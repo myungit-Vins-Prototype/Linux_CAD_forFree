@@ -1,0 +1,44 @@
+{
+  "files": [
+    {
+      "path": "AUDIT.md",
+      "sha256": "029b9f06171b16957a1170d52167a57e4ee4d4717a903032cb3ad5b78770bd9c",
+      "bytes": 3929
+    },
+    {
+      "path": "candidate-source-hash.json",
+      "sha256": "200e5d2584c9fc7f4c46b0db49a9312d8c70701ef0d5fc86006bc157f58389b9",
+      "bytes": 312
+    },
+    {
+      "path": "graph-evidence.json",
+      "sha256": "3d5c9c74d42e6336a06956046e4a2c86c4aaed2bbe678b6c7705c69f95b21fe9",
+      "bytes": 1242372
+    },
+    {
+      "path": "invert-graph-evidence.json",
+      "sha256": "df79772ca61b9c8ad61da2186314756d423943297eac94f2cbc199b79888330b",
+      "bytes": 633215
+    },
+    {
+      "path": "root-candidate.patch",
+      "sha256": "263abe9f4fee10620c189530145ee35423438f838ddfb43216454261c9d1621b",
+      "bytes": 490
+    },
+    {
+      "path": "root-probe.cpp.txt",
+      "sha256": "69cc32afd8301995d205389cab544026f3cb346477b31f64078448b1a6e412cb",
+      "bytes": 427
+    },
+    {
+      "path": "root-reported-observations.json",
+      "sha256": "6805a08468bae7d2de8ec584a8ba23279b0516152ce249d45c231079398e43c6",
+      "bytes": 532
+    },
+    {
+      "path": "root-source-freeze.json",
+      "sha256": "3851a91cc9ffc7d18fc8731b36c64093f6252574e522f17d5b1f58e4a633d675",
+      "bytes": 168
+    }
+  ]
+}

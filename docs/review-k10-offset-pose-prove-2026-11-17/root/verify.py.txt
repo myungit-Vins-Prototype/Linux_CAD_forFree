@@ -1,0 +1,31 @@
+from pathlib import Path
+import json,hashlib,re,subprocess
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-offset-pose-review/root');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def architecture():
+ g=json.loads((R/'docs/architecture/graph.json').read_text());assert not g['analysis']['errors'];assert g['analysis']['configurationDigest']==sha(R/'forgecad-release/compile_commands.json')
+ for f,h in g['hashes'].items():assert sha(R/f)==h,f
+ html=(R/'docs/architecture/index.html').read_text();assert json.loads(re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',html,re.S).group(1))==g
+ focus={'kernel/fk_offset.cpp','kernel/fk_shell.cpp','kernel/fk_transform.cpp','kernel/fk_curve_fit_bounds.cpp','kernel/tests/test_shell_pose.cpp','kernel/tests/test_shell.cpp','kernel/tests/test_curve_fit_validation.cpp'};nodes={n['id']:n for n in g['nodes']};assert focus<=nodes.keys()
+ incident=[e for e in g['edges'] if e['source'] in focus or e['target'] in focus]
+ calls={name:[e for e in incident if e['kind']=='call' and any(s['symbol'].endswith('::'+name) for s in e.get('sites',[]))] for name in ['projectLocal','fitCurve','offsetJoinedFaces','shellBody','scaleBody','transformBody']};assert all(calls.values())
+ assert any(e['source']=='kernel/tests/test_shell_pose.cpp' and e['target']=='kernel/fk_shell.cpp' and e['kind']=='call' for e in incident)
+ assert any(e['source']=='kernel/fk_shell.cpp' and e['target']=='kernel/fk_offset.cpp' and e['kind']=='call' for e in incident)
+ result={'nodes':len(nodes),'edges':len(g['edges']),'units':len(g['analysis']['units']),'errors':[],'hashes_html_configuration_verified':True,'calls':{k:len(v) for k,v in calls.items()},'focus':{f:{'description':nodes[f]['description'],'incoming':{k:sum(e['target']==f and e['kind']==k for e in incident) for k in ['call','include','reference']},'outgoing':{k:sum(e['source']==f and e['kind']==k for e in incident) for k in ['call','include','reference']}} for f in sorted(focus)}}
+ (T/'architecture-audit.json').write_text(json.dumps(result,indent=2)+'\n');(T/'architecture-incident.json').write_text(json.dumps(incident,indent=2)+'\n');subprocess.run(['python3','tools/generate_architecture.py','--check'],cwd=R,check=True);print({k:v for k,v in result.items() if k!='focus'})
+def preservation():
+ b=json.loads((T/'baseline.json').read_text());changed=sorted(f for f,h in b.items() if not (R/f).is_file() or sha(R/f)!=h);expected={'CLAUDE.md','docs/code-review-2026-11-15.md','kernel/fk_offset.cpp','kernel/CMakeLists.txt','tools/generate_architecture.py'};assert set(changed)==expected,changed
+ seals=json.loads((T/'seals-before.json').read_text())
+ for seal in seals:
+  p=R/seal['seal'];assert sha(p)==seal['sha256']
+  for line in p.read_text().splitlines():
+   if line.strip():h,f=line.split('  ',1);assert sha(p.parent/f)==h,(p,f)
+ assert sha(R/'docs/history/claude-prima-k10-offset-pose-2026-11-17.md')==b['CLAUDE.md']
+ for f,h in json.loads((T/'integrated-sources.json').read_text()).items():assert sha(R/f)==h,f
+ for f in ['cad_drawing_editor.cpp','cad_drawing_editor.h','cad_drawing_window.cpp','cad_forge.cpp','cad_forge.h','cad_sketch_refs.cpp','cad_sketch_refs.h','forgeCad2026_viewport.h','forgeCad2026_viewport_selection.cpp','kernel/fk_sheet.cpp','kernel/fk_blend_model.h','kernel/fk_surface_curve_bounds.cpp','kernel/fk_sheet_join_validation.cpp','kernel/tests/test_sheet_join_validation.cpp','kernel/tests/test_offset.cpp','kernel/tests/test_shell.cpp']:assert sha(R/f)==b[f],f
+ head=subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip();assert head=='47c7c19c4faf490995e8ff64f10d83d8a6abb077';assert subprocess.check_output(['git','rev-parse','origin/main'],cwd=R,text=True).strip()==head;assert not subprocess.check_output(['git','diff','--cached','--name-only'],cwd=R,text=True).strip()
+ mem=(R/'CLAUDE.md').read_text();assert len(mem.encode())<=16384 and len(re.findall(r'^\*\*',mem,re.M))<=10;assert 'nessun commit o push fino a nuova richiesta' in mem
+ subprocess.run(['git','diff','--check'],cwd=R,check=True)
+ bins={f:sha(R/f) for f in ['forgecad-release/forgecad','forgecad-release/forgecad_view_tests','forgecad-release/kernel/libforgekernel.a','forgecad-release/kernel/forgekernel_tests','forgecad-release/kernel/forgekernel_shell_pose_tests']};assert bins['forgecad-release/kernel/libforgekernel.a']==json.loads((T/'library-freeze.json').read_text())['sha256']
+ result={'HEAD_origin_main_unchanged':head,'index_empty':True,'no_commit_or_push':True,'baseline_files':len(b),'preserved_existing':len(b)-len(changed),'changed_existing':changed,'previous_proof_packages_preserved':len(seals),'previous_proof_artifacts':sum(s['files'] for s in seals),'CLAUDE_bytes':len(mem.encode()),'binary_hashes':bins,'existing_regressions_unchanged':{f:b[f] for f in ['kernel/tests/test_shell.cpp','kernel/tests/test_sheet_join_validation.cpp','kernel/tests/test_offset.cpp']}}
+ (T/'preservation-audit.json').write_text(json.dumps(result,indent=2)+'\n');print(result)
+if __name__=='__main__':globals()[__import__('sys').argv[1]]()

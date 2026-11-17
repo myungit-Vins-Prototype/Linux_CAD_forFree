@@ -1,0 +1,17 @@
+{
+  "exit": 0,
+  "seconds": 3.0754361529980088,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "--parallel",
+    "1",
+    "--output-junit",
+    "/tmp/k10-offset-pose-review/root/ctest-ui-final.xml",
+    "-V",
+    "-R",
+    "^(forgecad_all_history_tests|forgecad_blend_history_tests|forgecad_extension_panel_tests|forgecad_surface_tools_tests)$"
+  ]
+}

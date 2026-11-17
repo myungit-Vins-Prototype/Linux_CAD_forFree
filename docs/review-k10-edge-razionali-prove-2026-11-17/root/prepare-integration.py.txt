@@ -1,0 +1,14 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-rational-edge-review');W=T/'root/candidate'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+# Staging only: final copy uses baseline hash guards separately.
+f='tools/generate_architecture.py';s=(R/f).read_text()
+s=s.replace('Contratti della candidata UV e del residuo continuo: E/Q polynomiali, S NURBS native o istanze condivise con coefficienti e placement originali;', 'Contratti della candidata UV e del residuo continuo: E cubica anche razionale positiva, Q polinomiale, S NURBS native o istanze condivise con coefficienti e placement originali;')
+s=s.replace('Costruzione UV preproof e residuo continuo E(t)-S(Q(t)) su carrier NURBS2/3 nativi o istanziati a pesi positivi.', 'Costruzione UV preproof e residuo continuo E(t)-S(Q(t)): E cubica razionale positiva e Q polinomiale su carrier NURBS2/3 nativi o istanziati a pesi positivi. Numeratori omogenei e denominatori originali positivi; budget fissato prima della prova.')
+anchor=" 'kernel/tests/test_surface_curve_rational.cpp':"
+pos=s.index(anchor)
+s=s[:pos]+" 'kernel/tests/test_surface_curve_rational_edges.cpp': ('tests', 'Bordi cubici razionali sul carrier originale: pesi positivi, dominio/trim e verso correlato, pose e scale dei pesi, scarti nascosti e registro delle fin; esclusioni Q e cancellazione.'),\n"+s[pos:]
+p=W/f;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s)
+f='kernel/CMakeLists.txt';s=(R/f).read_text();old='tests/test_surface_curve_rational.cpp tests/test_surface_curve_instances.cpp)';assert old in s;s=s.replace(old,'tests/test_surface_curve_rational.cpp tests/test_surface_curve_instances.cpp\n    tests/test_surface_curve_rational_edges.cpp)',1);p=W/f;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s)
+print({str(p.relative_to(W)):sha(p) for p in W.rglob('*') if p.is_file()})

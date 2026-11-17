@@ -1,0 +1,134 @@
+{
+  "createdUtc": "2026-11-16T23:00:39.674589+00:00",
+  "sourceHead": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "results": {
+    "releaseCombined": "55/55 PASS exit0",
+    "sanitizerCombined": "55/55 PASS exit0",
+    "sanitizerSeconds": 290.1631428699984,
+    "lsanCalibration": "19 bytes in 1 allocation; exit23",
+    "historicalTests": "test_sheet_join_validation.cpp and test_offset.cpp identical to HEAD",
+    "productionSources": "all7 exact freeze hashes match"
+  },
+  "sourceSha256": {
+    "test_surface_curve_bounds.cpp": "75c9b732d8ec334ddb7bbb3e99d279eba5603c4e7798b46475f5f1fd8503e200",
+    "test_sheet_join_ledger.cpp": "49dca141fcb34e5170e6f08e98fe1d3353cae29032be63caad9b367dc72dac6e"
+  },
+  "binarySha256ForAttributionOnly": {
+    "candidate-tests": "af7cd6ca5544c9fbff36036caf636615b16df974eb0dce656a5a1b6ba899f655",
+    "san/candidate-tests": "ea2a50ff1fdf87c5be7431dd885f5c20e24669e15712979a7ff52e5f26710928",
+    "libforgekernel-release.a": "f70e65bc0ea5d2c9107ad105a521633d2ed8f6a63de916f5fbfe5315b42bed01"
+  },
+  "scope": {
+    "provider": "13 synthetic tests, supported original coefficients and fail-closed behavior",
+    "ledger": "9 actual Body fixtures; prebuild provenance and post-unify emitted fin invariants",
+    "publicCommand": "33 historical sheetjoin tests unchanged, including four NonIsoOffsetLoft variants",
+    "sanitizer": "3 changed productionTUs + tests/main instrumented; remainder Release",
+    "archived": "no binary/object/archive/CAD bodies"
+  },
+  "files": {
+    "README.txt": {
+      "sha256": "a4be4255b077c4955bc4528bd5647e4b02f0b2b5d7de06bde689f63397dc20d3",
+      "bytes": 2389
+    },
+    "combined-link.json": {
+      "sha256": "8f37c020ac395f6b3bea14a076522acdfa3ed901235111ba5f231fa67c75a0dc",
+      "bytes": 625
+    },
+    "combined-release.log": {
+      "sha256": "f81a8be16e143dde6f39fc69e44e34c0958c8e21d31d04bc95d396b5e00eaeca",
+      "bytes": 2541
+    },
+    "existing-sheet-tests-compile.json": {
+      "sha256": "aac90b4cde33b84b970f073c223c4bdc9a388989b0f45bc5ab32969b499ca93c",
+      "bytes": 426
+    },
+    "graph-consult.json": {
+      "sha256": "38dd8076f50c8ddb4b5adf6559a870b98928d28fecab2394c1190a1c12c5d0a9",
+      "bytes": 3655
+    },
+    "leak_calibration.cpp.txt": {
+      "sha256": "b73910ded67c00d23c4e402c1b73dcf990cfb4b0c5f517003ac5952134dde35d",
+      "bytes": 216
+    },
+    "ledger-compile.json": {
+      "sha256": "2a7f9e1878e4435c1f21a184e35c62b76b53bc14038ffc34bb684edb2aaa2828",
+      "bytes": 404
+    },
+    "production-freeze.json": {
+      "sha256": "bd7f20349e9a311cca651fb2a87f36ec3b5e3d069389f8db96bd3c44fea33a81",
+      "bytes": 717
+    },
+    "provider-compile.json": {
+      "sha256": "a3398f18728714ad3488b2d3120ddb76aae344f926bc9ad63effa3f0f2dc5aa4",
+      "bytes": 405
+    },
+    "provider-export.cpp.txt": {
+      "sha256": "624a9279bfa03eb54d77d7b397bbced6abf499bebac7548c352838928a74cb99",
+      "bytes": 1777
+    },
+    "provider-originals.json": {
+      "sha256": "4076c1606ddf708e516944ad1364dc20fbfed9c3b77715834417f002c288d33f",
+      "bytes": 8061
+    },
+    "release-library.json": {
+      "sha256": "484896e9c872a760ba5387250d17a086cc70d59c6f6f8f71cedc95bfa3eccb3c",
+      "bytes": 412
+    },
+    "san-combined-sanitizer.log": {
+      "sha256": "f81a8be16e143dde6f39fc69e44e34c0958c8e21d31d04bc95d396b5e00eaeca",
+      "bytes": 2541
+    },
+    "san-compile-commands.json": {
+      "sha256": "5f76a4eef83f9b0809338c7c6dec717345740825118684e54404f1bea7f9234f",
+      "bytes": 3627
+    },
+    "san-compile-results.json": {
+      "sha256": "89a0df93e3f9947c0af78103e2cda4f6ce9ef63c699b14024e3c9b403ae4e6d7",
+      "bytes": 580
+    },
+    "san-leak-calibration-thread.log": {
+      "sha256": "8759d3262770b2c0b9e60edc9a4f08a049d75196deefb1e1af632ea23bb20a56",
+      "bytes": 991
+    },
+    "san-leak-calibration.log": {
+      "sha256": "9cd224415cda5d995b88454493551a3c726499ac86e02946c1a6f413dd7c98a8",
+      "bytes": 38
+    },
+    "san-link-command.json": {
+      "sha256": "25301e426039929506e334cc008689e2f85e4cf168a5e998ce410b92a9e1cae7",
+      "bytes": 559
+    },
+    "san-run-command.json": {
+      "sha256": "df014f07adf56d0a970fd45ce197bea86ee084a098fe37f342ce9e9b40d1a747",
+      "bytes": 791
+    },
+    "san-runtime-results.json": {
+      "sha256": "4fe04c2c6e8df22cb6f785a3b26b919c4b57aa87eec3f90f4b83e6bad66535b4",
+      "bytes": 620
+    },
+    "sheet-compile.json": {
+      "sha256": "20727485264b5f9c200350e01a437bb5943556234f16bde597cd353c431eb3ce",
+      "bytes": 387
+    },
+    "test_sheet_join_ledger-compile.json": {
+      "sha256": "f98f247e5a6b47015d37ddf666b4a980faa364365819b9dabcc56f8b8de4cbdf",
+      "bytes": 407
+    },
+    "test_sheet_join_ledger.cpp.txt": {
+      "sha256": "49dca141fcb34e5170e6f08e98fe1d3353cae29032be63caad9b367dc72dac6e",
+      "bytes": 11645
+    },
+    "test_surface_curve_bounds-compile.json": {
+      "sha256": "0e13c0e874d1f9ab1b6d4ab09a162c394260a02b3824ca3e90b60117534f5888",
+      "bytes": 413
+    },
+    "test_surface_curve_bounds.cpp.txt": {
+      "sha256": "75c9b732d8ec334ddb7bbb3e99d279eba5603c4e7798b46475f5f1fd8503e200",
+      "bytes": 10600
+    },
+    "tests.patch": {
+      "sha256": "cb245a3b2e18caba157bf5aebecaa41ae72e8274ea6bc43b4bcf49aa2fc7dc27",
+      "bytes": 22819
+    }
+  }
+}

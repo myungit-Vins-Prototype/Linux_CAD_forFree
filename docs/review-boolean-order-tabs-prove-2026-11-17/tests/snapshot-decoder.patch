@@ -1,0 +1,19 @@
+--- cad_document_io.cpp
++++ private/cad_document_io_snapshot.cpp
+@@ -1275,7 +1275,7 @@
+     // cucitura elimina solo i bordi realmente collassati, prima di unirli.
+     // Cache 15: guide del loft con nodi comuni entro arrotondamento e
+     // offset cuciti stabili sulle sezioni quasi tangenti.
+-    if (state.version.checkinId.isNull()
++    if (false && state.version.checkinId.isNull()
+         && std::any_of(state.extrusions.cbegin(), state.extrusions.cend(),
+             [cacheVersion](const ExtrusionObject &body) {
+                 return !body.suppressed && ((cacheVersion < 14 && (body.feature == BodyFeature::Pattern
+@@ -1322,6 +1322,7 @@
+         }
+         if (cacheVersion >= 6) record.declared = chunks.read();
+         if (in.status() != QDataStream::Ok) return;
++        if (i == 13 || i == 14) { QFile raw(QStringLiteral("/tmp/boolean-order-review/tests/snapshot-record-%1.body").arg(i)); raw.open(QIODevice::WriteOnly); raw.write(record.data); }
+         records.push_back(std::move(record));
+     }
+     if (!in.atEnd()) return;

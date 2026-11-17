@@ -17,6 +17,7 @@
 #include "fk_transform.h"
 #include "fk_curve_algo.h"
 #include "fk_curve_fit_bounds.h"
+#include "fk_surface_curve_bounds.h"
 #include <algorithm>
 #include <array>
 #include <functional>
@@ -154,11 +155,20 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
     const double connectionBudget=std::min(tolerance,linearResolution());
     const double fitBudget=.2*connectionBudget;
     std::map<int,int> vertexOf,edgeOf;double worst=0;
-    // Il contratto delle fin Plane e' fissato prima del fit e viene
-    // ricontrollato dopo l'assemblaggio sui discendenti dichiarati.
-    const double planePCurveBudget = .8 * connectionBudget;
-    std::map<int, SurfacePtr> planeImages;
-    std::map<std::tuple<int, int, bool>, std::vector<std::pair<CurvePtr<2>, double>>> planeFinOrigins;
+    // Cap fisico fissato prima del fit, distinto dall'errore misurato.
+    const double pcurveBudget = .8 * connectionBudget;
+    enum class FinProof { Legacy, Plane, Surface };
+    struct FinContract {
+        CurvePtr<3> curve;
+        CurvePtr<2> pcurve;
+        Interval range;
+        double edgeTolerance;
+        double pcurveTolerance;
+        FinProof proof;
+    };
+    bool hasCertifiedFin = false;
+    std::map<int, SurfacePtr> mappedImages;
+    std::map<std::tuple<int, int, bool>, std::vector<FinContract>> finOrigins;
     for(auto v:source.vertices()){vertexOf[v.index]=int(vertices.size());vertices.push_back(map(source.vertex(v).point));}
     for(auto id:source.edges()) {
         cancellationPoint();const auto &edge=source.edge(id);double error=0;
@@ -174,12 +184,12 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
         Body::BuildFace mapped;mapped.sense=face.sense;
         const auto image=faceImage?faceImage(id):detail::MappingFaceImage{};
         const bool planeImage = image.surface && image.surface->type() == SurfaceType::Plane;
-        if (planeImage) planeImages.emplace(id.index, image.surface);
         if(image.surface){mapped.surface=image.surface;mapped.sense=image.sense;}
         else {
             try {mapped.surface=fitMappedSurface(*face.surface,window.first,window.second,differentialMap,fitBudget,worst,cuts,derivativeFraction,degree);}
             catch(const std::domain_error &e){throw std::domain_error("Faccia F"+std::to_string(id.index)+": "+e.what());}
         }
+        mappedImages.emplace(id.index, mapped.surface);
         for(auto loop:face.loops) {
             std::vector<Body::BuildFin> fins;
             for(auto use:source.loopFins(loop)) {
@@ -190,7 +200,7 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
                     // Il provider conserva coefficienti e supporto originali;
                     // il residuo fisico continuo include lo scarto normale.
                     pc = detail::fitPCurveOnPlane(edge.curve, mapped.surface, edge.range,
-                        std::min(1e-10, .05 * fitBudget), planePCurveBudget, &planeError);
+                        std::min(1e-10, .05 * fitBudget), pcurveBudget, &planeError);
                     require(bool(pc), "Deformazione: trasferimento SP-curve Plane non supportato.");
                 } else if(image.surface) {
                     const auto &original=source.edge(fin.edge);
@@ -207,12 +217,34 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
                     const auto planar=planarImage(*curve,original.range,Frame3());pc=planar.curve;
                     require(bool(pc),"Deformazione: trasferimento SP-curve non riuscito.");
                 }
-                const double error = planeImage ? planeError :
-                    pcurveDeviation(*mapped.surface,*edge.curve,*pc,edge.range,32);
-                require(error<=connectionBudget*.8,"Deformazione: SP-curve fuori tolleranza.");worst=std::max(worst,error);
-                const double pcurveTolerance = planeImage ? std::max(error, 1e-14) : std::max(error*1.01,1e-14);
-                if (planeImage)
-                    planeFinOrigins[{id.index, fin.edge.index, fin.sense}].push_back({pc, pcurveTolerance});
+                FinProof proofKind = planeImage ? FinProof::Plane : FinProof::Legacy;
+                double error = planeError;
+                if (!planeImage) {
+                    // Costruzione privata prima dell'UNICA prova; un Failed
+                    // riconosciuto e' terminale e non torna ai campioni.
+                    const auto candidate = detail::surfaceCurvePCurveCandidate(
+                        edge.curve, mapped.surface, pc, edge.range);
+                    const auto proof = detail::surfaceCurveResidualBound(
+                        edge.curve, mapped.surface, candidate, edge.range, pcurveBudget);
+                    if (proof.status == detail::SurfaceCurveBoundStatus::Unsupported) {
+                        error = pcurveDeviation(*mapped.surface, *edge.curve, *pc, edge.range, 32);
+                    } else {
+                        require(proof.status == detail::SurfaceCurveBoundStatus::Certified
+                                && std::isfinite(proof.upperBound) && proof.upperBound >= 0
+                                && proof.upperBound <= pcurveBudget,
+                            "Deformazione: SP-curve fuori dal budget continuo.");
+                        pc = candidate;
+                        error = proof.upperBound;
+                        proofKind = FinProof::Surface;
+                    }
+                }
+                require(error <= pcurveBudget, "Deformazione: SP-curve fuori tolleranza.");
+                worst = std::max(worst, error);
+                const double pcurveTolerance = proofKind == FinProof::Surface ? pcurveBudget :
+                    (planeImage ? std::max(error, 1e-14) : std::max(error * 1.01, 1e-14));
+                hasCertifiedFin = hasCertifiedFin || proofKind != FinProof::Legacy;
+                finOrigins[{id.index, fin.edge.index, fin.sense}].push_back(
+                    {edge.curve, pc, edge.range, edge.tolerance, pcurveTolerance, proofKind});
                 fins.push_back({edgeOf.at(fin.edge.index),fin.sense,pc,pcurveTolerance});
             }
             mapped.loops.push_back(std::move(fins));
@@ -221,49 +253,69 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
     }
     Body result=source.isSheet()?Body::buildSheet(vertices,edges,faces):Body::build(vertices,edges,faces);checked(result);
     BodyHistory preparedHistory;
-    if (history || !planeImages.empty()) preparedHistory = mappedHistory(source, result);
-    if (!planeImages.empty()) {
+    if (history || hasCertifiedFin) preparedHistory = mappedHistory(source, result);
+    if (hasCertifiedFin) {
         const auto origin = [&](EntityKind kind, int index) {
             const auto &links = preparedHistory.origins(kind, index);
-            require(links.size() == 1 && links.front().operand == 0 && links.front().kind == kind
+            require(preparedHistory.isDeclared(kind, index) && links.size() == 1
+                    && links.front().operand == 0 && links.front().kind == kind
                     && links.front().relation == HistoryRelation::Modified,
-                "Deformazione: genealogia del trasferimento Plane incoerente.");
+                "Deformazione: genealogia del trasferimento incoerente.");
             return links.front().index;
         };
+        // Anche senza history utente: identita' e cardinalita' delle vere fin
+        // emesse da build/buildSheet, senza riassociazione per prossimita'.
         for (auto id : result.faces()) {
             cancellationPoint();
             const int sourceFace = origin(EntityKind::Face, id.index);
-            const auto expected = planeImages.find(sourceFace);
-            if (expected == planeImages.end()) continue;
+            const auto expected = mappedImages.find(sourceFace);
             const auto &face = result.face(id);
-            require(face.surface == expected->second,
-                "Deformazione: carrier Plane modificato durante l'assemblaggio.");
+            require(expected != mappedImages.end() && face.surface == expected->second,
+                "Deformazione: carrier modificato durante l'assemblaggio.");
             for (auto loop : face.loops) for (auto use : result.loopFins(loop)) {
                 cancellationPoint();
                 const auto &fin = result.fin(use);
                 const auto &edge = result.edge(fin.edge);
                 const int sourceEdge = origin(EntityKind::Edge, fin.edge.index);
-                auto planned = planeFinOrigins.find({sourceFace, sourceEdge, fin.sense});
-                require(planned != planeFinOrigins.end() && !planned->second.empty(),
-                    "Deformazione: fin Plane priva di origine dichiarata.");
+                auto planned = finOrigins.find({sourceFace, sourceEdge, fin.sense});
+                require(planned != finOrigins.end() && !planned->second.empty(),
+                    "Deformazione: fin priva di origine dichiarata.");
                 const auto contract = std::find_if(planned->second.begin(), planned->second.end(),
-                    [&](const auto &entry) { return entry.first == fin.pcurve && entry.second == fin.pcurveTolerance; });
+                    [&](const FinContract &entry) {
+                        return entry.curve == edge.curve && entry.pcurve == fin.pcurve
+                            && entry.range.lo == edge.range.lo && entry.range.hi == edge.range.hi
+                            && entry.edgeTolerance == edge.tolerance
+                            && entry.pcurveTolerance == fin.pcurveTolerance;
+                    });
                 require(contract != planned->second.end(),
-                    "Deformazione: SP-curve o budget Plane modificato durante l'assemblaggio.");
+                    "Deformazione: curva, parametro o budget modificato durante l'assemblaggio.");
+                const FinProof kind = contract->proof;
                 planned->second.erase(contract);
                 const auto &original = source.edge(EdgeId(sourceEdge));
                 require(edge.range.lo == original.range.lo && edge.range.hi == original.range.hi,
-                    "Deformazione: parametro originale del bordo Plane modificato.");
+                    "Deformazione: parametro originale del bordo modificato.");
+                if (kind == FinProof::Legacy) continue;
                 require(std::isfinite(fin.pcurveTolerance) && fin.pcurveTolerance >= 0
-                        && fin.pcurveTolerance <= planePCurveBudget,
-                    "Deformazione: budget finale della fin Plane non valido.");
-                const double residual = detail::requirePCurveOnPlane(edge.curve, face.surface, fin.pcurve,
-                    edge.range, std::min(planePCurveBudget, fin.pcurveTolerance));
+                        && fin.pcurveTolerance <= pcurveBudget,
+                    "Deformazione: budget finale della fin non valido.");
+                double residual = 0;
+                if (kind == FinProof::Plane) {
+                    residual = detail::requirePCurveOnPlane(edge.curve, face.surface, fin.pcurve,
+                        edge.range, std::min(pcurveBudget, fin.pcurveTolerance));
+                } else {
+                    const auto proof = detail::surfaceCurveResidualBound(edge.curve, face.surface,
+                        fin.pcurve, edge.range, fin.pcurveTolerance);
+                    require(proof.status == detail::SurfaceCurveBoundStatus::Certified
+                            && std::isfinite(proof.upperBound) && proof.upperBound >= 0
+                            && proof.upperBound <= fin.pcurveTolerance,
+                        "Deformazione: fin finale fuori dal budget continuo.");
+                    residual = proof.upperBound;
+                }
                 worst = std::max(worst, residual);
             }
         }
-        for (const auto &planned : planeFinOrigins)
-            require(planned.second.empty(), "Deformazione: fin Plane persa nell'assemblaggio.");
+        for (const auto &planned : finOrigins)
+            require(planned.second.empty(), "Deformazione: fin persa nell'assemblaggio.");
     }
     cancellationPoint();
     if(history)*history=std::move(preparedHistory);

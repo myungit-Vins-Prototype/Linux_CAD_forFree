@@ -1,0 +1,30 @@
+#include "fk_body_io.h"
+#include "fk_surface_algo.h"
+#include "fk_precision.h"
+#include <fstream>
+#include <iostream>
+#include <iomanip>
+#include <iterator>
+using namespace ForgeCad::Kernel;
+int main(int argc,char**argv) {
+ try {
+  if(argc!=2)return 2;
+  std::ifstream f(argv[1],std::ios::binary);
+  if(!f)throw std::runtime_error("missing staged output");
+  Body b=readBodyBinary(std::string(std::istreambuf_iterator<char>(f),{}));
+  bool first=true;std::cout<<std::setprecision(17)<<"[";
+  for(auto ei:b.edges()) {
+   const auto&e=b.edge(ei);if(e.tolerance<=linearResolution())continue;
+   for(auto fi:{e.forward,e.backward}) {
+    if(!fi.valid())continue;
+    const auto&fin=b.fin(fi);auto face=b.finFace(fi);const auto&s=*b.face(face).surface;
+    for(int i=0;i<=8;++i) {
+     const double t=e.range.lo+e.range.length()*i/8.;const auto p=e.curve->point(t);const auto uv=fin.pcurve->point(t);const auto projection=projectPoint(s,p);
+     if(!first)std::cout<<",";first=false;
+     std::cout<<"{\"edge\":"<<ei.index<<",\"fin\":"<<fi.index<<",\"face\":"<<face.index<<",\"parameter\":\""<<std::hexfloat<<t<<std::defaultfloat<<"\",\"edgeTol\":"<<e.tolerance<<",\"startVertexGap\":"<<distance(e.curve->point(e.range.lo),b.vertex(b.edgeStart(ei)).point)<<",\"endVertexGap\":"<<distance(e.curve->point(e.range.hi),b.vertex(b.edgeEnd(ei)).point)<<",\"finTol\":"<<fin.pcurveTolerance<<",\"projectDistance\":"<<projection.distance<<",\"pcurveResidual\":"<<distance(p,s.point(uv.x(),uv.y()))<<",\"x\":["<<p.x()<<","<<p.y()<<","<<p.z()<<"]}";
+    }
+   }
+  }
+  std::cout<<"]\n";
+ }catch(const std::exception&e){std::cerr<<e.what()<<"\n";return 1;}
+}

@@ -1,0 +1,168 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 196
+    Start 196: forgekernel_surface_instances_tests
+
+196: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_instances_tests
+196: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+196: Test timeout computed to be: 10000000
+196: [  OK  ] SurfaceInstanceExactJetsAndPoles
+196: [  OK  ] SurfaceInstanceFlattenedAndImmutable
+196: [  OK  ] SurfaceInstanceSharesBezierPolesAndBounds
+196: [  OK  ] SurfaceInstanceBinarySharingAndLegacyRead
+196: [  OK  ] SurfaceInstanceRejectsInvalidPlacementAndRecords
+196: [  OK  ] SurfaceInstanceStepReplicaRoundTrip
+196: [  OK  ] SurfaceInstanceStepRejectsCycles
+196: [  OK  ] SurfaceInstanceStepReadsStandardMirrorAndScale
+196: [  OK  ] SurfaceInstancePreservesSingularTrimsAndMesh
+196: [  OK  ] SurfaceInstanceSewPolarWedgesAndCap
+196: [  OK  ] SurfaceInstanceZeroRadiusAtHighValenceCusp
+196: [  OK  ] BodyReadPoolExactSharingAndRecordIdentity
+196: [  OK  ] BodyReadPoolRejectsNearDuplicatesAndSurvivesPool
+196: [  OK  ] BodyReadPoolConcurrentDocuments
+196: 14/14 test superati
+1/6 Test #196: forgekernel_surface_instances_tests .............   Passed    0.71 sec
+test 200
+    Start 200: forgekernel_tolerance_tests
+
+200: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_tolerance_tests
+200: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+200: Test timeout computed to be: 10000000
+200: [  OK  ] ToleranceDefaults
+200: [  OK  ] ToleranceInvalidMetadata
+200: [  OK  ] ToleranceVertexBudget
+200: [  OK  ] TolerancePCurveBudget
+200: [  OK  ] ToleranceEdgeFaceBudget
+200: [  OK  ] ToleranceDocumentScopesAndWorkers
+200: [  OK  ] ToleranceDocumentOffsetAccuracy
+200: 7/7 test superati
+2/6 Test #200: forgekernel_tolerance_tests .....................   Passed    0.34 sec
+test 227
+    Start 227: forgekernel_surface_mapping_tests
+
+227: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_mapping_tests
+227: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+227: Test timeout computed to be: 120
+227: PASS sviluppo piano/cilindro/cono, aree/lunghezze, rifiuto doppia curvatura, deformazione cilindrica/volume, genealogia, B-rep, STEP e mesh, appoggio multifaccia continuo/NURBS/vuoti
+3/6 Test #227: forgekernel_surface_mapping_tests ...............   Passed    0.77 sec
+test 238
+    Start 238: forgekernel_sheet_join_validation_tests
+
+238: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_sheet_join_validation_tests
+238: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+238: Test timeout computed to be: 180
+238: [  OK  ] SheetJoinImplicitPolynomial
+238: [  OK  ] SheetJoinTangentPolynomial
+238: [  OK  ] SheetJoinRigidPose
+238: [  OK  ] SheetJoinSmallScale
+238: [  OK  ] SheetJoinLargeScale
+238: [  OK  ] SheetJoinRational
+238: [  OK  ] SheetJoinReverseSelection
+238: [  OK  ] SheetJoinFaceSense
+238: [  OK  ] SheetJoinCanonicalReversal
+238: [  OK  ] SheetJoinLowerBoundary
+238: [  OK  ] SheetJoinTangentRigidPose
+238: [  OK  ] SheetJoinTangentSmallScale
+238: [  OK  ] SheetJoinTangentLargeScale
+238: [  OK  ] SheetJoinTangentRational
+238: [  OK  ] SheetJoinTangentReverseSelection
+238: [  OK  ] SheetJoinTangentFaceSense
+238: [  OK  ] SheetJoinTangentCanonicalReversal
+238: [  OK  ] SheetJoinTangentLowerBoundary
+238: [  OK  ] SheetJoinHiddenNarrowKnots
+238: [  OK  ] SheetJoinTangentGapBudget
+238: [  OK  ] SheetJoinTangentTrimmedSupport
+238: [  OK  ] SheetJoinHiddenNarrowPhases
+238: [  OK  ] SheetJoinHiddenNarrowPose
+238: [  OK  ] SheetJoinHiddenNarrowSmallScale
+238: [  OK  ] SheetJoinHiddenNarrowLargeScale
+238: [  OK  ] SheetJoinHiddenNarrowReverseSelection
+238: [  OK  ] SheetJoinTangentGapPose
+238: [  OK  ] SheetJoinCancellationAtomic
+238: [  OK  ] SheetJoinInvalidLengthAtomic
+238: [  OK  ] SheetJoinNonIsoOffsetLoftOriginal
+238: [  OK  ] SheetJoinNonIsoOffsetLoftRigidPose
+238: [  OK  ] SheetJoinNonIsoOffsetLoftSmallScale
+238: [  OK  ] SheetJoinNonIsoOffsetLoftLargeScalePose
+238: 33/33 test superati
+4/6 Test #238: forgekernel_sheet_join_validation_tests .........   Passed   46.38 sec
+test 252
+    Start 252: forgekernel_surface_curve_bounds_tests
+
+252: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_curve_bounds_tests
+252: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+252: Test timeout computed to be: 180
+252: [  OK  ] NonIsoResidualCubicUVOnOriginalTensorPlane
+252: [  OK  ] NonIsoResidualBilinearCarrierAndNativeLineUV
+252: [  OK  ] NonIsoResidualCommonPartitionAcrossEdgeUVAndCarrierKnots
+252: [  OK  ] NonIsoResidualNonUnitDomainSubrangeAndCorrelatedReversal
+252: [  OK  ] NonIsoResidualConstantOriginalWeightsRemainPolynomial
+252: [  OK  ] NonIsoResidualHiddenEdgePeakIsNotAContinuousProof
+252: [  OK  ] NonIsoResidualHiddenCarrierCellPeakIsRejected
+252: [  OK  ] NonIsoResidualUVLeavesDomainBetweenThreeMatchingSamples
+252: [  OK  ] NonIsoResidualInvalidInputsFailClosed
+252: [  OK  ] NonIsoResidualCurveWeightsAndWrappersUnsupportedCarrierGapFails
+252: [  OK  ] NonIsoResidualCancellationPropagates
+252: [  OK  ] NonIsoResidualFixedInputResourceLimitFailsClosed
+252: [  OK  ] NonIsoResidualUnclampedOriginalCubicKnots
+252: [  OK  ] SheetJoinLedgerActualTwoFinsAndExtraFixedCaps
+252: [  OK  ] SheetJoinLedgerExplicitCompactionAndUnifyHistoryPermutation
+252: [  OK  ] SheetJoinLedgerRecognizedGapCannotUseLargeFinDeviation
+252: [  OK  ] SheetJoinLedgerMissingMapCurveRangeOrIncidenceRejects
+252: [  OK  ] SheetJoinLedgerInvalidBudgetAndEdgeMetadataRejects
+252: [  OK  ] SheetJoinLedgerUnsupportedFamilyRetainsLegacyWithoutCertificate
+252: [  OK  ] SheetJoinLedgerUnifiedDriftAndMissingDescendantsReject
+252: [  OK  ] SheetJoinLedgerCancellationPropagates
+252: [  OK  ] SheetJoinLedgerMissingCarrierOrOriginalCurveRejects
+252: [  OK  ] SheetJoinLedgerBoundedCubicCopyPreservesUnplannedSharedMap
+252: [  OK  ] SheetJoinLedgerHalfUlpLineBuildsBoundedNativeMap
+252: [  OK  ] SheetJoinLedgerBoundedCandidateCannotRepairPhysicalGap
+252: [  OK  ] RationalCarrierNativeQuadraticCubicAndMixedIdentity
+252: [  OK  ] RationalCarrierCellExtrapolatedDenominatorMayBeNegative
+252: [  OK  ] RationalCarrierWeightGaugeAndPhysicalScale
+252: [  OK  ] RationalCarrierNonUnitDomainTrimAndCorrelatedReverse
+252: [  OK  ] RationalCarrierChangedWeightIsRecognizedGap
+252: [  OK  ] RationalCarrierUVOutsideOriginalDomainFails
+252: [  OK  ] RationalCarrierCancellationPropagates
+252: [  OK  ] RationalCarrierHiddenKnotCellPeakFailsContinuously
+252: [  OK  ] RationalCarrierFixedOriginalScalarLimitFailsClosed
+252: [  OK  ] SurfaceInstanceIdentityNestedPoseMirrorAndScale
+252: [  OK  ] SurfaceInstanceRoundedPolesCannotHideOriginalCoefficientGap
+252: [  OK  ] SurfaceInstancePublicRationalQuiltPreservesFinalFinContracts
+252: [  OK  ] SurfaceInstanceHiddenCarrierPeakRejectedWithoutLegacyDowngrade
+252: [  OK  ] SurfaceInstanceDoesNotWidenCurveWeightOrWrapperFamilies
+252: [  OK  ] SurfaceInstanceCancellationRemainsDistinct
+252: 40/40 test superati
+5/6 Test #252: forgekernel_surface_curve_bounds_tests ..........   Passed    0.21 sec
+test 253
+    Start 253: forgekernel_mapping_nonplane_validation_tests
+
+253: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_mapping_nonplane_validation_tests
+253: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+253: Test timeout computed to be: 180
+253: [  OK  ] MappingNonPlaneCylinderFinalFinsAndNullHistory
+253: [  OK  ] MappingNonPlaneQuadraticTargetFinalFinsAndNullHistory
+253: [  OK  ] MappingNonPlaneRationalCarrierFinalFinsAndNullHistory
+253: [  OK  ] MappingNonPlaneHiddenCarrierPeakRejectedAtomically
+253: [  OK  ] MappingNonPlaneFarOutsideCannotBeRepairedByClamping
+253: [  OK  ] MappingNonPlaneCancellationPreservesInputsAndOutputs
+253: 6/6 test superati
+6/6 Test #253: forgekernel_mapping_nonplane_validation_tests ...   Passed    0.29 sec
+
+The following tests passed:
+	forgekernel_surface_instances_tests
+	forgekernel_tolerance_tests
+	forgekernel_surface_mapping_tests
+	forgekernel_sheet_join_validation_tests
+	forgekernel_surface_curve_bounds_tests
+	forgekernel_mapping_nonplane_validation_tests
+
+100% tests passed out of 6
+
+Total Test time (real) =  48.71 sec

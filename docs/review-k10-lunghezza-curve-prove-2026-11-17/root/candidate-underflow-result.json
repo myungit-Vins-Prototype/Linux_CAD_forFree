@@ -1,0 +1,9 @@
+{
+  "command": [
+    "/tmp/k10-arclength-review/root/candidate-probe",
+    "underflow"
+  ],
+  "exit": 0,
+  "seconds": 0.002517204004107043,
+  "watchdog_seconds": 5
+}

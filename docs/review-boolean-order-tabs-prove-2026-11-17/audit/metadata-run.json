@@ -1,0 +1,28 @@
+{
+  "argv": [
+    "/tmp/boolean-order-review/audit/inspect_metadata",
+    "/tmp/boolean-order-review/tests/snapshot-record-13.body",
+    "/tmp/boolean-order-review/tests/snapshot-record-14.body",
+    "/tmp/boolean-order-review/tests/raw-original-forward.body",
+    "/tmp/boolean-order-review/tests/raw-original-reverse.body"
+  ],
+  "exit": 0,
+  "inputs": [
+    {
+      "file": "/tmp/boolean-order-review/tests/snapshot-record-13.body",
+      "sha256": "a033476fb8c411a1f9bf38c50e187b13dac04daaf2441d3f4152ff13b078da68"
+    },
+    {
+      "file": "/tmp/boolean-order-review/tests/snapshot-record-14.body",
+      "sha256": "514106beb1d5888bde272e641e08ae1b5b1fccc6e54e4edb9966481422ad9e93"
+    },
+    {
+      "file": "/tmp/boolean-order-review/tests/raw-original-forward.body",
+      "sha256": "256d7d8a62017d9c6d6551210b291d19d7e9ec634803f67dd19fe8165835c2b5"
+    },
+    {
+      "file": "/tmp/boolean-order-review/tests/raw-original-reverse.body",
+      "sha256": "6a543ef9e7e8d542549ba84a59e65958a652f98adf41e71888b394794b3a75e7"
+    }
+  ]
+}

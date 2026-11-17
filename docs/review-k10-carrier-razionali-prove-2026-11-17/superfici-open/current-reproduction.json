@@ -1,0 +1,9 @@
+{
+  "argv": [
+    "/tmp/k10-next-review/audit/probe-scale-rotation"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "returncode": 1,
+  "elapsed_seconds": 3.6055591690092115,
+  "scope": "Anonymous public frozen fixture, exact historical scale/rotation and closed shell1.25, current final kernel"
+}

@@ -1,0 +1,3 @@
+patch --dry-run -p1 -d /tmp/k10-offset-pose-review/core/before < /tmp/k10-offset-pose-review/core/offset-projection.patch
+exit0
+checking file kernel/fk_offset.cpp

@@ -1,0 +1,32 @@
+[
+  {
+    "source": "/tmp/boolean-order-review/tests/raw-original-forward.log",
+    "staged": "tester-raw-original-forward.log",
+    "sha256": "c891e5c7bbd902efddfac5a969c514674cad6e34cbb3cce07d070979ba17a3d8",
+    "attribution": "tester execution/source; not run by auditor"
+  },
+  {
+    "source": "/tmp/boolean-order-review/tests/raw-original-reverse.log",
+    "staged": "tester-raw-original-reverse.log",
+    "sha256": "bebf56faab10d0d52ed93988adf4a962d84c179f6974232560621b95e0c059c5",
+    "attribution": "tester execution/source; not run by auditor"
+  },
+  {
+    "source": "/tmp/boolean-order-review/tests/raw-original-runs.json",
+    "staged": "tester-raw-original-runs.json",
+    "sha256": "2eb6a4f916203b6ecad5ba45e9afecf01a994add0e0c0bcda1c90914d6f80474",
+    "attribution": "tester execution/source; not run by auditor"
+  },
+  {
+    "source": "/tmp/boolean-order-review/tests/raw_union.cpp",
+    "staged": "tester-raw-union.cpp.txt",
+    "sha256": "0725d2cbbfbc70e3dc1f1f399a616f354fc49db596c791fe9819c0446e5dae14",
+    "attribution": "tester execution/source; not run by auditor"
+  },
+  {
+    "source": "/tmp/boolean-order-review/tests/library-freeze.json",
+    "staged": "tester-library-freeze.json",
+    "sha256": "67629c67f5d0965581685085b32bc2e30d5019676f2cbc348498d17b25fc594f",
+    "attribution": "tester execution/source; not run by auditor"
+  }
+]

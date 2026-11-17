@@ -1,0 +1,12 @@
+{
+  "providerResidualFunctionAndTailByteIdentical": true,
+  "review": "No blocking P1/P2 found in candidate patch; construction precedes one initial proof, Failed terminal, Unsupported legacy retains original Q; final ledger checks actual E/S/Q identities, explicit source origins, original ranges, sense, tolerance and incidence counts; external history/deviation commit only after final proof.",
+  "limits": "Static review and tests do not prove whole mapped carrier vs original callback; remaining S fit uses sampled validation. Unsupported family remains legacy sampled. No production hook or new ledger API added.",
+  "candidateHashes": {
+    "fk_sheet_join_validation.cpp": "15e314c0f54241ab8d682290db24065e1a033ed430c6e54474ead062b84f258a",
+    "fk_surface_curve_bounds.cpp": "24b34d948e7834caf261c8c8e733de067a24795738aae31ac6749390cc9a2c28",
+    "fk_surface_curve_bounds.h": "6f2256143a51864b01d903ab1daa08570c802a69226d33cb6c76b7842000ea41",
+    "fk_surface_mapping.cpp": "019423a02a6504b3d6e1d659ba9b3b0707397878d5b8bad3340efd52f2b45d3a"
+  },
+  "testSha256": "ee301ceaf193008457b263c13ce36fe9c0fbf3e75011bcbcea5ead3bd1af75e3"
+}

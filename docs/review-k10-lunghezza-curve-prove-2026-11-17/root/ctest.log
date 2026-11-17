@@ -1,0 +1,56 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 219
+    Start 219: forgekernel_bspline_derivative_tests
+
+219: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_bspline_derivative_tests
+219: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+219: Test timeout computed to be: 30
+219: [  OK  ] BSplinePolynomialDerivativesRemainAccurateAfterTranslation
+219: [  OK  ] BSplinePolynomialDerivativesPreserveOneSidedKnotLimits
+219: [  OK  ] BSplineDenseTranslatedLengthConvergesWithoutChangingTolerance
+219: 3/3 test superati
+1/3 Test #219: forgekernel_bspline_derivative_tests ......   Passed    0.00 sec
+test 257
+    Start 257: forgekernel_sheet_arc_validation_tests
+
+257: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_sheet_arc_validation_tests
+257: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+257: Test timeout computed to be: 120
+257: [  OK  ] SheetArcZeroSpeedCannotPublishShortReach
+257: [  OK  ] SheetArcRegularCurveCannotPublishExhaustedNewtonReach
+257: [  OK  ] SheetArcNaturalPositiveDistancesUsePhysicalReach
+257: [  OK  ] SheetArcOppositeDirectionAndPoseScaleKeepPhysicalReach
+257: [  OK  ] SheetArcLinearAndCylinderControlsKeepTheirPhysicalContract
+257: [  OK  ] SheetArcCancellationDoesNotPublishOrMutateInput
+257: 6/6 test superati
+2/3 Test #257: forgekernel_sheet_arc_validation_tests ....   Passed    0.00 sec
+test 258
+    Start 258: forgekernel_arc_length_validation_tests
+
+258: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_arc_length_validation_tests
+258: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+258: Test timeout computed to be: 30
+258: [  OK  ] ArcLengthSafeControls
+258: [  OK  ] ArcLengthCancellationPreset
+258: [  OK  ] ArcLengthReparametrizedSpeedsKeepPhysicalLength
+258: [  OK  ] ArcLengthNonfiniteDerivativeIsRejected
+258: [  OK  ] ArcLengthInvalidRangesAreRejected
+258: [  OK  ] ArcLengthCachedFailuresDoNotPoisonFiniteEntries
+258: 6/6 test superati
+3/3 Test #258: forgekernel_arc_length_validation_tests ...   Passed    0.00 sec
+
+The following tests passed:
+	forgekernel_bspline_derivative_tests
+	forgekernel_sheet_arc_validation_tests
+	forgekernel_arc_length_validation_tests
+
+100% tests passed out of 3
+
+Total Test time (real) =   0.01 sec

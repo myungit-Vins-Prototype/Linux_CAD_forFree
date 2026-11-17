@@ -1,0 +1,54 @@
+{
+  "commands.txt": {
+    "sha256": "17704f721a8dfa9f443fc68090bcd6422eed9b6b025f35edca2880a428506a1c",
+    "bytes": 856
+  },
+  "HANDOFF.md": {
+    "sha256": "9a31b16928851d1bdb8dbd2e1105da5d2ad005eb6f01a2f5420a6501ae6a372b",
+    "bytes": 2097
+  },
+  "static-verification.json": {
+    "sha256": "21f037e99d4ba3503c4d9a56ff53e3c4feb5ee39140841431317782b665ddf7c",
+    "bytes": 693
+  },
+  "after-occurrences.txt": {
+    "sha256": "d6fd9e122d8197d7fb0fc7c38dbfca9d70bc2e3d987a188be95564ac0d9c9109",
+    "bytes": 86
+  },
+  "source-manifest.json": {
+    "sha256": "61e131eda679455f1882fcd3f939a6635752a5ecfe136fab228bf477380214a0",
+    "bytes": 732
+  },
+  "graph-evidence.json": {
+    "sha256": "16cbf34a3d618dd21f384996a988a51ab548956c6a8ab789c9d725c48c14a2bf",
+    "bytes": 7649
+  },
+  "preserved-paths.txt": {
+    "sha256": "adfb347d186841966b05ce9b7eeabaea8ae2a30d3c1e759439814c5897e8059e",
+    "bytes": 2641
+  },
+  "baseline-occurrences.txt": {
+    "sha256": "2fe42b1ff714d045aa65b666970823b5b13c62d63159fcb41ace0bebc7f87351",
+    "bytes": 925
+  },
+  "extend-api-cleanup.patch": {
+    "sha256": "a8986609d578ccbceb41a2458f57b689653f0355c0a056f33540c7ab8a3fc308",
+    "bytes": 2822
+  },
+  "after/forgeCad2026_viewport_selection.cpp": {
+    "sha256": "fdebd58819cd46dfdc56e3a32876ff72c021944e19677e0571974f68c132d6b9",
+    "bytes": 106597
+  },
+  "after/forgeCad2026_viewport.h": {
+    "sha256": "68f944cb2aa67f2769c3f9622bb93c2e7064a1e2e2ca87fcb797bfc6c1c5f2e0",
+    "bytes": 105581
+  },
+  "before/forgeCad2026_viewport_selection.cpp": {
+    "sha256": "9ef5c603294813cb10edb850ef2177ecf16833e52998fcae24381dfe3a86b02e",
+    "bytes": 107284
+  },
+  "before/forgeCad2026_viewport.h": {
+    "sha256": "b9a801c6152f9723550a7e001209b8333ea2db4d4ab23709bc59c909b83e1d9d",
+    "bytes": 106016
+  }
+}

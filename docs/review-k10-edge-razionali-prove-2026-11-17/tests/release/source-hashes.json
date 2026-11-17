@@ -1,0 +1,11 @@
+{
+  "/tmp/k10-rational-edge-review/core/kernel/fk_surface_curve_bounds.cpp": "32b161a97903c5ca746a87b3bde59fb3c79566316d0f274a189127cc396f62e6",
+  "/tmp/k10-rational-edge-review/tests/test_surface_curve_rational_edges.cpp": "02f46f1e958939c040b396eae43a5b02fddb92babb78a8f74aa0c88bae865796",
+  "/tmp/k10-rational-edge-review/tests/test_surface_curve_bounds.cpp": "8f668fdad4f252f330d74d0dcb1d3eed365db6e5f9e6b3bdb303908be3f1e670",
+  "/tmp/k10-rational-edge-review/tests/test_surface_curve_instances.cpp": "d5f1dab3b182762a9be67302f4a24750e42257e8adf840ab335911e990eceac5",
+  "/home/myungit/Linux_CAD_forFree/kernel/tests/test_surface_curve_rational.cpp": "369e095a4c716f3c58957bd05ddb605222d4e2fd2ab1f7b6b3d95600fd01594a",
+  "/home/myungit/Linux_CAD_forFree/kernel/tests/test_sheet_join_ledger.cpp": "c05a59e5a4a532e37608dffec943e0f4f19d1821d9033dac8a735127b1b03740",
+  "/home/myungit/Linux_CAD_forFree/kernel/tests/test_mapping_nonplane_validation.cpp": "ee301ceaf193008457b263c13ce36fe9c0fbf3e75011bcbcea5ead3bd1af75e3",
+  "/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp": "d4e8174aa18faf0d899dd5731be71f6029fa9113a8eab6385f7151a44f57e70c",
+  "/tmp/k10-rational-edge-review/core/kernel/fk_surface_curve_bounds.h": "b6ccad5f246b08c9e69523e485f978600b51ae46104d64d12b18c53dbd487d00"
+}

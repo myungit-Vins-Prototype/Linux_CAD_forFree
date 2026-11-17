@@ -1,0 +1,29 @@
+{
+  "verdict": "No static blocker within the authorized two-file scope",
+  "candidate": {
+    "fk_curve_algo.cpp": "8ceb22befce610f835a9271ca88b497470a5ba2497210d94cbb8867bccfa3400",
+    "fk_curve_length_cache.h": "d9f5a424ffc931bae46b818b6bcff644ca06376dabbb9c301ba8ce423f9aa1e0"
+  },
+  "changes": [
+    "Cancellation before domain accessor and speed evaluation, breakpoint scan and span work",
+    "Reject nonfinite width, sample parameter, derivative, speed, integral or running total",
+    "Old sqrt(dot(d1,d1)) path retained whenever squared speed is normal",
+    "Componentwise zero check followed by hypot2/hypot3 only for zero/subnormal/infinite squared speed",
+    "Private cache mirrors speed algorithm; local put follows finite integral and whole put follows finite total"
+  ],
+  "preserved": [
+    "No tolerance preflight; legacy tolerance 0, negative, NaN and +Inf policy unchanged",
+    "No d0 check because speed only needs d1",
+    "No quadrature/header/public-API change; no new depth/work cap or interval slack",
+    "Ordinary speed arithmetic, span tolerance, sum order, counters and eviction unchanged",
+    "No entire-get transactional guarantee: valid earlier spans and statistics can remain when a later span fails"
+  ],
+  "runtimeAttribution": "All C++ baseline/watchdog executions copied here belong to ROOT; this auditor performed no compile, C++ execution, pathological loop, archive copy or repository edit",
+  "limits": [
+    "Exact Fraction oracle proves derivative and true length for two dyadic native linear BSplines only",
+    "Python hypot scalar result is not the C++ candidate runtime result",
+    "Adaptive Gauss-Kronrod error remains an estimate, not an interval certificate or global convergence guarantee",
+    "Nonfinite sample arguments and truly unrepresentable derivatives/speeds can be conservatively rejected rather than repaired",
+    "No ordinary user CAD-body failure or whole CAD operation guarantee claimed"
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "head": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "scope": "Three orphan application utilities; declarations/definitions and their own comments only; adjacent separator blank lines retained/removed for local function boundary.",
+  "files": [
+    {
+      "file": "cad_forge.h",
+      "baselineSha256": "f725765a2b70fdf565ace78b16947c7b895cbdb1ef3ee85b0587ea6c5416d681",
+      "afterSha256": "9903e27c3cf343483e4212adb6e66f2b8f52887f8672ee05be901b26d0d3301f",
+      "baselineMatchesWorkingTree": true,
+      "baselineMatchesGraph": true,
+      "bytesBefore": 17885,
+      "bytesAfter": 17637
+    },
+    {
+      "file": "cad_forge.cpp",
+      "baselineSha256": "c653afdef3979afc00ed9790b3cc35a5c270cb09235d6d63138df3bc03388fcd",
+      "afterSha256": "162ec8234a117fbb24da7b1e0c7bd6047cee35090a93e075d2bf9c3155b28b2f",
+      "baselineMatchesWorkingTree": true,
+      "baselineMatchesGraph": true,
+      "bytesBefore": 130693,
+      "bytesAfter": 130220
+    },
+    {
+      "file": "cad_sketch_refs.h",
+      "baselineSha256": "1b7980daf35c5279b4e5219b8c66cd6ebc0f0b5f4edbf45c7a9176afe9372cfa",
+      "afterSha256": "6ad95627dd114d372b8463d4ad079443f64b5ce9c8c09ac78231fec435d91212",
+      "baselineMatchesWorkingTree": true,
+      "baselineMatchesGraph": true,
+      "bytesBefore": 5716,
+      "bytesAfter": 5315
+    },
+    {
+      "file": "cad_sketch_refs.cpp",
+      "baselineSha256": "d13ec3cedff473b9df99a47f2f2d30bf8e5df7aee08033aa7db4ba73c453139e",
+      "afterSha256": "3dc1136afff94fc7db190761fc6adb6a2f9ffd5f16434a85976b5387e317c04f",
+      "baselineMatchesWorkingTree": true,
+      "baselineMatchesGraph": true,
+      "bytesBefore": 58443,
+      "bytesAfter": 56847
+    }
+  ],
+  "patchSha256": "d71d646c8851edb41129541cbdca629ac1c601d1106b6d932384548b46b9ae17",
+  "buildsRun": false,
+  "testsRun": false,
+  "newTests": false,
+  "repositoryWritesByThisAgent": false
+}

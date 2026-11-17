@@ -1,0 +1,321 @@
+{
+  "removed": [
+    {
+      "path": "/tmp/k10-instance-carrier-review/audit/export-public-instance",
+      "sha256": "d88d6a0f4d71dabe565e23a8e11dbc18da173cd977672aac6bfe925faa65810a",
+      "bytes": 60483400
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/audit/export-public-instance.o",
+      "sha256": "491236907301590f1245c6b09182e55b02a93f8592f6ae41ccaac32c91991225",
+      "bytes": 123544
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/leak-calibration",
+      "sha256": "b06299f68429ea3834879229e3173b2ae0a47e2d9e302ee9199eac71d3546303",
+      "bytes": 81400
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/candidate-probe",
+      "sha256": "9620d158ff0a3efbfa4b9cf24aa0d2f5c74aaabf25e46e4d655804c8da7eea90",
+      "bytes": 61411576
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/baseline-tests-final",
+      "sha256": "bf24680ef9987f71d8802de76ea9cfa30cc55637db4663f3701494b8b31bee7f",
+      "bytes": 62065088
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/baseline-tests",
+      "sha256": "f2314df363cffe4afc0f6d894e005de859255f89d35e49ec3598b4af273a7aff",
+      "bytes": 62068088
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/baseline-probe",
+      "sha256": "9ce24b5ba928c03799edebc27b41c510bea7a925bb2f27c2f5172e4b2f8e64de",
+      "bytes": 61392464
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/asan/instance-tests",
+      "sha256": "b16455359e95084425af985ee475b7c93af2c962754b8e814cba9ca337936e58",
+      "bytes": 78458776
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/asan/test_sheet_join_ledger.o",
+      "sha256": "bc6f9d87b678179edf3c4f1845283c58ce5d8938870163a611101db893f725d8",
+      "bytes": 5816752
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/asan/fk_test_main.o",
+      "sha256": "a2e50467af355ea050ba29d0d397e8b4ff4ba1b81dc7b84b7287e16ebe060c37",
+      "bytes": 219072
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/asan/test_mapping_nonplane_validation.o",
+      "sha256": "f6bece9fd5992a2a449883c791e3a2b550d0c53a958494b256228d76125270ae",
+      "bytes": 3820512
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/asan/test_surface_curve_rational.o",
+      "sha256": "33e94613525b66bf52ea5a7ba4a8b4889679bfc83c15dc1ba68becde53c5e26f",
+      "bytes": 2822760
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/asan/test_surface_curve_bounds.o",
+      "sha256": "8c70166a67761788f3bda223935f46c3e053f599ddaa80790058dea0708c0e92",
+      "bytes": 3321256
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/asan/fk_surface_curve_bounds.o",
+      "sha256": "32fee5cf5d900144c24bb5f35f6d5f702006d01de175b757a7bf2de4785ab8f0",
+      "bytes": 3781464
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/asan/test_surface_curve_instances.o",
+      "sha256": "998f7e367ff7098dca2308c8d139b9ccd2da9e9f2f3841ad19faf8bb561c23f7",
+      "bytes": 4740224
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/release-v1-7tests/fk_surface_curve_bounds.o",
+      "sha256": "1a6752aa8abe43da1d0655dc9d83d8c34856c3f847e87550fe50596a9495de54",
+      "bytes": 1146072
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/release-v1-7tests/test_surface_curve_instances.o",
+      "sha256": "38721d8a468632dfc7b006fc6899504fa232b1dbca3a50509bc3099da287e43d",
+      "bytes": 2585936
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/release-v1-7tests/test_surface_curve_bounds.o",
+      "sha256": "6e508632467ac766edcc9d7083158196b7fb79d9b3f9419e84c8f3e7cf17259c",
+      "bytes": 2205520
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/release-v1-7tests/test_surface_curve_rational.o",
+      "sha256": "bc1d4af7d4097cde612f517aceb2ed6bc93d050b8ce64b11af36be29dfe48c9d",
+      "bytes": 1686784
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/release-v1-7tests/test_mapping_nonplane_validation.o",
+      "sha256": "bd5933b01f0f19bb02bca2362183c967f06e6a4a28f1133eb1c2c75ba197ae96",
+      "bytes": 2075384
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/release-v1-7tests/test_sheet_join_ledger.o",
+      "sha256": "4f1b6f10e81c9e5563ab69e31d7639ab02f74c03171664dcafe6b4abd591f655",
+      "bytes": 2808904
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/release-v1-7tests/fk_test_main.o",
+      "sha256": "1b76143dee028611b7ba179631fcb54c05e9d7b6ce7281d22db40771f4dc72cc",
+      "bytes": 108000
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/release-v1-7tests/instance-tests",
+      "sha256": "a6f04d3ddb27d7f0f17b9096e47260acc865bef75547c1fd68b57588c23d2bcf",
+      "bytes": 68677416
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/release/instance-tests",
+      "sha256": "fe00c44488d0c7cfd5695b8531e2f80bdb69f20f46193d781eefa85f4d112d37",
+      "bytes": 68674280
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/release/fk_test_main.o",
+      "sha256": "1b76143dee028611b7ba179631fcb54c05e9d7b6ce7281d22db40771f4dc72cc",
+      "bytes": 108000
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/release/test_sheet_join_ledger.o",
+      "sha256": "4f1b6f10e81c9e5563ab69e31d7639ab02f74c03171664dcafe6b4abd591f655",
+      "bytes": 2808904
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/release/test_mapping_nonplane_validation.o",
+      "sha256": "bd5933b01f0f19bb02bca2362183c967f06e6a4a28f1133eb1c2c75ba197ae96",
+      "bytes": 2075384
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/release/test_surface_curve_rational.o",
+      "sha256": "bc1d4af7d4097cde612f517aceb2ed6bc93d050b8ce64b11af36be29dfe48c9d",
+      "bytes": 1686784
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/release/test_surface_curve_bounds.o",
+      "sha256": "6e508632467ac766edcc9d7083158196b7fb79d9b3f9419e84c8f3e7cf17259c",
+      "bytes": 2205520
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/release/test_surface_curve_instances.o",
+      "sha256": "7825269375f0fd6c8d75339e7740713ecb86c08162b65f549218c5e0d29c577a",
+      "bytes": 2569120
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/release/fk_surface_curve_bounds.o",
+      "sha256": "1a6752aa8abe43da1d0655dc9d83d8c34856c3f847e87550fe50596a9495de54",
+      "bytes": 1146072
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/leak-calibration",
+      "sha256": "6f2156a17d87733d0816395b42a7b02d2db2250777c99c713339dea58ef5a3e4",
+      "bytes": 81392
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/export-originals",
+      "sha256": "2e5023ae384dbdb4a1d3063eb6d7c6f228af4acb9dcd48433e195b396f787f56",
+      "bytes": 53123616
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/candidate-new-tests",
+      "sha256": "b82c43eef434abbd53f5729052e82f3fcb87f5ba70930e752fb41fd3346a6f26",
+      "bytes": 55720136
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/new.o",
+      "sha256": "375023f5ffafdbdc65bb666480b15d7b5ef8b28e008745d1c4865c6d79890e62",
+      "bytes": 2106320
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/baseline-tests",
+      "sha256": "52003fd8dd4fe60c8041300f0425c8e5f7b1aff7e732b1d594e3057a2b9febaf",
+      "bytes": 56276416
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/main.o",
+      "sha256": "09b83203e841c5a8ecfc8e1d781dcf77c1539760383c2bc0d49803ec76cd84ac",
+      "bytes": 107936
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/audit/final-actual-ledger",
+      "sha256": "ddee17177bac512f86d1da20c7bec0bb4be094c84e8b3426feeff16b09536ece",
+      "bytes": 55137768
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/audit/baseline-actual-ledger",
+      "sha256": "0885464b199595706aff089f1b7c64cad9fd73e929ff53d077970eb394bca198",
+      "bytes": 55059896
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/audit/export-actual-ledger.o",
+      "sha256": "efba97d7b2babd2548f9890c0d7e5effc90553a5b9f2ed68d01527a6133f411e",
+      "bytes": 127104
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/core/poly-candidate",
+      "sha256": "17d30435a3effe52f1524a1acb311bb98a750b8058000636f3488e042dd2ae1a",
+      "bytes": 61172672
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/core/poly-baseline",
+      "sha256": "f07218d502933d1df3a9c4d241dff59c88aa18a842c2913950b7a47d190a237c",
+      "bytes": 61820088
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/core/probe",
+      "sha256": "e98e095c0f1bd3f0c9145b2e752cafc96bc41c24af6abb9cad46fca44b1680e8",
+      "bytes": 3222480
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/core/provider.o",
+      "sha256": "fdd0c9a5fcaee747aadc553f9f745d6c0a3cbdf2425fafb0efd158277ca59a68",
+      "bytes": 157272
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/asan/rational-edge-tests",
+      "sha256": "bda01bc1ddb4e6f374fcb5c78960583355ed1d2fd1c67dbb6e375812401d62f3",
+      "bytes": 81291344
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/asan/test_sheet_join_ledger.o",
+      "sha256": "bc6f9d87b678179edf3c4f1845283c58ce5d8938870163a611101db893f725d8",
+      "bytes": 5816752
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/asan/fk_test_main.o",
+      "sha256": "a2e50467af355ea050ba29d0d397e8b4ff4ba1b81dc7b84b7287e16ebe060c37",
+      "bytes": 219072
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/asan/test_mapping_nonplane_validation.o",
+      "sha256": "ac3d4d1690bd862f82fcd57b2cb0394ee61e898fd1a75375dafc79491f18c30f",
+      "bytes": 3820496
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/asan/test_surface_curve_instances.o",
+      "sha256": "560042a93cb8c014d66cbbaa4a8b621b8394a79dc2b435f73157771dbd59a536",
+      "bytes": 4740200
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/asan/test_surface_curve_rational.o",
+      "sha256": "b04e6b03a05d5a0a4e78aa3e5107167d4dfeb9b7faf1434eed3cafb5b322433a",
+      "bytes": 2822752
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/asan/test_surface_curve_bounds.o",
+      "sha256": "2181a99f1da9ffd95bef7996ff5dee7c9a68039be2dae00e78c9c713683a00f0",
+      "bytes": 3322760
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/asan/fk_surface_curve_bounds.o",
+      "sha256": "76f7fdbbb6b84bf6e33a4247ef17c02aa279dac021a73bae6cc1394e17e3e9a5",
+      "bytes": 4181712
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/asan/test_surface_curve_rational_edges.o",
+      "sha256": "4cfe63af728f7555ad572b41d765a0a994f0d1d73c3fa677befcfc5fb423c8df",
+      "bytes": 3857552
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/release/baseline-final-tests",
+      "sha256": "14300246ea17aa37eaa8e7da1f914c0bdf323dad8b08b028e35007adfd453cbb",
+      "bytes": 56363456
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/release/rational-edge-tests",
+      "sha256": "276beff8ec2abb7520e5a654a2ed60251be51184cb65dd9a3ca3d948ad7aebed",
+      "bytes": 69994560
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/release/test_mapping_nonplane_validation.o",
+      "sha256": "265c9d51f68364354362e25c19e40cb3c81575156b463489969e7043536c9ddc",
+      "bytes": 2075384
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/release/fk_test_main.o",
+      "sha256": "1b76143dee028611b7ba179631fcb54c05e9d7b6ce7281d22db40771f4dc72cc",
+      "bytes": 108000
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/release/test_sheet_join_ledger.o",
+      "sha256": "4f1b6f10e81c9e5563ab69e31d7639ab02f74c03171664dcafe6b4abd591f655",
+      "bytes": 2808904
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/release/test_surface_curve_rational.o",
+      "sha256": "733a850dd63473924e0189cc82d79d5e4a52de72ee96b960ee6f0e047835ebe7",
+      "bytes": 1686776
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/release/test_surface_curve_instances.o",
+      "sha256": "7cf7aa70e2e3b62df49e5c24d9ae4a13e5073c94c26e6c1dd0e63552a7cca909",
+      "bytes": 2569008
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/release/test_surface_curve_bounds.o",
+      "sha256": "07b94a52e8d776f2e07c5185f103da7e8198f23f167f1249adbffa298e91648a",
+      "bytes": 2203728
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/release/test_surface_curve_rational_edges.o",
+      "sha256": "c2f0298d601ad2b010d8840a8a37c020835367b3149886c6cdc8014de5d3ab83",
+      "bytes": 2106320
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/tests/release/fk_surface_curve_bounds.o",
+      "sha256": "7d0dda45a089345aa1567be67c189c7d245931d62db9fc47fd1c922f6c1556a2",
+      "bytes": 1242272
+    }
+  ],
+  "bytes_freed": 1228518600,
+  "scope": "Only own completed previous-stage ELF executables/objects; no source/log/JSON/CAD/archives/repository/sealed evidence touched"
+}

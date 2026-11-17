@@ -1,0 +1,17 @@
+{
+  "exit": 8,
+  "seconds": 178.1362370620045,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "--parallel",
+    "1",
+    "--output-junit",
+    "/tmp/k10-offset-pose-review/root/ctest.xml",
+    "-V",
+    "-R",
+    "^(forgekernel_shell_pose_tests|forgekernel_offset_validation_tests|forgekernel_curve_fit_validation_tests|forgekernel_offset_pcurve_tests|forgekernel_offset_split_crease_tests|forgekernel_edge_offset_fit_validation_tests|forgekernel_surface_curve_fit_validation_tests|forgekernel_boundary_fit_validation_tests|forgekernel_sheet_join_validation_tests|forgekernel_surface_curve_bounds_tests|forgekernel_sheet_fit_validation_tests|forgekernel_blend_cavity_tests|forgekernel_blend_cavity_regression_tests|forgekernel_blend_contact_break_tests|forgekernel_history_tests|forgekernel_surface_tools_tests|forgekernel_surface_parameterization_tests|forgecad_surface_tools_tests|forgecad_extension_panel_tests|forgecad_all_history_tests|forgecad_blend_history_tests)$"
+  ]
+}

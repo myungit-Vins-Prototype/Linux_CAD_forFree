@@ -1,0 +1,15 @@
+ M CLAUDE.md
+ M cad_drawing_editor.cpp
+ M cad_drawing_editor.h
+ M cad_drawing_window.cpp
+ M cad_forge.cpp
+ M cad_forge.h
+ M cad_sketch_refs.cpp
+ M cad_sketch_refs.h
+ M docs/code-review-2026-11-15.md
+ M forgeCad2026_viewport.h
+ M forgeCad2026_viewport_selection.cpp
+ M tools/generate_architecture.py
+?? docs/history/claude-prima-legacy-api-2026-11-16.md
+?? docs/review-legacy-api-2026-11-16.md
+?? docs/review-legacy-api-prove-2026-11-16/

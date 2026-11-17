@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/usr/bin/c++",
+    "-std=c++17",
+    "-O2",
+    "-g",
+    "-ffp-contract=off",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "/tmp/k10-quadrant-review/root/probe.cpp",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+    "-pthread",
+    "-o",
+    "/tmp/k10-quadrant-review/root/baseline-probe"
+  ],
+  "exit": 0,
+  "seconds": 0.6651913550012978
+}

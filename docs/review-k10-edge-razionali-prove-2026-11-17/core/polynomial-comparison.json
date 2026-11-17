@@ -1,0 +1,24 @@
+{
+  "finRecords": 48,
+  "comparisons": [
+    {
+      "baseline": "poly-baseline.jsonl",
+      "candidate": "poly-candidate.jsonl",
+      "byteEqual": true,
+      "baselineSha256": "47fa8415739cc50816edf303b77d63a8231d236754b136b694edbdb90714f4bb",
+      "candidateSha256": "47fa8415739cc50816edf303b77d63a8231d236754b136b694edbdb90714f4bb",
+      "comparison": "cmp",
+      "exitCode": 0
+    },
+    {
+      "baseline": "poly-baseline.log",
+      "candidate": "poly-candidate.log",
+      "byteEqual": true,
+      "baselineSha256": "ba68b0d0c55519c965ab2c4e95905b9494761710f9808754300d29c23315fc48",
+      "candidateSha256": "ba68b0d0c55519c965ab2c4e95905b9494761710f9808754300d29c23315fc48",
+      "comparison": "cmp",
+      "exitCode": 0
+    }
+  ],
+  "limitation": "Same public cylinder/NURBS driver; does not prove all possible polynomial-family outputs."
+}

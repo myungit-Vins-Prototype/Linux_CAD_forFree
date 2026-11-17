@@ -1,0 +1,96 @@
+--- a/kernel/fk_quadrature.h
++++ b/kernel/fk_quadrature.h
+@@ -227,6 +227,8 @@
+ 
+ // Accettato se per ogni componente l'errore stimato e' sotto la tolleranza
+ // o sotto l'arrotondamento (`roundoff` volte l'integrale della grandezza).
++// Solo le prime `controlled` componenti guidano il raffinamento; tutte
++// restano valutate e devono essere finite. Per default sono controllate tutte.
+ // Se la bisezione non riduce l'errore (i due figli insieme ne hanno almeno 3/4,
+ // mentre su un integrando liscio cala di ordini di grandezza) e l'errore e'
+ // gia' vicino all'arrotondamento, l'intervallo e' dominato dal rumore
+@@ -236,14 +238,16 @@
+ // senza questo controllo la bisezione percorrerebbe l'albero intero fino alla
+ // profondita' massima (2^30 intervalli).
+ template <std::size_t N, class F>
+-Evaluation<N> adaptivePanel(const F &f, const Panel<N> &p, const Values<N> &tolerance, double roundoff, int depth) {
++Evaluation<N> adaptivePanel(const F &f, const Panel<N> &p, const Values<N> &tolerance, double roundoff, int depth,
++                            std::size_t controlled = N) {
++    if (controlled > N) throw std::domain_error("quadratura: numero di componenti controllate non valido");
+     if (!std::isfinite(p.a) || !std::isfinite(p.b)) throw std::domain_error("quadratura: estremi non finiti");
+     for (std::size_t k = 0; k < N; ++k)
+         if (!std::isfinite(p.integral.value[k]) || !std::isfinite(p.integral.magnitude[k])
+             || p.integral.magnitude[k] < 0.0 || !std::isfinite(p.error[k]) || p.error[k] < 0.0)
+             throw std::domain_error("quadratura: pannello non finito o non valido");
+     bool accepted = true, nearRoundoff = true;
+-    for (std::size_t k = 0; k < N && depth < 30; ++k) {
++    for (std::size_t k = 0; k < controlled && depth < 30; ++k) {
+         const double floor = roundoff * p.integral.magnitude[k];
+         if (p.error[k] <= tolerance[k] || p.error[k] <= floor) continue;
+         accepted = false;
+@@ -254,7 +258,7 @@
+     if (middle == p.a || middle == p.b) throw std::domain_error("quadratura: suddivisione non rappresentabile");
+     const Panel<N> left = panel<N>(f, p.a, middle), right = panel<N>(f, middle, p.b);
+     bool noise = nearRoundoff;
+-    for (std::size_t k = 0; k < N && noise; ++k) {
++    for (std::size_t k = 0; k < controlled && noise; ++k) {
+         const double floor = roundoff * p.integral.magnitude[k];
+         if (p.error[k] <= tolerance[k] || p.error[k] <= floor) continue;
+         const double combinedError = left.error[k] + right.error[k];
+@@ -274,8 +278,8 @@
+     }
+     Values<N> halfTolerance;
+     for (std::size_t k = 0; k < N; ++k) halfTolerance[k] = 0.5 * tolerance[k];
+-    result = adaptivePanel<N>(f, left, halfTolerance, roundoff, depth + 1);
+-    const Evaluation<N> second = adaptivePanel<N>(f, right, halfTolerance, roundoff, depth + 1);
++    result = adaptivePanel<N>(f, left, halfTolerance, roundoff, depth + 1, controlled);
++    const Evaluation<N> second = adaptivePanel<N>(f, right, halfTolerance, roundoff, depth + 1, controlled);
+     for (std::size_t k = 0; k < N; ++k) {
+         result.value[k] += second.value[k];
+         result.magnitude[k] += second.magnitude[k];
+@@ -294,16 +298,19 @@
+ // all'integrale di |f_k| (stimato con una prima regola 7-15), che e' la
+ // misura giusta anche quando i contributi si cancellano, oppure errore sotto
+ // `roundoff` volte l'integrale della grandezza. Restituisce anche
+-// l'integrale delle grandezze.
+-template <std::size_t N, class F>
+-Evaluation<N> integrateVector(const F &f, double a, double b, double relativeTolerance, double roundoff) {
++// l'integrale delle grandezze. `controlled` limita soltanto le componenti
++// che guidano l'adattamento, non i controlli di finitezza.
++template <std::size_t N, class F>
++Evaluation<N> integrateVector(const F &f, double a, double b, double relativeTolerance, double roundoff,
++                              std::size_t controlled = N) {
++    if (controlled > N) throw std::domain_error("quadratura: numero di componenti controllate non valido");
+     Panel<N> first;
+     first.a = a;
+     first.b = b;
+     Values<N> absolute, tolerance;
+     gaussKronrod<N>(f, a, b, first.integral, first.error, absolute);
+     for (std::size_t k = 0; k < N; ++k) tolerance[k] = relativeTolerance * absolute[k];
+-    return adaptivePanel<N>(f, first, tolerance, roundoff, 0);
++    return adaptivePanel<N>(f, first, tolerance, roundoff, 0, controlled);
+ }
+ 
+ }
+--- a/kernel/fk_mass.cpp
++++ b/kernel/fk_mass.cpp
+@@ -514,17 +514,17 @@
+             out.magnitude[k] = (g.magnitude[k] + local.magnitude[k] * vExtent) * duMagnitude;
+         }
+         // Servono solo a contare gli avvolgimenti: non guidano la quadratura.
++        // La grandezza resta zero; il chiamante limita le componenti controllate.
+         out.value[11] = du;
+         out.value[12] = uv[1] * du;
+         out.value[13] = dv;
+-        for (std::size_t k = kFaceValues; k < kLoopValues; ++k) out.magnitude[k] = HUGE_VAL;
+         return out;
+     };
+     LoopValues total{};
+     const std::vector<double> breaks = track.curve->breakpoints(track.range);
+     for (std::size_t i = 0; i + 1 < breaks.size(); ++i) {
+         spanWidth = breaks[i + 1] - breaks[i];
+-        const LoopEvaluation piece = detail::integrateVector<kLoopValues>(f, breaks[i], breaks[i + 1], tolerance_, kLoopRoundoff);
++        const LoopEvaluation piece = detail::integrateVector<kLoopValues>(f, breaks[i], breaks[i + 1], tolerance_, kLoopRoundoff, kFaceValues);
+         for (std::size_t k = 0; k < kLoopValues; ++k) total[k] += piece.value[k];
+     }
+     if (!track.sense)

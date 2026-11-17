@@ -1,0 +1,11 @@
+from pathlib import Path
+import json,hashlib
+T=Path('/tmp/k10-quadrature-review/root');items=[]
+for p in T.rglob('*'):
+ if not p.is_file():continue
+ with p.open('rb') as f:magic=f.read(8)
+ if magic[:4]==b'\x7fELF' or magic==b'!<arch>\n':items.append({'path':str(p.relative_to(T)),'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
+plan={'files':items,'bytes':sum(x['bytes'] for x in items),'scope':'only own completed /tmp/k10-quadrature-review/root staging; production build, sources, logs and CAD preserved'};p=T/'cleanup.json';assert not p.exists();p.write_text(json.dumps(plan,indent=2)+'\n')
+for x in items:
+ p=T/x['path'];assert hashlib.sha256(p.read_bytes()).hexdigest()==x['sha256'];p.unlink()
+print('Removed own completed staging',len(items),plan['bytes'],'bytes')

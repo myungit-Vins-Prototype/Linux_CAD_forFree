@@ -1,0 +1,12 @@
+{
+  "command": [
+    "cmake",
+    "-S",
+    ".",
+    "-B",
+    "forgecad-release"
+  ],
+  "exit": 0,
+  "seconds": 1.0428495139931329,
+  "watchdog_seconds": 600
+}

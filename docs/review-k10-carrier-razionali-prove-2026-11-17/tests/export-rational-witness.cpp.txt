@@ -1,0 +1,103 @@
+#include "/tmp/k10-next-review/tests/test_surface_curve_rational.cpp"
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <cstdlib>
+namespace {
+std::string number(double d) {
+    std::ostringstream o;
+    o << '"' << std::hexfloat << d << '"';
+    return o.str();
+}
+template <class T> void array(std::ostream &o, const T &v) {
+    o << '[';
+    bool sep = false;
+    for (auto x : v) {
+        if (sep)
+            o << ',';
+        sep = true;
+        o << number(x);
+    }
+    o << ']';
+}
+template <int N> void vector(std::ostream &o, const Vec<N> &v) {
+    o << '[';
+    for (int i = 0; i < N; ++i) {
+        if (i)
+            o << ',';
+        o << number(v[i]);
+    }
+    o << ']';
+}
+template <int N> void curveJson(std::ostream &o, const CurvePtr<N> &c) {
+    if (auto s = std::dynamic_pointer_cast<const BSplineCurve<N>>(c)) {
+        o << "{\"type\":\"bspline\",\"degree\":" << s->degree()
+          << ",\"knots\":";
+        array(o, s->knots());
+        o << ",\"poles\":[";
+        for (int i = 0; i < s->poleCount(); ++i) {
+            if (i)
+                o << ',';
+            vector(o, s->poles()[i]);
+        }
+        o << "],\"weights\":[";
+        for (int i = 0; i < s->poleCount(); ++i) {
+            if (i)
+                o << ',';
+            o << number(s->weight(i));
+        }
+        o << "]}";
+    } else if (auto l = std::dynamic_pointer_cast<const Line<N>>(c)) {
+        o << "{\"type\":\"line\",\"origin\":";
+        vector(o, l->origin());
+        o << ",\"direction\":";
+        vector(o, l->direction());
+        o << '}';
+    } else if (auto t = std::dynamic_pointer_cast<const TrimmedCurve<N>>(c)) {
+        o << "{\"type\":\"trimmed\",\"basis\":";
+        curveJson(o, t->basis());
+        o << '}';
+    } else
+        throw std::runtime_error("test export: unsupported curve wrapper");
+}
+void surfaceJson(std::ostream &o, const BSplineSurface &s) {
+    if (s.basis())
+        throw std::runtime_error(
+            "test export: instance would lose placement rounding");
+    o << "{\"uDegree\":" << s.uDegree() << ",\"vDegree\":" << s.vDegree()
+      << ",\"uKnots\":";
+    array(o, s.uKnots());
+    o << ",\"vKnots\":";
+    array(o, s.vKnots());
+    o << ",\"uPoleCount\":" << s.uPoleCount()
+      << ",\"vPoleCount\":" << s.vPoleCount() << ",\"poles\":[";
+    for (int i = 0; i < s.uPoleCount(); ++i)
+        for (int j = 0; j < s.vPoleCount(); ++j) {
+            if (i || j)
+                o << ',';
+            vector(o, s.pole(i, j));
+        }
+    o << "],\"weights\":[";
+    for (int i = 0; i < s.uPoleCount(); ++i)
+        for (int j = 0; j < s.vPoleCount(); ++j) {
+            if (i || j)
+                o << ',';
+            o << number(s.weight(i, j));
+        }
+    o << "]}";
+}
+}
+FK_TEST(ExportRationalHiddenPeakWitness) {
+    const char *path=std::getenv("K10_RATIONAL_WITNESS"); if(!path)return;
+    auto source=identityCarrier(3,3,{0,.201,.202,.203,1},{1,1.25,1.5,1.25,1});
+    auto uv=std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,1,1},std::vector<Vec2>{{0,0},{1,1}});
+    auto edge=std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,0,0,0,1,1,1,1},std::vector<Vec3>{{0,0,0},{1./3,1./3,0},{2./3,2./3,0},{1,1,0}});
+    std::vector<Vec3> poles; std::vector<double> weights;
+    for(int i=0;i<source->uPoleCount();++i)for(int j=0;j<source->vPoleCount();++j){auto point=source->pole(i,j);if(i==6)point[2]=1;poles.push_back(point);weights.push_back(source->weight(i,j));}
+    auto peak=std::make_shared<BSplineSurface>(3,3,source->uKnots(),source->vKnots(),source->uPoleCount(),source->vPoleCount(),poles,weights);
+    auto proof=detail::surfaceCurveResidualBound(edge,peak,uv,{0,1},1e-8);
+    FK_CHECK(proof.status==detail::SurfaceCurveBoundStatus::Failed);
+    std::ofstream out(path);
+    out<<"{\"scope\":\"synthetic-rational-carrier-node-counterexample\",\"records\":[{\"range\":["<<number(0)<<','<<number(1)<<"],\"budget\":"<<number(1e-8)<<",\"runtimeStatus\":\"Failed\",\"witnessT\":"<<number(.202)<<",\"witnessExactResidualZ\":\"1\",\"curve\":";
+    curveJson(out,CurvePtr<3>(edge));out<<",\"pcurve\":";curveJson(out,CurvePtr<2>(uv));out<<",\"surface\":";surfaceJson(out,*peak);out<<"}]}";
+}

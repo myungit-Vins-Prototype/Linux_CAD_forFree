@@ -1,0 +1,5679 @@
+{
+  "nodes": [
+    {
+      "id": "CMakeLists.txt",
+      "group": "build",
+      "description": "Definisce eseguibile e suite; libreria interna condivisa dai runner delle tavole e impronta geometrica limitata alla chiusura delle dipendenze del calcolo.",
+      "lines": 1066,
+      "symbols": []
+    },
+    {
+      "id": "cad_document_tabs.cpp",
+      "group": "startup",
+      "description": "Contenitore unico dei documenti 3D e 2D: pagine QMainWindow indipendenti, schede spostabili in alto/basso persistenti, apertura canonica senza duplicati, scorciatoie della pagina attiva, attivazione/accesso e pannelli flottanti. Chiusura con preflight di tutti i salvataggi e arresto asincrono del recupero 3D.",
+      "lines": 244,
+      "symbols": [
+        "ForgeCad::DocumentTabsWindow::DocumentTabsWindow",
+        "ForgeCad::DocumentTabsWindow::activateCurrent",
+        "ForgeCad::DocumentTabsWindow::activateDocument",
+        "ForgeCad::DocumentTabsWindow::addDocument",
+        "ForgeCad::DocumentTabsWindow::chooseDocument",
+        "ForgeCad::DocumentTabsWindow::closeDocument",
+        "ForgeCad::DocumentTabsWindow::closeEvent",
+        "ForgeCad::DocumentTabsWindow::continueClosing",
+        "ForgeCad::DocumentTabsWindow::documentClosed",
+        "ForgeCad::DocumentTabsWindow::event",
+        "ForgeCad::DocumentTabsWindow::findDocument",
+        "ForgeCad::DocumentTabsWindow::newModel",
+        "ForgeCad::DocumentTabsWindow::openPath",
+        "ForgeCad::DocumentTabsWindow::refreshDocumentActions",
+        "ForgeCad::DocumentTabsWindow::refreshTab",
+        "ForgeCad::DocumentTabsWindow::setTabsAtBottom",
+        "ForgeCad::DocumentTabsWindow::tabsAtBottom",
+        "ForgeCad::documentTabsWindow",
+        "ForgeCad::showDocumentWorkspace"
+      ]
+    },
+    {
+      "id": "cad_document_tabs.h",
+      "group": "startup",
+      "description": "Contenitore unico dei documenti 3D e 2D: pagine QMainWindow indipendenti, schede spostabili in alto/basso persistenti, apertura canonica senza duplicati, scorciatoie della pagina attiva, attivazione/accesso e pannelli flottanti. Chiusura con preflight di tutti i salvataggi e arresto asincrono del recupero 3D.",
+      "lines": 40,
+      "symbols": [
+        "ForgeCad::DocumentTabsWindow::closingAll",
+        "ForgeCad::DocumentTabsWindow::documentTabs"
+      ]
+    },
+    {
+      "id": "cad_drawing_editor.cpp",
+      "group": "drawing",
+      "description": "Editor della tavola: aggiornamento transazionale del modello tramite API coordinata dal contenitore; centri/assi su bordi selezionati e sezione locale con contorno/profondita, modificabile con quote e richiami associati senza bloccare le altre viste; raggio libero dal primo clic e leader corto per centro esterno; ricollegamento quote con snap, anteprima e conferma atomica; allineatori durante il primo posizionamento e il trascinamento, stato temporaneo riusato fra anteprime e conferma senza salto; snap fra punte coincidenti delle quote lineari/angolari con calcolo geometrico condiviso, priorit\u00e0 e indicatore lampeggiante; guide lampeggianti e aggancio direzionale dei testi di quota al vicino nel verso del movimento, annullamento e Undo al rilascio; quote trasparenti, frecce H/B, richiami obliqui e serie ordinate continue; scala comune del foglio e sorgente della scala per ogni vista, aggiornamento atomico di anteprime e dipendenze; selezione, posizionamento e comandi; inserimento atomico e anteprime di catene e ordinate, propriet\u00e0 e anteprime dei datum/cartigli geometrici e delle rugosit\u00e0 Ra/Rz e dei badge persistenti con scelta della prima quota e frecce nella viewport, incluse anteprime delle viste interrotte e sezioni rimosse a gradini multipli e allineate a due piani angolari; disegno e ridefinizione del taglio con mouse, centro e rami o percorso ortogonale, snap geometrici e anteprima annullabile.",
+      "lines": 3658,
+      "symbols": [
+        "ForgeCad::AxisItem::AxisItem",
+        "ForgeCad::AxisItem::boundingRect",
+        "ForgeCad::AxisItem::mouseDoubleClickEvent",
+        "ForgeCad::AxisItem::paint",
+        "ForgeCad::AxisItem::shape",
+        "ForgeCad::DimensionBadgeItem::DimensionBadgeItem",
+        "ForgeCad::DimensionBadgeItem::boundingRect",
+        "ForgeCad::DimensionBadgeItem::paint",
+        "ForgeCad::DimensionBadgeItem::place",
+        "ForgeCad::DrawingPageItem::DrawingPageItem",
+        "ForgeCad::DrawingPageItem::boundingRect",
+        "ForgeCad::DrawingPageItem::paint",
+        "ForgeCad::DrawingSheetEditor::DrawingSheetEditor",
+        "ForgeCad::DrawingSheetEditor::Impl::Impl",
+        "ForgeCad::DrawingSheetEditor::Impl::ScaleControls::apply",
+        "ForgeCad::DrawingSheetEditor::Impl::ScaleControls::customValue",
+        "ForgeCad::DrawingSheetEditor::Impl::ScaleControls::effective",
+        "ForgeCad::DrawingSheetEditor::Impl::addDatum",
+        "ForgeCad::DrawingSheetEditor::Impl::addViewDialog",
+        "ForgeCad::DrawingSheetEditor::Impl::alignDialog",
+        "ForgeCad::DrawingSheetEditor::Impl::alignDimensionArrows",
+        "ForgeCad::DrawingSheetEditor::Impl::alignDimensionText",
+        "ForgeCad::DrawingSheetEditor::Impl::alignedQuotePosition",
+        "ForgeCad::DrawingSheetEditor::Impl::annotationDialog",
+        "ForgeCad::DrawingSheetEditor::Impl::appendCompoundCutPoint",
+        "ForgeCad::DrawingSheetEditor::Impl::applyLayout",
+        "ForgeCad::DrawingSheetEditor::Impl::auxiliaryDialog",
+        "ForgeCad::DrawingSheetEditor::Impl::axisDragPointer",
+        "ForgeCad::DrawingSheetEditor::Impl::axisFor",
+        "ForgeCad::DrawingSheetEditor::Impl::beginSeries",
+        "ForgeCad::DrawingSheetEditor::Impl::beginTechnicalSection",
+        "ForgeCad::DrawingSheetEditor::Impl::beginTextAlignment",
+        "ForgeCad::DrawingSheetEditor::Impl::breakDialog",
+        "ForgeCad::DrawingSheetEditor::Impl::cacheSections",
+        "ForgeCad::DrawingSheetEditor::Impl::cachedAxis",
+        "ForgeCad::DrawingSheetEditor::Impl::calculate",
+        "ForgeCad::DrawingSheetEditor::Impl::cancelAxisDrag",
+        "ForgeCad::DrawingSheetEditor::Impl::cancelCut",
+        "ForgeCad::DrawingSheetEditor::Impl::cancelCutDrag",
+        "ForgeCad::DrawingSheetEditor::Impl::cancelDetail",
+        "ForgeCad::DrawingSheetEditor::Impl::cancelDimensionDrag",
+        "ForgeCad::DrawingSheetEditor::Impl::cancelLocalInput",
+        "ForgeCad::DrawingSheetEditor::Impl::cancelNumbering",
+        "ForgeCad::DrawingSheetEditor::Impl::cancelPlacement",
+        "ForgeCad::DrawingSheetEditor::Impl::cancelViewDrag",
+        "ForgeCad::DrawingSheetEditor::Impl::candidateAxis",
+        "ForgeCad::DrawingSheetEditor::Impl::centerCommand",
+        "ForgeCad::DrawingSheetEditor::Impl::centerDimensionText",
+        "ForgeCad::DrawingSheetEditor::Impl::centerFor",
+        "ForgeCad::DrawingSheetEditor::Impl::centerKey",
+        "ForgeCad::DrawingSheetEditor::Impl::centerPointer",
+        "ForgeCad::DrawingSheetEditor::Impl::changeNumberDialog",
+        "ForgeCad::DrawingSheetEditor::Impl::changeViews",
+        "ForgeCad::DrawingSheetEditor::Impl::chooseRepairReference",
+        "ForgeCad::DrawingSheetEditor::Impl::clearNumberingPreview",
+        "ForgeCad::DrawingSheetEditor::Impl::clearOverlay",
+        "ForgeCad::DrawingSheetEditor::Impl::compoundCutHint",
+        "ForgeCad::DrawingSheetEditor::Impl::compoundCutOverlay",
+        "ForgeCad::DrawingSheetEditor::Impl::computeView",
+        "ForgeCad::DrawingSheetEditor::Impl::constrainedCutPoint",
+        "ForgeCad::DrawingSheetEditor::Impl::createTextAlignment",
+        "ForgeCad::DrawingSheetEditor::Impl::cutConstraint",
+        "ForgeCad::DrawingSheetEditor::Impl::cutDisplayEnds",
+        "ForgeCad::DrawingSheetEditor::Impl::cutDragPointer",
+        "ForgeCad::DrawingSheetEditor::Impl::cutKey",
+        "ForgeCad::DrawingSheetEditor::Impl::cutOverlay",
+        "ForgeCad::DrawingSheetEditor::Impl::cutParents",
+        "ForgeCad::DrawingSheetEditor::Impl::cutPointer",
+        "ForgeCad::DrawingSheetEditor::Impl::cutPoints",
+        "ForgeCad::DrawingSheetEditor::Impl::cutSnapFeedback",
+        "ForgeCad::DrawingSheetEditor::Impl::derivedDialog",
+        "ForgeCad::DrawingSheetEditor::Impl::derivedProperties",
+        "ForgeCad::DrawingSheetEditor::Impl::detailCreationOptions",
+        "ForgeCad::DrawingSheetEditor::Impl::detailDialog",
+        "ForgeCad::DrawingSheetEditor::Impl::detailKey",
+        "ForgeCad::DrawingSheetEditor::Impl::detailParent",
+        "ForgeCad::DrawingSheetEditor::Impl::detailPointer",
+        "ForgeCad::DrawingSheetEditor::Impl::detailProperties",
+        "ForgeCad::DrawingSheetEditor::Impl::dimensionDragPointer",
+        "ForgeCad::DrawingSheetEditor::Impl::dimensionLinearEnds",
+        "ForgeCad::DrawingSheetEditor::Impl::dimensionPresentation",
+        "ForgeCad::DrawingSheetEditor::Impl::dimensionTextDirection",
+        "ForgeCad::DrawingSheetEditor::Impl::drawCutLines",
+        "ForgeCad::DrawingSheetEditor::Impl::drawSheet",
+        "ForgeCad::DrawingSheetEditor::Impl::editAxisDialog",
+        "ForgeCad::DrawingSheetEditor::Impl::editDimensionDialog",
+        "ForgeCad::DrawingSheetEditor::Impl::editSelectedDimension",
+        "ForgeCad::DrawingSheetEditor::Impl::editSelectedView",
+        "ForgeCad::DrawingSheetEditor::Impl::encodedState",
+        "ForgeCad::DrawingSheetEditor::Impl::finishCompoundCut",
+        "ForgeCad::DrawingSheetEditor::Impl::finishDetailOutline",
+        "ForgeCad::DrawingSheetEditor::Impl::finishDimensionRepair",
+        "ForgeCad::DrawingSheetEditor::Impl::finishTextAlignment",
+        "ForgeCad::DrawingSheetEditor::Impl::initializeSheetScale",
+        "ForgeCad::DrawingSheetEditor::Impl::insertPrepared",
+        "ForgeCad::DrawingSheetEditor::Impl::insertionState",
+        "ForgeCad::DrawingSheetEditor::Impl::installPrepared",
+        "ForgeCad::DrawingSheetEditor::Impl::layoutFor",
+        "ForgeCad::DrawingSheetEditor::Impl::localPaper",
+        "ForgeCad::DrawingSheetEditor::Impl::measured",
+        "ForgeCad::DrawingSheetEditor::Impl::movableDimensionTips",
+        "ForgeCad::DrawingSheetEditor::Impl::moveViewTo",
+        "ForgeCad::DrawingSheetEditor::Impl::noteFor",
+        "ForgeCad::DrawingSheetEditor::Impl::noteResult",
+        "ForgeCad::DrawingSheetEditor::Impl::notify",
+        "ForgeCad::DrawingSheetEditor::Impl::numberingDialog",
+        "ForgeCad::DrawingSheetEditor::Impl::numberingPointer",
+        "ForgeCad::DrawingSheetEditor::Impl::pageDialog",
+        "ForgeCad::DrawingSheetEditor::Impl::paintAttached",
+        "ForgeCad::DrawingSheetEditor::Impl::paintDimensionDrag",
+        "ForgeCad::DrawingSheetEditor::Impl::paintLeader",
+        "ForgeCad::DrawingSheetEditor::Impl::paintQuotePreview",
+        "ForgeCad::DrawingSheetEditor::Impl::paintRepairPreview",
+        "ForgeCad::DrawingSheetEditor::Impl::paintTip",
+        "ForgeCad::DrawingSheetEditor::Impl::paperLocal",
+        "ForgeCad::DrawingSheetEditor::Impl::placementKey",
+        "ForgeCad::DrawingSheetEditor::Impl::placementPointer",
+        "ForgeCad::DrawingSheetEditor::Impl::pointShown",
+        "ForgeCad::DrawingSheetEditor::Impl::prepareNumbering",
+        "ForgeCad::DrawingSheetEditor::Impl::propagateLayout",
+        "ForgeCad::DrawingSheetEditor::Impl::queueRedraw",
+        "ForgeCad::DrawingSheetEditor::Impl::quoteKey",
+        "ForgeCad::DrawingSheetEditor::Impl::quoteOverlay",
+        "ForgeCad::DrawingSheetEditor::Impl::quotePointer",
+        "ForgeCad::DrawingSheetEditor::Impl::quotePosition",
+        "ForgeCad::DrawingSheetEditor::Impl::quoted",
+        "ForgeCad::DrawingSheetEditor::Impl::record",
+        "ForgeCad::DrawingSheetEditor::Impl::redraw",
+        "ForgeCad::DrawingSheetEditor::Impl::refreshAxisHandles",
+        "ForgeCad::DrawingSheetEditor::Impl::refreshAxisNotable",
+        "ForgeCad::DrawingSheetEditor::Impl::refreshCutHandles",
+        "ForgeCad::DrawingSheetEditor::Impl::refreshCutPoints",
+        "ForgeCad::DrawingSheetEditor::Impl::refreshDetailConnectors",
+        "ForgeCad::DrawingSheetEditor::Impl::refreshDimensionHandles",
+        "ForgeCad::DrawingSheetEditor::Impl::refreshHiddenAction",
+        "ForgeCad::DrawingSheetEditor::Impl::refreshHistoryActions",
+        "ForgeCad::DrawingSheetEditor::Impl::refreshNotable",
+        "ForgeCad::DrawingSheetEditor::Impl::refreshTree",
+        "ForgeCad::DrawingSheetEditor::Impl::removeSelection",
+        "ForgeCad::DrawingSheetEditor::Impl::repairSelectedDimension",
+        "ForgeCad::DrawingSheetEditor::Impl::replaceState",
+        "ForgeCad::DrawingSheetEditor::Impl::report",
+        "ForgeCad::DrawingSheetEditor::Impl::resetHistory",
+        "ForgeCad::DrawingSheetEditor::Impl::resetQuote",
+        "ForgeCad::DrawingSheetEditor::Impl::resolved",
+        "ForgeCad::DrawingSheetEditor::Impl::resolverFor",
+        "ForgeCad::DrawingSheetEditor::Impl::restore",
+        "ForgeCad::DrawingSheetEditor::Impl::sameAxisDependencies",
+        "ForgeCad::DrawingSheetEditor::Impl::sameSource",
+        "ForgeCad::DrawingSheetEditor::Impl::say",
+        "ForgeCad::DrawingSheetEditor::Impl::scaleControls",
+        "ForgeCad::DrawingSheetEditor::Impl::selectTreeItem",
+        "ForgeCad::DrawingSheetEditor::Impl::selectedAxis",
+        "ForgeCad::DrawingSheetEditor::Impl::selectedNote",
+        "ForgeCad::DrawingSheetEditor::Impl::selectedView",
+        "ForgeCad::DrawingSheetEditor::Impl::selectionFromScene",
+        "ForgeCad::DrawingSheetEditor::Impl::selectionFromTree",
+        "ForgeCad::DrawingSheetEditor::Impl::seriesPlacement",
+        "ForgeCad::DrawingSheetEditor::Impl::snapName",
+        "ForgeCad::DrawingSheetEditor::Impl::snapViewTitle",
+        "ForgeCad::DrawingSheetEditor::Impl::sourceFor",
+        "ForgeCad::DrawingSheetEditor::Impl::startPlacement",
+        "ForgeCad::DrawingSheetEditor::Impl::startPreparedPlacement",
+        "ForgeCad::DrawingSheetEditor::Impl::steppedSectionDialog",
+        "ForgeCad::DrawingSheetEditor::Impl::styleDialog",
+        "ForgeCad::DrawingSheetEditor::Impl::technicalAnnotationDialog",
+        "ForgeCad::DrawingSheetEditor::Impl::viewBounds",
+        "ForgeCad::DrawingSheetEditor::Impl::viewDragPointer",
+        "ForgeCad::DrawingSheetEditor::Impl::viewFor",
+        "ForgeCad::DrawingSheetEditor::addAnnotation",
+        "ForgeCad::DrawingSheetEditor::addAxis",
+        "ForgeCad::DrawingSheetEditor::addCenterMarks",
+        "ForgeCad::DrawingSheetEditor::addDimension",
+        "ForgeCad::DrawingSheetEditor::addDimensionSeries",
+        "ForgeCad::DrawingSheetEditor::addSelectedDimension",
+        "ForgeCad::DrawingSheetEditor::alignSectionOrientation",
+        "ForgeCad::DrawingSheetEditor::alignView",
+        "ForgeCad::DrawingSheetEditor::annotationResult",
+        "ForgeCad::DrawingSheetEditor::applyPageTemplate",
+        "ForgeCad::DrawingSheetEditor::axisResult",
+        "ForgeCad::DrawingSheetEditor::beginAnnotation",
+        "ForgeCad::DrawingSheetEditor::beginAuxiliaryViewPlacement",
+        "ForgeCad::DrawingSheetEditor::beginAxis",
+        "ForgeCad::DrawingSheetEditor::beginDerivedViewPlacement",
+        "ForgeCad::DrawingSheetEditor::beginDetailCircle",
+        "ForgeCad::DrawingSheetEditor::beginDetailViewPlacement",
+        "ForgeCad::DrawingSheetEditor::beginDimensionRepair",
+        "ForgeCad::DrawingSheetEditor::beginLocalSection",
+        "ForgeCad::DrawingSheetEditor::beginSectionLine",
+        "ForgeCad::DrawingSheetEditor::beginSectionPlacement",
+        "ForgeCad::DrawingSheetEditor::beginViewPlacement",
+        "ForgeCad::DrawingSheetEditor::canRedo",
+        "ForgeCad::DrawingSheetEditor::canUndo",
+        "ForgeCad::DrawingSheetEditor::cancelViewPlacement",
+        "ForgeCad::DrawingSheetEditor::canvas",
+        "ForgeCad::DrawingSheetEditor::clearCenterMarks",
+        "ForgeCad::DrawingSheetEditor::curves",
+        "ForgeCad::DrawingSheetEditor::detachView",
+        "ForgeCad::DrawingSheetEditor::dimensionResult",
+        "ForgeCad::DrawingSheetEditor::exportPdf",
+        "ForgeCad::DrawingSheetEditor::exportPdfPages",
+        "ForgeCad::DrawingSheetEditor::fitSheet",
+        "ForgeCad::DrawingSheetEditor::hasSectionLine",
+        "ForgeCad::DrawingSheetEditor::hasViewPlacement",
+        "ForgeCad::DrawingSheetEditor::insertView",
+        "ForgeCad::DrawingSheetEditor::installPreparedModel",
+        "ForgeCad::DrawingSheetEditor::isComputing",
+        "ForgeCad::DrawingSheetEditor::isModified",
+        "ForgeCad::DrawingSheetEditor::isReadOnly",
+        "ForgeCad::DrawingSheetEditor::loadSheet",
+        "ForgeCad::DrawingSheetEditor::markSaved",
+        "ForgeCad::DrawingSheetEditor::moveAnnotation",
+        "ForgeCad::DrawingSheetEditor::moveDetailLabel",
+        "ForgeCad::DrawingSheetEditor::moveDimension",
+        "ForgeCad::DrawingSheetEditor::moveView",
+        "ForgeCad::DrawingSheetEditor::moveViewTitle",
+        "ForgeCad::DrawingSheetEditor::pageContext",
+        "ForgeCad::DrawingSheetEditor::redo",
+        "ForgeCad::DrawingSheetEditor::removeAnnotation",
+        "ForgeCad::DrawingSheetEditor::removeAxis",
+        "ForgeCad::DrawingSheetEditor::removeCenterMark",
+        "ForgeCad::DrawingSheetEditor::removeView",
+        "ForgeCad::DrawingSheetEditor::resetViewTitle",
+        "ForgeCad::DrawingSheetEditor::reverseSection",
+        "ForgeCad::DrawingSheetEditor::sections",
+        "ForgeCad::DrawingSheetEditor::setCenterLinesVisible",
+        "ForgeCad::DrawingSheetEditor::setCenterMarksVisible",
+        "ForgeCad::DrawingSheetEditor::setChangedCallback",
+        "ForgeCad::DrawingSheetEditor::setCylinderAxesVisible",
+        "ForgeCad::DrawingSheetEditor::setDimensionNumbering",
+        "ForgeCad::DrawingSheetEditor::setDimensionObliquity",
+        "ForgeCad::DrawingSheetEditor::setDocumentHistory",
+        "ForgeCad::DrawingSheetEditor::setDrawingStyle",
+        "ForgeCad::DrawingSheetEditor::setHiddenLinesVisible",
+        "ForgeCad::DrawingSheetEditor::setLocalSection",
+        "ForgeCad::DrawingSheetEditor::setPageContext",
+        "ForgeCad::DrawingSheetEditor::setPageSettings",
+        "ForgeCad::DrawingSheetEditor::setReadOnly",
+        "ForgeCad::DrawingSheetEditor::setRevisionTable",
+        "ForgeCad::DrawingSheetEditor::setSectionHatch",
+        "ForgeCad::DrawingSheetEditor::setSectionLine",
+        "ForgeCad::DrawingSheetEditor::setSectionStyle",
+        "ForgeCad::DrawingSheetEditor::setShadedFacesVisible",
+        "ForgeCad::DrawingSheetEditor::setViewAlignment",
+        "ForgeCad::DrawingSheetEditor::setViewBreak",
+        "ForgeCad::DrawingSheetEditor::setViewScale",
+        "ForgeCad::DrawingSheetEditor::sheet",
+        "ForgeCad::DrawingSheetEditor::undo",
+        "ForgeCad::DrawingSheetEditor::updateAnnotation",
+        "ForgeCad::DrawingSheetEditor::updateAxis",
+        "ForgeCad::DrawingSheetEditor::updateDetailView",
+        "ForgeCad::DrawingSheetEditor::updateDimension",
+        "ForgeCad::DrawingSheetEditor::updateModel",
+        "ForgeCad::DrawingSheetEditor::updateView",
+        "ForgeCad::DrawingSheetEditor::~DrawingSheetEditor",
+        "ForgeCad::MoveLabel::MoveLabel",
+        "ForgeCad::MoveLabel::boundingRect",
+        "ForgeCad::MoveLabel::format",
+        "ForgeCad::MoveLabel::itemChange",
+        "ForgeCad::MoveLabel::mouseDoubleClickEvent",
+        "ForgeCad::MoveLabel::mouseMoveEvent",
+        "ForgeCad::MoveLabel::mousePressEvent",
+        "ForgeCad::MoveLabel::mouseReleaseEvent",
+        "ForgeCad::MoveLabel::paint",
+        "ForgeCad::MoveLabel::sceneEvent",
+        "ForgeCad::MoveLabel::shape",
+        "ForgeCad::MoveNote::MoveNote",
+        "ForgeCad::MoveNote::boundingRect",
+        "ForgeCad::MoveNote::mouseDoubleClickEvent",
+        "ForgeCad::MoveNote::mousePressEvent",
+        "ForgeCad::MoveNote::mouseReleaseEvent",
+        "ForgeCad::MoveNote::paint",
+        "ForgeCad::MoveNote::shape",
+        "ForgeCad::SectionItem::boundingRect",
+        "ForgeCad::SectionItem::paint",
+        "ForgeCad::SectionItem::shape",
+        "ForgeCad::SheetCanvas::SheetCanvas",
+        "ForgeCad::SheetCanvas::applyZoom",
+        "ForgeCad::SheetCanvas::configurePan",
+        "ForgeCad::SheetCanvas::endPan",
+        "ForgeCad::SheetCanvas::event",
+        "ForgeCad::SheetCanvas::focusInEvent",
+        "ForgeCad::SheetCanvas::focusOutEvent",
+        "ForgeCad::SheetCanvas::keyPressEvent",
+        "ForgeCad::SheetCanvas::keyReleaseEvent",
+        "ForgeCad::SheetCanvas::leaveEvent",
+        "ForgeCad::SheetCanvas::mouseDoubleClickEvent",
+        "ForgeCad::SheetCanvas::mouseMoveEvent",
+        "ForgeCad::SheetCanvas::mousePressEvent",
+        "ForgeCad::SheetCanvas::mouseReleaseEvent",
+        "ForgeCad::SheetCanvas::restorePanCursor",
+        "ForgeCad::SheetCanvas::savePanCursor",
+        "ForgeCad::SheetCanvas::viewportEvent",
+        "ForgeCad::SheetCanvas::wheelEvent",
+        "ForgeCad::ViewFrame::paint",
+        "ForgeCad::ViewPreviewCanvas::fit",
+        "ForgeCad::ViewPreviewCanvas::resizeEvent",
+        "ForgeCad::additionalSectionSteps",
+        "ForgeCad::fontFor",
+        "ForgeCad::joinedPaths",
+        "ForgeCad::paperPoint",
+        "ForgeCad::sameDimension",
+        "ForgeCad::sameGeometry",
+        "ForgeCad::sectionStepValues",
+        "ForgeCad::technicalPen",
+        "ForgeCad::transportAttachment"
+      ]
+    },
+    {
+      "id": "cad_drawing_window.cpp",
+      "group": "drawing",
+      "description": "Workspace della suite 2D incorporabile nelle schede: chiusura/salvataggi coordinati, ricostruzione menu dopo cambio foglio con unico sottomenu Tema persistente; nuova tavola dallo snapshot valutato del modello salvato, verificato con impronta del file e identita; preparazione cancellabile senza rigenerare la storia; documento multifoglio, salvataggio e PDF multipagina. Il comando Aggiorna dal .prt salvato verifica identita e impronta della sorgente nel contenitore.",
+      "lines": 434,
+      "symbols": [
+        "ForgeCad::DrawingWindow::DrawingWindow",
+        "ForgeCad::DrawingWindow::acquireWriteAccess",
+        "ForgeCad::DrawingWindow::closeEvent",
+        "ForgeCad::DrawingWindow::createFromModel",
+        "ForgeCad::DrawingWindow::event",
+        "ForgeCad::DrawingWindow::exportPdfPath",
+        "ForgeCad::DrawingWindow::exportPdfPath::RestoreAccess::~RestoreAccess",
+        "ForgeCad::DrawingWindow::installEditor",
+        "ForgeCad::DrawingWindow::loadContents",
+        "ForgeCad::DrawingWindow::openPath",
+        "ForgeCad::DrawingWindow::prepareToClose",
+        "ForgeCad::DrawingWindow::refreshEditAccess",
+        "ForgeCad::DrawingWindow::refreshModelUpdateNotice",
+        "ForgeCad::DrawingWindow::refreshPageContext",
+        "ForgeCad::DrawingWindow::refreshTitle",
+        "ForgeCad::DrawingWindow::report",
+        "ForgeCad::DrawingWindow::requireEditAccess",
+        "ForgeCad::DrawingWindow::save",
+        "ForgeCad::DrawingWindow::savePath",
+        "ForgeCad::DrawingWindow::updateFromSource",
+        "ForgeCad::DrawingWindow::~DrawingWindow"
+      ]
+    },
+    {
+      "id": "forgeCad2026_application_theme.cpp",
+      "group": "startup",
+      "description": "Controller unico di palette e QSS globale su finestre e schede incorporate 3D/2D; applicazione coerente protetta dal reingresso, stile Fusion ripristinato dopo sostituzioni native e menu Tema persistente chiaro/scuro/desktop.",
+      "lines": 229,
+      "symbols": [
+        "ForgeCad::ApplicationTheme::ApplicationTheme",
+        "ForgeCad::ApplicationTheme::apply",
+        "ForgeCad::ApplicationTheme::dark",
+        "ForgeCad::ApplicationTheme::eventFilter",
+        "ForgeCad::ApplicationTheme::schedule",
+        "ForgeCad::ApplicationTheme::setMode",
+        "ForgeCad::ApplicationTheme::trace",
+        "ForgeCad::applicationPalette",
+        "ForgeCad::applicationStyleSheet",
+        "ForgeCad::applicationThemeMode",
+        "ForgeCad::initializeApplicationTheme",
+        "ForgeCad::setApplicationThemeMode",
+        "ForgeCad::setupApplicationThemeMenu"
+      ]
+    },
+    {
+      "id": "forgeCad2026_viewport.cpp",
+      "group": "viewport",
+      "description": "Ciclo di vita e impostazioni pubbliche del coordinatore CadViewport; gabbia poli multipli, proiezione/picking del gizmo e delta vincolati agli assi 3D.",
+      "lines": 713,
+      "symbols": [
+        "CadViewport::CadViewport",
+        "CadViewport::activeSketchIndex",
+        "CadViewport::alignViewToSketch",
+        "CadViewport::antialiasing",
+        "CadViewport::axesOnTop",
+        "CadViewport::axesVisible",
+        "CadViewport::axisDisplayLength",
+        "CadViewport::axisLength",
+        "CadViewport::background",
+        "CadViewport::calculateShapeAnalysis",
+        "CadViewport::clearDatumPreview",
+        "CadViewport::clearExportMeshPreview",
+        "CadViewport::clearFeatureHandle",
+        "CadViewport::clearReferenceListHighlight",
+        "CadViewport::clearShapeAnalysis",
+        "CadViewport::commitFeatureHandleValue",
+        "CadViewport::disableSectionClip",
+        "CadViewport::dragFeatureHandle",
+        "CadViewport::enableSectionClip",
+        "CadViewport::featureHandleAt",
+        "CadViewport::featureHandleGeometry",
+        "CadViewport::featureHandleRadialAt",
+        "CadViewport::featureHandleSketchCenter",
+        "CadViewport::featureHandleValue",
+        "CadViewport::featureHighlightColor",
+        "CadViewport::fitAll",
+        "CadViewport::geometrySnap",
+        "CadViewport::gpuGlassAvailable",
+        "CadViewport::gridSnap",
+        "CadViewport::interactionLocked",
+        "CadViewport::isSketchDrawn",
+        "CadViewport::maxAntialiasing",
+        "CadViewport::originSnap",
+        "CadViewport::panKey",
+        "CadViewport::panelBackdropFrame",
+        "CadViewport::projectSketchPolyline",
+        "CadViewport::referenceListHighlighted",
+        "CadViewport::removeGlassPanel",
+        "CadViewport::renderedFrameSerial",
+        "CadViewport::resetZoom",
+        "CadViewport::sceneRangeAlong",
+        "CadViewport::sectionArrowLength",
+        "CadViewport::sectionDragDelta",
+        "CadViewport::sectionEnabled",
+        "CadViewport::sectionHandleAt",
+        "CadViewport::sectionHandleShape",
+        "CadViewport::sectionQuad",
+        "CadViewport::setAntialiasing",
+        "CadViewport::setAxesOnTop",
+        "CadViewport::setAxesVisible",
+        "CadViewport::setAxisLength",
+        "CadViewport::setBackground",
+        "CadViewport::setConstraintMode",
+        "CadViewport::setDatumPreview",
+        "CadViewport::setDisplayMode",
+        "CadViewport::setDocumentChangedCallback",
+        "CadViewport::setEditBodyCallback",
+        "CadViewport::setExportMeshPreview",
+        "CadViewport::setFeatureHandle",
+        "CadViewport::setFeatureHighlightColor",
+        "CadViewport::setGeometrySnap",
+        "CadViewport::setGlassPanel",
+        "CadViewport::setGridSnap",
+        "CadViewport::setGridVisible",
+        "CadViewport::setHiddenEdgesVisible",
+        "CadViewport::setInteractionLocked",
+        "CadViewport::setLightingPreset",
+        "CadViewport::setLineAngle",
+        "CadViewport::setLineLength",
+        "CadViewport::setMeasureOverlay",
+        "CadViewport::setOriginSnap",
+        "CadViewport::setPanKey",
+        "CadViewport::setPlaneContextCallback",
+        "CadViewport::setPlaneVisible",
+        "CadViewport::setPolygonSides",
+        "CadViewport::setReferenceListHighlight",
+        "CadViewport::setReferenceMarks",
+        "CadViewport::setReferencePlanesVisible",
+        "CadViewport::setRendererCallback",
+        "CadViewport::setSection",
+        "CadViewport::setSectionDragCallback",
+        "CadViewport::setSectionRefreshCallback",
+        "CadViewport::setSelectionCallback",
+        "CadViewport::setSketchBodyOpacity",
+        "CadViewport::setSketchConstructionVisible",
+        "CadViewport::setSketchEntityPickCallback",
+        "CadViewport::setSketchModeCallback",
+        "CadViewport::setSketchPickCallback",
+        "CadViewport::setSketchViewUnlocked",
+        "CadViewport::setStatusCallback",
+        "CadViewport::setSurfacePoleOverlay",
+        "CadViewport::setSurfacePoleSelection",
+        "CadViewport::setTessellationQuality",
+        "CadViewport::setToolChangedCallback",
+        "CadViewport::setTopologyIdsVisible",
+        "CadViewport::setWheelZoomEnabled",
+        "CadViewport::setWorkCallback",
+        "CadViewport::sketchBodyOpacity",
+        "CadViewport::sketchConstructionVisible",
+        "CadViewport::sketchModeActive",
+        "CadViewport::suggestedDatumOffset",
+        "CadViewport::surfacePoleAxisDragVector",
+        "CadViewport::surfacePoleAxisScreen",
+        "CadViewport::surfacePoleDragVector",
+        "CadViewport::surfacePoleGizmoCenter",
+        "CadViewport::surfacePoleHandleAt",
+        "CadViewport::surfacePoleScreen",
+        "CadViewport::zoomIn",
+        "CadViewport::zoomOut",
+        "CadViewport::~CadViewport"
+      ]
+    },
+    {
+      "id": "forgeCad2026_viewport_render.cpp",
+      "group": "viewport",
+      "description": "Nasconde sempre le cache automatiche e mostra la costruzione esplicita in modifica oppure tramite opzione Visualizza, con highlight coerenti; prepara le mesh prima delle passate GL, protegge il paint rientrante e ripristina il contesto del widget; risultato completo senza ridisegnare la base disponibile al picker dei bordi; frame e overlay con normali uscenti dei piani nelle anteprime e, se abilitate nel menu Visualizza, al passaggio del mouse anche nella scelta dei riferimenti, gabbia NURBS, poli selezionati e gizmo colorato globale/locale; visibilita storica in schizzo, anteprime feature anche nello schizzo con vista sbloccata e prepass di profondita per trasparenza a singolo strato; sospende la superficie in anteprima nella scelta delle facce storiche. Mostra assi e quattro estremi della nuova ellisse durante la costruzione.",
+      "lines": 1544,
+      "symbols": [
+        "CadViewport::configureEnvironmentLighting",
+        "CadViewport::configureLighting",
+        "CadViewport::drawAxes",
+        "CadViewport::drawBackgroundGradient",
+        "CadViewport::drawCurvePreview",
+        "CadViewport::drawDatumLabels",
+        "CadViewport::drawDatumPlanes",
+        "CadViewport::drawDatumQuad",
+        "CadViewport::drawDimensions",
+        "CadViewport::drawExportMeshPreview",
+        "CadViewport::drawExtrusionOutline",
+        "CadViewport::drawExtrusions",
+        "CadViewport::drawFeatureHandle",
+        "CadViewport::drawFeatureHighlightEdges",
+        "CadViewport::drawFeatureHighlightFaces",
+        "CadViewport::drawGeometryRef",
+        "CadViewport::drawGpuGlassPanels",
+        "CadViewport::drawGrid",
+        "CadViewport::drawInferenceTags",
+        "CadViewport::drawMeasureOverlay",
+        "CadViewport::drawPickedEdges",
+        "CadViewport::drawPlaneResizeHandles",
+        "CadViewport::drawPreview",
+        "CadViewport::drawReferenceLabels",
+        "CadViewport::drawReferencePlanes",
+        "CadViewport::drawSectionCaps",
+        "CadViewport::drawSectionHandle",
+        "CadViewport::drawSectionPlane",
+        "CadViewport::drawSelectedFace",
+        "CadViewport::drawSelectionBox",
+        "CadViewport::drawSelectionHighlight",
+        "CadViewport::drawSketch",
+        "CadViewport::drawSketchConstraints",
+        "CadViewport::drawSketchCurvature",
+        "CadViewport::drawSketchDimensions",
+        "CadViewport::drawSnapMarkers",
+        "CadViewport::drawTopologyHighlight",
+        "CadViewport::drawTopologyLabels",
+        "CadViewport::drawTrimPartHover",
+        "CadViewport::highlightConstraintEntities",
+        "CadViewport::highlightSceneObject",
+        "CadViewport::highlightSketchElement",
+        "CadViewport::initializeGL",
+        "CadViewport::initializeGlassShader",
+        "CadViewport::paintGL",
+        "CadViewport::resizeGL",
+        "CadViewport::strokeHighlight"
+      ]
+    },
+    {
+      "id": "tests/test_document_theme_tabs.h",
+      "group": "tests",
+      "description": "Tema globale su schede 3D/2D visibili e nascoste, finestre separate, nuove pagine, soli documenti 2D e cambio foglio; menu, pannelli, icone e pixel, colori utente e contenuto della carta invariati. Sezione e report massa reali gia aperti: istruzione senza tagli, altezza necessaria e resize utente preservato, foreground/contrasto, errore e ritorno normale, documento/copia/selezione/scroll preservati senza ricalcolo al tema.",
+      "lines": 778,
+      "symbols": [
+        "ViewportInteractionTest::documentThemeTabsTests",
+        "ViewportInteractionTest::uiResidualThemeTests",
+        "ViewportInteractionTest::uiResidualThemeTests::ClipboardGuard::ClipboardGuard",
+        "ViewportInteractionTest::uiResidualThemeTests::ClipboardGuard::clone",
+        "ViewportInteractionTest::uiResidualThemeTests::ClipboardGuard::~ClipboardGuard",
+        "ViewportInteractionTest::uiResidualThemeTests::ClipboardMimeData::ClipboardMimeData",
+        "ViewportInteractionTest::uiResidualThemeTests::ClipboardMimeData::formats",
+        "ViewportInteractionTest::uiResidualThemeTests::ClipboardMimeData::hasFormat",
+        "ViewportInteractionTest::uiResidualThemeTests::ClipboardMimeData::retrieveData"
+      ]
+    },
+    {
+      "id": "tests/test_viewport.cpp",
+      "group": "tests",
+      "description": "Verifica: Vista e interazione.",
+      "lines": 12408,
+      "symbols": [
+        "ViewportInteractionTest::applicatorePreview",
+        "ViewportInteractionTest::associativeOffset",
+        "ViewportInteractionTest::asyncLifetimeRegressions",
+        "ViewportInteractionTest::auditSheetHistory",
+        "ViewportInteractionTest::automaticSnapConstraints",
+        "ViewportInteractionTest::benchLoad",
+        "ViewportInteractionTest::benchView",
+        "ViewportInteractionTest::benchWindow",
+        "ViewportInteractionTest::benchmarkBlendEdit",
+        "ViewportInteractionTest::benchmarkBlendEdit::SerialScope::SerialScope",
+        "ViewportInteractionTest::benchmarkBlendEdit::SerialScope::~SerialScope",
+        "ViewportInteractionTest::blendDocumentFaces",
+        "ViewportInteractionTest::blendPreviewReload",
+        "ViewportInteractionTest::bodyOwnerHistoryRegressions",
+        "ViewportInteractionTest::constructionDimensionRegressions",
+        "ViewportInteractionTest::copyFaces",
+        "ViewportInteractionTest::curveExtraction",
+        "ViewportInteractionTest::datumStoryRegressions",
+        "ViewportInteractionTest::deletionDuringEdgePick",
+        "ViewportInteractionTest::denseFixedSketchRegressions",
+        "ViewportInteractionTest::derivedCurveEntity",
+        "ViewportInteractionTest::displayStats",
+        "ViewportInteractionTest::documentAccess",
+        "ViewportInteractionTest::documentPrecisionTests",
+        "ViewportInteractionTest::draftDocumentCase",
+        "ViewportInteractionTest::draftFeature",
+        "ViewportInteractionTest::dumpDocument",
+        "ViewportInteractionTest::edgeLoftWorkflow",
+        "ViewportInteractionTest::ellipseTrim",
+        "ViewportInteractionTest::emptyNewSketches",
+        "ViewportInteractionTest::extendTopologyFace",
+        "ViewportInteractionTest::extensionContourPicking",
+        "ViewportInteractionTest::extensionPanelPicking",
+        "ViewportInteractionTest::extrusionActionPreconditions",
+        "ViewportInteractionTest::extrusionSurfaceOnly",
+        "ViewportInteractionTest::featureHandles",
+        "ViewportInteractionTest::fillDocument",
+        "ViewportInteractionTest::genealogyReferences",
+        "ViewportInteractionTest::handleConstraints",
+        "ViewportInteractionTest::historyPositionRegressions",
+        "ViewportInteractionTest::individualFillControls",
+        "ViewportInteractionTest::intersectionSnapDrag",
+        "ViewportInteractionTest::inwardOffsetAndProjection",
+        "ViewportInteractionTest::inwardOffsetAndProjection::Procedural::domain",
+        "ViewportInteractionTest::inwardOffsetAndProjection::Procedural::evaluate",
+        "ViewportInteractionTest::inwardOffsetAndProjection::Procedural::type",
+        "ViewportInteractionTest::linkedDrawingUi",
+        "ViewportInteractionTest::loftCorner",
+        "ViewportInteractionTest::meshExportAutomatic",
+        "ViewportInteractionTest::meshStats",
+        "ViewportInteractionTest::microFeatureMarksTest",
+        "ViewportInteractionTest::midpointQuadrantConstraints",
+        "ViewportInteractionTest::mouseSnapshotRegression",
+        "ViewportInteractionTest::offsetFacePicking",
+        "ViewportInteractionTest::offsetLoftSides",
+        "ViewportInteractionTest::offsetLofts",
+        "ViewportInteractionTest::openLoftTangency",
+        "ViewportInteractionTest::pickOwner",
+        "ViewportInteractionTest::preparedBlendHistoryPreview",
+        "ViewportInteractionTest::previewPerformance",
+        "ViewportInteractionTest::profileMouseOffset",
+        "ViewportInteractionTest::profileProjection",
+        "ViewportInteractionTest::profileSketchInteraction",
+        "ViewportInteractionTest::profileThicken",
+        "ViewportInteractionTest::projectionFeatures",
+        "ViewportInteractionTest::rebuildAllCommand",
+        "ViewportInteractionTest::rebuildDocument",
+        "ViewportInteractionTest::referenceListHighlight",
+        "ViewportInteractionTest::regularizeSplineDocument",
+        "ViewportInteractionTest::renderEdit",
+        "ViewportInteractionTest::renderSketchContext",
+        "ViewportInteractionTest::renderStep",
+        "ViewportInteractionTest::repairExtensionContours",
+        "ViewportInteractionTest::reviewRegressions",
+        "ViewportInteractionTest::run",
+        "ViewportInteractionTest::savedLoftSurface",
+        "ViewportInteractionTest::shapeAnalysisUi",
+        "ViewportInteractionTest::sheetDressupFeatures",
+        "ViewportInteractionTest::sketchCombUi",
+        "ViewportInteractionTest::sketchGhostRender",
+        "ViewportInteractionTest::sketchReferenceWorkflow",
+        "ViewportInteractionTest::sketchStoryRegressions",
+        "ViewportInteractionTest::smoothZoom",
+        "ViewportInteractionTest::snapCacheRegressions",
+        "ViewportInteractionTest::solidTrims",
+        "ViewportInteractionTest::spatialSketch",
+        "ViewportInteractionTest::splineSelectionClicks",
+        "ViewportInteractionTest::splineShapeOptions",
+        "ViewportInteractionTest::storyboardScroll",
+        "ViewportInteractionTest::surfacePatterns",
+        "ViewportInteractionTest::sweepReferences",
+        "ViewportInteractionTest::thickenFeature",
+        "ViewportInteractionTest::topologyLabelVisibility",
+        "ViewportInteractionTest::topologyLabels",
+        "ViewportInteractionTest::trimPartPicking",
+        "ViewportInteractionTest::trimTopologyBodies",
+        "ViewportInteractionTest::variablePatternPanel",
+        "ViewportInteractionTest::workflowUi",
+        "ViewportInteractionTest::workspaceRevisionsUi",
+        "exampleDocumentPath",
+        "main",
+        "require",
+        "surfaceToolsVisualQa",
+        "testDocumentCompress",
+        "testDocumentUncompress"
+      ]
+    }
+  ],
+  "incomingAndOutgoing": [
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_document_tabs.cpp",
+      "kind": "call",
+      "count": 31
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_document_tabs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_drawing_window.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_drawing_window.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_icons.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_icons.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_menu.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_widget_context.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_widget_context.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "forgeCad2026_gui.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "forgeCad2026_gui.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "forgeCad2026_gui.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_browser.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_document_version.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing.h",
+      "kind": "call",
+      "count": 101
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_annotations.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_annotations.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_axes.h",
+      "kind": "call",
+      "count": 28
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_break.h",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_break.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_center_selection.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_center_selection.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_compute.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_compute.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_derived.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_derived.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_detail.h",
+      "kind": "call",
+      "count": 63
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_detail.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_dimension.cpp",
+      "kind": "call",
+      "count": 43
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_dimension.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_dimension_repair.h",
+      "kind": "call",
+      "count": 19
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_dimension_repair.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 1380
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_editor.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_local_section.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_local_section.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_local_section_depth.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_local_section_display.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_local_section_display.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_local_section_tool.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_local_section_tool.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_local_section_tool.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_numbering.h",
+      "kind": "call",
+      "count": 16
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_numbering.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_page.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_page.h",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_preparation.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_preparation.h",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_sheet.cpp",
+      "kind": "call",
+      "count": 28
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_sheet.h",
+      "kind": "call",
+      "count": 163
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_silhouette.h",
+      "kind": "call",
+      "count": 16
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_silhouette.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_style.h",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_technical.h",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_template.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_template.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_text_layout.h",
+      "kind": "call",
+      "count": 23
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_text_layout.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_tolerances.h",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_visibility.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_visibility.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_icons.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_icons.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_numeric_input.h",
+      "kind": "call",
+      "count": 21
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_numeric_input.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_toolbar.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_toolbar.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "forgeCad2026_menu.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "forgeCad2026_zoom.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "forgeCad2026_zoom.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "kernel/fk_classify.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "kernel/fk_classify.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "kernel/fk_history.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "kernel/fk_math.cpp",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 215
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "kernel/fk_tessellate.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_release_ui.cpp",
+      "target": "cad_document_tabs.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_drawing_release_ui.cpp",
+      "target": "cad_document_tabs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_release_ui.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_drawing_release_ui.cpp",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "cad_drawing_restore.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_drawing_restore.cpp",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "cad_drawing_revision_ui.cpp",
+      "target": "cad_document_tabs.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_drawing_revision_ui.cpp",
+      "target": "cad_document_tabs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_revision_ui.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 16
+    },
+    {
+      "source": "cad_drawing_revision_ui.cpp",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 41
+    },
+    {
+      "source": "cad_drawing_sheets_ui.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 29
+    },
+    {
+      "source": "cad_drawing_sheets_ui.cpp",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "cad_drawing_template_editor.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_document_io.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_document_tabs.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_document_tabs.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_document_tabs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_document_version.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_compute.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_compute.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 25
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_file.cpp",
+      "kind": "call",
+      "count": 24
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_file.h",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_focus.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_focus.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_page.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_page.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_preparation.h",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_revision_ui.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_revisions.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_sheet.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_sheets_ui.cpp",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_template.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_template.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_template.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_template_editor.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_template_editor.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_toolbars.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_toolbars.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 47
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_window.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_icons.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_icons.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_menu.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_revision_client.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_revision_client.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_revision_store.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_revision_store.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_toolbar.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_toolbar.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_workspace.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_workspace.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_workspace.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "forgeCad2026_application_theme.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "forgeCad2026_application_theme.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_storyboard_selection.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_surface_poles_interaction.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "forgeCad2026.cpp",
+      "target": "cad_document_tabs.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "forgeCad2026.cpp",
+      "target": "cad_document_tabs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026.cpp",
+      "target": "forgeCad2026_application_theme.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_application_theme.cpp",
+      "target": "forgeCad2026_application_theme.cpp",
+      "kind": "call",
+      "count": 21
+    },
+    {
+      "source": "forgeCad2026_application_theme.cpp",
+      "target": "forgeCad2026_application_theme.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_analysis.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "forgeCad2026_dialogs_common.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 28
+    },
+    {
+      "source": "forgeCad2026_dialogs_mapping.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "forgeCad2026_dialogs_projection.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_dialogs_sketch.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "forgeCad2026_dialogs_solids.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 24
+    },
+    {
+      "source": "forgeCad2026_dialogs_surface_tools.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "forgeCad2026_dialogs_surfaces.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 21
+    },
+    {
+      "source": "forgeCad2026_dialogs_trim.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "cad_document_tabs.cpp",
+      "kind": "call",
+      "count": 16
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "cad_document_tabs.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "cad_document_tabs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "forgeCad2026_application_theme.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 136
+    },
+    {
+      "source": "forgeCad2026_menu.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 23
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview_main.cpp",
+      "target": "forgeCad2026_application_theme.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "cad_curve_solver.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "cad_datum.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "cad_datum.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "cad_display_cache.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "cad_expression.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "cad_kernel.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "cad_memory.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "cad_memory.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "cad_overlay_renderer.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "cad_shape_analysis.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "cad_surface_poles_visibility.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "forgeCad2026_camera.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "forgeCad2026_glass_compositor.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "forgeCad2026_gpu_picker.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "forgeCad2026_gui_common.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "forgeCad2026_ribbon_preview.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "forgeCad2026_scene_renderer.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 32
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "forgeCad2026_viewport.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "forgeCad2026_viewport_document.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "forgeCad2026_viewport_internal.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "forgeCad2026_viewport_internal.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "forgeCad2026_viewport_scene.cpp",
+      "kind": "call",
+      "count": 35
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "forgeCad2026_viewport_sketch.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "forgeCad2026_viewport_document.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "forgeCad2026_viewport_document_lifetime.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "forgeCad2026_viewport_interaction.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "forgeCad2026_viewport_parameter_dimensions.cpp",
+      "target": "forgeCad2026_viewport_render.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_pole_visibility.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "cad_constraints.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "cad_constraints.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "cad_display_cache.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "cad_display_cache.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "cad_expression.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "cad_feature_dependencies.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "cad_kernel.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "cad_overlay_renderer.cpp",
+      "kind": "call",
+      "count": 27
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "cad_surface_poles_visibility.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "cad_surface_poles_visibility.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "cad_topology_ref.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_fillet_handles.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_glass_compositor.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_gpu_picker.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_gui_common.cpp",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_scene_renderer.cpp",
+      "kind": "call",
+      "count": 25
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_scene_renderer.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_sketch_curvature.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 26
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_viewport.h",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_viewport_document.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_viewport_internal.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_viewport_loft_diagnostics.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_viewport_parameter_dimensions.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_viewport_pole_visibility.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_viewport_render.cpp",
+      "kind": "call",
+      "count": 107
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_viewport_scene.cpp",
+      "kind": "call",
+      "count": 128
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_viewport_selection.cpp",
+      "kind": "call",
+      "count": 25
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_viewport_sketch.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_viewport_sketch.cpp",
+      "kind": "reference",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "forgeCad2026_viewport_sketch_reference.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_scene.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "forgeCad2026_viewport_selection.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "forgeCad2026_viewport_sketch.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "forgeCad2026_viewport_sketch_reference.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_sketch_reference.cpp",
+      "target": "forgeCad2026_viewport_render.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/document_regression.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_advanced_fillets.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_advanced_fillets.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "tests/test_all_history.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_all_history.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 21
+    },
+    {
+      "source": "tests/test_application_theme.cpp",
+      "target": "forgeCad2026_application_theme.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_blend_history.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_blend_history.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 25
+    },
+    {
+      "source": "tests/test_boolean_box.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_boolean_box.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 24
+    },
+    {
+      "source": "tests/test_boolean_history.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_boolean_history.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 34
+    },
+    {
+      "source": "tests/test_catalog_recovery_gui.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_catalog_recovery_gui.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_catalog_recovery_gui.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_catalog_recovery_gui.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_chamfer_preview_editing.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_circular_pattern_fit.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_circular_pattern_fit.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 25
+    },
+    {
+      "source": "tests/test_declared_history_cache.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_declared_history_cache.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 56
+    },
+    {
+      "source": "tests/test_display_mesh.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "tests/test_document_consultation.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "tests/test_document_consultation.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 13
+    },
+    {
+      "source": "tests/test_document_consultation.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 42
+    },
+    {
+      "source": "tests/test_document_lifetime.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_document_lifetime.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 13
+    },
+    {
+      "source": "tests/test_document_read.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 76
+    },
+    {
+      "source": "tests/test_document_recovery.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 50
+    },
+    {
+      "source": "tests/test_document_tabs.h",
+      "target": "cad_document_tabs.cpp",
+      "kind": "call",
+      "count": 19
+    },
+    {
+      "source": "tests/test_document_tabs.h",
+      "target": "cad_document_tabs.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_document_tabs.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_document_tabs.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_document_tabs.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_document_tabs.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 32
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "cad_document_tabs.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "cad_document_tabs.h",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "cad_drawing_sheet.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "cad_drawing_sheets_ui.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "cad_drawing_window.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "forgeCad2026_application_theme.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "forgeCad2026_dialogs_analysis.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "forgeCad2026_dialogs_common.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "forgeCad2026_gui.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "forgeCad2026_viewport_document.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "forgeCad2026_viewport_selection.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "tests/test_document_theme_tabs.h",
+      "kind": "call",
+      "count": 157
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_document_units.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_document_units.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "tests/test_drawing_ambiguous_snaps.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_drawing_angular_center.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 31
+    },
+    {
+      "source": "tests/test_drawing_angular_extensions.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 38
+    },
+    {
+      "source": "tests/test_drawing_annotations.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 74
+    },
+    {
+      "source": "tests/test_drawing_apparent_radii.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "tests/test_drawing_auxiliary.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 58
+    },
+    {
+      "source": "tests/test_drawing_axes.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 55
+    },
+    {
+      "source": "tests/test_drawing_axis_dimensions.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 64
+    },
+    {
+      "source": "tests/test_drawing_break.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 59
+    },
+    {
+      "source": "tests/test_drawing_centers.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 59
+    },
+    {
+      "source": "tests/test_drawing_complete_sections.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 23
+    },
+    {
+      "source": "tests/test_drawing_cut_snaps.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 21
+    },
+    {
+      "source": "tests/test_drawing_cut_view_selection.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 19
+    },
+    {
+      "source": "tests/test_drawing_derived.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 326
+    },
+    {
+      "source": "tests/test_drawing_detail.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 145
+    },
+    {
+      "source": "tests/test_drawing_dimension_center.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "tests/test_drawing_dimension_controls.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 28
+    },
+    {
+      "source": "tests/test_drawing_dimension_numbering.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 79
+    },
+    {
+      "source": "tests/test_drawing_dimension_repair.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 50
+    },
+    {
+      "source": "tests/test_drawing_dimension_series.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 48
+    },
+    {
+      "source": "tests/test_drawing_dimensions_gui.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 161
+    },
+    {
+      "source": "tests/test_drawing_editor.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 26
+    },
+    {
+      "source": "tests/test_drawing_flacone_interaction.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "tests/test_drawing_hidden_lines.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 49
+    },
+    {
+      "source": "tests/test_drawing_layout_history.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 104
+    },
+    {
+      "source": "tests/test_drawing_local_section_depth.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 63
+    },
+    {
+      "source": "tests/test_drawing_local_tools.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 127
+    },
+    {
+      "source": "tests/test_drawing_model_update.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_drawing_model_update.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_drawing_mouse.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "tests/test_drawing_mouse.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "tests/test_drawing_multisheet.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 57
+    },
+    {
+      "source": "tests/test_drawing_multisheet.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "tests/test_drawing_multisheet.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_drawing_multisheet.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 63
+    },
+    {
+      "source": "tests/test_drawing_navigation_contours.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 22
+    },
+    {
+      "source": "tests/test_drawing_options.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 45
+    },
+    {
+      "source": "tests/test_drawing_page.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 39
+    },
+    {
+      "source": "tests/test_drawing_pan.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 24
+    },
+    {
+      "source": "tests/test_drawing_performance.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_presentation.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 25
+    },
+    {
+      "source": "tests/test_drawing_release.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "tests/test_drawing_release.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_drawing_release.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_release.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "tests/test_drawing_revision_restore.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "tests/test_drawing_revision_restore.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_drawing_revision_restore.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_drawing_revision_restore.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 16
+    },
+    {
+      "source": "tests/test_drawing_revisions.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 24
+    },
+    {
+      "source": "tests/test_drawing_revisions.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 19
+    },
+    {
+      "source": "tests/test_drawing_revisions.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_drawing_revisions.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 53
+    },
+    {
+      "source": "tests/test_drawing_scale.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 48
+    },
+    {
+      "source": "tests/test_drawing_section_edit.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 40
+    },
+    {
+      "source": "tests/test_drawing_section_model.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 19
+    },
+    {
+      "source": "tests/test_drawing_section_model.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_drawing_section_radius.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 19
+    },
+    {
+      "source": "tests/test_drawing_segment_spacing.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "tests/test_drawing_technical_annotations.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 97
+    },
+    {
+      "source": "tests/test_drawing_templates.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "tests/test_drawing_text_layout.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 37
+    },
+    {
+      "source": "tests/test_drawing_tolerances.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 42
+    },
+    {
+      "source": "tests/test_drawing_ui_controls.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 30
+    },
+    {
+      "source": "tests/test_drawing_view_edit.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 40
+    },
+    {
+      "source": "tests/test_drawing_view_placement.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 42
+    },
+    {
+      "source": "tests/test_drawing_view_preview.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 16
+    },
+    {
+      "source": "tests/test_drawing_workflow.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "tests/test_drawing_workflow.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "tests/test_drawing_workflow.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 24
+    },
+    {
+      "source": "tests/test_edit_preview_reuse.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "tests/test_edit_preview_reuse.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 39
+    },
+    {
+      "source": "tests/test_ellipse_extremes.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_ellipse_extremes.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 72
+    },
+    {
+      "source": "tests/test_extrusion_history.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_extrusion_history.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 32
+    },
+    {
+      "source": "tests/test_extrusion_next_body.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_extrusion_next_body.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 39
+    },
+    {
+      "source": "tests/test_extrusion_next_body_gui.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_extrusion_next_body_gui.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 22
+    },
+    {
+      "source": "tests/test_feature_faces.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_fillet_refinements.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_fillet_refinements.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "tests/test_fillet_selection_review.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_fillet_selection_review.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 48
+    },
+    {
+      "source": "tests/test_function_panels.h",
+      "target": "cad_document_tabs.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_function_panels.h",
+      "target": "forgeCad2026_application_theme.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_function_panels.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "tests/test_function_panels.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 104
+    },
+    {
+      "source": "tests/test_gui_3d_review.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "tests/test_gui_3d_review.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 27
+    },
+    {
+      "source": "tests/test_helix_start_angle.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_helix_start_angle.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 13
+    },
+    {
+      "source": "tests/test_history_graph_next_body.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_history_graph_next_body.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 16
+    },
+    {
+      "source": "tests/test_history_preview_mesh.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_history_preview_mesh.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 13
+    },
+    {
+      "source": "tests/test_history_suppression.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_lazy_mesh.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "tests/test_lazy_mesh.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 44
+    },
+    {
+      "source": "tests/test_linked_drawing.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "tests/test_linked_drawing.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 30
+    },
+    {
+      "source": "tests/test_linked_drawing.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_linked_drawing.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 28
+    },
+    {
+      "source": "tests/test_loft_correspondence.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_loft_points.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_loft_points.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 19
+    },
+    {
+      "source": "tests/test_loft_projected_sections.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_loft_projected_sections.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "tests/test_mesh_memory.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_mesh_memory.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_native_revisions.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_native_revisions.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 75
+    },
+    {
+      "source": "tests/test_next_body_union.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "tests/test_next_body_union_cache.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_next_body_union_cache.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_pattern_history_repair.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_pattern_history_repair.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 59
+    },
+    {
+      "source": "tests/test_pattern_placements.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_pattern_placements.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 112
+    },
+    {
+      "source": "tests/test_preview_selection_state.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_projected_curve_references.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 38
+    },
+    {
+      "source": "tests/test_projected_drawing.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 27
+    },
+    {
+      "source": "tests/test_projected_drawing_file.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 124
+    },
+    {
+      "source": "tests/test_projected_drawing_file.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 31
+    },
+    {
+      "source": "tests/test_projected_drawing_file.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_projected_drawing_file.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 101
+    },
+    {
+      "source": "tests/test_revision_access_gui.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_revision_access_gui.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_revision_access_gui.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_revision_access_gui.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 19
+    },
+    {
+      "source": "tests/test_revolution_history.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_revolution_history.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 29
+    },
+    {
+      "source": "tests/test_sketch_apparent.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_sketch_apparent.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 38
+    },
+    {
+      "source": "tests/test_sketch_construction.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "tests/test_sketch_construction.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 43
+    },
+    {
+      "source": "tests/test_sketch_interaction.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_sketch_interaction.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 41
+    },
+    {
+      "source": "tests/test_sketch_intersections.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_sketch_linked_refs.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "tests/test_sketch_linked_refs.h",
+      "target": "forgeCad2026_viewport_render.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_sketch_linked_refs.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 139
+    },
+    {
+      "source": "tests/test_sketch_menu_cancel.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_sketch_menu_cancel.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_sketch_projection_gui.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_sketch_projection_gui.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 24
+    },
+    {
+      "source": "tests/test_sketch_reference_hover.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_sketch_reference_hover.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 33
+    },
+    {
+      "source": "tests/test_sketch_slot_point.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_sketch_slot_point.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 30
+    },
+    {
+      "source": "tests/test_sketch_support.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_sketch_support.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "tests/test_sketch_tools_refs.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_sketch_tools_refs.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 39
+    },
+    {
+      "source": "tests/test_solver_partition.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 38
+    },
+    {
+      "source": "tests/test_storyboard_merge_chain.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_storyboard_merge_chain.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 23
+    },
+    {
+      "source": "tests/test_storyboard_panel_selection.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_storyboard_panel_selection.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 38
+    },
+    {
+      "source": "tests/test_storyboard_review.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "tests/test_storyboard_review.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 73
+    },
+    {
+      "source": "tests/test_surface_mapping.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "tests/test_surface_mapping.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 133
+    },
+    {
+      "source": "tests/test_surface_poles_analytic.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_surface_poles_analytic.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "tests/test_surface_poles_continuity.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "tests/test_surface_poles_continuity.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 46
+    },
+    {
+      "source": "tests/test_surface_poles_multi.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 25
+    },
+    {
+      "source": "tests/test_surface_poles_multi.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 86
+    },
+    {
+      "source": "tests/test_surface_poles_soft.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_surface_poles_soft.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 27
+    },
+    {
+      "source": "tests/test_surface_tools_gui.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 24
+    },
+    {
+      "source": "tests/test_surface_tools_gui.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 145
+    },
+    {
+      "source": "tests/test_tangent_contacts.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "tests/test_thread_edges.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_thread_edges.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 19
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_constraints.cpp",
+      "kind": "call",
+      "count": 114
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_constraints.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_cuda_tessellation.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_cuda_tessellation.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_curve_extract.cpp",
+      "kind": "call",
+      "count": 19
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_curve_extract.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_curve_solver.cpp",
+      "kind": "call",
+      "count": 66
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_datum.cpp",
+      "kind": "call",
+      "count": 13
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_datum.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_datum.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_display_cache.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_display_cache.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 206
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_document_precision.cpp",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_document_read.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_document_read.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_document_tabs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_drawing_file.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_drawing_window.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_element_names.cpp",
+      "kind": "call",
+      "count": 27
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_element_names.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_ellipse.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_export.cpp",
+      "kind": "call",
+      "count": 26
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_export.h",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_expression.cpp",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_expression.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_expression.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_extrude.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_extrude.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_feature_build.cpp",
+      "kind": "call",
+      "count": 43
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_feature_build.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_feature_dependencies.cpp",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_feature_dependencies.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_feature_faces.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_features.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_features.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 87
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_forge.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_gpu_broad_phase.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_gpu_broad_phase.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_history.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_history_chain.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_history_graph.cpp",
+      "kind": "call",
+      "count": 22
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_history_graph.h",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_history_graph.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_icons.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_icons.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_import.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_kernel.cpp",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_kernel.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_loft_correspondence_editor.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_loft_diagnostics.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_measure.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_measure.h",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_measure.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_model_history.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_model_history.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_overlay_renderer.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_pattern.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_pattern.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_projected_curve.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_revision_client.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_revision_client.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_sketch_apparent.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_sketch_edit.cpp",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_sketch_edit.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_sketch_offset.cpp",
+      "kind": "call",
+      "count": 19
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_sketch_offset.h",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_sketch_reference_usage.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_sketch_refs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_snap.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_snapshot_chunks.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_snapshot_chunks.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_snapshot_chunks.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_spatial_sketch.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_spatial_sketch.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_storyboard_selection.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_surface_mapping.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_surface_poles_interaction.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_surface_poles_model.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_surface_poles_session.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_surface_tools.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_surface_tools.h",
+      "kind": "include",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_topology_ref.cpp",
+      "kind": "call",
+      "count": 97
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_topology_ref.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 1031
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cuda_support.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_application_theme.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_application_theme.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_dialogs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_dialogs_analysis.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_dialogs_common.cpp",
+      "kind": "call",
+      "count": 55
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_dialogs_common.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_dialogs_projection.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_dialogs_sketch.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_dialogs_solids.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_dialogs_surface_tools.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_dialogs_surfaces.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_dialogs_trim.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_feature_preview.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_gui.cpp",
+      "kind": "call",
+      "count": 59
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_gui.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_gui_common.cpp",
+      "kind": "call",
+      "count": 21
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_storyboard.cpp",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_storyboard.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 278
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_viewport.h",
+      "kind": "call",
+      "count": 16
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_viewport.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_viewport_document.cpp",
+      "kind": "call",
+      "count": 817
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_viewport_interaction.cpp",
+      "kind": "call",
+      "count": 47
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_viewport_parameter_dimensions.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_viewport_preview.cpp",
+      "kind": "call",
+      "count": 75
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_viewport_render.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_viewport_scene.cpp",
+      "kind": "call",
+      "count": 135
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_viewport_selection.cpp",
+      "kind": "call",
+      "count": 99
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_viewport_sketch.cpp",
+      "kind": "call",
+      "count": 149
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_zoom.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "forgeCad2026_zoom.h",
+      "kind": "call",
+      "count": 13
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_apparent_contour.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_blend.cpp",
+      "kind": "call",
+      "count": 19
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_blend.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_blend_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_blend_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_body_check.cpp",
+      "kind": "call",
+      "count": 40
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_body_check.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_body_io.cpp",
+      "kind": "call",
+      "count": 38
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_body_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_boolean.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_classify.cpp",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_classify.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 86
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_curve_ops.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_extrude.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_helix.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_helix.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_helix.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_history.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_iges.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_iges.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_loft.cpp",
+      "kind": "call",
+      "count": 22
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_loft.h",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_loft.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 46
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_math.cpp",
+      "kind": "call",
+      "count": 56
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 408
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_parallel.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_pcurve.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_primitives.cpp",
+      "kind": "call",
+      "count": 30
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_primitives.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_profile.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_profile.h",
+      "kind": "call",
+      "count": 22
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_project.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_revolve.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_revolve.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_sew.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_sew.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_sheet.cpp",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_sheet.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_sketch_projection.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_step.cpp",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_step.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_step.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_surface.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 50
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_surface_algo.h",
+      "kind": "include",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_surface_poles_constraints.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_surface_poles_conversion.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_surface_refit.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_tessellate.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_tessellate.h",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_tessellate.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 325
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 389
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/tests/surface_tools_fixture.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/tests/surface_tools_fixture.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/document_regression.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/document_regression.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_advanced_fillets.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_advanced_fillets.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_all_history.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_all_history.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_blend_history.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_blend_history.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_boolean_box.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_boolean_box.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_boolean_history.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_boolean_history.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_catalog_recovery_gui.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_catalog_recovery_gui.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_chamfer_preview_editing.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_chamfer_preview_editing.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_declared_history_cache.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_declared_history_cache.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_display_mesh.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_display_mesh.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_document_consultation.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_document_consultation.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_document_lifetime.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_document_lifetime.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_document_read.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_document_read.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_document_recovery.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_document_recovery.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_document_tabs.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_document_tabs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_document_theme_tabs.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_document_theme_tabs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_document_units.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_document_units.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_drawing_mouse.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_drawing_mouse.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_drawing_multisheet.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_drawing_multisheet.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_drawing_performance.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_drawing_performance.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_drawing_release.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_drawing_release.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_drawing_revision_restore.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_drawing_revision_restore.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_drawing_revisions.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_drawing_revisions.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_drawing_section_model.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_drawing_section_model.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_edit_preview_reuse.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_edit_preview_reuse.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_ellipse_extremes.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_ellipse_extremes.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_extrusion_history.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_extrusion_history.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_extrusion_next_body.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_extrusion_next_body.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_extrusion_next_body_gui.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_extrusion_next_body_gui.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_fillet_refinements.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_fillet_refinements.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_fillet_selection_review.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_fillet_selection_review.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_function_panels.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_function_panels.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_gui_3d_review.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_gui_3d_review.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_helix_start_angle.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_helix_start_angle.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_history_graph_next_body.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_history_graph_next_body.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_history_preview_mesh.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_history_preview_mesh.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_history_suppression.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_history_suppression.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_lazy_mesh.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_lazy_mesh.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_linked_drawing.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_linked_drawing.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_loft_correspondence.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_loft_correspondence.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_loft_points.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_loft_points.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_loft_projected_sections.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_loft_projected_sections.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_mesh_memory.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_mesh_memory.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_native_revisions.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_native_revisions.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_next_body_union.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_next_body_union.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_next_body_union_cache.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_next_body_union_cache.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_pattern_history_repair.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_pattern_history_repair.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_pattern_placements.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_pattern_placements.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_pattern_variation.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_pattern_variation.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_preview_selection_state.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_preview_selection_state.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_projected_curve_references.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_projected_curve_references.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_projected_drawing_file.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_projected_drawing_file.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_revision_access_gui.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_revision_access_gui.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_revolution_history.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_revolution_history.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_apparent.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_apparent.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_construction.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_construction.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_interaction.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_interaction.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_intersections.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_intersections.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_linked_refs.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_linked_refs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_menu_cancel.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_menu_cancel.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_projection_fit_validation.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_projection_fit_validation.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_projection_gui.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_projection_gui.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_reference_hover.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_reference_hover.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_slot_point.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_slot_point.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_tools_refs.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_sketch_tools_refs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_solver_partition.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_solver_partition.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_storyboard_panel_selection.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_storyboard_panel_selection.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_storyboard_review.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_storyboard_review.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_surface_mapping.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_surface_mapping.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_surface_poles_analytic.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_surface_poles_analytic.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_surface_poles_continuity.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_surface_poles_continuity.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_surface_poles_multi.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_surface_poles_multi.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_surface_poles_soft.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_surface_poles_soft.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_surface_tools_gui.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_surface_tools_gui.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_thread_edges.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_thread_edges.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 2811
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_workspace_revisions.h",
+      "kind": "call",
+      "count": 23
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_workspace_revisions.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_zoom_input.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "tests/test_zoom_input.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "toolbar_editor.h",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "toolbar_editor.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_workspace_revisions.h",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_workspace_revisions.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 52
+    },
+    {
+      "source": "tests/test_zoom_input.h",
+      "target": "tests/test_viewport.cpp",
+      "kind": "call",
+      "count": 20
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "tests/test_pcurve_deviation_validation.cpp": "tests/test_pcurve_deviation_validation.cpp.txt",
+  "root/archive.py": "root/archive.py.txt",
+  "root/finalize-docs.py": "root/finalize-docs.py.txt",
+  "root/cleanup.py": "root/cleanup.py.txt",
+  "root/verify.py": "root/verify.py.txt",
+  "root/run.py": "root/run.py.txt",
+  "root/nurbs-probe.cpp": "root/nurbs-probe.cpp.txt",
+  "root/milestone.py": "root/milestone.py.txt",
+  "root/probe.cpp": "root/probe.cpp.txt",
+  "root/candidate/tools/generate_architecture.py": "root/candidate/tools/generate_architecture.py.txt"
+}

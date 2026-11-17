@@ -1,0 +1,11 @@
+from pathlib import Path
+import json,hashlib
+T=Path('/tmp/k10-arclength-review/root');entries=[]
+for p in sorted(T.rglob('*')):
+ if not p.is_file() or p.is_symlink():continue
+ with p.open('rb') as f:magic=f.read(8)
+ if magic.startswith(b'\x7fELF') or magic==b'!<arch>\n':entries.append({'path':str(p),'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
+(T/'cleanup-plan.json').write_text(json.dumps(entries,indent=2)+'\n')
+for e in entries:
+ p=Path(e['path']);assert p.parent==T and hashlib.sha256(p.read_bytes()).hexdigest()==e['sha256'];p.unlink()
+j={'removed_files':len(entries),'bytes':sum(e['bytes'] for e in entries),'scope':'Only completed current root staging ELF/object files; no repository build, CAD, sources or logs removed'};(T/'cleanup-result.json').write_text(json.dumps(j,indent=2)+'\n');print(j)

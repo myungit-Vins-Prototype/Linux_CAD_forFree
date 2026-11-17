@@ -1,0 +1,29 @@
+[ 39%] Built target forgekernel
+[ 39%] Built target forgecad_compute_autogen_timestamp_deps
+[ 39%] Built target forgecad_compute_autogen
+[ 43%] Built target forgecad_compute
+[ 43%] Built target forgecad_autogen_timestamp_deps
+[ 43%] Built target forgecad_autogen
+[100%] Built target forgecad
+[ 90%] Built target forgekernel
+[ 90%] Building CXX object kernel/CMakeFiles/forgekernel_surface_curve_bounds_tests.dir/tests/test_surface_curve_bounds.cpp.o
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_surface_curve_bounds_tests.dir/tests/test_surface_curve_instances.cpp.o
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_surface_curve_bounds_tests.dir/tests/test_surface_curve_rational.cpp.o
+[100%] Linking CXX executable forgekernel_surface_curve_bounds_tests
+[100%] Built target forgekernel_surface_curve_bounds_tests
+[100%] Built target forgekernel
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_mapping_nonplane_validation_tests.dir/tests/test_mapping_nonplane_validation.cpp.o
+[100%] Linking CXX executable forgekernel_mapping_nonplane_validation_tests
+[100%] Built target forgekernel_mapping_nonplane_validation_tests
+[100%] Built target forgekernel
+[100%] Linking CXX executable forgekernel_surface_mapping_tests
+[100%] Built target forgekernel_surface_mapping_tests
+[100%] Built target forgekernel
+[100%] Linking CXX executable forgekernel_sheet_join_validation_tests
+[100%] Built target forgekernel_sheet_join_validation_tests
+[100%] Built target forgekernel
+[100%] Linking CXX executable forgekernel_surface_instances_tests
+[100%] Built target forgekernel_surface_instances_tests
+[100%] Built target forgekernel
+[100%] Linking CXX executable forgekernel_tolerance_tests
+[100%] Built target forgekernel_tolerance_tests

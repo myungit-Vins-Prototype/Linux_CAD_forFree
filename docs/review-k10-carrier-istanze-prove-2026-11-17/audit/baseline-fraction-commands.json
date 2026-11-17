@@ -1,0 +1,24 @@
+{
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "observedExit": 0,
+  "commands": [
+    [
+      "python3",
+      "/tmp/k10-instance-carrier-review/audit/verify_narrow_witness.py.txt",
+      "/tmp/k10-instance-carrier-review/tests/baseline-fins.jsonl",
+      "/tmp/k10-instance-carrier-review/audit/baseline-instance-narrow-fraction.json"
+    ],
+    [
+      "python3",
+      "/tmp/k10-instance-carrier-review/audit/verify_public_fins.py.txt",
+      "/tmp/k10-instance-carrier-review/tests/baseline-fins.jsonl",
+      "/tmp/k10-instance-carrier-review/audit/baseline-public-instance-fraction.json",
+      "public-instance"
+    ],
+    [
+      "python3",
+      "/tmp/k10-instance-carrier-review/audit/verify_no_flatten_witness.py.txt"
+    ]
+  ],
+  "inputSHA256": "a423ee2e6f8030c5a7fc0843dbdfec9bf8bb4c7612f1ce552f19981ab8b154ce"
+}

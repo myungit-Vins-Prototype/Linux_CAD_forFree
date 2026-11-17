@@ -1,0 +1,38 @@
+{
+  "package": "independent-static-global-mapping-audit",
+  "candidateSha256": "03d21ceab86aead510559aee7101ade9a4aba8b1ef516671943b0bfa823fd001",
+  "noCompiledArtifacts": true,
+  "runtimeExecutedByAudit": false,
+  "files": [
+    {
+      "path": "README.txt",
+      "bytes": 2652,
+      "sha256": "24d1d10375d8de43cccd4f95dd860b3edeb7f01a23fbb80646ae74e2f83d57f5"
+    },
+    {
+      "path": "baseline-static-audit.json",
+      "bytes": 2942,
+      "sha256": "d5aa31fc89f920b08dc851b22773a8c706e60dc38fd63dc8009f9226fd41f061"
+    },
+    {
+      "path": "candidate-fk_mapping_fit.cpp.txt",
+      "bytes": 14743,
+      "sha256": "03d21ceab86aead510559aee7101ade9a4aba8b1ef516671943b0bfa823fd001"
+    },
+    {
+      "path": "candidate-static-review.json",
+      "bytes": 2496,
+      "sha256": "87162810c3f1e4ef1f8ec4b2ad8318e3c72011a5d23d746b235eb47820dcae82"
+    },
+    {
+      "path": "candidate.patch.txt",
+      "bytes": 7048,
+      "sha256": "9fcb03f53b5b455ec62f9c4bb77b2fa9a356d34b5d8a5469d6301d81f472a463"
+    },
+    {
+      "path": "graph-consult.json",
+      "bytes": 719092,
+      "sha256": "1f72aa8e270502e56b1ac90398b8609c9251b60b0eb9dcbaef4248c0cd98cf0f"
+    }
+  ]
+}

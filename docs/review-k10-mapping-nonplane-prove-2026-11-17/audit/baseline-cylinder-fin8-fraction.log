@@ -1,0 +1,1 @@
+{'fin': 8, 'edge': 8, 'face': 2, 'budget': 8e-08, 'pass': True, 'upper_mm': 1.0718379110461663e-08, 'cells': 16, 'leaves': 32, 'branches': 108, 'max_depth': 1, 'label': 'cylinder', 'runtimeStatus': 2, 'runtimeUpper': 'inf'}

@@ -1,0 +1,6 @@
+{
+  "label": "Q-peak",
+  "witness": "0x1.e45106b6b3b93p-15",
+  "parameterExpression": "1 / std::sqrt(3e8)",
+  "attribution": "Chosen IEEE point matching the regression expression; the proof reads the hex exactly, not a sampled upper bound"
+}

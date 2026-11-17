@@ -1,0 +1,338 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 55242f7..fd67de0 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -6,6 +6,7 @@ Aggiornato **16 novembre 2026**.
+ 
+ ## Regole permanenti e decisioni
+ 
++- **16/11: continuare review/correzioni locali; nessun commit o push fino a nuova richiesta.**
+ - Italiano; nessun `codex` nei nomi dei branch. `main` unico;
+   `solver-mesh-gpu` è stato integrato e archiviato il 30 ottobre. CUDA e Metal restano backend opzionali negli stessi
+   sorgenti, con fallback CPU.
+@@ -108,6 +109,11 @@ ctest --test-dir forgecad-release --output-on-failure
+ 
+ ## Ultimi interventi — esiti consolidati
+ 
++**16/11 — Sette API legacy rimosse e verificate, senza commit/push.**
++Tre Sol; app/10CTest/35statici/mappa PASS; kernel invariato.
++22candidate:16rimosse,6intenzionali;33bug invariati. K10 finNewton:solo piano.
++[Prove e limiti](docs/review-legacy-api-2026-11-16.md).
++
+ **16/11 — UI9/UI10 verificate,33rilievi corretti.**
+ Palette Sezione/massa/Raccordo e altezza Sezione;4wrapper tolti,6query conservate,7legacy aperte.
+ App/12CTest+3mirati/74Wayland/appunti/mappa PASS; 958ed68 push, CI Linux/macOS PASS.
+@@ -123,18 +129,10 @@ Parametro razionale/ISO e fin: app/28CTest/15mirati/sanitizer/Wayland/Fraction P
+ Pubbliche3/3 legacy, zero ISO certificate. K10:24/24parziali,31rilievi invariati;
+ Newton/unsupported/carrier globale runtime aperti. [Prove/limiti](docs/review-k10-boundary-2026-11-16.md).
+ 
+-**16/11 — K10 mitre ISO verificate con tre agenti Sol.**
+-App/27CTest/13mirati/19sanitizer/Wayland/Fraction PASS; fin sintetiche reali.
+-Pubbliche16/16 senzaISO; diagonali/Newton campionati. K10:23/24parziali+1aperto.
+-[Prove/limiti](docs/review-k10-mitre-2026-11-16.md).
+-
+-**16/11 — K10 giunti estensioni, tre agenti Sol.**
+-Via tangente continua/cap fisso; app/22CTest/29sanitizer/41Sheet/Wayland/Fraction PASS.
+-Newton trasverso aperto. [Prove/limiti](docs/review-k10-sheet-join-2026-11-16.md).
+-
+-**16/11 — K10 Mapping/Quilt UV, tre agenti Sol.**
+-Plane/offset:app/26CTest/Wayland/21sanitizer/Fraction80fin PASS; altri carrier campionati.
+-[Prove/limiti](docs/review-k10-mapping-uv-2026-11-16.md).
++K10 mitre/giunti/Mapping: app e27/22/26CTest PASS; certificati ISO/Plane parziali,
++Newton e carrier generici campionati. [Mitre](docs/review-k10-mitre-2026-11-16.md),
++[giunti](docs/review-k10-sheet-join-2026-11-16.md), [UV](docs/review-k10-mapping-uv-2026-11-16.md).
++Dettagli conservati nella [memoria precedente](docs/history/claude-prima-legacy-api-2026-11-16.md).
+ 
+ **16/11 — UI8 tema/schede, tre agenti Sol.**
+ Palette/QSS e menuTema2D:app/21CTest/Wayland/API PASS; carta/colori invariati,
+diff --git a/cad_drawing_editor.cpp b/cad_drawing_editor.cpp
+index 382b372..af83cdd 100644
+--- a/cad_drawing_editor.cpp
++++ b/cad_drawing_editor.cpp
+@@ -437,7 +437,6 @@ struct DrawingSheetEditor::Impl{
+         if(changed){drag.guide->show();drag.blink->start();}return anchor;
+     }
+     QLabel *message=nullptr;
+-    QAction *updateAction=nullptr;
+     QTreeWidget *tree=nullptr;
+     bool syncingSelection=false;
+     QPointer<QDialog> numberingPanel;
+@@ -492,7 +491,6 @@ struct DrawingSheetEditor::Impl{
+     void cacheSections(){sectionCurves.clear();for(const auto &[id,pieces]:curves)for(const auto &piece:pieces)
+         if(piece.kind==DrawingCurveKind::Section)sectionCurves[id].push_back(piece);}
+     std::function<void(const DrawingSheet &)> changed;
+-    std::function<DrawingEditorModel()> provider;
+     bool rebuilding=false;
+     bool readOnly=false;
+     QAction *quoteAction=nullptr;
+@@ -2944,9 +2942,8 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
+     action(QStringLiteral("Quota verticale"),"drawingVerticalDimensionAction",[this]{impl_->report(addSelectedDimension(DrawingMeasure::VerticalDistance));});
+     action(QStringLiteral("Lunghezza curva"),"drawingLengthDimensionAction",[this]{impl_->report(addSelectedDimension(DrawingMeasure::SectionLength));});
+     toolbar->addSeparator();action(QStringLiteral("Elimina selezione"),"drawingDeleteSelectionAction",[this]{impl_->removeSelection();});
+-    impl_->updateAction=action(QStringLiteral("Aggiorna dal modello"),"drawingUpdateModelAction",[this]{if(impl_->provider){try{impl_->report(updateModel(impl_->provider()));}catch(const std::exception &error){impl_->report(QString::fromUtf8(error.what()));}}});
+     action(QStringLiteral("Impostazioni zoom…"),"drawingZoomPreferencesAction",[this]{ForgeCad::showZoomPreferences(this);});
+-    impl_->updateAction->setEnabled(false);action(QStringLiteral("Adatta foglio"),"drawingFitAction",[this]{fitSheet();});
++    action(QStringLiteral("Adatta foglio"),"drawingFitAction",[this]{fitSheet();});
+     impl_->scene=new QGraphicsScene(this);impl_->view=new SheetCanvas(impl_->scene,this);impl_->view->setObjectName("drawingCanvas");impl_->view->configurePan();impl_->view->setRenderHint(QPainter::Antialiasing);impl_->view->setBackgroundRole(QPalette::Dark);impl_->view->setMouseTracking(true);impl_->view->viewport()->setMouseTracking(true);
+     impl_->view->pointer=[this](QPointF point,Qt::KeyboardModifiers modifiers,bool click){try{if(impl_->localSectionTool&&impl_->localSectionTool->active())return impl_->localSectionTool->pointer(point,click,modifiers);if(impl_->centerInput>=0)return impl_->centerPointer(point,click);if(impl_->numberingPanel)return impl_->numberingPointer(point,click);return impl_->detail?impl_->detailPointer(point,click):impl_->cut?impl_->cutPointer(point,modifiers,click):impl_->placement?impl_->placementPointer(point,click):impl_->quotePointer(point,modifiers,click);}catch(const std::exception &e){impl_->say(QString::fromUtf8(e.what()));return true;}};
+     impl_->view->drag=[this](QPointF p,Qt::KeyboardModifiers m,int phase){try{if(impl_->numberingPanel)return true;return impl_->dimensionDragPointer(p,phase)||impl_->cutDragPointer(p,m,phase)||impl_->axisDragPointer(p,phase)||impl_->viewDragPointer(p,m,phase);}catch(const std::exception &e){impl_->cancelViewDrag();impl_->say(QString::fromUtf8(e.what()));return true;}};
+@@ -3033,7 +3030,6 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
+         {"drawingPageSettingsAction","drawingPage"},
+         {"drawingHiddenLinesAction","drawingHiddenLines"},
+         {"drawingDeleteSelectionAction","delete"},
+-        {"drawingUpdateModelAction","drawingModelUpdate"},
+         {"drawingFitAction","zoomAll"},
+         {"drawingZoomPreferencesAction","viewWheel"},
+         {"drawingAlignSectionOrientationAction","drawingAlignSectionOrientation"},
+@@ -3646,7 +3642,6 @@ void DrawingSheetEditor::installPreparedModel(PreparedDrawingSheet prepared){
+ }
+ 
+ void DrawingSheetEditor::setChangedCallback(std::function<void(const DrawingSheet &)> callback){impl_->changed=std::move(callback);}
+-void DrawingSheetEditor::setModelProvider(std::function<DrawingEditorModel()> provider){impl_->provider=std::move(provider);impl_->updateAction->setEnabled(bool(impl_->provider)&&!impl_->readOnly);}
+ bool DrawingSheetEditor::isReadOnly()const{return impl_->readOnly;}
+ void DrawingSheetEditor::setReadOnly(bool readOnly){
+     if(readOnly)impl_->cancelNumbering();
+@@ -3656,7 +3651,7 @@ void DrawingSheetEditor::setReadOnly(bool readOnly){
+     impl_->quoteType->setEnabled(!impl_->readOnly);
+     for(const auto &name:{"drawingAddNoteAction","drawingAddLeaderAction","drawingAddDatumAction","drawingAddGeometricToleranceAction","drawingAddSurfaceTextureAction","drawingEditAnnotationAction","drawingAxisThroughPointsAction","drawingAxisBetweenLinesAction","drawingEditAxisAction","drawingDerivedViewAction","drawingAuxiliaryViewAction","drawingBreakViewAction","drawingDetailViewAction","drawingTechnicalSectionAction","drawingSteppedSectionAction","drawingAlignedSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction","drawingDimensionNumberingAction","drawingChangeDimensionNumberAction","drawingToggleDimensionNumberAction","drawingOptionsAction","drawingResetViewTitleAction","drawingPageSettingsAction","drawingSmartDimensionAction","drawingChainHorizontalAction","drawingChainVerticalAction","drawingOrdinateXAction","drawingOrdinateYAction","drawingRepairDimensionAction","drawingRepairFirstReferenceAction","drawingRepairSecondReferenceAction","drawingEditDimensionAction","drawingReverseDimensionArrowsAction","drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction","drawingAddProjectionAction","drawingAddViewAction","drawingEditViewAction","drawingAlignViewAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction","drawingDeleteSelectionAction"})
+         findChild<QAction *>(QString::fromLatin1(name))->setEnabled(!impl_->readOnly);
+-    impl_->refreshHiddenAction();impl_->refreshHistoryActions();impl_->updateAction->setEnabled(!impl_->readOnly&&bool(impl_->provider));
++    impl_->refreshHiddenAction();impl_->refreshHistoryActions();
+     for(auto *item:impl_->scene->items())if(dynamic_cast<MoveLabel *>(item)||dynamic_cast<MoveNote *>(item))item->setFlag(QGraphicsItem::ItemIsMovable,!impl_->readOnly&&item->data(kindRole).toString()!=QLatin1String("view"));
+ }
+ void DrawingSheetEditor::fitSheet(){impl_->view->zoom.stop();impl_->view->fitInView(QRectF(QPointF(-5,-5),impl_->state.size+QSizeF(10,10)),Qt::KeepAspectRatio);}
+diff --git a/cad_drawing_editor.h b/cad_drawing_editor.h
+index 6aebee9..543ad86 100644
+--- a/cad_drawing_editor.h
++++ b/cad_drawing_editor.h
+@@ -101,7 +101,6 @@ public:
+     QString addSelectedDimension(DrawingMeasure measure);
+     QString updateModel(DrawingEditorModel model);
+     void setChangedCallback(std::function<void(const DrawingSheet &)> callback);
+-    void setModelProvider(std::function<DrawingEditorModel()> provider);
+     void fitSheet();
+     void setReadOnly(bool readOnly);
+     bool isReadOnly() const;
+diff --git a/cad_drawing_window.cpp b/cad_drawing_window.cpp
+index 5934d30..eeb3d3e 100644
+--- a/cad_drawing_window.cpp
++++ b/cad_drawing_window.cpp
+@@ -147,8 +147,6 @@ void DrawingWindow::installEditor(DrawingSheetEditor *prepared){
+     }
+     next->setReadOnly(true);
+     next->setChangedCallback([this](const DrawingSheet &sheet){sheetChanged(sheet);});
+-    // Il comando del contenitore verifica percorso, identita' e impronta.
+-    next->findChild<QAction *>("drawingUpdateModelAction")->setVisible(false);
+     modelUpdateNotice_=new QWidget(container);modelUpdateNotice_->setObjectName("drawingModelUpdateNotice");
+     auto *noticeLayout=new QHBoxLayout(modelUpdateNotice_);noticeLayout->setContentsMargins(8,5,8,5);
+     modelUpdateText_=new QLabel(modelUpdateNotice_);modelUpdateText_->setTextFormat(Qt::PlainText);modelUpdateText_->setWordWrap(true);
+diff --git a/cad_forge.cpp b/cad_forge.cpp
+index 3ef6d12..3027a7d 100644
+--- a/cad_forge.cpp
++++ b/cad_forge.cpp
+@@ -2403,17 +2403,4 @@ bool forgePickFace(const Body &body, const QVector3D &origin, const QVector3D &d
+     }
+ }
+ 
+-
+-bool forgeIntersectRay(const Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index) {
+-    try {
+-        double t = 0.0;
+-        if (!firstRayHit(body, Vec3(origin.x(), origin.y(), origin.z()), Vec3(direction.x(), direction.y(), direction.z()), 1e-7, t, nullptr, index))
+-            return false;
+-        distance = t;
+-        return true;
+-    } catch (const std::exception &) {
+-        return false;
+-    }
+-}
+-
+ }
+diff --git a/cad_forge.h b/cad_forge.h
+index fbac525..75564cf 100644
+--- a/cad_forge.h
++++ b/cad_forge.h
+@@ -224,9 +224,6 @@ void forgeWarmPickCaches(const Kernel::Body &body);
+ bool forgePickFace(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit, const Kernel::RayFaceIndex *index = nullptr,
+                    const Kernel::Interval *window = nullptr);
+ 
+-// Distanza lungo il raggio del primo punto del body colpito (geometria esatta).
+-bool forgeIntersectRay(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index = nullptr);
+-
+ // Funzione che ha creato la faccia `face` di `picked` nel punto `point`:
+ // la prima di `chain` (le funzioni da cui il corpo deriva, in ordine, con
+ // i loro corpi) che ha una faccia sulla stessa superficie e che contiene il
+diff --git a/cad_sketch_refs.cpp b/cad_sketch_refs.cpp
+index 8a7b84f..63e0a90 100644
+--- a/cad_sketch_refs.cpp
++++ b/cad_sketch_refs.cpp
+@@ -160,17 +160,6 @@ QString sketchReferenceLabel(const GeometryRef &source, const QVector<SketchObje
+     return label;
+ }
+ 
+-bool nearestBodyEdge(const Body &body, const Vec3 &point, CurvePtr<3> &curve, Interval &range) {
+-    double best = std::numeric_limits<double>::max();
+-    for (EdgeId e : body.edges()) {
+-        const Edge &edge = body.edge(e);
+-        if (!edge.curve) continue;
+-        const double d = projectPoint(*edge.curve, point, edge.range).distance;
+-        if (d < best) best = d, curve = edge.curve, range = edge.range;
+-    }
+-    return best < std::numeric_limits<double>::max();
+-}
+-
+ QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, const Interval &range, bool construction, bool fixed,
+                              QVector<SketchEntity> *created) {
+     if (!curve || !(range.hi > range.lo)) return QStringLiteral("Curva non valida.");
+@@ -609,22 +598,6 @@ QString sketchAxisReference(const SketchObject &sketch, const Kernel::Vec3 &orig
+     direction /= length;
+     return {};
+ }
+-int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength) {
+-    const auto cross = [](const QPointF &a, const QPointF &b) { return a.x() * b.y() - a.y() * b.x(); };
+-    for (int i : sketch.constructionSegments) {
+-        if (i < 0 || i >= sketch.segments.size()) continue;
+-        const auto &s = sketch.segments.at(i);
+-        const QPointF d = s.second - s.first;
+-        if (std::fabs(cross(d, direction)) > 1e-12 * std::max(1.0, std::hypot(d.x(), d.y()))
+-            || std::fabs(cross(s.first - point, direction)) > 1e-12 * std::max({1.0, std::hypot(point.x(), point.y()), std::hypot(s.first.x(), s.first.y())})) continue;
+-        for (const auto &c : sketch.geometricConstraints)
+-            if (c.type == ConstraintType::Fix && c.first == ConstraintRef{0, i, -1}) return i;
+-    }
+-    const int index = int(sketch.segments.size());
+-    appendSegment(sketch, point - halfLength * direction, point + halfLength * direction, true);
+-    sketch.geometricConstraints.append(makeConstraint(sketch, ConstraintType::Fix, {{0, index, -1}}));
+-    return index;
+-}
+ int sketchReferenceSourceIndex(const GeometryRef &ref, const QVector<SketchObject> &sketches,
+                               const QVector<ExtrusionObject> &bodies) {
+     if (isSketchRef(ref)) {
+diff --git a/cad_sketch_refs.h b/cad_sketch_refs.h
+index 822dee1..901dee0 100644
+--- a/cad_sketch_refs.h
++++ b/cad_sketch_refs.h
+@@ -53,8 +53,6 @@ QString appendProjectedSketchEntity(SketchObject &sketch, const SketchObject &so
+ QString sketchPlaneReference(const SketchObject &sketch, const SketchFrame &plane, QPointF &point, QPointF &direction);
+ QString sketchAxisReference(const SketchObject &sketch, const Kernel::Vec3 &origin, const Kernel::Vec3 &axis,
+                             QPointF &point, QPointF &direction);
+-// Riusa una retta di costruzione gia' fissa e collineare, oppure ne crea una.
+-int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength);
+ 
+ // Aggiunge allo schizzo la proiezione del tratto `range` di `curve`
+ // (coordinate del modello); `construction` le fa di costruzione, `fixed` le
+@@ -62,9 +60,6 @@ int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const Q
+ QString appendProjectedCurve(SketchObject &sketch, const Kernel::CurvePtr<3> &curve, const Kernel::Interval &range, bool construction, bool fixed,
+                              QVector<SketchEntity> *created = nullptr);
+ 
+-// Spigolo del body piu' vicino a `point` (la sua curva e il suo tratto).
+-bool nearestBodyEdge(const Kernel::Body &body, const Kernel::Vec3 &point, Kernel::CurvePtr<3> &curve, Kernel::Interval &range);
+-
+ // Curve di sezione di solidi e superfici con il piano dello schizzo,
+ // limitate ai bordi delle facce e aggiunte come sopra.
+ QString appendSectionCurves(SketchObject &sketch, const Kernel::Body &body, bool construction, bool fixed, QVector<SketchEntity> *created = nullptr);
+diff --git a/docs/code-review-2026-11-15.md b/docs/code-review-2026-11-15.md
+index 63ec9b2..ce7a931 100644
+--- a/docs/code-review-2026-11-15.md
++++ b/docs/code-review-2026-11-15.md
+@@ -1,5 +1,7 @@
+ # Review generale ForgeCAD — 15 novembre 2026
+ 
++**Prosecuzione locale, senza commit/push:** rimossi i sette ingressi legacy e le catene morte Estendi/provider tavola/utility. App completa,10/10CTest,35/35controlli statici e mappa PASS. Delle22candidate iniziali:16rimosse,6query/cataloghi intenzionali; **33bug funzionali corretti invariati**. K10 generale resta aperto; delimitata in sola lettura la verifica delle fin Newton non ISO. La CI verde precedente non certifica queste modifiche locali. [Rapporto e limiti](review-legacy-api-2026-11-16.md).
++
+ **UI9/UI10 corretti e verificati:** colori Sezione/massa, altezza Sezione e separatore Raccordo. **Totale33rilievi corretti**; quattro wrapper sono manutenzione, sei query intenzionali, sette legacy aperte. App completa/12CTest e74controlli specifici Wayland PASS; Il separatore aggiunge9raster e3CTest PASS. Wayland generale schede resta in timeout su sessione bloccata (offscreen PASS). CI nuova Linux/macOS PASS su `958ed68`; [log](review-ui-colori-api-github-prove-2026-11-16/README.txt). [Prove e limiti](review-ui-colori-api-2026-11-16.md).
+ 
+ **Preparazione precedente, sola lettura:** ricontrollate17API e localizzati i colori fissi Sezione/Proprietà di massa; separatore Raccordo solo candidato. Nessuna correzione o rimozione attribuita a quella fase storica. [Inventario e limiti](review-prossimi-punti-2026-11-16.md).
+diff --git a/forgeCad2026_viewport.h b/forgeCad2026_viewport.h
+index aa25efd..d1087b9 100644
+--- a/forgeCad2026_viewport.h
++++ b/forgeCad2026_viewport.h
+@@ -452,11 +452,6 @@ public:
+     // Estensione: attiva la scelta dei bordi; deferPreview permette al pannello
+     // di apparire prima del calcolo e gestire selezione e anteprima insieme.
+     QString beginExtendPick(bool linear, bool deferPreview = false);
+-    void setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback);
+-    // Tipo dell'estensione per l'anteprima durante la scelta dei bordi.
+-    void setEdgePickLinear(bool linear);
+-    // Di nuovo alla scelta dei bordi da estendere, con quelli dati gia' scelti.
+-    void resumeExtendPick(int body, const QVector<EdgePoint> &edges, bool linear);
+     // Modifica degli spigoli del raccordo (o smusso) `blend`: la scelta riparte
+     // sulla sua base con gli spigoli attuali; al posto del raccordo si vede
+     // l'anteprima. Invio chiama il callback di setEdgeEditCallback.
+@@ -1753,7 +1748,6 @@ private:
+     int datumPreviewIndex_ = -1;
+     std::function<void(int, int, EdgePoint)> helixPickFinished_;
+     ChamferSpec edgePickSpec_;  // smusso: modo delle distanze per l'anteprima durante la scelta  // scelta dei bordi di una superficie da estendere
+-    std::function<void(int, QVector<EdgePoint>)> extendPickFinished_;
+     QVector<int> pickedEdges_, hoverFaceEdges_;
+     // Facce scelte per tutti i loro bordi (raccordi e smussi): finche' i bordi
+     // restano tutti scelti, la feature salva la faccia e non gli spigoli.
+diff --git a/forgeCad2026_viewport_selection.cpp b/forgeCad2026_viewport_selection.cpp
+index 9e92cbb..e0984a3 100644
+--- a/forgeCad2026_viewport_selection.cpp
++++ b/forgeCad2026_viewport_selection.cpp
+@@ -227,22 +227,6 @@ QString CadViewport::beginExtendPick(bool linear, bool deferPreview) {
+     return startEdgePick(false, true, false, deferPreview);
+ }
+ 
+-void CadViewport::setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback) { extendPickFinished_ = std::move(callback); }
+-
+-void CadViewport::setEdgePickLinear(bool linear) {
+-    edgePickLinear_ = linear;
+-    if (edgePicking_ && edgePickExtend_) edgePicked();
+-}
+-
+-void CadViewport::resumeExtendPick(int body, const QVector<EdgePoint> &edges, bool linear) {
+-    if (body < 0 || body >= extrusions_.size()) return;
+-    selection_ = {SceneObjectKind::Extrusion, body, -1};
+-    selectedFace_ = {};
+-    if (!beginExtendPick(linear).isEmpty()) return;
+-    pickReferences(body, edges);
+-    edgePicked();
+-}
+-
+ QString CadViewport::beginBlendEdit(int blend, double size, bool chamfer) {
+     if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
+     if (blend < 0 || blend >= extrusions_.size() || extrusions_.at(blend).feature != BodyFeature::Blend
+@@ -1693,9 +1677,8 @@ void CadViewport::finishEdgePick() {
+         clearBlendPreview();
+         return;
+     }
+-    if (extend) {
+-        if (extendPickFinished_) extendPickFinished_(body, points);
+-    } else if (edited >= 0) {
++    if (extend) return;
++    if (edited >= 0) {
+         if (edgeEditFinished_) edgeEditFinished_(edited, points, edgePickSize_, chamfer);
+     } else if (edgePickFinished_) {
+         edgePickFinished_(body, points, chamfer);
+diff --git a/tools/generate_architecture.py b/tools/generate_architecture.py
+index 2329faa..e461ca8 100644
+--- a/tools/generate_architecture.py
++++ b/tools/generate_architecture.py
+@@ -447,7 +447,7 @@ DESCRIPTIONS.update({
+  'cad_drawing_dimension': ('drawing', 'Geometria delle quote 2D, generatrici coniche/cilindriche con estremi associativi, diametri, R profilo dalle isoparametriche circolari dei raccordi, catene e ordinate con segno; testimone esatto per estremi legacy e generatrici coniche/cilindriche con nomi condivisi, senza ricerca del punto piu vicino.'),
+  'tests/test_drawing_dimensions_gui.cpp': ('tests', 'Regressioni GUI quote: snap durante la definizione e primo clic identico all’anteprima, Alt/Esc e pulizia; coincidenza delle punte angolare/lineare, settori, richiami obliqui e snap raggiungibili; agganci e proprietà, allineamento direzionale orizzontale/verticale al testo più vicino, inversione, zoom, lampeggio, testo ruotato, Alt/Esc, perdita presa, PDF e Undo/Redo.'),
+  'cad_drawing_editor': ('drawing',
+-                        'Editor della tavola: centri/assi su bordi selezionati e sezione locale con contorno/profondita, modificabile con quote e richiami associati senza bloccare le altre viste; raggio libero dal primo clic e leader corto per centro esterno; ricollegamento quote con snap, anteprima e conferma atomica; allineatori durante il primo posizionamento e il trascinamento, stato temporaneo riusato fra anteprime e conferma senza salto; snap fra punte coincidenti delle quote lineari/angolari con calcolo geometrico condiviso, priorità e indicatore lampeggiante; guide lampeggianti e aggancio direzionale dei testi di quota al vicino nel verso del movimento, annullamento e Undo al rilascio; quote trasparenti, frecce H/B, richiami obliqui e serie ordinate continue; scala comune del foglio e sorgente della scala per ogni vista, aggiornamento atomico di anteprime e dipendenze; selezione, posizionamento e comandi; inserimento atomico e anteprime di catene e ordinate, proprietà e anteprime dei datum/cartigli geometrici e delle rugosità Ra/Rz e dei badge persistenti con scelta della prima quota e frecce nella viewport, incluse anteprime delle viste interrotte e sezioni rimosse a gradini multipli e allineate a due piani angolari; disegno e ridefinizione del taglio con mouse, centro e rami o percorso ortogonale, snap geometrici e anteprima annullabile.'),
++                        'Editor della tavola: aggiornamento transazionale del modello tramite API coordinata dal contenitore; centri/assi su bordi selezionati e sezione locale con contorno/profondita, modificabile con quote e richiami associati senza bloccare le altre viste; raggio libero dal primo clic e leader corto per centro esterno; ricollegamento quote con snap, anteprima e conferma atomica; allineatori durante il primo posizionamento e il trascinamento, stato temporaneo riusato fra anteprime e conferma senza salto; snap fra punte coincidenti delle quote lineari/angolari con calcolo geometrico condiviso, priorità e indicatore lampeggiante; guide lampeggianti e aggancio direzionale dei testi di quota al vicino nel verso del movimento, annullamento e Undo al rilascio; quote trasparenti, frecce H/B, richiami obliqui e serie ordinate continue; scala comune del foglio e sorgente della scala per ogni vista, aggiornamento atomico di anteprime e dipendenze; selezione, posizionamento e comandi; inserimento atomico e anteprime di catene e ordinate, proprietà e anteprime dei datum/cartigli geometrici e delle rugosità Ra/Rz e dei badge persistenti con scelta della prima quota e frecce nella viewport, incluse anteprime delle viste interrotte e sezioni rimosse a gradini multipli e allineate a due piani angolari; disegno e ridefinizione del taglio con mouse, centro e rami o percorso ortogonale, snap geometrici e anteprima annullabile.'),
+  'cad_drawing_preparation': ('drawing', 'Riuso thread-safe delle curve esatte per piani e sorgenti identici; ritaglio conservativo dei dettagli prima del calcolo di visibilita. Prepara anche sezioni locali composte con contorno e profondita; viste su worker con cache locali e mesh immutabili condivise; barriere di raffinamento conservano l’ordine geometrico seriale, budget limitato, progressi e annullamento; risultati trasferibili all’editor per aggiornamento atomico multifoglio senza ricalcoli.'),
+  'cad_geometry_refs.h': ('features', 'Visitatori const/mutabili dei riferimenti per famiglie, inclusi collegamenti associativi degli schizzi con copie immutabili per Undo; condivisi da storia, dipendenze e topologia.'),
+  'tests/test_geometry_refs.cpp': ('tests', 'Copertura di tutte le famiglie dei riferimenti, support/Pierce e snapshot Undo; rimappatura dei risultati di ripetizione e ancoraggio degli schizzi dopo il gruppo.'),
+@@ -485,7 +485,7 @@ DESCRIPTIONS.update({
+                             'Classifica la visibilità con indice spaziale XY degli occludenti analitici (sfere, cilindri, coni, tori), mesh per auto-occlusione e rifilature, tagli parametrici delle coniche anche NURBS certificate e consolidamento dei bordi proiettati rettilinei.'),
+  'cad_drawing_sheets_ui.cpp': ('drawing', 'Schede e gestore dei fogli, identita persistenti, storia globale con ripristino della sorgente quando cambia modello e preparazione su tutti i fogli.'),
+  'cad_drawing_window': ('drawing',
+-                        'Workspace della suite 2D incorporabile nelle schede: chiusura/salvataggi coordinati, ricostruzione menu dopo cambio foglio con unico sottomenu Tema persistente; nuova tavola dallo snapshot valutato del modello salvato, verificato con impronta del file e identita; preparazione cancellabile senza rigenerare la storia; documento multifoglio, salvataggio e PDF multipagina.'),
++                        'Workspace della suite 2D incorporabile nelle schede: chiusura/salvataggi coordinati, ricostruzione menu dopo cambio foglio con unico sottomenu Tema persistente; nuova tavola dallo snapshot valutato del modello salvato, verificato con impronta del file e identita; preparazione cancellabile senza rigenerare la storia; documento multifoglio, salvataggio e PDF multipagina. Il comando Aggiorna dal .prt salvato verifica identita e impronta della sorgente nel contenitore.'),
+  'cad_element_names': ('features',
+                        'Registra genealogia delle feature e nomi topologici persistenti per risolvere i '
+                        'riferimenti; ricostruisce i nomi legacy delle tavole sul medesimo B-rep per la migrazione.'),
+@@ -603,7 +603,7 @@ DESCRIPTIONS.update({'forgeCad2026_gui.cpp': ('startup',
+                                          'e modifica mantiene visibili risultati precedenti e stadi '
+                                          'esplicitamente selezionati, anche dopo anteprima fallita o Azzera; '
+                                          'Esc ripristina la scena finale. Rende tutti i quattro estremi '
+-                                         'della nuova ellisse selezionabili e candidati snap.'),
++                                         'della nuova ellisse selezionabili e candidati snap. Estendi e coordinato dal pannello con callback changed/key e anteprima differita.'),
+  'forgeCad2026_viewport_render.cpp': ('viewport',
+                                       'Nasconde sempre le cache automatiche e mostra la costruzione '
+                                       'esplicita in modifica oppure tramite opzione Visualizza, con '

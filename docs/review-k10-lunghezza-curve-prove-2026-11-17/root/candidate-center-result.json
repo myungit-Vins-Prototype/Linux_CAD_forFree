@@ -1,0 +1,9 @@
+{
+  "command": [
+    "/tmp/k10-arclength-review/root/candidate-probe",
+    "center"
+  ],
+  "exit": 0,
+  "seconds": 0.002143692006939091,
+  "watchdog_seconds": 5
+}

@@ -1,0 +1,37 @@
+{
+  "exit": 0,
+  "seconds": 97.62278439800139,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "--parallel",
+    "1",
+    "--output-junit",
+    "/tmp/k10-next-review/root/ctest.xml",
+    "-V",
+    "-R",
+    "^(forgekernel_surface_curve_bounds_tests|forgekernel_sheet_join_validation_tests|forgekernel_sheet_fit_validation_tests|forgekernel_surface_curve_fit_validation_tests|forgekernel_curve_fit_validation_tests|forgekernel_history_tests|forgekernel_offset_validation_tests|forgekernel_offset_pcurve_tests|forgekernel_sew_pcurve_tests|forgekernel_surface_tools_tests|forgekernel_surface_instances_tests|forgekernel_surface_parameterization_tests|forgecad_surface_tools_tests|forgecad_extension_panel_tests|forgecad_all_history_tests|forgecad_blend_history_tests)$"
+  ],
+  "selected_tests": [
+    "forgekernel_surface_curve_bounds_tests",
+    "forgekernel_sheet_join_validation_tests",
+    "forgekernel_sheet_fit_validation_tests",
+    "forgekernel_surface_curve_fit_validation_tests",
+    "forgekernel_curve_fit_validation_tests",
+    "forgekernel_history_tests",
+    "forgekernel_offset_validation_tests",
+    "forgekernel_offset_pcurve_tests",
+    "forgekernel_sew_pcurve_tests",
+    "forgekernel_surface_tools_tests",
+    "forgekernel_surface_instances_tests",
+    "forgekernel_surface_parameterization_tests",
+    "forgecad_surface_tools_tests",
+    "forgecad_extension_panel_tests",
+    "forgecad_all_history_tests",
+    "forgecad_blend_history_tests"
+  ],
+  "skipped": [],
+  "actual_passed": 16
+}

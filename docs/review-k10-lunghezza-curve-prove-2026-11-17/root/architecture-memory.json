@@ -1,0 +1,17 @@
+{
+  "processes": [
+    {
+      "pid": 1679432,
+      "rss": "VmRSS:\t   87956 kB"
+    },
+    {
+      "pid": 1679441,
+      "rss": "VmRSS:\t   25856 kB"
+    },
+    {
+      "pid": 1679442,
+      "rss": "VmRSS:\t  452376 kB"
+    }
+  ],
+  "conclusion": "Process RSS snapshot only; shared pages may be counted twice, not whole-machine RAM or peak"
+}

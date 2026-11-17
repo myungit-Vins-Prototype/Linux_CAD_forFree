@@ -1,0 +1,23 @@
+{
+  "scope": "K10 quadrature controlled-component V2 test supplement",
+  "frozen": true,
+  "groups": 6,
+  "baselineFilter": "SafeControls",
+  "production": {
+    "fk_quadrature.h": "f1ec31f8673d753192d7d9646448f30a78f16fb9ec0bac514f74680dc663d3d6",
+    "fk_mass.cpp": "8248392ee0b7be25dd2b4217bc0ad29eeaf04c939e4e4940a12d328be45c66aa"
+  },
+  "executionByThisAgent": "none",
+  "files": [
+    {
+      "path": "test_quadrature_validation.cpp",
+      "bytes": 10603,
+      "sha256": "451cb83e153566f4dcc280ba304f6766ad27fcb5dce8ce0c04a22265b1ee38a5"
+    },
+    {
+      "path": "COVERAGE.txt",
+      "bytes": 2251,
+      "sha256": "984085a7ec07cd81f1bc23b196a9abb8ce7abe71713d57e2e4d0702f3b27c8a3"
+    }
+  ]
+}

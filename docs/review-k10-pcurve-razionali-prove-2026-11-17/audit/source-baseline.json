@@ -1,0 +1,54 @@
+[
+  {
+    "path": "/home/myungit/Linux_CAD_forFree/AGENTS.md",
+    "sha256": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac"
+  },
+  {
+    "path": "/home/myungit/Linux_CAD_forFree/CLAUDE.md",
+    "sha256": "ff41eb1a7962c3f324cb186770ce12217d5601daf6bdd30634ad2e73c94d1063"
+  },
+  {
+    "path": "/home/myungit/Linux_CAD_forFree/docs/tolerance-policy.md",
+    "sha256": "2cf51f1ef37206a596ececffd3ed2365197ea9531e78e723d45e3426dd4b678c"
+  },
+  {
+    "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_bspline.h",
+    "sha256": "8ab6654b6f1fda07d67fe2f1aae8e1b3f6e255a988354eea383765c5b98d165d"
+  },
+  {
+    "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_bspline_surface.cpp",
+    "sha256": "a1b4769fff26a4d8399dc46f2084ab52dd6a9a6e8b3a01791857c9261453af7e"
+  },
+  {
+    "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_bspline_surface.h",
+    "sha256": "f8324ce20d0d00164c74bdf6fd6b7d85d2003cd4933d86d2084a525dff2d88ae"
+  },
+  {
+    "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_mapping_carrier.cpp",
+    "sha256": "1c769c5136df3502903afea4771636c939425735a975319e1d68848d0316ab25"
+  },
+  {
+    "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_pcurve.cpp",
+    "sha256": "ad5e5ce7082274aee5c279772f30caa56b21689b7b4b7331d27543444c58df79"
+  },
+  {
+    "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp",
+    "sha256": "32dc9c3b46c89b049104897706270b080fecc8b419c4535242fd95092a408a9a"
+  },
+  {
+    "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_sheet_join_validation.cpp",
+    "sha256": "15e314c0f54241ab8d682290db24065e1a033ed430c6e54474ead062b84f258a"
+  },
+  {
+    "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_curve_bounds.cpp",
+    "sha256": "32b161a97903c5ca746a87b3bde59fb3c79566316d0f274a189127cc396f62e6"
+  },
+  {
+    "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_curve_bounds.h",
+    "sha256": "b6ccad5f246b08c9e69523e485f978600b51ae46104d64d12b18c53dbd487d00"
+  },
+  {
+    "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_mapping.cpp",
+    "sha256": "019423a02a6504b3d6e1d659ba9b3b0707397878d5b8bad3340efd52f2b45d3a"
+  }
+]

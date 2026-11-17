@@ -1,0 +1,11 @@
+{
+  "AGENTS.md": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+  "CLAUDE.md": "407c5d19ac17432714cd531c2c95aae490066878de6de972e126f77128e6cd83",
+  "docs/code-review-2026-11-15.md": "1bfa70837eeca0550b4be1553afab5b7ce0bafca1957c52a23db160bc6851db7",
+  "docs/history/claude-prima-k10-inversione-periodica-2026-11-17.md": "da0b65615c0a61e26baad0a5977548c6fb133d9c35b9b71efbe3c1f475109de7",
+  "docs/review-k10-inversione-periodica-2026-11-17.md": "190ceeb0a4df9b23980387a9b3079699731c43d3d10514630f8d6f6eae0b9603",
+  "kernel/CMakeLists.txt": "8ab4f559d603ccceeba990823a11cfb5fdcff254ede822003092b771a7c0c2e6",
+  "kernel/fk_surface_algo.cpp": "2b385177a309a5a832f43394f4f4456294031cf3b30d7d0695743cedf6b83a37",
+  "kernel/tests/test_invert_point_validation.cpp": "c77471ae664519c94ca3c6d28258cec3c4794b64238990da079b721260e3d1d4",
+  "tools/generate_architecture.py": "9a1d541b2938b5f6e4ecbec0684003998a9d02641b2903de0facc8e543997667"
+}

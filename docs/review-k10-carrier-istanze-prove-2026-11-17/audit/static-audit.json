@@ -1,0 +1,35 @@
+{
+  "outcome": "No actionable P1/P2 found in scoped static review",
+  "files": [
+    {
+      "path": "kernel/fk_surface_curve_bounds.cpp",
+      "beforeSHA256": "24b34d948e7834caf261c8c8e733de067a24795738aae31ac6749390cc9a2c28",
+      "candidateSHA256": "2d52c696b141891a6f620b9ef4b7dcfae8a82fdf3a5f6280a07abe7ff2e64aa7"
+    },
+    {
+      "path": "kernel/fk_surface_curve_bounds.h",
+      "beforeSHA256": "6f2256143a51864b01d903ab1daa08570c802a69226d33cb6c76b7842000ea41",
+      "candidateSHA256": "94f64598883d8a7a81a2047b3339a83434e99f51da22a2a73c1f2fb4f6e8764a"
+    }
+  ],
+  "mathematics": [
+    "For positive rational weights, affine image uses the same denominator W and transformed numerator MPw+tW. Centering the outermost translation before multiplication gives M(Pw)+(t-anchor)W without losing any stored IEEE coefficient.",
+    "The implementation encloses each ORIGINAL native pole via stored finite matrices from inner to outer with outward interval operations, then multiplies by the original positive weight. It never reads the rounded instance pole() image.",
+    "Original positive weights and native knots/domain remain valid under affine placement; continuous per-cell residual and denominator proof remain unchanged.",
+    "Finite affine matrices suffice for a positional enclosure; no inverse or similarity-norm estimate is used. Public BSplineSurface instance construction separately enforces a finite nondegenerate similarity.",
+    "The native arithmetic sequence remains I(original coordinate)-origin. Output carrier and edge are not replaced by this provider."
+  ],
+  "controlFlow": [
+    "Traversal bounded to 32 placement links with cancellation before recursive knot/weight/pole access. Constructor currently canonicalizes an instance of an instance to one native base using a stored rounded composition; the certificate is about that stored representation.",
+    "Exhausted/nonfinite recognized instance returns Failed. Candidate generation may return original, but mandatory provider call still returns Failed, not Unsupported.",
+    "Bounded Q construction remains before the single terminal residual proof; late fin ledger and publication are outside this source delta and unchanged.",
+    "Resource caps on coefficient scans/allocations remain; placement traversal adds constant bound of 32 times fixed3x3 operations per original pole."
+  ],
+  "limits": [
+    "Only existing E cubic polynomial/Q line or polynomial degree1/3 and S degree2/3 positive-weight family.",
+    "No proof of global mapping intent, carrier approximation, Newton convergence or trim/topological correctness.",
+    "No proof of hypothetical projective transformations: Transform3 stores affine3x3+translation only.",
+    "No claim that independently requested nested transforms survive the public constructor as distinct links.",
+    "Large cancellation may cause conservative Failed and is not repaired by increasing cap."
+  ]
+}

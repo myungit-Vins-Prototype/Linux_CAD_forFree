@@ -1,0 +1,9 @@
+{
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "MassOfExtrusions"
+  ],
+  "exit": 0,
+  "seconds": 0.06737670199072454,
+  "watchdog_seconds": 600
+}

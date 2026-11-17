@@ -1,0 +1,99 @@
+{
+  "nodes": 800,
+  "edges": 11710,
+  "units": 406,
+  "errors": [],
+  "hashes_config_HTML_verified": true,
+  "focus": {
+    "kernel/fk_curve_algo.cpp": {
+      "description": "Proiezioni esatte: limita i tratti Bezier al range con bounds inclusivi, conservando ordine/candidati e filtri conservativi entro distanza; lunghezze e quadratura invariate.",
+      "relations": {
+        "incoming": {
+          "call": 1,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 7,
+          "include": 6,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_curve_algo.h": {
+      "description": "Interrogazioni sulle curve: proiezione di un punto, lunghezza d'arco.",
+      "relations": {
+        "incoming": {
+          "call": 86,
+          "include": 101,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 0,
+          "include": 1,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_sheet.cpp": {
+      "description": "Taglio, rifilo ed estensione di lamine; offset NURBS planari certificati. Famiglia ISO scelta dalle pcurve sorgenti originali con limite fisico continuo e ancore per incidenza; giunti ISO verificati sui due supporti a cap fisso e fin ricontrollate dopo build/unify. Newton resta una costruzione campionata; fin Newton su supporti nativi quadratici/bicubici anche razionali positivi sono verificate continuamente con budget prefit e candidate UV nel dominio, dopo build/unify tramite mappa edge esplicita, con fallimenti riconosciuti terminali e famiglie unsupported legacy. Inversione della lunghezza d arco: dopo gli ultimi passi Newton verifica direzione, finitezza e lunghezza fisica del parametro restituito sul reach, entro il budget1e-9scala fissato sull input; quadratura stimata1e-13 e60iterazioni invariate, fallimenti non convergenti terminali.",
+      "relations": {
+        "incoming": {
+          "call": 42,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 32,
+          "include": 17,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_sheet.h": {
+      "description": "Taglio e rifilo di lamine; selezione del pezzo piu vicino condivisa con estensione, senza ripetere le intersezioni.",
+      "relations": {
+        "incoming": {
+          "call": 0,
+          "include": 38,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 1,
+          "include": 4,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_sheet_join_validation.cpp": {
+      "description": "Usa la costruzione UV condivisa per le sole fin Newton pianificate; mantiene E/S/parametro e cap prefit, certifica prima di assegnare Q e ricontrolla i discendenti dopo unify anche senza history utente. Niente epsilon UV o recupero campionato dopo Failed; Unsupported conserva la via legacy.",
+      "relations": {
+        "incoming": {
+          "call": 6,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 6,
+          "include": 3,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/tests/test_sheet_arc_validation.cpp": {
+      "description": "Estensione pubblica su Extrusion e tensor B-spline: richiesti3mm contro1mm o178.534mm prima del guard, rifiuto atomico, positivi con fin/carrier effettivi e oracolo distanza, verso opposto/posa/scala, lineare/cilindro e cancellazione. Nessun certificato globale della quadratura.",
+      "relations": {
+        "incoming": {
+          "call": 1,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 20,
+          "include": 9,
+          "reference": 0
+        }
+      }
+    }
+  }
+}

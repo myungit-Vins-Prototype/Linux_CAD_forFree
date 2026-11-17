@@ -1,0 +1,23 @@
+forgeCad2026_dialogs_surfaces.cpp:2195:        viewport->requestExtendPreview(selectedBase, selected, distanceBox->value(), typeBox->currentIndex() == 1, hidden);
+forgeCad2026_viewport.h:454:    QString beginExtendPick(bool linear, bool deferPreview = false);
+forgeCad2026_viewport.h:637:    void requestExtendPreview(int base, const QVector<EdgePoint> &edges, double distance, bool linear, int hidden = -1);
+forgeCad2026_viewport.h:1707:    bool edgePickExtend_ = false, edgePickLinear_ = false;
+forgeCad2026_viewport.h:1769:    std::function<void(int, QVector<EdgePoint>)> edgePickChanged_; // pannello aperto: selezione aggiornata nella vista
+forgeCad2026_viewport_selection.cpp:224:QString CadViewport::beginExtendPick(bool linear, bool deferPreview) {
+forgeCad2026_viewport_selection.cpp:226:    edgePickLinear_ = linear;
+forgeCad2026_viewport_selection.cpp:233:    edgePickLinear_ = linear;
+forgeCad2026_viewport_selection.cpp:234:    if (edgePicking_ && edgePickExtend_) edgePicked();
+forgeCad2026_viewport_selection.cpp:241:    if (!beginExtendPick(linear).isEmpty()) return;
+forgeCad2026_viewport_selection.cpp:284:    edgePickExtend_ = extend;
+forgeCad2026_viewport_selection.cpp:331:    edgePickChanged_ = std::move(callback);
+forgeCad2026_viewport_selection.cpp:349:bool CadViewport::edgePickPanelActive() const { return bool(edgePickChanged_); }
+forgeCad2026_viewport_selection.cpp:1607:            .arg(edgePickExtend_ ? QStringLiteral("Estensione") : edgePickChamfer_ ? QStringLiteral("Smusso") : QStringLiteral("Raccordo"))
+forgeCad2026_viewport_selection.cpp:1608:            .arg(edgePickExtend_ ? QStringLiteral("i bordi di una superficie") : QStringLiteral("gli spigoli di un solido o di superfici cucite (anche selezionando una faccia)"));
+forgeCad2026_viewport_selection.cpp:1609:    if (edgePickExtend_)
+forgeCad2026_viewport_selection.cpp:1626:    if (!edgePickExtend_)
+forgeCad2026_viewport_selection.cpp:1651:    else if (!edgePickExtend_ && edgePickEdit_ >= 0 && edgePickEdit_ < extrusions_.size()) {
+forgeCad2026_viewport_selection.cpp:1658:    } else if (edgePickExtend_) requestExtendPreview(edgePickBody_, pickedEdgePoints(), edgePickSize_, edgePickLinear_, edgePickEdit_);
+forgeCad2026_viewport_selection.cpp:1661:    if (edgePickChanged_) edgePickChanged_(edgePickBody_, pickedEdgePoints());
+forgeCad2026_viewport_selection.cpp:1681:    if (edgePickChanged_) return;  // con il pannello aperto si conferma con OK
+forgeCad2026_viewport_selection.cpp:1688:    const bool chamfer = edgePickChamfer_, extend = edgePickExtend_;
+forgeCad2026_viewport_selection.cpp:1710:    return !edgePickExtend_ || !body.solid;

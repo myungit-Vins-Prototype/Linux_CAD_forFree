@@ -1,0 +1,44 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 227
+    Start 227: forgekernel_surface_mapping_tests
+
+227: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_mapping_tests
+227: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+227: Test timeout computed to be: 120
+227: PASS sviluppo piano/cilindro/cono, aree/lunghezze, rifiuto doppia curvatura, deformazione cilindrica/volume, genealogia, B-rep, STEP e mesh, appoggio multifaccia continuo/NURBS/vuoti
+1/2 Test #227: forgekernel_surface_mapping_tests ...............   Passed    0.73 sec
+test 253
+    Start 253: forgekernel_mapping_nonplane_validation_tests
+
+253: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_mapping_nonplane_validation_tests
+253: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+253: Test timeout computed to be: 180
+253: [  OK  ] MappingNonPlaneCylinderFinalFinsAndNullHistory
+253: [  OK  ] MappingNonPlaneQuadraticTargetFinalFinsAndNullHistory
+253: [  OK  ] MappingNonPlaneRationalCarrierFinalFinsAndNullHistory
+253: [  OK  ] MappingNonPlaneHiddenCarrierPeakRejectedAtomically
+253: [  OK  ] MappingNonPlaneFarOutsideCannotBeRepairedByClamping
+253: [  OK  ] MappingNonPlaneCancellationPreservesInputsAndOutputs
+253: [  OK  ] MappingFitFiniteCubicQuinticGridsAndDeviation
+253: [  OK  ] MappingFitNonFiniteInteriorProbeCannotPublishSurface
+253: [  OK  ] MappingFitNonFiniteCornerAndStencilValuesReject
+253: [  OK  ] MappingFitEveryAnalyticJetVectorMustBeFinite
+253: [  OK  ] MappingFitToleranceAndGridPreflightBeforeCallbacks
+253: [  OK  ] MappingFitCallbackErrorsAndCancellationDoNotPublish
+253: 12/12 test superati
+2/2 Test #253: forgekernel_mapping_nonplane_validation_tests ...   Passed    0.24 sec
+
+The following tests passed:
+	forgekernel_surface_mapping_tests
+	forgekernel_mapping_nonplane_validation_tests
+
+100% tests passed out of 2
+
+Total Test time (real) =   0.99 sec

@@ -1,0 +1,6 @@
+{
+  "byte_identical": true,
+  "sha256": "d75973c1d5b3f10fa37f639e55500ad3cc631ba6e3ebf0679cedcee62d869122",
+  "lines": 8,
+  "covers": "Line tol1e-11/0/-1, circle, rationalC0 cubic, affine transform, partial/full and cached/direct"
+}

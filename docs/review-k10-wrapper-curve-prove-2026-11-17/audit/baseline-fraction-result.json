@@ -1,0 +1,304 @@
+{
+  "pass": true,
+  "inputSHA256": "3d96aeded997afb790cd5114bc54dd78c6cd7617557545e464e73a00028e790e",
+  "method": "Exact Fraction original homogeneous E/S Cox composition, full E/Q knot partition and all closed intersected S cells; Euclidean rational Bernstein numerator/denominator enclosure",
+  "records": [
+    {
+      "fin": 0,
+      "edge": 0,
+      "face": 0,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "rationalE": true,
+      "runtimeStatus": "Unsupported",
+      "runtimeUpper": "inf"
+    },
+    {
+      "fin": 1,
+      "edge": 1,
+      "face": 0,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "rationalE": true,
+      "runtimeStatus": "Unsupported",
+      "runtimeUpper": "inf"
+    },
+    {
+      "fin": 2,
+      "edge": 2,
+      "face": 0,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "rationalE": true,
+      "runtimeStatus": "Unsupported",
+      "runtimeUpper": "inf"
+    },
+    {
+      "fin": 3,
+      "edge": 3,
+      "face": 0,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "rationalE": true,
+      "runtimeStatus": "Unsupported",
+      "runtimeUpper": "inf"
+    }
+  ],
+  "genuineRationalEAndQ": [
+    {
+      "fin": 0,
+      "source": "curve",
+      "coordinate": 0,
+      "wrapperLinks": 5,
+      "trims": 3,
+      "transforms": 2,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "actualTransformedNumeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    },
+    {
+      "fin": 0,
+      "source": "pcurve",
+      "coordinate": 0,
+      "wrapperLinks": 2,
+      "trims": 2,
+      "transforms": 0,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "actualTransformedNumeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    },
+    {
+      "fin": 1,
+      "source": "curve",
+      "coordinate": 1,
+      "wrapperLinks": 5,
+      "trims": 3,
+      "transforms": 2,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "actualTransformedNumeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    },
+    {
+      "fin": 1,
+      "source": "pcurve",
+      "coordinate": 1,
+      "wrapperLinks": 2,
+      "trims": 2,
+      "transforms": 0,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "actualTransformedNumeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    },
+    {
+      "fin": 2,
+      "source": "curve",
+      "coordinate": 0,
+      "wrapperLinks": 5,
+      "trims": 3,
+      "transforms": 2,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "actualTransformedNumeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    },
+    {
+      "fin": 2,
+      "source": "pcurve",
+      "coordinate": 0,
+      "wrapperLinks": 2,
+      "trims": 2,
+      "transforms": 0,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "actualTransformedNumeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    },
+    {
+      "fin": 3,
+      "source": "curve",
+      "coordinate": 1,
+      "wrapperLinks": 5,
+      "trims": 3,
+      "transforms": 2,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "actualTransformedNumeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    },
+    {
+      "fin": 3,
+      "source": "pcurve",
+      "coordinate": 1,
+      "wrapperLinks": 2,
+      "trims": 2,
+      "transforms": 0,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "actualTransformedNumeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    }
+  ],
+  "originalPolynomialSDenominatorIdentity": "Wsbar=7*D^4 exactly on all4 actual fins; production normalized branch uses D^4",
+  "elapsed": 0.028606204010429792,
+  "scope": "Internal ledger integration on actual Body::buildSheet/unify final4 mixed-E-wrapper/double-TrimQ fins; not a new public extendSheet or mapper family"
+}

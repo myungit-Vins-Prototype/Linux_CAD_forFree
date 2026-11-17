@@ -1,0 +1,61 @@
+#include "fk_body_io.h"
+#include "fk_body_check.h"
+#include "fk_mass.h"
+#include "fk_history.h"
+#include "fk_precision.h"
+#include "fk_shell.h"
+#include "fk_transform.h"
+#include "fk_surface_algo.h"
+#include "fk_classify.h"
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <iomanip>
+#include <sstream>
+#include <stdexcept>
+#include <cmath>
+using namespace ForgeCad::Kernel;
+void require(bool ok,const char *what){if(!ok)throw std::runtime_error(what);}
+int main(int argc,char**argv){
+ try {
+    require(argc==2,"output path missing");
+    std::ifstream f("/home/myungit/Linux_CAD_forFree/kernel/tests/data/shell_stitched_tangent.body",std::ios::binary);
+    require(bool(f),"anonymous fixture missing");
+    const Body base=readBodyBinary(std::string(std::istreambuf_iterator<char>(f),{}));
+    const Body scaled=scaleBody(base,{},2.5);
+    const Body source=transformBody(scaled,Transform3::rotation({12,-23,7},{1,2,.3},.42));
+    const auto before=writeBodyBinary(source);
+    CheckOptions checks;checks.loopCrossings=true;
+    require(checkBody(source,checks).empty(),"invalid input");
+    BodyHistory history;const double thickness=1.25;
+    const Body output=shellBody(source,{},thickness,&history);
+    require(checkBody(output,checks).empty(),"invalid output");
+    require(!output.isSheet()&&output.shells().size()==2&&output.faces().size()==22,"unexpected closed shell topology");
+    for(EdgeId e:output.edges())require(!output.isLaminar(e),"laminar output edge");
+    require(writeBodyBinary(source)==before,"source mutated");
+    require(history.operandCount()==1,"missing public history");
+    for(FaceId f:source.faces())require(!history.descendants(EntityKind::Face,0,f.index).empty(),"source face genealogy missing");
+    std::ostringstream samples;samples<<std::setprecision(17);bool first=true;int inner=0,declared=0;double largest=0;
+    for(FaceId f:output.faces()) {
+      require(history.isDeclared(EntityKind::Face,f.index),"output face genealogy inferred");++declared;
+      const auto &origins=history.origins(EntityKind::Face,f.index);
+      require(origins.size()==1&&origins[0].operand==0&&origins[0].kind==EntityKind::Face,"ambiguous face origin");
+      const FaceId parent(origins[0].index);require(source.contains(parent),"invalid source face origin");
+      const auto &old=source.face(parent);const auto &now=output.face(f);
+      if(now.surface==old.surface)continue;
+      Vec3 p;Vec2 uv;require(faceInteriorPoint(output,f,p,&uv),"no output face interior witness");
+      if(old.surface->type()==SurfaceType::Plane){const auto q=projectPoint(*old.surface,p);uv={q.u,q.v};}
+      const Vec3 n=old.surface->normal(uv.x(),uv.y())*(old.sense?1.:-1.);
+      const double error=norm(p-old.surface->point(uv.x(),uv.y())+thickness*n);
+      require(std::isfinite(error),"nonfinite thickness witness");largest=std::max(largest,error);++inner;
+      if(!first)samples<<',';
+      first=false;
+      samples<<"{\"face\":"<<f.index<<",\"sourceFace\":"<<parent.index<<",\"u\":"<<uv.x()<<",\"v\":"<<uv.y()<<",\"thicknessError_mm\":"<<error<<'}';
+    }
+    require(inner>=6,"insufficient inner face witnesses");
+    const Body restored=readBodyBinary(writeBodyBinary(output));require(checkBody(restored,checks).empty(),"codec output invalid");
+    require(writeBodyBinary(source)==before,"source mutated after analysis");
+    std::ofstream out(argv[1]);out<<std::setprecision(17)<<"{\"scope\":\"actual public shellBody scale2.5 rotation.42 closed1.25, anonymous fixture\",\"pass\":true,\"faces\":"<<output.faces().size()<<",\"shells\":"<<output.shells().size()<<",\"declaredFaces\":"<<declared<<",\"inputImmutable\":true,\"codecCheck\":true,\"nominalOffsetBudget_mm\":"<<linearResolution()<<",\"thickness_mm\":"<<thickness<<",\"volume_mm3\":"<<massProperties(output).volume<<",\"innerFaceWitnessCount\":"<<inner<<",\"maxSampleThicknessError_mm\":"<<largest<<",\"thicknessEvidence\":\"Interior point diagnostics via declared source face, same UV except source plane foot; NOT a continuous whole-shell certificate\",\"witnesses\":["<<samples.str()<<"]}\n";
+    require(bool(out),"write output failed");std::cout<<"PASS public closed shell, declaredfaces="<<declared<<", inner witnesses="<<inner<<", max sample thickness error="<<std::setprecision(17)<<largest<<'\n';return 0;
+ }catch(const std::exception&e){std::cerr<<e.what()<<'\n';return 1;}
+}

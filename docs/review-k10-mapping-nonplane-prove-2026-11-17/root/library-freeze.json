@@ -1,0 +1,6 @@
+{
+  "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+  "sha256": "a0c5530e331c08d86fc5c4fa29e4477e66fa1ff4c6c646df15d959f211e9531c",
+  "bytes": 181216900,
+  "scope": "Rebuilt three changed kernel TUs; app/selected target build still in progress"
+}

@@ -1,0 +1,86 @@
+{
+  "version": 2,
+  "files": [
+    {
+      "path": "HANDOFF-V2.md",
+      "bytes": 3348,
+      "sha256": "be783eb33bf5a5a7a9c0af1350686b4338121b0834524598305a73eef1cea756"
+    },
+    {
+      "path": "SOURCE-FREEZE-V2.json",
+      "bytes": 1126,
+      "sha256": "60194d64b342284f87b8bf2d8f35f722973ee30a3b3c9e347d0ef53a7893cc18"
+    },
+    {
+      "path": "cache-graph-evidence.json",
+      "bytes": 225001,
+      "sha256": "a12d103ac9224bc61b8610388686e91f9b01996d0a218f0fc534fed0367aa93d"
+    },
+    {
+      "path": "callers-rg.txt",
+      "bytes": 26692,
+      "sha256": "f9c7ba36cd4e1ff6fa8eb276d033db4e783287ca8960a90961bf37af4de65fbd"
+    },
+    {
+      "path": "candidate-v2.patch.txt",
+      "bytes": 5802,
+      "sha256": "a52c3909befa296d03e901a0276e38768f3144076023ca01ad02b5e329724740"
+    },
+    {
+      "path": "fk_curve_algo.cpp.baseline.txt",
+      "bytes": 17580,
+      "sha256": "4055c830965fb2c0741ca9292e18166dcec0c2528f3228bc33fa2f297fa2e60e"
+    },
+    {
+      "path": "fk_curve_algo.cpp.candidate.txt",
+      "bytes": 19269,
+      "sha256": "8ceb22befce610f835a9271ca88b497470a5ba2497210d94cbb8867bccfa3400"
+    },
+    {
+      "path": "fk_curve_length_cache.h.baseline.txt",
+      "bytes": 4356,
+      "sha256": "a5b3135fc97fecf492ca7bcfabc8aeb3290c00de85ded0729cb22f7d2897734a"
+    },
+    {
+      "path": "fk_curve_length_cache.h.candidate.txt",
+      "bytes": 5953,
+      "sha256": "d9f5a424ffc931bae46b818b6bcff644ca06376dabbb9c301ba8ce423f9aa1e0"
+    },
+    {
+      "path": "graph-evidence.json",
+      "bytes": 323917,
+      "sha256": "427ebba51bf41e6794963b0d1ab4121683643de4d76616dbf380cfa78a268513"
+    },
+    {
+      "path": "probe.cpp.txt",
+      "bytes": 1758,
+      "sha256": "5628578b0167f1d94a70784d95c562aa9dd816ba9a1c43cd6cfc79022ea33100"
+    },
+    {
+      "path": "root-baseline-cancel.log.txt",
+      "bytes": 23,
+      "sha256": "74fac789448e79442e5f2c48986922563a0a8869d48933e8d1558d0d5d9b9248"
+    },
+    {
+      "path": "root-baseline-center.log.txt",
+      "bytes": 45,
+      "sha256": "2be9ef90fac02e6947021d662d8e9c95100211cb9e5cfaeeca14d3d5b82540cf"
+    },
+    {
+      "path": "root-baseline-underflow.log.txt",
+      "bytes": 68,
+      "sha256": "91421f2a151466a00da1d8a9131bc8a0a749f01d4abc49129382e7a1e07ff790"
+    },
+    {
+      "path": "root-baseline-velocity.log.txt",
+      "bytes": 34,
+      "sha256": "40e3c2c7dc26735578e08fdb620181dbdc2dc3bda14bb9e89362c217ca305768"
+    },
+    {
+      "path": "v1-to-v2.patch.txt",
+      "bytes": 1750,
+      "sha256": "ef31dd6cbafedb186c9b769e8f82a5941304d77c6714ec29520f991a887d604a"
+    }
+  ],
+  "core_cpp_runtime_performed": false
+}

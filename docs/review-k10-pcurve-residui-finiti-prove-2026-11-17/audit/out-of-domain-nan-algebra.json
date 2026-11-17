@@ -1,0 +1,83 @@
+{
+  "mode": "Exact Fraction algebra of stored IEEE coefficients only; no C++ compile/run",
+  "curve": {
+    "degree": 3,
+    "knots": [
+      1,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      2
+    ],
+    "poles": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0
+      ]
+    ],
+    "weights": [
+      21,
+      29,
+      37,
+      45
+    ],
+    "naturalDomain": [
+      1,
+      2
+    ]
+  },
+  "queryRange": [
+    0,
+    1
+  ],
+  "t": "1/8",
+  "localBernsteinParameter": "-7/8",
+  "basis": [
+    "3375/512",
+    "-4725/512",
+    "2205/512",
+    "-343/512"
+  ],
+  "weightedTerms": [
+    "70875/512",
+    "-137025/512",
+    "81585/512",
+    "-15435/512"
+  ],
+  "sumDenominator": "0",
+  "homogeneousNumerator": [
+    0,
+    0,
+    0
+  ],
+  "denominatorPolynomial": "W(t)=24*t-3",
+  "allTermsExactlyDoubleRepresentable": true,
+  "reason": "At t=1/8 each Bernstein basis and weighted term is dyadic with small integer numerator; all original pole coordinates are exact zero. Ordered IEEE sums of these small dyadics yield W=0 and H=0 exactly. Curve rational evaluation computes0/0 at this parameter.",
+  "otherInitialNodeDenominators": {
+    "0": "-3",
+    "1/4": "3",
+    "1/2": "9",
+    "3/4": "15",
+    "1": "21"
+  },
+  "scope": "Invalid outside-native-domain query; not a valid-user-CAD failure. Candidate illustrates unchecked nonfinite probe in a real API. Public runtime outcome not claimed by this observer."
+}

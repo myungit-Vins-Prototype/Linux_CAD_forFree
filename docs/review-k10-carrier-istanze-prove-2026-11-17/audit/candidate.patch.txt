@@ -1,0 +1,178 @@
+--- a/kernel/fk_surface_curve_bounds.cpp
++++ b/kernel/fk_surface_curve_bounds.cpp
+@@ -324,6 +324,59 @@
+     }
+     return true;
+ }
++// Read placement links BEFORE any recursive knot/weight/pole accessor.
++// The public constructor already canonicalizes to one native base. This
++// bounded walk also fails closed if a future representation adds links.
++struct CarrierSource {
++    const BSplineSurface *base = nullptr;
++    std::array<const Transform3 *, 32> placements{};
++    std::size_t count = 0;
++};
++bool carrierSource(const BSplineSurface &surface, CarrierSource &source) {
++    source.base = &surface;
++    while (source.base->basis()) {
++        cancellationPoint();
++        if (source.count == source.placements.size()) return false;
++        const auto &placement = source.base->placement();
++        if (!isFinite(placement.translationPart())) return false;
++        for (int i = 0; i < 3; ++i)
++            for (int j = 0; j < 3; ++j)
++                if (!std::isfinite(placement.matrix(i, j))) return false;
++        source.placements[source.count++] = &placement;
++        source.base = source.base->basis().get();
++    }
++    return true;
++}
++bool centeredCarrierPole(const CarrierSource &source, int u, int v,
++                         const Point<3> &origin, Point<3> &point) {
++    const auto original = source.base->pole(u, v);
++    for (int axis = 0; axis < 3; ++axis) {
++        if (!std::isfinite(original[axis])) return false;
++        point[std::size_t(axis)] = I(original[axis]);
++    }
++    // Original IEEE matrices and base coefficients, NOT the rounded public
++    // pole() image. No double matrix composition or similarity-scale bound.
++    for (std::size_t level = source.count; level > 0; --level) {
++        cancellationPoint();
++        const auto &placement = *source.placements[level - 1];
++        Point<3> transformed;
++        for (int row = 0; row < 3; ++row) {
++            I value(placement.translationPart()[row]);
++            // Center the outermost affine expression before its sums. This
++            // is exactly M*P+(t-origin), with outward rounding throughout.
++            if (level == 1) value = value - origin[std::size_t(row)];
++            for (int column = 0; column < 3; ++column)
++                value = value + I(placement.matrix(row, column)) * point[std::size_t(column)];
++            if (!finite(value)) return false;
++            transformed[std::size_t(row)] = value;
++        }
++        point = transformed;
++    }
++    if (!source.count)
++        for (int axis = 0; axis < 3; ++axis)
++            point[std::size_t(axis)] = point[std::size_t(axis)] - origin[std::size_t(axis)];
++    return std::all_of(point.begin(), point.end(), [](I value) { return finite(value); });
++}
+ }
+ 
+ CurvePtr<2> surfaceCurvePCurveCandidate(const CurvePtr<3> &curve, const SurfacePtr &surface,
+@@ -335,9 +388,12 @@
+     if (!e || !s || (!q && !line) || e->degree() != 3
+         || (q && q->degree() != 1 && q->degree() != 3)
+         || (s->uDegree() != 2 && s->uDegree() != 3) || (s->vDegree() != 2 && s->vDegree() != 3)
+-        || s->basis() || s->isUPeriodic() || s->isVPeriodic()) return original;
++        || s->isUPeriodic() || s->isVPeriodic()) return original;
++    CarrierSource source;
++    if (!carrierSource(*s, source)) return original;
++    const auto *base = source.base;
+     const int ne = e->poleCount(), nq = q ? q->poleCount() : 0;
+-    const int nu = s->uPoleCount(), nv = s->vPoleCount();
++    const int nu = base->uPoleCount(), nv = base->vPoleCount();
+     // Bound setup BEFORE scans or copies, including a fourth carrier scalar.
+     constexpr std::size_t maxScalars = 2000000;
+     if (ne < 4 || ne > 100000 || (q && (nq <= q->degree() || nq > 100000))
+@@ -350,10 +406,10 @@
+     for (int i = 0; i < nu; ++i)
+         for (int j = 0; j < nv; ++j) {
+             cancellationPoint();
+-            const double weight = s->weight(i, j);
++            const double weight = base->weight(i, j);
+             if (!(weight > 0) || !std::isfinite(weight)) return original;
+         }
+-    const Interval domain[] = {s->uDomain(), s->vDomain()};
++    const Interval domain[] = {base->uDomain(), base->vDomain()};
+     for (const auto &range : domain)
+         if (!range.isFinite() || !(range.lo < range.hi)) return original;
+     const auto bounded = [&](Vec2 value) {
+@@ -401,18 +457,21 @@
+     const auto *line = dynamic_cast<const Line<2> *>(pcurve.get());
+     const auto *s = dynamic_cast<const BSplineSurface *>(surface.get());
+     if (!e || !s || (!q && !line) || e->degree() != 3 || (q && q->degree() != 1 && q->degree() != 3)
+-        || (s->uDegree() != 2 && s->uDegree() != 3) || (s->vDegree() != 2 && s->vDegree() != 3) || s->basis() || s->isUPeriodic() || s->isVPeriodic()) return unsupported;
+-    const int ne = e->poleCount(), nq = q ? q->poleCount() : 0, nu = s->uPoleCount(), nv = s->vPoleCount();
+-    if (ne < 4 || (q && nq <= q->degree()) || nu <= s->uDegree() || nv <= s->vDegree() || ne > 100000 || nq > 100000
++        || (s->uDegree() != 2 && s->uDegree() != 3) || (s->vDegree() != 2 && s->vDegree() != 3) || s->isUPeriodic() || s->isVPeriodic()) return unsupported;
++    CarrierSource source;
++    if (!carrierSource(*s, source)) return failed;
++    const auto *base = source.base;
++    const int ne = e->poleCount(), nq = q ? q->poleCount() : 0, nu = base->uPoleCount(), nv = base->vPoleCount();
++    if (ne < 4 || (q && nq <= q->degree()) || nu <= base->uDegree() || nv <= base->vDegree() || ne > 100000 || nq > 100000
+         || std::size_t(nu) > maxScalars / (3 * std::size_t(nv))
+         || 3 * std::size_t(nu) * std::size_t(nv) + 16 * std::size_t(ne + nq) > maxScalars) return failed;
+-    if (!validKnots(e->knots(), 3, ne) || !validKnots(s->uKnots(), s->uDegree(), nu) || !validKnots(s->vKnots(), s->vDegree(), nv)
++    if (!validKnots(e->knots(), 3, ne) || !validKnots(base->uKnots(), base->uDegree(), nu) || !validKnots(base->vKnots(), base->vDegree(), nv)
+         || (q && !validKnots(q->knots(), q->degree(), nq)) || !finitePoles(*e) || (q && !finitePoles(*q))) return failed;
+     if (range.lo < e->domain().lo || range.hi > e->domain().hi
+         || (q && (range.lo < q->domain().lo || range.hi > q->domain().hi))) return failed;
+     const int ew = weights(ne, [&](int i) { return e->weight(i); });
+     const int qw = q ? weights(nq, [&](int i) { return q->weight(i); }) : 1;
+-    const int sw = weights(nu * nv, [&](int i) { return s->weight(i / nv, i % nv); });
++    const int sw = weights(nu * nv, [&](int i) { return base->weight(i / nv, i % nv); });
+     if (ew < 0 || qw < 0 || sw < 0) return failed;
+     if (!ew || !qw) return unsupported;
+     // Account for the fourth homogeneous scalar before snapshot allocation.
+@@ -423,20 +482,16 @@
+     Point<3> origin{I(anchor[0]), I(anchor[1]), I(anchor[2])};
+     const auto edgeData = snapshot<3>(*e, origin);
+     const auto uvData = q ? snapshot<2>(*q, Point<2>{I(0), I(0)}) : Source<2>{};
+-    Carrier carrier{s->uKnots(), s->vKnots(), nu, nv, s->uDegree(), s->vDegree(), {}, {}, infinity};
++    Carrier carrier{base->uKnots(), base->vKnots(), nu, nv, base->uDegree(), base->vDegree(), {}, {}, infinity};
+     if (!sw) carrier.weights.reserve(std::size_t(nu) * std::size_t(nv));
+     carrier.poles.reserve(std::size_t(nu) * std::size_t(nv));
+     for (int i = 0; i < nu; ++i)
+         for (int j = 0; j < nv; ++j) {
+             cancellationPoint();
+-            const Vec3 point = s->pole(i, j);
+             Point<3> centered;
+-            for (int axis = 0; axis < 3; ++axis) {
+-                if (!std::isfinite(point[axis])) return failed;
+-                centered[std::size_t(axis)] = I(point[axis]) - origin[std::size_t(axis)];
+-            }
++            if (!centeredCarrierPole(source, i, j, origin, centered)) return failed;
+             if (!sw) {
+-                const double weight = s->weight(i, j);
++                const double weight = base->weight(i, j);
+                 carrier.minimumWeight = std::min(carrier.minimumWeight, weight);
+                 carrier.weights.push_back(I(weight));
+                 for (I &coordinate : centered) coordinate = coordinate * I(weight);
+@@ -475,7 +530,7 @@
+                 }
+                 std::array<I, 2> image;
+                 bool inDomain = true;
+-                const Interval domains[] = {s->uDomain(), s->vDomain()};
++                const Interval domains[] = {base->uDomain(), base->vDomain()};
+                 for (int axis = 0; axis < 2; ++axis) {
+                     image[std::size_t(axis)] = hull(uv[std::size_t(axis)]);
+                     // Intersection with the exact ORIGINAL pole hull is a
+--- a/kernel/fk_surface_curve_bounds.h
++++ b/kernel/fk_surface_curve_bounds.h
+@@ -10,7 +10,7 @@
+     double upperBound = std::numeric_limits<double>::infinity();
+ };
+ 
+-// Builds a private UV candidate BEFORE residual certification. For the native
++// Builds a private UV candidate BEFORE residual certification. For the
+ // family below, Line2 becomes degree-one Bernstein data on the ORIGINAL edge
+ // range (no direction renormalization); BSpline2 keeps degree/knots/weights.
+ // Candidate poles are bounded to the natural carrier rectangle. E/S, the edge
+@@ -25,10 +25,13 @@
+ // with the SAME original edge parameter. budget is finite, positive and
+ // fixed by the caller.
+ // E: native cubic BSpline; Q: native Line2 or degree-one/cubic BSpline2;
+-// S: native, nonperiodic BSplineSurface with each degree two or three and
+-// strictly positive finite original weights, including unequal weights.
++// S: nonperiodic BSplineSurface with each degree two or three and strictly
++// positive finite original weights, native or a shared similarity instance.
++// Instance bounds use native base poles and stored IEEE placements with
++// outward intervals, never rounded transformed pole() data. Traversal is
++// bounded/cancellable; exhaustion or inconclusive data return Failed.
+ // E/Q support empty or exactly constant positive original weights only;
+-// their unequal weights, instances and wrappers return Unsupported.
++// their unequal weights and E/Q wrappers return Unsupported.
+ // Original homogeneous carrier coefficients and a positive denominator
+ // bound certify rational S without changing the caller's physical budget.
+ // Invalid/null data, domains not proved, exhausted fixed resources and

@@ -1,0 +1,35 @@
+{
+  "files": [
+    {
+      "path": "HANDOFF.md",
+      "bytes": 3696,
+      "sha256": "d87ca9ffd7da3c63a12b31fc2097b7720ec8369319095cedaae3745ac33b9f01"
+    },
+    {
+      "path": "SOURCE-FREEZE.json",
+      "bytes": 552,
+      "sha256": "4bddb2c8ed209d87e5104ff658992d2e797e9a4409321934658a797ccd64ebdf"
+    },
+    {
+      "path": "candidate.patch.txt",
+      "bytes": 12109,
+      "sha256": "f7fdd0603f0013308a6c243154f37115fec556c813f9d0760c662dfe7d71f9c1"
+    },
+    {
+      "path": "fk_quadrature.baseline.h.txt",
+      "bytes": 8960,
+      "sha256": "30964c986ea45e022115223d60ae6277373d844ecced2d75b97a3ecd9b345310"
+    },
+    {
+      "path": "fk_quadrature.candidate.h.txt",
+      "bytes": 15563,
+      "sha256": "048c8007849e807c2721a20e90387c855a2076ba3e56bcc90cf55320e3a804b7"
+    },
+    {
+      "path": "graph-focus.json",
+      "bytes": 8375,
+      "sha256": "fc71ffc4ed5e6916a6774b4cb0917cb7a31b08d23b546bd55207022492368385"
+    }
+  ],
+  "core_cpp_runtime_performed": false
+}

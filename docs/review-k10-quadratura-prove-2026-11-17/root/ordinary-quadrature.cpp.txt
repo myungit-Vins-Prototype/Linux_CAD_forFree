@@ -1,0 +1,15 @@
+#include "fk_quadrature.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+int main(){
+ std::cout<<std::hexfloat;
+ for(double tol:{1e-10,0.,-1.})for(int mode=0;mode<4;++mode){
+  auto f=[=](double x){return mode==0?2.:mode==1?x*x*x-2*x+3:mode==2?std::sin(x):1e5*std::cos(x)+1.;};
+  double e,a;double v=detail::gaussKronrod(f,-.25,2.5,e,a);std::cout<<"panel "<<mode<<' '<<v<<' '<<e<<' '<<a<<'\n';
+  if(mode<2||tol>0)std::cout<<"scalar "<<mode<<' '<<tol<<' '<<detail::integrate(f,-.25,2.5,tol)<<'\n';
+ }
+ auto vf=[](double x){detail::Evaluation<3> r;r.value={x*x*x-2*x+3,std::sin(x),1e5*std::cos(x)+1};r.magnitude={std::fabs(r.value[0]),1.,1e5+1.};return r;};
+ detail::Evaluation<3> v;detail::Values<3> e,a;detail::gaussKronrod<3>(vf,-.25,2.5,v,e,a);for(int k=0;k<3;++k)std::cout<<"vector-panel "<<k<<' '<<v.value[k]<<' '<<v.magnitude[k]<<' '<<e[k]<<' '<<a[k]<<'\n';
+ v=detail::integrateVector<3>(vf,-.25,2.5,1e-10,1e-14);for(int k=0;k<3;++k)std::cout<<"vector "<<k<<' '<<v.value[k]<<' '<<v.magnitude[k]<<'\n';
+}

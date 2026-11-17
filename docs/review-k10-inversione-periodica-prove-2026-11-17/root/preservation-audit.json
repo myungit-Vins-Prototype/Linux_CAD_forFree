@@ -1,0 +1,22 @@
+{
+  "baseline_files": 7247,
+  "changed_existing": [
+    "CLAUDE.md",
+    "docs/code-review-2026-11-15.md",
+    "kernel/CMakeLists.txt",
+    "kernel/fk_surface_algo.cpp",
+    "tools/generate_architecture.py"
+  ],
+  "preserved_existing": 7242,
+  "previous_packages": 33,
+  "previous_artifacts": 4633,
+  "HEAD_origin_main": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "index_empty": true,
+  "no_commit_push_UI_CI_general483": true,
+  "CLAUDE_bytes": 16368,
+  "ctest_passed": 4,
+  "new_groups": 6,
+  "baseline_new_groups_passed": 2,
+  "UV_final_and_residual_byteidentical_baseline_candidate_probe": true,
+  "success_bool_corrected_for_outside_cap": true
+}

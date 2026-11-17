@@ -1,0 +1,45 @@
+#include "fk_surface_curve_bounds.h"
+#include "fk_bspline.h"
+#include "fk_bspline_surface.h"
+#include <chrono>
+#include <cstdlib>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+using namespace ForgeCad::Kernel;
+double number(std::istream &in) { std::string s; in >> s; return std::strtod(s.c_str(), nullptr); }
+std::vector<double> scalars(std::istream &in) {
+    int n; in >> n; std::vector<double> values;
+    while (n--) values.push_back(number(in));
+    return values;
+}
+template<int N> CurvePtr<N> curve(std::istream &in) {
+    int p, n; in >> p; auto knots = scalars(in); in >> n;
+    std::vector<Vec<N>> poles;
+    while (n--) { Vec<N> a; for (int i=0;i<N;++i) a[i]=number(in); poles.push_back(a); }
+    auto weights = scalars(in);
+    return std::make_shared<BSplineCurve<N>>(p, knots, poles, weights);
+}
+SurfacePtr surface(std::istream &in) {
+    int p,q,nu,nv; in >> p >> q >> nu >> nv;
+    auto u=scalars(in),v=scalars(in);std::vector<Vec3> poles;
+    for(int i=0;i<nu*nv;++i) { Vec3 a;for(int k=0;k<3;++k)a[k]=number(in);poles.push_back(a); }
+    return std::make_shared<BSplineSurface>(p,q,u,v,nu,nv,poles,scalars(in));
+}
+int check(const char *name,const CurvePtr<3> &e,const SurfacePtr &s,const CurvePtr<2> &q,Interval r,double cap) {
+    auto start=std::chrono::steady_clock::now();
+    auto out=detail::surfaceCurveResidualBound(e,s,q,r,cap);
+    std::cout << name << " status=" << int(out.status) << " upper=" << std::setprecision(17) << out.upperBound
+        << " seconds=" << std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count() << '\n';
+    return out.status==detail::SurfaceCurveBoundStatus::Certified ? 0:1;
+}
+int main(int, char **argv) {
+    int failures=0;std::ifstream in(argv[1]);int n;in>>n;
+    for(int i=0;i<n;++i) {
+        Interval r{number(in),number(in)};const double cap=number(in);auto e=curve<3>(in);int type;in>>type;CurvePtr<2> q;
+        if(type==0) {Vec2 o,d;for(int k=0;k<2;++k)o[k]=number(in);for(int k=0;k<2;++k)d[k]=number(in);q=std::make_shared<Line<2>>(o,d);}
+        else q=curve<2>(in);
+        auto s=surface(in);failures+=check(("historic-rational-fin-"+std::to_string(i)).c_str(),e,s,q,r,cap);
+    }
+    return failures;
+}

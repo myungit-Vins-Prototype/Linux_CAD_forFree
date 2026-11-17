@@ -1,0 +1,49 @@
+{
+  "nodes": [
+    {
+      "id": "kernel/CMakeLists.txt",
+      "group": "build",
+      "description": "Definisce libreria geometrica, test, rilevamento from_chars decimale e arrotondamento coerente senza contrazione FMA implicita nei chiamanti CPU C++/Objective-C++.",
+      "lines": 714
+    },
+    {
+      "id": "kernel/fk_affine_surface_fit.cpp",
+      "group": "kernel",
+      "description": "Riconoscimento delle SP-curve affini originali per superfici estruse: segmenti UV anche obliqui, dominio, copertura, pesi, budget e cancellazione; inoltro al certificato continuo sul generatore originale.",
+      "lines": 46
+    },
+    {
+      "id": "kernel/fk_curve_fit_bounds.cpp",
+      "group": "kernel",
+      "description": "Limiti continui Bernstein outward per posizione, offset NURBS e composizione isoparametrica NURBS e affine anche obliqua su estrusione con SP-curve originale; limiti delle derivate del supporto per il trasferimento UV, coefficienti originali, pesi, istanze, budget e cancellazione. Proiezione affine su Plane dagli originali IEEE, normale da assi del piano e direzione originale, con residuo omogeneo outward. Offset bordi: posizione edge e normale del generatore indipendenti, SP-curve affine originale e controllo continuo dei poli dopo assemblaggio. Doppio certificato Plane/SP-curve: proiezione fisica per il fit e residuo completo della fin, coefficienti originali posseduti e metriche in mm.",
+      "lines": 1745
+    },
+    {
+      "id": "kernel/fk_curve_fit_bounds.h",
+      "group": "kernel",
+      "description": "Contratti del fit continuo, provider di posizione/offset/composizione superficie-SP-curve e limiti delle derivate U/V del supporto; distingue famiglie supportate, intervalli affini espliciti e rifiuto quando il controllo non conclude. Include il provider della proiezione originale su Plane con dati copiati e durate indipendenti dai chiamanti. Contratto offset edge di estrusione con dati originali posseduti e normale nel parametro del generatore. Contratto duale Plane/SP-curve e distinzione fra dati non supportati, factory invalida e query inconclusiva. API interne mirate fitPCurveOnPlane/requirePCurveOnPlane: costruzione e ricontrollo del residuo fisico con pubblicazione transazionale.",
+      "lines": 105
+    },
+    {
+      "id": "kernel/fk_pcurve.cpp",
+      "group": "kernel",
+      "description": "SP-curve (Parasolid) / pcurve (OCCT): la curva di un edge nello spazio dei parametri (u, v) di una faccia, con lo stesso parametro dell'edge: S(p(t)) = C(t) per t nel range dell'edge.",
+      "lines": 567
+    },
+    {
+      "id": "kernel/fk_sheet.cpp",
+      "group": "kernel",
+      "description": "Taglio, rifilo ed estensione di lamine; offset NURBS planari certificati. Famiglia ISO scelta dalle pcurve sorgenti originali con limite fisico continuo e ancore per incidenza; giunti ISO verificati sui due supporti a cap fisso e fin ricontrollate dopo build/unify. Sorgenti nonISO, anche quasi tangenti, usano Newton campionato; certificati ISO falliti restano terminali.",
+      "lines": 1022
+    },
+    {
+      "id": "kernel/tests/test_sheet_join_validation.cpp",
+      "group": "tests",
+      "description": "Giunti ISO NURBS: prove continue, cap fisso e negativi per picchi/gap; ancore e genealogia, codec e cancellazione. Offset loft con pcurve nonISO quasi tangenti: quattro varianti pubbliche, pose/scale, doppia estensione e taglio reciproco, sorgente immutabile.",
+      "lines": 660
+    }
+  ],
+  "incidentEdgesRead": 259,
+  "graphSha256": "dca2d66bf1813c32f0edb9295c0a4b6fea1bb3f41d8ea19f9876b04921a0107e",
+  "fullReadEvidence": "/tmp/k10-noniso-review/tests/graph-consult.json"
+}

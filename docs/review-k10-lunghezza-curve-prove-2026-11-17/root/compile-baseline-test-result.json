@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/usr/bin/c++",
+    "-std=c++17",
+    "-O2",
+    "-g",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "-c",
+    "/tmp/k10-arclength-review/tests/test_arc_length_validation.cpp",
+    "-o",
+    "/tmp/k10-arclength-review/root/baseline-test.o"
+  ],
+  "exit": 0,
+  "seconds": 2.1639998629980255,
+  "watchdog_seconds": 600
+}

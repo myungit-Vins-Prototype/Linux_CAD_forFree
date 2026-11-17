@@ -1,0 +1,7 @@
+{
+  "source": "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+  "copy": "/tmp/k10-noniso-review/tests/libforgekernel-release.a",
+  "sha256": "f70e65bc0ea5d2c9107ad105a521633d2ed8f6a63de916f5fbfe5315b42bed01",
+  "bytes": 179556964,
+  "scope": "Release dependency archive only; targeted provider/ledger objects override it. Sheet command tests require overriding fk_sheet separately."
+}

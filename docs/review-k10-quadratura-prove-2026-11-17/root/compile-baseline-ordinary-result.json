@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/usr/bin/c++",
+    "-std=c++17",
+    "-O2",
+    "-g",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "/tmp/k10-quadrature-review/root/ordinary-quadrature.cpp",
+    "-o",
+    "/tmp/k10-quadrature-review/root/baseline-ordinary"
+  ],
+  "exit": 0,
+  "seconds": 0.43407316599041224,
+  "watchdog_seconds": 600
+}

@@ -1,0 +1,61 @@
+#include "fk_surface_curve_bounds.h"
+#include "fk_bspline.h"
+#include "fk_bspline_surface.h"
+#include <chrono>
+#include <cstdlib>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+using namespace ForgeCad::Kernel;
+double number(std::istream &in) { std::string s; in >> s; return std::strtod(s.c_str(), nullptr); }
+std::vector<double> scalars(std::istream &in) {
+    int n; in >> n; std::vector<double> values;
+    while (n--) values.push_back(number(in));
+    return values;
+}
+template<int N> CurvePtr<N> curve(std::istream &in) {
+    int p, n; in >> p; auto knots = scalars(in); in >> n;
+    std::vector<Vec<N>> poles;
+    while (n--) { Vec<N> a; for (int i=0;i<N;++i) a[i]=number(in); poles.push_back(a); }
+    auto weights = scalars(in);
+    return std::make_shared<BSplineCurve<N>>(p, knots, poles, weights);
+}
+SurfacePtr surface(std::istream &in) {
+    int p,q,nu,nv; in >> p >> q >> nu >> nv;
+    auto u=scalars(in),v=scalars(in);std::vector<Vec3> poles;
+    for(int i=0;i<nu*nv;++i) { Vec3 a;for(int k=0;k<3;++k)a[k]=number(in);poles.push_back(a); }
+    return std::make_shared<BSplineSurface>(p,q,u,v,nu,nv,poles,scalars(in));
+}
+int check(const char *name,const CurvePtr<3> &e,const SurfacePtr &s,const CurvePtr<2> &q,Interval r,double cap) {
+    auto start=std::chrono::steady_clock::now();
+    auto out=detail::surfaceCurveResidualBound(e,s,q,r,cap);
+    std::cout << name << " status=" << int(out.status) << " upper=" << std::setprecision(17) << out.upperBound
+        << " seconds=" << std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count() << '\n';
+    return out.status==detail::SurfaceCurveBoundStatus::Certified ? 0:1;
+}
+int main(int argc,char **argv) {
+    int failures=0;
+    std::vector<double> knots{0,0,0,0,1,1,1,1};std::vector<Vec3> poles;
+    for(int i=0;i<4;++i)for(int j=0;j<4;++j)poles.push_back(Vec3(i/3.,j/3.,0));
+    auto plane=std::make_shared<BSplineSurface>(3,3,knots,knots,4,4,poles);
+    auto uv=std::make_shared<BSplineCurve<2>>(3,knots,std::vector<Vec2>{{0,0},{1/3.,0},{2/3.,0},{1,1}});
+    auto e=std::make_shared<BSplineCurve<3>>(3,knots,std::vector<Vec3>{{0,0,0},{1/3.,0,0},{2/3.,0,0},{1,1,0}});
+    failures+=check("boundary-plane",e,plane,uv,{0,1},1e-9);
+    auto zeroUV=std::make_shared<Line<2>>(Vec2(0,0),Vec2(0,1));
+    auto zeroE=std::make_shared<BSplineCurve<3>>(3,knots,std::vector<Vec3>{{0,0,0},{0,1/3.,0},{0,2/3.,0},{0,1,0}});
+    failures+=check("zero-u-boundary",zeroE,plane,zeroUV,{0,1},1e-9);
+    std::vector<double> splitKnots{0,0,0,0,.5,.5,.5,1,1,1,1};
+    std::vector<Vec3> splitPoles;
+    const double xs[]={0,1/6.,1/3.,.5,.5+1/6.,.5+1/3.,1};
+    for(double x:xs)for(int j=0;j<4;++j)splitPoles.push_back(Vec3(x,j/3.,0));
+    auto split=std::make_shared<BSplineSurface>(3,3,splitKnots,knots,7,4,splitPoles);
+    auto across=std::make_shared<Line<2>>(Vec2(0,.5),Vec2(1,0));
+    auto acrossE=std::make_shared<BSplineCurve<3>>(3,knots,std::vector<Vec3>{{0,.5,0},{1/3.,.5,0},{2/3.,.5,0},{1,.5,0}});
+    failures+=check("one-ulp-knot-neighbors",acrossE,split,across,{std::nextafter(.5,0.),std::nextafter(.5,1.)},1e-9);
+    if(argc>1) {
+        std::ifstream in(argv[1]);int n;in>>n;
+        for(int i=0;i<n;++i) {Interval r{number(in),number(in)};auto edge=curve<3>(in);auto pc=curve<2>(in);auto s=surface(in);
+            failures+=check(("actual-fin-"+std::to_string(i)).c_str(),edge,s,pc,r,1e-7);}
+    }
+    return failures;
+}

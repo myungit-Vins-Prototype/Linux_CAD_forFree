@@ -1,0 +1,9 @@
+[
+  "/usr/bin/c++",
+  "/tmp/k10-rational-pcurve-review/tests/release/test_surface_curve_rational_pcurves.o",
+  "/tmp/k10-rational-pcurve-review/tests/release/fk_test_main.o",
+  "/tmp/k10-rational-pcurve-review/root/libforgekernel-baseline.a",
+  "-lpthread",
+  "-o",
+  "/tmp/k10-rational-pcurve-review/tests/release/baseline-final-tests"
+]

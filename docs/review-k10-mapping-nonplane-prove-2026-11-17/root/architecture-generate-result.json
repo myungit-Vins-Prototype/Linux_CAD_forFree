@@ -1,0 +1,10 @@
+{
+  "command": [
+    "python3",
+    "tools/generate_architecture.py",
+    "--build-dir",
+    "forgecad-release"
+  ],
+  "exit": 0,
+  "seconds": 429.2169937019935
+}

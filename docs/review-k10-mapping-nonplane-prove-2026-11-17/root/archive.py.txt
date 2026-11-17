@@ -1,0 +1,37 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-mapping-nonplane-review');P=R/'docs/review-k10-mapping-nonplane-prove-2026-11-17';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+assert not P.exists(),'Never overwrite sealed evidence'
+for label,mname in [('tests','manifest.json'),('audit','MANIFEST.json')]:
+ d=T/label/'final-proof';m=json.loads((d/mname).read_text())
+ for e in m['files']:assert sha(d/e.get('path',e.get('file')))==e['sha256']
+ for p in d.rglob('*'):
+  if p.is_file():
+   p.read_text();assert p.suffix not in {'.cpp','.h','.py','.prt','.body','.a','.o'};q=P/label/p.relative_to(d);q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes())
+for p in (T/'root').iterdir():
+ if p.is_file() and p.name not in {'milestone.py','report-draft.md','package-result.json'}:
+  p.read_text();q=P/'root'/(p.name+'.txt' if p.suffix=='.py' else p.name);q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes())
+manifest={};files=set(json.loads((T/'root/integrated-sources.json').read_text()))|{'CLAUDE.md','AGENTS.md','docs/code-review-2026-11-15.md','docs/review-k10-mapping-nonplane-2026-11-17.md','docs/history/claude-prima-k10-mapping-nonplane-2026-11-17.md'}
+for name in sorted(files):
+ p=R/name;q=P/'workspace'/(name+'.txt');q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes());manifest[name]=sha(p)
+(P/'source-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+a=json.loads((T/'root/architecture-audit.json').read_text());pres=json.loads((T/'root/preservation-audit.json').read_text())
+(P/'README.txt').write_text(f'''K10 nonPlane mapping: final native fin residual validation,17November2026.
+No commit/push; HEAD/origin47c7c19 and empty index unchanged. Functional findings33 unchanged; this is continuation of already tracked K10. Prior API/kernel local work preserved. Per user correction, only relevant kernel tests: NO UI startup/tests, general483 rerun or new CI.
+Bug: internal existing mapBodyByFunction test seam accepts narrow bicubic carrier peak between old33samples. Actual final-fin witness residual~.00075mm vs fixed8e-8mm cap (about9375times); baseline checkBody0/finTol1e-14. Independent Fraction on original IEEE coefficients proves the negative witness and whole-Q domain membership;33old samples explain aliasing but are not a global proof. No new public user CAD failure claimed.
+Patch: shared pre-proof UV construction moved from sheet ledger into surface_curve_bounds module; provider residual function/tail byte-identical. Mapping recognized Failed terminal, Unsupported original-Q legacy sampled path. Fixed cap established before fits. Native fin declares prefixed cap rather than measured-error metadata; no acceptance cap or edgeTol inflation. Explicit all-fin contract after build/buildSheet covers E/S/Q identity, range, finSense, budgets/cardinality with genealogy even if user history null. Atomic final publication. Does not certify whole carrier versus mapping intent, Newton branches, trim/topology or global injectivity; K10 remains partial.
+Positive fixtures: two public boxes each24actualfins and public rational-quilt4. First two emit3/3polynomialS even if input target quadratic; third preserves original2/2variable-positive-weight carrier. Final52E/S/ranges identical to baseline;48LineQ converted to degree1 Bernstein before ONE initial acceptance proof,4rational-quiltQ unchanged. Baseline16Line proof failures had exact entire-line domain membership, not real UV overshoot; one baseline fin separately Fraction-certified before candidate construction. No epsilon/domain relaxation/provider predicate change.
+Complete app target plus8selected kernel targets PASS. First invocation completed app then Make missed new target after CMake regenerated its already-loaded target list; preserved exit2 log and successful second invocation exit0 without further source edits. Final app SHA b7b899b8c6e019cdc7e6141716da474c502b5cdd54017b0f1d54c44f64ef932b.8/8CTest PASS zero skip47.45s; runner new6cases. No UI target selected, old view runner unchanged and unexecuted.
+Staged Release40/40 and scoped ASan/UBSan/LSan40/40:6new+12existingledger+22existingprovider. SAME3productionTUs+4testTUs/main instrumented, other kernel dependencies Release. Separate real19-byte leak calibration exit23 outside ptrace. Not whole-app sanitizer/leak certification. These40 and6new are not extra independent counts to add to8CTest.
+Tester and independent auditor final results are separately labelled. Tester overlay uses frozen baselineea1825; auditor rebuild-library runtime API/Fraction uses actual final roota0c5530e331c08d86fc5c4fa29e4477e66fa1ff4c6c646df15d959f211e9531c.52/52actualfins runtimeCertified and exact FractionPASS, caps8e-8/edgeTol0; maxima cylinder1.0718664751e-8,quad8.18049845e-10,rational1.16330619e-10mm. Null-history public outputs byte-identical; rootlib rational repeated by auditor. Inputs/targets immutable and explicit ancestry verified. Independent algorithms do not call production extractor/provider.
+Architecture{a['nodes']}nodes/{a['edges']}edges/{a['units']}TU, AST errors0, hashes/configuration/HTML/helper-and-residual calls verified both directions. Generated ignored graph/HTML not versioned/copied. Preservation{pres['baseline_files']}baselinefiles, {pres['previous_proof_packages_preserved']}previous sealed packages/{pres['previous_proof_artifacts']}artifacts; latest memory bytes{pres['CLAUDE_bytes']}. Only expected source/CMake/generator/memory/review edits. Source snapshots and manifests bind final worktree.
+Completed old temporary-stage compiled artifacts were removed to free2GiB tmpfs, only own recreatable ELF/objects/libraries; text/source/log/CAD and repo sealed evidence unchanged. Plan/result document precise paths, not production deletions.
+All payload UTF8 JSON/XML/text/inert source, no CAD/BRep/ELF/object/archive. Source files have extra.txt where necessary. Component manifests keep original archive paths; top SHA256SUMS validates actual paths including component seals. Copy inert source/recipes to NEW staging to reproduce; do not run mutating pipelines inside sealed packages. No CI claim for uncommitted work.
+''')
+entries=[]
+for p in sorted(P.rglob('*')):
+ if p.is_file():p.read_text();entries.append((str(p.relative_to(P)),sha(p)))
+seal=P/'SHA256SUMS';seal.write_text(''.join(h+'  '+f+'\n' for f,h in entries))
+for f,h in entries:assert sha(P/f)==h
+for f,h in manifest.items():assert sha(R/f)==h
+result={'path':str(P),'files_without_seal':len(entries),'bytes_without_seal':sum((P/f).stat().st_size for f,h in entries),'seal_sha256':sha(seal)};(T/'root/package-result.json').write_text(json.dumps(result,indent=2)+'\n');print(result)

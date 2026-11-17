@@ -1,0 +1,27 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-quadrature-review/root');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+b=json.loads((T/'baseline.json').read_text());assert [f for f,h in b.items() if sha(R/f)!=h]==['CLAUDE.md']
+f=json.loads((T/'freeze.json').read_text())
+for v in f.values():assert sha(Path(v['path']))==v['sha256']
+assert '6/6 test superati' in (T/'staged-tests.log').read_text() and '6/6 test superati' in (T/'san-tests.log').read_text()
+assert (T/'baseline-ordinary.log').read_bytes()==(T/'candidate-ordinary.log').read_bytes()
+assert (T/'baseline-length-golden.log').read_bytes()==(T/'candidate-length-golden.log').read_bytes()
+new=R/'kernel/tests/test_quadrature_validation.cpp';assert not new.exists()
+(R/'kernel/fk_quadrature.h').write_bytes(Path(f['candidate']['path']).read_bytes());new.write_bytes(Path(f['tests']['path']).read_bytes())
+p=R/'kernel/CMakeLists.txt';s=p.read_text();s=s.replace('set_source_files_properties(fk_curve_algo.cpp fk_loft.cpp fk_sweep_surface_validation.cpp','set_source_files_properties(fk_mass.cpp fk_profile.cpp fk_curve_algo.cpp fk_loft.cpp fk_sweep_surface_validation.cpp');s+='''
+# Accumuli GK condivisi: overflow recuperabile, rifiuti finiti e regressione nativa.
+add_executable(forgekernel_quadrature_validation_tests tests/fk_test_main.cpp
+    tests/test_quadrature_validation.cpp)
+target_link_libraries(forgekernel_quadrature_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_quadrature_validation_tests PRIVATE -Wall -Wextra -Wpedantic
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+set_target_properties(forgekernel_quadrature_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_quadrature_validation_tests COMMAND forgekernel_quadrature_validation_tests)
+set_tests_properties(forgekernel_quadrature_validation_tests PROPERTIES TIMEOUT 30)
+''';p.write_text(s)
+p=R/'CMakeLists.txt';s=p.read_text();assert s.count('set_source_files_properties(cad_sketch_offset.cpp PROPERTIES')==1;s=s.replace('# Offset NURBS dello schizzo: regressioni pubbliche senza viewport o contesto GL.\nset_source_files_properties(cad_sketch_offset.cpp PROPERTIES','# Controlli finiti di offset NURBS e quadrature: niente assunzioni fast-math.\nset_source_files_properties(cad_sketch_offset.cpp cad_mass.cpp PROPERTIES');p.write_text(s)
+p=R/'tools/generate_architecture.py';s=p.read_text();anchor=" 'kernel/tests/test_arc_length_validation.cpp':";assert s.count(anchor)==1;pos=s.index(anchor);s=s[:pos]+" 'kernel/fk_quadrature.h': ('kernel', 'Quadratura adattiva GK7-15 scalare e vettoriale: conserva aritmetica ordinaria, memorizza15campioni e recupera overflow degli accumuli con riscalamento e prodotti frexp/scalbn. Centro e semiampiezza stabili; rifiuta valori non finiti, somme non rappresentabili e bisezioni senza avanzamento prima delle decisioni adattive. Stime numeriche, non certificati continui; tolleranze e profondita legacy conservate.'),\n 'kernel/tests/test_quadrature_validation.cpp': ('tests', 'Sei gruppi GK scalare/vettoriale: golden ordinari e tol0/-1, integrandi2^1023 su range2^-1023, magnitudini indipendenti, callback15 senza replay, lunghezza B-spline nativa e cache, rifiuti NaN/Inf anche depth30, midpoint grandi, semiampiezza nulla e integrali non rappresentabili.'),\n"+s[pos:];s=s.replace('senza cambiare quadratura GK, partizioni, somme o tolleranza legacy.','con quadratura GK condivisa, partizioni, somme esterne e tolleranza legacy conservate.');s=s.replace('norma stabile di arcLength, quadratura e somma invariate.','norma stabile di arcLength, quadratura condivisa e somma esterna invariata.');p.write_text(s)
+paths=['kernel/fk_quadrature.h','kernel/tests/test_quadrature_validation.cpp','kernel/CMakeLists.txt','CMakeLists.txt','tools/generate_architecture.py'];(T/'integrated-sources.json').write_text(json.dumps({p:sha(R/p) for p in paths},indent=2)+'\n')
+p=R/'CLAUDE.md';s=p.read_text();s=s.replace('Baseline nativa: retta1mm con h2^-1023, derivatafinita2^1023, watchdog0,3s exit124. Fix non integrato.','Retta1mm h2^-1023: watchdog0,3s→1. Fix integrato; staging6/6+SAN e golden bitidentici PASS.\nBuildapp, regressioni mirate e mappa ancora da verificare.');assert len(s.encode())<=16384;p.write_text(s)
+print('Integrated frozen candidate and tests; CLAUDE',len(s.encode()))

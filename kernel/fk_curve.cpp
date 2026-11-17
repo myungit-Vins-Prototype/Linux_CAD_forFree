@@ -40,11 +40,19 @@ void evaluateConic(const Vec<N> &center, const Vec<N> &a, const Vec<N> &b, doubl
 namespace detail {
 
 std::vector<double> quadrantBreakpoints(const Interval &range) {
+    cancellationPoint();
+    if (!range.isFinite() || range.lo > range.hi)
+        throw std::invalid_argument("quadrantBreakpoints: intervallo non valido");
     std::vector<double> result{range.lo};
     const double tolerance = 1.0e-12 * std::max(1.0, std::fabs(range.hi));
-    for (double k = std::ceil(range.lo / kHalfPi); k * kHalfPi < range.hi - tolerance; k += 1.0) {
+    for (double k = std::ceil(range.lo / kHalfPi); k * kHalfPi < range.hi - tolerance;) {
+        cancellationPoint();
         const double t = k * kHalfPi;
         if (t > range.lo + tolerance) result.push_back(t);
+        const double next = k + 1.0;
+        if (!std::isfinite(next) || !(next > k))
+            throw std::domain_error("quadrantBreakpoints: indice non rappresentabile");
+        k = next;
     }
     result.push_back(range.hi);
     return result;

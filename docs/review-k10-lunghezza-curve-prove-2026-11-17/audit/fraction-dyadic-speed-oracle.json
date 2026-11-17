@@ -1,0 +1,71 @@
+{
+  "independentScope": "exact Fraction parameter/speed/length identities and scalar IEEE oracle only; not C++ kernel execution or quadrature certification",
+  "cases": [
+    {
+      "exponent": -600,
+      "hHex": "0x1.0000000000000p-600",
+      "nativeDegree": 1,
+      "nativeKnotsHex": [
+        "0x0.0p+0",
+        "0x0.0p+0",
+        "0x1.0000000000000p-600",
+        "0x1.0000000000000p-600"
+      ],
+      "nativePoles": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0
+        ]
+      ],
+      "queryHex": [
+        "0x0.0p+0",
+        "0x1.0000000000000p-600"
+      ],
+      "exactDerivativeHex": "0x1.0000000000000p+600",
+      "exactArcLength": "1",
+      "exactSquaredSpeedPowerOfTwo": 1200,
+      "binary64SquaredSpeed": "inf",
+      "binary64LegacyNorm": "inf",
+      "pythonHypotScalarOracleHex": "0x1.0000000000000p+600"
+    },
+    {
+      "exponent": 600,
+      "hHex": "0x1.0000000000000p+600",
+      "nativeDegree": 1,
+      "nativeKnotsHex": [
+        "0x0.0p+0",
+        "0x0.0p+0",
+        "0x1.0000000000000p+600",
+        "0x1.0000000000000p+600"
+      ],
+      "nativePoles": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0
+        ]
+      ],
+      "queryHex": [
+        "0x0.0p+0",
+        "0x1.0000000000000p+600"
+      ],
+      "exactDerivativeHex": "0x1.0000000000000p-600",
+      "exactArcLength": "1",
+      "exactSquaredSpeedPowerOfTwo": -1200,
+      "binary64SquaredSpeed": "0x0.0p+0",
+      "binary64LegacyNorm": "0x0.0p+0",
+      "pythonHypotScalarOracleHex": "0x1.0000000000000p-600"
+    }
+  ]
+}

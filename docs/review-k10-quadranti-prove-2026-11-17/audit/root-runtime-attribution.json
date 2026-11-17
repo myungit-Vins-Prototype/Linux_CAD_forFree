@@ -1,0 +1,121 @@
+{
+  "cases": {
+    "baseline-normal": {
+      "metadata": {
+        "command": [
+          "/tmp/k10-quadrant-review/root/baseline-probe",
+          "normal"
+        ],
+        "exit": 0,
+        "seconds": 0.0035042040108237416
+      },
+      "stdout": "returned count=8 -0x1.3333333333333p-2 -0x0p+0 0x1.921fb54442d18p+0 0x1.921fb54442d18p+1 0x1.2d97c7f3321d2p+2 0x1.921fb54442d18p+2 0x1.f6a7a2955385ep+2 0x1p+3\n",
+      "attribution": "Compiled/executed by ROOT; audit only read and preserved these text logs."
+    },
+    "baseline-preset": {
+      "metadata": {
+        "command": [
+          "/tmp/k10-quadrant-review/root/baseline-probe",
+          "preset"
+        ],
+        "exit": 0,
+        "seconds": 0.003434047001064755
+      },
+      "stdout": "returned count=8\n",
+      "attribution": "Compiled/executed by ROOT; audit only read and preserved these text logs."
+    },
+    "baseline-stalled": {
+      "metadata": {
+        "command": [
+          "timeout",
+          "--signal=KILL",
+          "0.3",
+          "/tmp/k10-quadrant-review/root/baseline-probe",
+          "stalled"
+        ],
+        "exit": 137,
+        "seconds": 0.31416972300212365
+      },
+      "stdout": "",
+      "attribution": "Compiled/executed by ROOT; audit only read and preserved these text logs."
+    },
+    "baseline-infinite": {
+      "metadata": {
+        "command": [
+          "timeout",
+          "--signal=KILL",
+          "0.3",
+          "/tmp/k10-quadrant-review/root/baseline-probe",
+          "infinite"
+        ],
+        "exit": 137,
+        "seconds": 0.3143241689977003
+      },
+      "stdout": "",
+      "attribution": "Compiled/executed by ROOT; audit only read and preserved these text logs."
+    },
+    "candidate-normal": {
+      "metadata": {
+        "command": [
+          "/tmp/k10-quadrant-review/root/candidate-probe",
+          "normal"
+        ],
+        "exit": 0,
+        "seconds": 0.0035515909985406324
+      },
+      "stdout": "returned count=8 -0x1.3333333333333p-2 -0x0p+0 0x1.921fb54442d18p+0 0x1.921fb54442d18p+1 0x1.2d97c7f3321d2p+2 0x1.921fb54442d18p+2 0x1.f6a7a2955385ep+2 0x1p+3\n",
+      "attribution": "Compiled/executed by ROOT; audit only read and preserved these text logs."
+    },
+    "candidate-preset": {
+      "metadata": {
+        "command": [
+          "/tmp/k10-quadrant-review/root/candidate-probe",
+          "preset"
+        ],
+        "exit": 0,
+        "seconds": 0.003489003996946849
+      },
+      "stdout": "cancelled\n",
+      "attribution": "Compiled/executed by ROOT; audit only read and preserved these text logs."
+    },
+    "candidate-stalled": {
+      "metadata": {
+        "command": [
+          "/tmp/k10-quadrant-review/root/candidate-probe",
+          "stalled"
+        ],
+        "exit": 0,
+        "seconds": 0.003502015009871684
+      },
+      "stdout": "domain_error: quadrantBreakpoints: indice non rappresentabile\n",
+      "attribution": "Compiled/executed by ROOT; audit only read and preserved these text logs."
+    },
+    "candidate-infinite": {
+      "metadata": {
+        "command": [
+          "/tmp/k10-quadrant-review/root/candidate-probe",
+          "infinite"
+        ],
+        "exit": 0,
+        "seconds": 0.0034588889975566417
+      },
+      "stdout": "invalid_argument: quadrantBreakpoints: intervallo non valido\n",
+      "attribution": "Compiled/executed by ROOT; audit only read and preserved these text logs."
+    },
+    "candidate-during": {
+      "metadata": {
+        "command": [
+          "/tmp/k10-quadrant-review/root/candidate-probe",
+          "during"
+        ],
+        "exit": 0,
+        "seconds": 0.007543451996752992
+      },
+      "stdout": "cancelled\n",
+      "attribution": "Compiled/executed by ROOT; audit only read and preserved these text logs."
+    }
+  },
+  "normalOutputByteIdentical": true,
+  "auditCppRuntime": false,
+  "oracleRelation": "Timeout alone proves only nonreturn during watchdog window; the independent binary64 fixed-state oracle proves the baseline stagnation mechanism."
+}

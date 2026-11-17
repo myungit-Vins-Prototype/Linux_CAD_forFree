@@ -1,0 +1,10 @@
+E32 status=1 upper=2.115258955021921e-15
+E33 status=2 upper=inf
+Q32 status=1 upper=2.115258955021921e-15
+Q33 status=2 upper=inf
+Qexact-trim status=2 upper=inf
+Qexact-paired-unwrapped status=1 upper=1.9614219401112359e-14
+Qexact-candidate-pointer=1
+anti-flatten status=2 upper=inf
+rounded-native-control status=1 upper=2.115258955021921e-15
+shear-singular-trim status=1 upper=4.0382216414054859e-15

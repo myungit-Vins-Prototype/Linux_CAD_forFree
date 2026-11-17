@@ -1,0 +1,10 @@
+{
+  "command": [
+    "/tmp/k10-arc-review/root/candidate-probe",
+    "dyadic",
+    "1.4551915228366852e-11"
+  ],
+  "exit": 0,
+  "seconds": 0.0034382339945295826,
+  "watchdog_seconds": 20
+}

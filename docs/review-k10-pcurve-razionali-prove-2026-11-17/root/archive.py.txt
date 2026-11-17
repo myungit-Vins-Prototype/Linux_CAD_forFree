@@ -1,0 +1,40 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-rational-pcurve-review');P=R/'docs/review-k10-pcurve-razionali-prove-2026-11-17';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+assert not P.exists(),'Never overwrite sealed evidence'
+components=[('core','MANIFEST.json','329f0f5ea88cd1ac51f061069cffdc1eb17f2245fe674ebef45dee3e04845c15'),('tests','manifest.json','47540e0f0853649af571d857059db4ce5522e2c8e216703b2accbf192e6c0a7e'),('audit','MANIFEST.json','7edee2dcecbcaa2e6b1edf99d459deee4b80ac02816aff1ece6271cf24436cc5')]
+for label,name,h in components:
+ d=T/label/'final-proof';assert sha(d/name)==h;j=json.loads((d/name).read_text());entries=j['files'] if 'files' in j else [{'path':f,'sha256':v} for f,v in j.items()]
+ for e in entries:assert sha(d/e['path'])==e['sha256']
+ for p in d.rglob('*'):
+  if p.is_file():p.read_text();assert p.suffix not in {'.cpp','.h','.py','.a','.o','.prt','.body'}
+for label,name,h in components:
+ d=T/label/'final-proof'
+ for p in d.rglob('*'):
+  if p.is_file():q=P/label/p.relative_to(d);q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes())
+skip={'milestone.py','finalize-docs.py','report-draft.md','package-result.json','libforgekernel-baseline.a','architecture-before.json'}
+for p in (T/'root').iterdir():
+ if p.is_file() and p.name not in skip:
+  p.read_text();assert p.suffix not in {'.a','.o','.prt','.body'};q=P/'root'/(p.name+'.txt' if p.suffix in {'.py','.cpp','.h'} else p.name);q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes())
+manifest={};files=set(json.loads((T/'root/integrated-sources.json').read_text()))|{'AGENTS.md','CLAUDE.md','docs/code-review-2026-11-15.md','docs/review-k10-pcurve-razionali-2026-11-17.md','docs/history/claude-prima-k10-pcurve-razionali-2026-11-17.md'}
+for f in sorted(files):p=R/f;q=P/'workspace'/(f+'.txt');q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes());manifest[f]=sha(p)
+(P/'source-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+a=json.loads((T/'root/architecture-audit.json').read_text());pres=json.loads((T/'root/preservation-audit.json').read_text())
+(P/'README.txt').write_text(f'''K10 positive rational native Q,17November2026. No commit/push; HEAD/origin47c7c19/indexempty unchanged. Functional findings33 unchanged; continuous residual provider/ledger family extension. Only pertinent kernel tests, NO UI startup/tests, broad483 rerun or newCI. No userCAD modified or new public CAD failure claimed.
+Old Qvar returnedUnsupported; ledger skipped these fins. Q=(U/D,V/D) now retains ORIGINAL IEEE Euclidean poles/weights/knots and sharedparameter through homogeneous Cox. Tensor denominatorD^(pu+pv) included even Spolynomial, with effectiveMinSW1 when commonSweight was eliminated by existing snapshot. VariableS weightsretainoriginal minimum; positivity on ACTIVEcell with Qwhole-domainproof. NumeratorHsbar*We-He*Wsbar degree<=21; outward sequentialpositive divisions and alternativepositive denominatorhull are independentlyvalid upperbounds. ExtraSource1 Q3nq+degree+3 counted BEFOREallocation, workcaps unchanged. CandidateQ before ONEacceptanceproof, Failedterminal and cancellable. Oldbasis/snapshot/onRange/residual bodiesunchanged; Qconst oldbranch.
+Finalsource5d85a734/header64741592, one productionTU. Complete app+6selectedtargets PASS30.22s; appSHA40514d86d35368fa2380fde3bf1e5b8fef6b452fd706a6af135d93d4a48a19c7. Rootlib6f0a76dfdde164289e0b646843120c1efdcaabcede8eb38446f5aa3459987356,181604788bytes.6/6CTest PASS zero skip43.33s. UI runner unchanged and unexecuted.
+FinalnewTU9e3617cases: genuineQ1/Q3, nonlinearSpoly and Dpowerguard, rational/instanceS with gauges/pose, carrier-cellcrossings/trim/reverse, hiddenQpeak, singlefirstplannedfin beforeassign, domain/wrapper/cancel. ThreepreviousTU only oneQweight assertion Unsupported=>Failed each, plus oneupdatedtestname. Baseline0/7 against NEWcontract, staged Release59/59PASS.59=7new+52old; counts overlap6CTest and mustnot beadded. ASan/UBSan/LSan59/59PASS4.877s: ONEprodTU+SEVENtestTUs/main instrumented, remainingkernel Release unique baseline8641. Separate real19byte intentionalleak calibration exit23 outsideptrace. Not whole-appmemory/leak certification. Core48publicfin and6Evar/QLine probe comparisons are separate overlayregression: JSON/stdout/log byteidentical vsbaseline, not universal bitidentity claim.
+Independent final observer links actual rebuiltrootlib withhashbeforeafter. BodybuildSheet=>certifySheetJoins=>unifySameDomain=>requireUnified yields4actualboundaryfins, eachgenuineE3/Q3rational, Spoly2/2 constantoriginalweight7. BaselineQUnsupported0contracts; final4Certified and Fraction4whole-intervalPASSexactzero, gcdQ4reduceddenominator3, exactidentityWsbar_original=7D^4(normalizedD^4). E/S/Q/range/edgeTol/sense/ancestry unchanged; finTol0=>prefixedplannedcap1e-7, NOT acceptancecapincrease. Sourceimmutable/null-historyunify byteidentical; no wholebody byteidentity tobaselineclaim. Ledgerboundaryfixture is NOT a new publicextendSheetjoin.
+Separate testerexports10originalfixtures:8positiveFractionPASSmax3.2050864e-14mm,2negativewitnesses. Qpeakweights1,1,1e8,1e8 and secondpoleY.01; witnessIEEE0x1.e45106b6b3b93p-15 residual8.659420760637576e-7mm=10.82427595cap8e-8. Qwhole-domainproved and flatcontrol0; old33gridmax3.067e-9 only illustratesblindspot, notwhole-rangeproof. DpowercounterfactualQ_u=1/(2-t),Hs_x=D^3,Ws=D^4; wrongE=D^3 would falsecertify if denominatoromitted, actualgap7.5mm at0 and currentproductionFailed. This is a guardagainst badimplementation, NOT omission attributedto previousproduction. Singleplannedfin firstproofrejection beforeassign preservesbody/E/S; no generalmulti-plantransactionclaim.
+Realcallers verifiedSTATIC: generic mapBody without faceimage retains sourceQ; wrapBodyOnSurface fallback and wrapBodyOnFaces canreach provider withrationalQ/Sfitcubic, while explicitimage refitsQ. Quiltdegree5excluded. This is reachability only, no new runtimepublicCADclaim. WrapperE/Q, otherdegrees/families, periodicsS remainUnsupported; wholecarrier-mapintent, Newtonbranch/convergence, trim/topology/globalinjectivity notcertified; K10partial.
+Architecture{a['nodes']}nodes/{a['edges']}edges/{a['units']}TUerrors0, sourcehash/configuration/HTML/typedlinks bothdirections verified. Generated ignoredgraph/HTML not copied/versioned. Beforemap summary and componentconsultations retained. Preservation{pres['baseline_files']}baselinefiles, only9expectedexistingchanges; all{pres['previous_proof_packages_preserved']}priorsealedpackages/{pres['previous_proof_artifacts']}artifacts intact. Memory{pres['CLAUDE_bytes']}bytes, precedingfullmemoryarchived beforecondensation.
+Temporaryspace: deletedONLY2completedownfrozenarchives362463080bytes and63ELF/objects1228518600bytes fromprevious2completedstages; tester also3privatecurrentduplicateELF afterhash/export. Plans/hashes/results retained. NO source/log/coeffJSON/CAD/productionbinary/repo/seal removed. Current unique sharedbaseline8641archive metadata retained, actual archiveexcludedfrompayload. Allcurrentrunscompleted withoutspacefailure.
+AllpayloadUTF8JSON/XML/JSONL/text/inertsourcesextra.txt; NO CAD/BRep/ELF/object/archive. Componentmanifests retainoriginalstagedpaths/metadata; topSHA256SUMS validates actualarchivepaths includingcomponentseals. Reproduce in NEWstaging fromsource/recipes; neverrun mutatingscripts inside sealedevidence. HistoricalGitHubCI doesnotcertify uncommittedwork. Reportcontains scope/limits/remainingroadmap.
+''')
+entries=[]
+for p in sorted(P.rglob('*')):
+ if p.is_file():p.read_text();entries.append((str(p.relative_to(P)),sha(p)))
+seal=P/'SHA256SUMS';seal.write_text(''.join(h+'  '+f+'\n' for f,h in entries))
+for f,h in entries:assert sha(P/f)==h
+for f,h in manifest.items():assert sha(R/f)==h
+result={'path':str(P),'files_without_seal':len(entries),'bytes_without_seal':sum((P/f).stat().st_size for f,h in entries),'seal_sha256':sha(seal)};(T/'root/package-result.json').write_text(json.dumps(result,indent=2)+'\n');print(result)

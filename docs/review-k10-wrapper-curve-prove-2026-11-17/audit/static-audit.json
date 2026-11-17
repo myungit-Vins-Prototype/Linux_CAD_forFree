@@ -1,0 +1,52 @@
+{
+  "outcome": "No actionable P1/P2 in wrapper freeze7dfb4c8f",
+  "sources": [
+    {
+      "path": "kernel/fk_surface_curve_bounds.cpp",
+      "sha256": "7dfb4c8f4b2d06ac1be0ef469d053232aa879fe2b762cf176567fabfd4059fba"
+    },
+    {
+      "path": "kernel/fk_surface_curve_bounds.h",
+      "sha256": "dd92c62ce5707241743f70a34602af9b0b0e6eca048c765a23fc7a8e634a1aca"
+    }
+  ],
+  "unchangedNativeFunctions": {
+    "std::vector<P> basis(": {
+      "byteIdentical": true,
+      "sha256": "9dc494b82b36f49831007742d2fb6d4b5100e47897d32843a6b8496ff94e9fd4"
+    },
+    "std::vector<P> homogeneousBasis(": {
+      "byteIdentical": true,
+      "sha256": "a40fe9f847a4e35c901fdbd990eb31eca7ea7e7fa19f95e7d9d83e2b638dbb6f"
+    },
+    "double residual(": {
+      "byteIdentical": true,
+      "sha256": "ea68c14602454d9388d589f1dcfee79c5169c0e505bb4007cdfdaebfe9442e50"
+    },
+    "double rationalUVResidual(": {
+      "byteIdentical": true,
+      "sha256": "598f19ffa1694e1cdeaebc587894a8ee7c2763ca19e2c0cc05a14383d9070bfe"
+    },
+    "template<int N> VP<N> onRange(": {
+      "byteIdentical": true,
+      "sha256": "6a88dcd1289483507e7f4abaa6d163248c3caa200c24ca10842c759c8421f616"
+    },
+    "template<int N> Source<N> snapshot(": {
+      "byteIdentical": true,
+      "sha256": "1efc95793c5548ffdd0be8677a9ff4a15f57ae428c74c244255c4fc5672334c7"
+    }
+  },
+  "review": [
+    "Mixed E Trimmed3/Transformed and Q Trimmed2 decoded using local metadata only, <=32 combined links per curve and cancellation before recursive domain/isPeriodic methods.",
+    "Stored trim intervals must contain query EXACTLY at every link. Supported BSpline bases then check exact natural domain; periodic unsupported bases retain Unsupported without a spurious nonperiodic-domain check.",
+    "Nonfinite matrices/translations, invalid recognized wrapper metadata and exhaustion return Failed before fallback. Any finite affine E transform is allowed, including shear or singular maps; no inverse required.",
+    "Rounded world anchor is solely a shared origin. Actual E poles use original native coefficients and each original IEEE matrix inner-to-outer with outward intervals, t_outer-anchor centered first.",
+    "Original E/S and parameter remain unchanged. CandidateQ cannot remove an invalid original restriction: decoder failure returns original, then mandatory provider fails. Valid changed wrapped BSpline Q receives Trimmed(candidate,query); Line candidate already has exact query domain.",
+    "Unchanged wrapped Q retains original pointer. Native/trim-only E without transforms follows the original snapshot arithmetic; old residual/basis/homogeneous residual functions are byte-identical."
+  ],
+  "coverageQualification": [
+    "Runtime positive conversion TrimLine->Bernstein is not newly demonstrated by this observer/test TU; bound supports TrimLine directly, conversion is reviewed statically through shared existing Line branch.",
+    "Runtime candidate behavior observed: invalid trim returns original pointer in tests, unchanged wrapped BSpline preserves pointer in our final actual ledger.",
+    "No multi-plan transaction atomicity claim; caller operates on private body and Failed is terminal."
+  ]
+}

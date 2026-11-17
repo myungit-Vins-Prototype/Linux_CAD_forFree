@@ -1,0 +1,37 @@
+{
+  "pass": true,
+  "inputSHA256": "8a5f0e7d790ec2b0ea59a5a4af9329714dfeb590f66728243a9c787521911ae4",
+  "scope": "Counterfactual algebraic guard: omitting polynomial S denominator D^4 could certify wrong E=D^3; actual production returns Failed",
+  "originalQ": "U=1,D=2-t,V=0",
+  "originalPolynomialS": "Identity degree2/2, weights1",
+  "normalizedHomogeneousS": "Hs_x=D^3, Ws=D^4",
+  "counterfactualWs1ResidualIdenticallyZero": true,
+  "actualPointParameterFraction": "0",
+  "actualResidualFractions": [
+    "-15/2",
+    "0",
+    "0"
+  ],
+  "actualGapMM": 7.5,
+  "budgetFraction": "3022314549036573/37778931862957161709568",
+  "qOriginalPoleHullProvesWholeImageInDomain": true,
+  "correctControl": {
+    "fin": null,
+    "edge": null,
+    "face": null,
+    "budget": 8e-08,
+    "pass": true,
+    "upper_mm": 9.135549459772718e-16,
+    "cells": 1,
+    "leaves": 1,
+    "branches": 1,
+    "max_depth": 0
+  },
+  "runtimeWrongStatus": 2,
+  "notClaimed": [
+    "Production omitted D power",
+    "A new public mapping bug",
+    "Whole-range upper bound for the failing curve",
+    "Sampled acceptance or topology proof"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "command": [
+    "/tmp/k10-arclength-review/root/baseline-probe",
+    "velocity"
+  ],
+  "exit": 124,
+  "seconds": 0.3011173730046721,
+  "watchdog_seconds": 0.3
+}

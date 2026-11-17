@@ -1,0 +1,217 @@
+{
+  "scope": "Independent original-coefficient instance-carrier audit; static review plus public final4 and exact Fraction witnesses",
+  "fileCount": 42,
+  "totalBytes": 4808088,
+  "files": [
+    {
+      "path": "README.txt",
+      "bytes": 4422,
+      "sha256": "ee07051bea18ddc967572d48636c7388b6cfaf12f23e3ccee7b2b7eb6b03aac6"
+    },
+    {
+      "path": "actual-public-instance-final.json",
+      "bytes": 8959,
+      "sha256": "9010c3403f78b9f4cf5eee1c49cb1e3c00947f40da640f9e184cf532a7bea4f1"
+    },
+    {
+      "path": "baseline-fins.jsonl",
+      "bytes": 23479,
+      "sha256": "a423ee2e6f8030c5a7fc0843dbdfec9bf8bb4c7612f1ce552f19981ab8b154ce"
+    },
+    {
+      "path": "baseline-fraction-commands.json",
+      "bytes": 827,
+      "sha256": "e77a75c9b62b65657557faf3757ceaa350fecd033a1b22c66f8c5b03960679a3"
+    },
+    {
+      "path": "baseline-instance-narrow-fraction.json",
+      "bytes": 2798,
+      "sha256": "cf2fcced729b242d797ee3dbb36f87a09c028c2799411ca1dc93d79493728fa9"
+    },
+    {
+      "path": "baseline-instance-narrow-fraction.log",
+      "bytes": 2798,
+      "sha256": "cf2fcced729b242d797ee3dbb36f87a09c028c2799411ca1dc93d79493728fa9"
+    },
+    {
+      "path": "baseline-library-freeze.json",
+      "bytes": 270,
+      "sha256": "09f59aef4a61895d5a218675117ab6fc87f5c24886dbb48bbc5482e52d87b240"
+    },
+    {
+      "path": "baseline-probe.log",
+      "bytes": 912,
+      "sha256": "6aa0557e5d7c043acd8b4f9389e23e8fa4be891c1e970438955085e0be258f6e"
+    },
+    {
+      "path": "baseline-public-instance-fraction.json",
+      "bytes": 1751,
+      "sha256": "88aaa57539dade22db513deaf2221c170f4156c0bc2172f48e16e3145895fcdf"
+    },
+    {
+      "path": "baseline-public-instance-fraction.log",
+      "bytes": 904,
+      "sha256": "3da74ca5f10f39d9658f77c9788a8cb4360468d704b07d8a462575d67bdfe79f"
+    },
+    {
+      "path": "baseline-sources.json",
+      "bytes": 1566,
+      "sha256": "907a28e56b7461a47e85abac154b8f08459bf8983684d29efd1e88963947163e"
+    },
+    {
+      "path": "baseline-staged-final-coefficients.json",
+      "bytes": 2685,
+      "sha256": "2f12697a7d06aee5ef64acfdc83c5e0d18da75bc5c462f75867d4453831a41ed"
+    },
+    {
+      "path": "baseline-vs-staged-coefficients.json",
+      "bytes": 1747,
+      "sha256": "f1962d5dc46424276ff1567546c2102e9451efb8dcbf46b31364473fbc8c2be3"
+    },
+    {
+      "path": "baseline_probe.cpp.txt",
+      "bytes": 10576,
+      "sha256": "7ef92982845d8921fde23f16672c34f1dddc95f99d6237e770e621aaeeb90485"
+    },
+    {
+      "path": "candidate.patch.txt",
+      "bytes": 10364,
+      "sha256": "3cab0b867c61affb60bcf706031de0a479a927b04dff0c3514c6160503338442"
+    },
+    {
+      "path": "compare_original_coefficients.py.txt",
+      "bytes": 1348,
+      "sha256": "77fbc19fbad987462995f316c4c514aef5486921857aa60fe6bf07312debc8c3"
+    },
+    {
+      "path": "compile-public-instance.json",
+      "bytes": 541,
+      "sha256": "452475a49639f01ce13a4245da4aeb1df42a7b6bc60104b16121fc97bea4db81"
+    },
+    {
+      "path": "compile-public-instance.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "export_public_instance.cpp.txt",
+      "bytes": 8757,
+      "sha256": "358859aeffdf9416b44d8212b20bb381009755f105b518e9f482acdde0ff4f9e"
+    },
+    {
+      "path": "final-fraction-run.json",
+      "bytes": 324,
+      "sha256": "660f119971777c3423c5a075c8b9539930a12d65e22a7db93946a29f73dff1c1"
+    },
+    {
+      "path": "final-instance-fraction-result.json",
+      "bytes": 1863,
+      "sha256": "591d41dcd4d196a31476c17651166ba1d75fe380696a2b2e9ceb3ff0a590b33a"
+    },
+    {
+      "path": "final-instance-fraction.log",
+      "bytes": 1016,
+      "sha256": "af4df597eda147692abb5247d5b1e68cc529e35e7169f057c82e3929e9e89838"
+    },
+    {
+      "path": "final-library-and-source-freeze.json",
+      "bytes": 599,
+      "sha256": "1d60be2832d6695ea50147557795efd36a3b9216461b3d0694b1236775481201"
+    },
+    {
+      "path": "final-link.json",
+      "bytes": 569,
+      "sha256": "b285870e4ac7b7da163be33f0c0fb4e4284abe2fa969129e22e83a0ec6b83233"
+    },
+    {
+      "path": "final-link.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "final-public-instance.log",
+      "bytes": 95,
+      "sha256": "128b929e88e6f5e03a74660e183a8425619119a7ca062c3dbe52c04696d13a89"
+    },
+    {
+      "path": "final-public-run.json",
+      "bytes": 302,
+      "sha256": "25f294b5f8d244b40a53e449556f75df72236518863c07fe0dc8fa23c3317a71"
+    },
+    {
+      "path": "fk_surface_curve_bounds.cpp.candidate.txt",
+      "bytes": 28672,
+      "sha256": "2d52c696b141891a6f620b9ef4b7dcfae8a82fdf3a5f6280a07abe7ff2e64aa7"
+    },
+    {
+      "path": "fk_surface_curve_bounds.h.candidate.txt",
+      "bytes": 2752,
+      "sha256": "94f64598883d8a7a81a2047b3339a83434e99f51da22a2a73c1f2fb4f6e8764a"
+    },
+    {
+      "path": "fraction_common.py.txt",
+      "bytes": 4133,
+      "sha256": "6c201bca580c820cbedb5ba4e2b5b397af7958046266fe96528bb9de3aafe2cb"
+    },
+    {
+      "path": "graph-consult-before.json",
+      "bytes": 4634245,
+      "sha256": "f30e46abb960a7ac06914bb7b306200d01f8ec092a491c4f2725f34d70453733"
+    },
+    {
+      "path": "no-flatten-witness-input.json",
+      "bytes": 6844,
+      "sha256": "bc82191968648131785381858bb81184ff6f07c40d14895f733013b9a60d1ee1"
+    },
+    {
+      "path": "no-flatten-witness-result.json",
+      "bytes": 724,
+      "sha256": "b0dee519a8e6b53d16d7126d984099d8eeedd6a24344b9a3762259571f2ef0cd"
+    },
+    {
+      "path": "no-flatten-witness.log",
+      "bytes": 724,
+      "sha256": "b0dee519a8e6b53d16d7126d984099d8eeedd6a24344b9a3762259571f2ef0cd"
+    },
+    {
+      "path": "representation-source-excerpts.json",
+      "bytes": 11847,
+      "sha256": "acb1fc48061f1ae857736e08af3be5ddb7aab408d8839553d1bc1b3fccd24d1f"
+    },
+    {
+      "path": "run_final_instance.py.txt",
+      "bytes": 2400,
+      "sha256": "a39e2860d9a6745291b2993075681370e5eca5ad4e96b8525adc506b4c8e9a41"
+    },
+    {
+      "path": "staged-fins.jsonl",
+      "bytes": 8463,
+      "sha256": "73387d8a6c8199ef3e40399157b9c48fa18651a594f92d00d31c5644d08be0bb"
+    },
+    {
+      "path": "static-audit.json",
+      "bytes": 2937,
+      "sha256": "b73a2496018b1c8c551e4f3d38cb282e96a6d72c441c7b96a12776b39bb86c96"
+    },
+    {
+      "path": "verify_narrow_witness.py.txt",
+      "bytes": 2991,
+      "sha256": "396393a077d49c0f8b5b4625dff01d45729d38ba69033b750d3deda1c7d6fb38"
+    },
+    {
+      "path": "verify_no_flatten_witness.py.txt",
+      "bytes": 2790,
+      "sha256": "f4e779fa8fc0c36f1f4be7f2a684a51fe3c01a2bc3c1eacc2cb5f97880467a16"
+    },
+    {
+      "path": "verify_public_fins.py.txt",
+      "bytes": 3146,
+      "sha256": "e0785d290f9a2928ec5e8ab28dcfc2fdcd0df5dba3da5449f67df4f76694b43e"
+    },
+    {
+      "path": "verify_tensor_fraction.py.txt",
+      "bytes": 5948,
+      "sha256": "b8d1010264f72af6f73850ae7a0d0b9c765c7fc8d5404e19f04bccd2094a38f6"
+    }
+  ]
+}

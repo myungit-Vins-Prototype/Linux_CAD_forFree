@@ -1,0 +1,21 @@
+{
+  "files": [
+    {
+      "path": "kernel/fk_surface_curve_bounds.cpp",
+      "sha256": "7dfb4c8f4b2d06ac1be0ef469d053232aa879fe2b762cf176567fabfd4059fba",
+      "bytes": 41023
+    },
+    {
+      "path": "kernel/fk_surface_curve_bounds.h",
+      "sha256": "dd92c62ce5707241743f70a34602af9b0b0e6eca048c765a23fc7a8e634a1aca",
+      "bytes": 3341
+    },
+    {
+      "path": "candidate.patch",
+      "sha256": "6b856b0e203774298a27488cbed4fe6f849ea7b4544d99c8f3d0d23c0432d4fa",
+      "bytes": 10134
+    }
+  ],
+  "baselineLibrarySha256": "6f0a76dfdde164289e0b646843120c1efdcaabcede8eb38446f5aa3459987356",
+  "status": "source frozen; further changes only for concrete findings"
+}

@@ -1,0 +1,10 @@
+{
+  "candidate": {
+    "path": "/tmp/k10-quadrature-review/core/kernel/fk_quadrature.h",
+    "sha256": "048c8007849e807c2721a20e90387c855a2076ba3e56bcc90cf55320e3a804b7"
+  },
+  "tests": {
+    "path": "/tmp/k10-quadrature-review/tests/test_quadrature_validation.cpp",
+    "sha256": "88f9718de56f1488f24e0aa637c03f563d67868894437fc6af9f18c4f6f60e29"
+  }
+}

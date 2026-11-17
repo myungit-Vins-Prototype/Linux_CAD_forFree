@@ -1,0 +1,50 @@
+K10 arcParameter — frozen semantic tests, 17 November 2026
+
+TU: test_sheet_arc_validation.cpp
+SHA256 daf3c3a211260e07c3f35325314443b3b7010db75120df9986cf173068c136af
+Candidate fk_sheet.cpp d584e6cf0622bcb59f8a4f57b19230279ab7fd7b7509a48b39a2b3e28ff8df76
+
+Six groups; no filtering needed for baseline (parent reports its native probes
+complete in milliseconds; use parent external 30s runner limit). Public-native
+Body::buildSheet fixtures have a declared spline extrusion and an exact tensor
+BSplineSurface3x1 alternative, all geometry constructed through real classes.
+No hook, fake curve, SDK, OCCT, UI, data file or numerical sample-count cap.
+
+Source Cx=(u-2)^3, Cy=epsilon*u on [-1,1], exact dyadic X poles
+[-27,-9,-3,-1]. BuildEdge indices1/3 select terminal/initial vertical
+incidences. No nearest reassociation. Two new public regressions reject with
+std::domain_error: zero speed at initial Newton end and regular epsilon2^-36
+iteration exhaustion. Parent independently confirmed baseline Extrusion success
+with length1 /178.5340877756 against3, both output checkBody-valid. Tensor
+baseline attribution awaits parent execution of this TU; not inferred from
+shared helper alone. Fresh history stays empty on failure; source Body binary
+must remain byte-identical. This is operation publication behavior, not a claim
+of transactional arbitrary multi-plan ledger semantics.
+
+Positive controls: .25/.5 physical reach; opposite direction on posed and
+scaled .25/2.5 inputs; both native support types. Face descendants are selected
+through explicit history; endpoint U comes from actual output fin pcurve
+endpoint/range, and actual emitted midpoint vIso is integrated. Monotone
+collinear geometry also provides an independent endpoint-distance oracle.
+The assertion budget is the existing operation physical1e-9*sourceScale,
+fixed before construction. It is not a new cap or tolerance change.
+Further controls cover tangent linear reach and radius2 cylinder physical
+arc reach; cancellation preactivated before public extendSheet, source and
+fresh history unchanged. No permanent timed thread.
+
+Current API has only extendSheet(..., distance, linear=false, history).
+Parametric/Linear/Natural is not a three-valued current kernel enum. false
+continues the same support; true builds a supported tangent strip. Both use
+physical distance. General tensor BSpline contract measures the transverse
+iso through the selected boundary midpoint, not equal travel on all side
+curves. Existing ISO/Newton join certificate/Unsupported fallback policy,
+fit tolerances, Newton formula and60iteration limit remain production-owned.
+
+This agent read AGENTS/CLAUDE/tolerance policy, descriptions and typed graph
+edges in both directions, existing SheetExtend/SheetFit/33SheetJoin and
+SurfaceExtendUntil tests. graph-consult.json is a scoped summary.
+PLAN.txt records the initial proposal before runtime confirmation; this
+handoff supersedes its pending-test status. No compile or test execution was
+performed by this agent. Parent owns baseline/candidate/SAN, CMake wiring,
+repository integration and mandatory CLAUDE/architecture updates. Await any
+real runtime failure before a further source change; no further scope.

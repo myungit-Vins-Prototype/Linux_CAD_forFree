@@ -1,0 +1,456 @@
+{
+  "node": {
+    "id": "kernel/fk_curve_length_cache.h",
+    "group": "kernel",
+    "description": "Riuso interno e locale degli integrali di lunghezza, senza approssimare la parametrizzazione.",
+    "lines": 95,
+    "symbols": [
+      "ForgeCad::Kernel::detail::CurveLengthCache::CurveLengthCache",
+      "ForgeCad::Kernel::detail::CurveLengthCache::Key::operator<",
+      "ForgeCad::Kernel::detail::CurveLengthCache::get",
+      "ForgeCad::Kernel::detail::CurveLengthCache::key",
+      "ForgeCad::Kernel::detail::CurveLengthCache::put",
+      "ForgeCad::Kernel::detail::CurveLengthCache::statistics",
+      "ForgeCad::Kernel::detail::CurveLengthCache::~CurveLengthCache"
+    ]
+  },
+  "incident": [
+    {
+      "source": "kernel/fk_curve_length_cache.h",
+      "target": "kernel/fk_cancel.h",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 63,
+          "symbol": "ForgeCad::Kernel::cancellationPoint",
+          "owner": "ForgeCad::Kernel::detail::CurveLengthCache::get"
+        },
+        {
+          "line": 79,
+          "symbol": "ForgeCad::Kernel::cancellationPoint",
+          "owner": "ForgeCad::Kernel::detail::CurveLengthCache::get"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_curve_length_cache.h",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 71,
+          "symbol": "ForgeCad::Kernel::Curve::evaluate",
+          "owner": "ForgeCad::Kernel::detail::CurveLengthCache::get"
+        },
+        {
+          "line": 73,
+          "symbol": "ForgeCad::Kernel::Curve::breakpoints",
+          "owner": "ForgeCad::Kernel::detail::CurveLengthCache::get"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_curve_length_cache.h",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 4,
+          "symbol": "fk_curve_algo.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_curve_length_cache.h",
+      "target": "kernel/fk_curve_length_cache.h",
+      "kind": "call",
+      "count": 5,
+      "sites": [
+        {
+          "line": 44,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::Key::Key",
+          "owner": "ForgeCad::Kernel::detail::CurveLengthCache::key"
+        },
+        {
+          "line": 67,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::key",
+          "owner": "ForgeCad::Kernel::detail::CurveLengthCache::get"
+        },
+        {
+          "line": 81,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::key",
+          "owner": "ForgeCad::Kernel::detail::CurveLengthCache::get"
+        },
+        {
+          "line": 86,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::put",
+          "owner": "ForgeCad::Kernel::detail::CurveLengthCache::get"
+        },
+        {
+          "line": 89,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::put",
+          "owner": "ForgeCad::Kernel::detail::CurveLengthCache::get"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_curve_length_cache.h",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 65,
+          "symbol": "ForgeCad::Kernel::Interval::isFinite",
+          "owner": "ForgeCad::Kernel::detail::CurveLengthCache::get"
+        },
+        {
+          "line": 71,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::detail::CurveLengthCache::get"
+        },
+        {
+          "line": 71,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::Kernel::detail::CurveLengthCache::get"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_curve_length_cache.h",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 85,
+          "symbol": "ForgeCad::Kernel::detail::integrate",
+          "owner": "ForgeCad::Kernel::detail::CurveLengthCache::get"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_curve_length_cache.h",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 5,
+          "symbol": "fk_quadrature.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_curve_length_cache.h",
+      "target": "kernel/fk_timing.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 58,
+          "symbol": "ForgeCad::Kernel::detail::timingEnabled",
+          "owner": "ForgeCad::Kernel::detail::CurveLengthCache::~CurveLengthCache"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_curve_length_cache.h",
+      "target": "kernel/fk_timing.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 6,
+          "symbol": "fk_timing.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_loft.cpp",
+      "target": "kernel/fk_curve_length_cache.h",
+      "kind": "call",
+      "count": 17,
+      "sites": [
+        {
+          "line": 294,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "ForgeCad::Kernel::sectionProgress"
+        },
+        {
+          "line": 301,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "ForgeCad::Kernel::sectionProgress"
+        },
+        {
+          "line": 324,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "ForgeCad::Kernel::parameterAtLength"
+        },
+        {
+          "line": 329,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "ForgeCad::Kernel::parameterAtLength"
+        },
+        {
+          "line": 344,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "ForgeCad::Kernel::parameterAtLength"
+        },
+        {
+          "line": 345,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "ForgeCad::Kernel::parameterAtLength"
+        },
+        {
+          "line": 713,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::CurveLengthCache",
+          "owner": "ForgeCad::Kernel::followingGuide"
+        },
+        {
+          "line": 726,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "ForgeCad::Kernel::followingGuide"
+        },
+        {
+          "line": 736,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "ForgeCad::Kernel::followingGuide"
+        },
+        {
+          "line": 737,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "ForgeCad::Kernel::followingGuide"
+        },
+        {
+          "line": 1060,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::CurveLengthCache",
+          "owner": "ForgeCad::Kernel::prepareLoft"
+        },
+        {
+          "line": 1235,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::CurveLengthCache",
+          "owner": "ForgeCad::Kernel::loftCore"
+        },
+        {
+          "line": 1247,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "ForgeCad::Kernel::loftCore"
+        },
+        {
+          "line": 1385,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "ForgeCad::Kernel::loftCore"
+        },
+        {
+          "line": 2138,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::CurveLengthCache",
+          "owner": "ForgeCad::Kernel::loftSectionPoint"
+        },
+        {
+          "line": 2140,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "ForgeCad::Kernel::loftSectionPoint"
+        },
+        {
+          "line": 2160,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::CurveLengthCache",
+          "owner": "ForgeCad::Kernel::loftSectionFraction"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_loft.cpp",
+      "target": "kernel/fk_curve_length_cache.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 22,
+          "symbol": "fk_curve_length_cache.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_bspline_derivatives.cpp",
+      "target": "kernel/fk_curve_length_cache.h",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 103,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::CurveLengthCache",
+          "owner": "BSplineDenseTranslatedLengthConvergesWithoutChangingTolerance"
+        },
+        {
+          "line": 104,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "BSplineDenseTranslatedLengthConvergesWithoutChangingTolerance"
+        },
+        {
+          "line": 108,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "BSplineDenseTranslatedLengthConvergesWithoutChangingTolerance"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_bspline_derivatives.cpp",
+      "target": "kernel/fk_curve_length_cache.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 4,
+          "symbol": "fk_curve_length_cache.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_curve_algo.cpp",
+      "target": "kernel/fk_curve_length_cache.h",
+      "kind": "call",
+      "count": 21,
+      "sites": [
+        {
+          "line": 226,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::CurveLengthCache",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 231,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 233,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::statistics",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 235,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::CurveLengthCache",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 235,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 245,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::CurveLengthCache",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 246,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 247,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::statistics",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 248,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 249,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::statistics",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 250,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 250,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::statistics",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 251,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::CurveLengthCache",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 252,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 253,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::statistics",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 254,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::CurveLengthCache",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 255,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 256,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::statistics",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 257,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::CurveLengthCache",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 259,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        },
+        {
+          "line": 260,
+          "symbol": "ForgeCad::Kernel::detail::CurveLengthCache::get",
+          "owner": "CurveLengthCachePreservesQuadratureAndIdentity"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_curve_algo.cpp",
+      "target": "kernel/fk_curve_length_cache.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 8,
+          "symbol": "fk_curve_length_cache.h",
+          "owner": ""
+        }
+      ]
+    }
+  ],
+  "typed_both_directions": {
+    "incoming": {
+      "call": 4,
+      "include": 3,
+      "reference": 0
+    },
+    "outgoing": {
+      "call": 6,
+      "include": 3,
+      "reference": 0
+    }
+  }
+}

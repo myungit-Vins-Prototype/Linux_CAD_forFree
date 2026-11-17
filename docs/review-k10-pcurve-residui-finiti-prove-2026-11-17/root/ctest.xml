@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="4"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="60"
+	timestamp="2026-11-17T13:08:39"
+	>
+	<testcase name="forgekernel_sheet_join_validation_tests" classname="forgekernel_sheet_join_validation_tests" time="38.5595" status="run">
+		<properties/>
+		<system-out>[  OK  ] SheetJoinImplicitPolynomial
+[  OK  ] SheetJoinTangentPolynomial
+[  OK  ] SheetJoinRigidPose
+[  OK  ] SheetJoinSmallScale
+[  OK  ] SheetJoinLargeScale
+[  OK  ] SheetJoinRational
+[  OK  ] SheetJoinReverseSelection
+[  OK  ] SheetJoinFaceSense
+[  OK  ] SheetJoinCanonicalReversal
+[  OK  ] SheetJoinLowerBoundary
+[  OK  ] SheetJoinTangentRigidPose
+[  OK  ] SheetJoinTangentSmallScale
+[  OK  ] SheetJoinTangentLargeScale
+[  OK  ] SheetJoinTangentRational
+[  OK  ] SheetJoinTangentReverseSelection
+[  OK  ] SheetJoinTangentFaceSense
+[  OK  ] SheetJoinTangentCanonicalReversal
+[  OK  ] SheetJoinTangentLowerBoundary
+[  OK  ] SheetJoinHiddenNarrowKnots
+[  OK  ] SheetJoinTangentGapBudget
+[  OK  ] SheetJoinTangentTrimmedSupport
+[  OK  ] SheetJoinHiddenNarrowPhases
+[  OK  ] SheetJoinHiddenNarrowPose
+[  OK  ] SheetJoinHiddenNarrowSmallScale
+[  OK  ] SheetJoinHiddenNarrowLargeScale
+[  OK  ] SheetJoinHiddenNarrowReverseSelection
+[  OK  ] SheetJoinTangentGapPose
+[  OK  ] SheetJoinCancellationAtomic
+[  OK  ] SheetJoinInvalid...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_offset_pcurve_tests" classname="forgekernel_offset_pcurve_tests" time="0.386948" status="run">
+		<properties/>
+		<system-out>joined_polynomial source_residual=2.2204460492503131e-16 actual_residual=8.9389661512521902e-11 fin_budget=9.9999999999999995e-07 at=0.37059999999999998 fin=3 ratio=8.9389661512521905e-05 PASS
+joined_rational source_residual=2.2204460492503131e-16 actual_residual=8.9389661512521902e-11 fin_budget=9.9999999999999995e-07 at=0.37059999999999998 fin=3 ratio=8.9389661512521905e-05 PASS
+joined_shift_trim source_residual=2.2204460492503131e-16 actual_residual=8.9389661512521902e-11 fin_budget=9.9999999999999995e-07 at=0.37059999999999998 fin=3 ratio=8.9389661512521905e-05 PASS
+joined_reverse source_residual=3.3306690738754696e-16 actual_residual=8.9389661512521902e-11 fin_budget=9.9999999999999995e-07 at=0.37059999999999998 fin=3 ratio=8.9389661512521905e-05 PASS
+joined_pose source_residual=2.9457545650361182e-15 actual_residual=7.6161563644910462e-10 fin_budget=9.9999999999999995e-07 at=0.40294999999999997 fin=6 ratio=0.00076161563644910467 PASS
+joined_scale source_residual=2.2737367544323206e-13 actual_residual=2....
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_sew_pcurve_tests" classname="forgekernel_sew_pcurve_tests" time="22.0097" status="run">
+		<properties/>
+		<system-out>nonaffine_polynomial source_original=0 residual=3.8395221104055299e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2364439862352513e-09 edge_tolerance=0 witness_t=0.046875 PASS
+nonaffine_reverse_inputs source_original=0 residual=3.8395221104055299e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2364439862352513e-09 edge_tolerance=0 witness_t=0.046875 PASS
+nonaffine_shift_trim source_original=0 residual=3.8393950553550216e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2364413694726504e-09 edge_tolerance=0 witness_t=-2.625 PASS
+nonaffine_reverse_target source_original=0 residual=3.839473407610261e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2364414810235015e-09 edge_tolerance=0 witness_t=0.953125 PASS
+nonaffine_scale source_original=0 residual=8.4684472767548868e-09 legacy_cap=0.0001 fin_tolerance=9.2592244982370258e-09 edge_tolerance=0 witness_t=0.1484375 PASS
+reuse_sampled_same_parameter source_original=0 residual=3.8400708168850883e-09 legacy_cap=9.9999999999999995e-08 fin_toleran...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_pcurve_deviation_validation_tests" classname="forgekernel_pcurve_deviation_validation_tests" time="0.00126065" status="run">
+		<properties/>
+		<system-out>[  OK  ] PCurveDeviationFiniteControlsAndSampledKnotPeaks
+[  OK  ] PCurveDeviationInvalidSamplesAndRangesReturnInfinity
+[  OK  ] PCurveDeviationNonFiniteNativeEvaluationsNeverLookExact
+[  OK  ] PCurveDeviationOverflowGapFromFinitePointsIsInfinity
+[  OK  ] PCurveAcceptanceNeedsFiniteDeviationEvenWithInfiniteTolerance
+[  OK  ] PCurveDeviationAndAcceptancePropagateCancellation
+6/6 test superati
+</system-out>
+	</testcase>
+</testsuite>

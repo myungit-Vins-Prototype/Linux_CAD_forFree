@@ -1,0 +1,9 @@
+{
+  "command": [
+    "/tmp/k10-arclength-review/root/baseline-probe",
+    "center"
+  ],
+  "exit": 0,
+  "seconds": 0.002117597992764786,
+  "watchdog_seconds": 5
+}

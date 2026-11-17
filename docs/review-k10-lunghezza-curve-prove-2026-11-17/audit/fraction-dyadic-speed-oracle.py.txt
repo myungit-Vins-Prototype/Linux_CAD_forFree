@@ -1,0 +1,14 @@
+from fractions import Fraction
+import json, math
+records=[]
+for e in (-600,600):
+    h=math.ldexp(1.0,e)
+    v=math.ldexp(1.0,-e)
+    exact_h=Fraction.from_float(h)
+    exact_v=Fraction.from_float(v)
+    squared=v*v
+    stable=math.hypot(v,0.0,0.0)
+    assert exact_h*exact_v==1
+    assert stable==v
+    records.append(dict(exponent=e,knotsHex=[0.0.hex(),0.0.hex(),h.hex(),h.hex()],poles=[[0,0,0],[1,0,0]],exactDerivativeHex=v.hex(),exactLength='1',binary64Squared='inf' if math.isinf(squared) else squared.hex(),hypotHex=stable.hex(),scope='scalar-only independent oracle; no C++ kernel execution'))
+print(json.dumps(records,indent=2)+'\n')

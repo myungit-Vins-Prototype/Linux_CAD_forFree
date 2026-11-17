@@ -1,0 +1,151 @@
+from pathlib import Path
+import difflib,json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-mapping-nonplane-review/root');D=T/'candidate';D.mkdir(exist_ok=True)
+sheet=(R/'kernel/fk_sheet_join_validation.cpp').read_text();a=sheet.index('// Candidate construction');b=sheet.index('void requireResult',a);helper=sheet[a:b]
+helper=helper.replace('CurvePtr<2> boundedPCurveCandidate(const Edge &edge, const SurfacePtr &surface,\n                                  const CurvePtr<2> &original) {','''CurvePtr<2> surfaceCurvePCurveCandidate(const CurvePtr<3> &curve, const SurfacePtr &surface,
+                                         const CurvePtr<2> &original, const Interval &range) {''').replace('edge.curve','curve').replace('edge.range','range').replace('invalidJoin();','throw std::domain_error("SP-curve: candidato UV non finito");')
+# Keep the original weight predicate private, candidate construction explicit.
+split=helper.index('CurvePtr<2> surfaceCurvePCurveCandidate');private=helper[:split];public=helper[split:]
+bounds=(R/'kernel/fk_surface_curve_bounds.cpp').read_text().replace('#include <utility>','#include <utility>\n#include <stdexcept>')
+marker='}\n\nSurfaceCurveBoundResult surfaceCurveResidualBound';assert marker in bounds
+bounds=bounds.replace(marker,private+'}\n\n'+public+'SurfaceCurveBoundResult surfaceCurveResidualBound',1)
+# The proof implementation remains byte-identical after its signature.
+old=(R/'kernel/fk_surface_curve_bounds.cpp').read_text();tail='SurfaceCurveBoundResult surfaceCurveResidualBound';assert bounds[bounds.index(tail):]==old[old.index(tail):]
+sheet=sheet[:a]+sheet[b:];sheet=sheet.replace('#include "fk_bspline.h"\n','').replace('#include "fk_bspline_surface.h"\n','').replace('boundedPCurveCandidate(edge, body.face(face).surface, fin.pcurve)','surfaceCurvePCurveCandidate(edge.curve, body.face(face).surface, fin.pcurve, edge.range)')
+header=(R/'kernel/fk_surface_curve_bounds.h').read_text();marker='// Whole-range positional residual';i=header.index(marker)
+header=header[:i]+'''// Builds a private UV candidate BEFORE residual certification. For the native
+// family below, Line2 becomes degree-one Bernstein data on the ORIGINAL edge
+// range (no direction renormalization); BSpline2 keeps degree/knots/weights.
+// Candidate poles are bounded to the natural carrier rectangle. E/S, the edge
+// parameter and the caller's budget are unchanged. This is construction, NOT
+// acceptance: the caller must certify the candidate once before assigning it.
+// Unsupported families retain the original Q pointer, shared inputs are not
+// modified. No epsilon and no recovery after a Failed residual proof.
+CurvePtr<2> surfaceCurvePCurveCandidate(const CurvePtr<3> &edge, const SurfacePtr &surface,
+                                       const CurvePtr<2> &pcurve, const Interval &range);
+
+'''+header[i:]
+s=(R/'kernel/fk_surface_mapping.cpp').read_text().replace('#include "fk_curve_fit_bounds.h"','#include "fk_curve_fit_bounds.h"\n#include "fk_surface_curve_bounds.h"')
+a=s.index('    // Il contratto delle fin Plane');b=s.index('    for(auto v:source.vertices())',a)
+s=s[:a]+'''    // Cap fisico fissato prima del fit, distinto dall'errore misurato.
+    const double pcurveBudget = .8 * connectionBudget;
+    enum class FinProof { Legacy, Plane, Surface };
+    struct FinContract {
+        CurvePtr<3> curve;
+        CurvePtr<2> pcurve;
+        Interval range;
+        double edgeTolerance;
+        double pcurveTolerance;
+        FinProof proof;
+    };
+    bool hasCertifiedFin = false;
+    std::map<int, SurfacePtr> mappedImages;
+    std::map<std::tuple<int, int, bool>, std::vector<FinContract>> finOrigins;
+'''+s[b:]
+s=s.replace('        if (planeImage) planeImages.emplace(id.index, image.surface);\n','')
+marker='        for(auto loop:face.loops) {';i=s.index(marker,s.index('    for(auto id:source.faces())'))
+s=s[:i]+'        mappedImages.emplace(id.index, mapped.surface);\n'+s[i:]
+s=s.replace('planePCurveBudget','pcurveBudget')
+a=s.index('                const double error = planeImage ?');b=s.index('                fins.push_back(',a)
+s=s[:a]+'''                FinProof proofKind = planeImage ? FinProof::Plane : FinProof::Legacy;
+                double error = planeError;
+                if (!planeImage) {
+                    // Costruzione privata prima dell'UNICA prova; un Failed
+                    // riconosciuto e' terminale e non torna ai campioni.
+                    const auto candidate = detail::surfaceCurvePCurveCandidate(
+                        edge.curve, mapped.surface, pc, edge.range);
+                    const auto proof = detail::surfaceCurveResidualBound(
+                        edge.curve, mapped.surface, candidate, edge.range, pcurveBudget);
+                    if (proof.status == detail::SurfaceCurveBoundStatus::Unsupported) {
+                        error = pcurveDeviation(*mapped.surface, *edge.curve, *pc, edge.range, 32);
+                    } else {
+                        require(proof.status == detail::SurfaceCurveBoundStatus::Certified
+                                && std::isfinite(proof.upperBound) && proof.upperBound >= 0
+                                && proof.upperBound <= pcurveBudget,
+                            "Deformazione: SP-curve fuori dal budget continuo.");
+                        pc = candidate;
+                        error = proof.upperBound;
+                        proofKind = FinProof::Surface;
+                    }
+                }
+                require(error <= pcurveBudget, "Deformazione: SP-curve fuori tolleranza.");
+                worst = std::max(worst, error);
+                const double pcurveTolerance = proofKind == FinProof::Surface ? pcurveBudget :
+                    (planeImage ? std::max(error, 1e-14) : std::max(error * 1.01, 1e-14));
+                hasCertifiedFin = hasCertifiedFin || proofKind != FinProof::Legacy;
+                finOrigins[{id.index, fin.edge.index, fin.sense}].push_back(
+                    {edge.curve, pc, edge.range, edge.tolerance, pcurveTolerance, proofKind});
+'''+s[b:]
+a=s.index('    BodyHistory preparedHistory;');b=s.index('    cancellationPoint();\n    if(history)',a)
+s=s[:a]+'''    BodyHistory preparedHistory;
+    if (history || hasCertifiedFin) preparedHistory = mappedHistory(source, result);
+    if (hasCertifiedFin) {
+        const auto origin = [&](EntityKind kind, int index) {
+            const auto &links = preparedHistory.origins(kind, index);
+            require(preparedHistory.isDeclared(kind, index) && links.size() == 1
+                    && links.front().operand == 0 && links.front().kind == kind
+                    && links.front().relation == HistoryRelation::Modified,
+                "Deformazione: genealogia del trasferimento incoerente.");
+            return links.front().index;
+        };
+        // Anche senza history utente: identita' e cardinalita' delle vere fin
+        // emesse da build/buildSheet, senza riassociazione per prossimita'.
+        for (auto id : result.faces()) {
+            cancellationPoint();
+            const int sourceFace = origin(EntityKind::Face, id.index);
+            const auto expected = mappedImages.find(sourceFace);
+            const auto &face = result.face(id);
+            require(expected != mappedImages.end() && face.surface == expected->second,
+                "Deformazione: carrier modificato durante l'assemblaggio.");
+            for (auto loop : face.loops) for (auto use : result.loopFins(loop)) {
+                cancellationPoint();
+                const auto &fin = result.fin(use);
+                const auto &edge = result.edge(fin.edge);
+                const int sourceEdge = origin(EntityKind::Edge, fin.edge.index);
+                auto planned = finOrigins.find({sourceFace, sourceEdge, fin.sense});
+                require(planned != finOrigins.end() && !planned->second.empty(),
+                    "Deformazione: fin priva di origine dichiarata.");
+                const auto contract = std::find_if(planned->second.begin(), planned->second.end(),
+                    [&](const FinContract &entry) {
+                        return entry.curve == edge.curve && entry.pcurve == fin.pcurve
+                            && entry.range.lo == edge.range.lo && entry.range.hi == edge.range.hi
+                            && entry.edgeTolerance == edge.tolerance
+                            && entry.pcurveTolerance == fin.pcurveTolerance;
+                    });
+                require(contract != planned->second.end(),
+                    "Deformazione: curva, parametro o budget modificato durante l'assemblaggio.");
+                const FinProof kind = contract->proof;
+                planned->second.erase(contract);
+                const auto &original = source.edge(EdgeId(sourceEdge));
+                require(edge.range.lo == original.range.lo && edge.range.hi == original.range.hi,
+                    "Deformazione: parametro originale del bordo modificato.");
+                if (kind == FinProof::Legacy) continue;
+                require(std::isfinite(fin.pcurveTolerance) && fin.pcurveTolerance >= 0
+                        && fin.pcurveTolerance <= pcurveBudget,
+                    "Deformazione: budget finale della fin non valido.");
+                double residual = 0;
+                if (kind == FinProof::Plane) {
+                    residual = detail::requirePCurveOnPlane(edge.curve, face.surface, fin.pcurve,
+                        edge.range, std::min(pcurveBudget, fin.pcurveTolerance));
+                } else {
+                    const auto proof = detail::surfaceCurveResidualBound(edge.curve, face.surface,
+                        fin.pcurve, edge.range, fin.pcurveTolerance);
+                    require(proof.status == detail::SurfaceCurveBoundStatus::Certified
+                            && std::isfinite(proof.upperBound) && proof.upperBound >= 0
+                            && proof.upperBound <= fin.pcurveTolerance,
+                        "Deformazione: fin finale fuori dal budget continuo.");
+                    residual = proof.upperBound;
+                }
+                worst = std::max(worst, residual);
+            }
+        }
+        for (const auto &planned : finOrigins)
+            require(planned.second.empty(), "Deformazione: fin persa nell'assemblaggio.");
+    }
+'''+s[b:]
+files={'kernel/fk_surface_curve_bounds.cpp':bounds,'kernel/fk_surface_curve_bounds.h':header,'kernel/fk_sheet_join_validation.cpp':sheet,'kernel/fk_surface_mapping.cpp':s};manifest={}
+for name,data in files.items():
+ p=D/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(data);manifest[name]=hashlib.sha256(p.read_bytes()).hexdigest()
+(T/'candidate-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+(T/'candidate.patch').write_text(''.join(''.join(difflib.unified_diff((R/n).read_text().splitlines(True),d.splitlines(True),fromfile='a/'+n,tofile='b/'+n)) for n,d in files.items()))
+print(manifest)

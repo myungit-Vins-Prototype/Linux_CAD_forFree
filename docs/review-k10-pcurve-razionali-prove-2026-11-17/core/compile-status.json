@@ -1,0 +1,6 @@
+{
+  "command": "c++ -O3 -DNDEBUG -std=c++17 -ffp-contract=off -Wall -Wextra -Wpedantic -I/home/myungit/Linux_CAD_forFree/kernel -c /tmp/k10-rational-pcurve-review/core/kernel/fk_surface_curve_bounds.cpp -o /tmp/k10-rational-pcurve-review/core/provider.o",
+  "exitCode": 0,
+  "output": "",
+  "warningsObserved": 0
+}

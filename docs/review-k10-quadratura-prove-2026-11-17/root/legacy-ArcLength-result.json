@@ -1,0 +1,9 @@
+{
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "ArcLength"
+  ],
+  "exit": 0,
+  "seconds": 0.06488731400168035,
+  "watchdog_seconds": 600
+}

@@ -1,0 +1,96 @@
+--- a/cad_forge.h
++++ b/cad_forge.h
+@@ -224,9 +224,6 @@
+ bool forgePickFace(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit, const Kernel::RayFaceIndex *index = nullptr,
+                    const Kernel::Interval *window = nullptr);
+ 
+-// Distanza lungo il raggio del primo punto del body colpito (geometria esatta).
+-bool forgeIntersectRay(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index = nullptr);
+-
+ // Funzione che ha creato la faccia `face` di `picked` nel punto `point`:
+ // la prima di `chain` (le funzioni da cui il corpo deriva, in ordine, con
+ // i loro corpi) che ha una faccia sulla stessa superficie e che contiene il
+--- a/cad_forge.cpp
++++ b/cad_forge.cpp
+@@ -2403,17 +2403,4 @@
+     }
+ }
+ 
+-
+-bool forgeIntersectRay(const Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index) {
+-    try {
+-        double t = 0.0;
+-        if (!firstRayHit(body, Vec3(origin.x(), origin.y(), origin.z()), Vec3(direction.x(), direction.y(), direction.z()), 1e-7, t, nullptr, index))
+-            return false;
+-        distance = t;
+-        return true;
+-    } catch (const std::exception &) {
+-        return false;
+-    }
+-}
+-
+-}
++}
+--- a/cad_sketch_refs.h
++++ b/cad_sketch_refs.h
+@@ -53,17 +53,12 @@
+ QString sketchPlaneReference(const SketchObject &sketch, const SketchFrame &plane, QPointF &point, QPointF &direction);
+ QString sketchAxisReference(const SketchObject &sketch, const Kernel::Vec3 &origin, const Kernel::Vec3 &axis,
+                             QPointF &point, QPointF &direction);
+-// Riusa una retta di costruzione gia' fissa e collineare, oppure ne crea una.
+-int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength);
+ 
+ // Aggiunge allo schizzo la proiezione del tratto `range` di `curve`
+ // (coordinate del modello); `construction` le fa di costruzione, `fixed` le
+ // blocca con un vincolo fisso. Errore vuoto se riesce; `created` riceve le entita' nuove.
+ QString appendProjectedCurve(SketchObject &sketch, const Kernel::CurvePtr<3> &curve, const Kernel::Interval &range, bool construction, bool fixed,
+                              QVector<SketchEntity> *created = nullptr);
+-
+-// Spigolo del body piu' vicino a `point` (la sua curva e il suo tratto).
+-bool nearestBodyEdge(const Kernel::Body &body, const Kernel::Vec3 &point, Kernel::CurvePtr<3> &curve, Kernel::Interval &range);
+ 
+ // Curve di sezione di solidi e superfici con il piano dello schizzo,
+ // limitate ai bordi delle facce e aggiunte come sopra.
+--- a/cad_sketch_refs.cpp
++++ b/cad_sketch_refs.cpp
+@@ -158,17 +158,6 @@
+     }
+     if (ref.featureId) label+=QStringLiteral(" [ID %1]").arg(ref.featureId);
+     return label;
+-}
+-
+-bool nearestBodyEdge(const Body &body, const Vec3 &point, CurvePtr<3> &curve, Interval &range) {
+-    double best = std::numeric_limits<double>::max();
+-    for (EdgeId e : body.edges()) {
+-        const Edge &edge = body.edge(e);
+-        if (!edge.curve) continue;
+-        const double d = projectPoint(*edge.curve, point, edge.range).distance;
+-        if (d < best) best = d, curve = edge.curve, range = edge.range;
+-    }
+-    return best < std::numeric_limits<double>::max();
+ }
+ 
+ QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, const Interval &range, bool construction, bool fixed,
+@@ -609,22 +598,6 @@
+     direction /= length;
+     return {};
+ }
+-int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength) {
+-    const auto cross = [](const QPointF &a, const QPointF &b) { return a.x() * b.y() - a.y() * b.x(); };
+-    for (int i : sketch.constructionSegments) {
+-        if (i < 0 || i >= sketch.segments.size()) continue;
+-        const auto &s = sketch.segments.at(i);
+-        const QPointF d = s.second - s.first;
+-        if (std::fabs(cross(d, direction)) > 1e-12 * std::max(1.0, std::hypot(d.x(), d.y()))
+-            || std::fabs(cross(s.first - point, direction)) > 1e-12 * std::max({1.0, std::hypot(point.x(), point.y()), std::hypot(s.first.x(), s.first.y())})) continue;
+-        for (const auto &c : sketch.geometricConstraints)
+-            if (c.type == ConstraintType::Fix && c.first == ConstraintRef{0, i, -1}) return i;
+-    }
+-    const int index = int(sketch.segments.size());
+-    appendSegment(sketch, point - halfLength * direction, point + halfLength * direction, true);
+-    sketch.geometricConstraints.append(makeConstraint(sketch, ConstraintType::Fix, {{0, index, -1}}));
+-    return index;
+-}
+ int sketchReferenceSourceIndex(const GeometryRef &ref, const QVector<SketchObject> &sketches,
+                               const QVector<ExtrusionObject> &bodies) {
+     if (isSketchRef(ref)) {

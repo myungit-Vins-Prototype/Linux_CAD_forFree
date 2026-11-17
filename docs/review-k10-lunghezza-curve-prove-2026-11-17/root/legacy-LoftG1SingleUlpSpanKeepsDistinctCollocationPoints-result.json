@@ -1,0 +1,9 @@
+{
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "LoftG1SingleUlpSpanKeepsDistinctCollocationPoints"
+  ],
+  "exit": 0,
+  "seconds": 0.025393313000677153,
+  "watchdog_seconds": 600
+}

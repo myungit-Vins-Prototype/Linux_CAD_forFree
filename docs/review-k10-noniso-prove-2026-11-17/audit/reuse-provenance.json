@@ -1,0 +1,30 @@
+{
+  "oldDriver": "/home/myungit/Linux_CAD_forFree/docs/ci-sheet-join-prove-2026-11-16/tests/test_newton_fin_exports.cpp.txt",
+  "changes": [
+    "Absolute include of current production test source, fresh TU compilation when final library ready",
+    "Operation cap exported as edge.tolerance exactly, no added fin tolerance and no max(deviation)",
+    "Validate exported operation cap finite positive",
+    "Require runtime provider status Certified for both actual fins; upper finite within fixed edge budget",
+    "Require fin.pcurveTolerance equals edge.tolerance, export runtimeStatus/runtimeUpper",
+    "Final preflight will restrict old Fraction extraction to clamped native E/Q (or native Line)"
+  ],
+  "verifierSources": {
+    "fraction_common.py.txt": {
+      "path": "/home/myungit/Linux_CAD_forFree/docs/ci-sheet-join-prove-2026-11-16/audit/fraction_common.py.txt",
+      "sha256": "6c201bca580c820cbedb5ba4e2b5b397af7958046266fe96528bb9de3aafe2cb",
+      "byteIdentical": true
+    },
+    "verify_tensor_fraction.py.txt": {
+      "path": "/home/myungit/Linux_CAD_forFree/docs/ci-sheet-join-prove-2026-11-16/audit/verify_tensor_fraction.py.txt",
+      "sha256": "08fccbe94b071f2c478e0d268f6a8b3fb60ea663f0a7c456033d826e44b63cf3",
+      "byteIdentical": true
+    },
+    "verify_actual_newton_fins.py.txt": {
+      "path": "/home/myungit/Linux_CAD_forFree/docs/ci-sheet-join-prove-2026-11-16/audit/verify_actual_newton_fins.py.txt",
+      "sha256": "253d4e82872aa5ff2dbadcbe344b02e6712cea946e751188681914c7f8e91090",
+      "byteIdentical": true
+    }
+  },
+  "execution": "Fresh private TU compiled and linked against frozen final library SHA500d4c72b5adba86e4d5758f71b2fdebfed8eb1f8f95bf7d521ef24cf4f47d3b; public 1/1 PASS including no-user-history byte equality; preflight and Fraction2/2 PASS",
+  "proofScope": "Actual two emitted edge/fin/carrier/pcurve positional contracts at fixed operation cap; not Newton convergence, all trims or all output fins"
+}

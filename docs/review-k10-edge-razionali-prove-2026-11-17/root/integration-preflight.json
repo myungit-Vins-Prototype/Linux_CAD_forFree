@@ -1,0 +1,8 @@
+{
+  "exit": 1,
+  "phase": "before any test/CMake/generator repository writes",
+  "reason": "guard expected one changed line per old test but agent also renamed each test to reflect rational-E scope",
+  "review": "Both old-test deltas reviewed: only one Unsupported-to-Failed assertion and FK_TEST name per file; adjusted guard to two lines",
+  "production_unchanged": true,
+  "not_a_test_failure": true
+}

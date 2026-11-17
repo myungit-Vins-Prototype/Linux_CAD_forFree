@@ -1,0 +1,13 @@
+# GCC compile staging provider: exit0, warningclean
+/usr/bin/c++ -std=c++17 -O2 -g -Wall -Wextra -Wpedantic -ffp-contract=off -fno-fast-math -I/home/myungit/Linux_CAD_forFree/kernel -I/tmp/k10-next-review/core/kernel -c /tmp/k10-next-review/core/kernel/fk_surface_curve_bounds.cpp -o /tmp/k10-next-review/core/provider.o
+# Probes link same frozen library, own provider object first to override old symbol
+/usr/bin/c++ -std=c++17 -O2 -g -Wall -Wextra -Wpedantic -ffp-contract=off -fno-fast-math -I/tmp/k10-next-review/core/kernel -I/home/myungit/Linux_CAD_forFree/kernel /tmp/k10-next-review/core/probe-rational.cpp /tmp/k10-next-review/core/provider.o /tmp/k10-noniso-review/tests/libforgekernel-release.a -pthread -o /tmp/k10-next-review/core/probe-rational
+/tmp/k10-next-review/core/probe-rational /tmp/k10-next-review/core/rational-input.txt
+# exit1: 2commonCertified, 1extraFaileddomain (diagnostic expected)
+# Identical compile command with probe-bounded-candidates.cpp and matching output path:
+/tmp/k10-next-review/core/probe-bounded-candidates /tmp/k10-next-review/core/bounded-candidate-input.txt
+# exit0:6/6boundedcandidateCertified, NOT complete public API test
+# Frozen library SHA f70e65bc0ea5d2c9107ad105a521633d2ed8f6a63de916f5fbfe5315b42bed01
+
+# Ledger staging GCC compile, exit0 warningclean
+/usr/bin/c++ -std=c++17 -O2 -g -Wall -Wextra -Wpedantic -ffp-contract=off -fno-fast-math -I/tmp/k10-next-review/core/kernel -I/home/myungit/Linux_CAD_forFree/kernel -c /tmp/k10-next-review/core/kernel/fk_sheet_join_validation.cpp -o /tmp/k10-next-review/core/ledger.o

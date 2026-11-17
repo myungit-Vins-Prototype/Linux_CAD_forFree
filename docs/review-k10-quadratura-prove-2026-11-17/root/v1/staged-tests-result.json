@@ -1,0 +1,8 @@
+{
+  "command": [
+    "/tmp/k10-quadrature-review/root/staged-tests"
+  ],
+  "exit": 0,
+  "seconds": 0.002815961997839622,
+  "watchdog_seconds": 30
+}

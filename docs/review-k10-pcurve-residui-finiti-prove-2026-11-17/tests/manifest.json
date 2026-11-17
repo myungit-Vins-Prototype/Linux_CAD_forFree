@@ -1,0 +1,8 @@
+{
+  "ownership": "Texts only: no compile/runtime/repo edit/archive copy. Root owns serial baseline/candidate verification.",
+  "files": {
+    "test_pcurve_deviation_validation.cpp": "b3ad0796e0b78a830a7188103e81eb47c48b32ff9a5f4804bfc71423ae4543be",
+    "graph-consult.json": "5d01c13dd10a7c215f4087a2c053c433de3041fd318bd23ac19f4b8e10b5da3c",
+    "HANDOFF.txt": "4e4b2eb7968ed8e84f1b8112556228d0acbd275d5a80bab511f2e281dec9c09c"
+  }
+}

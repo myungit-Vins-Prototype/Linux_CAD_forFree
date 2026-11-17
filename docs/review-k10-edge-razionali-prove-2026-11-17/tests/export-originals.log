@@ -1,0 +1,6 @@
+rational-native status=1 upper=6.1534805964274077e-14
+rational-reverse-trim status=1 upper=3.282681064526353e-14
+rational-placed status=1 upper=9.8455689542838518e-14
+rational-peak-flat status=1 upper=1.1493323374472796e-08
+rational-peak status=2 upper=inf
+rational-ledger-actual status=1 upper=6.855666574246931e-09

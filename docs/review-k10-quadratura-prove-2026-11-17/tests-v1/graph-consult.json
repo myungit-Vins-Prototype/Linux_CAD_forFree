@@ -1,0 +1,135 @@
+{
+  "graphSHA256": "525b88b6ea8576f126a4230bc7bb68d5186b521480cbdec8bb36eff40f602a39",
+  "nodes": [
+    {
+      "id": "kernel/fk_curve_algo.cpp",
+      "description": "Proiezioni esatte con tratti Bezier limitati al range e filtri conservativi. arcLength2/3 controlla cancellazione e valori finiti; sqrt(dot) ordinario conservato e hypot solo per quadrato subnormal/zero/overflow, senza cambiare quadratura GK, partizioni, somme o tolleranza legacy."
+    },
+    {
+      "id": "kernel/fk_curve_length_cache.h",
+      "description": "Cache locale delle lunghezze per loft, curve immutabili prese in prestito: stessi controlli finiti/cancellazione e norma stabile di arcLength, quadratura e somma invariate. Cache bounded con hit/eviction originali, nessun valore non finito pubblicato; prefissi validi possono restare dopo un errore."
+    },
+    {
+      "id": "kernel/fk_mass.cpp",
+      "description": "Proprieta di massa: conserva il ramo UV delle SP-curve approssimate come seed del fallback di inversione; nelle collezioni miste solo le regioni solide contribuiscono al volume/inertia; completa i contorni UV sui lati NURBS collassati certificati dai poli; riuso dei jet NURBS a u fisso con fk_bspline_isoline nelle quadrature V; facce indipendenti in parallelo, somme seriali, errori ordinati e cancellazione; proprieta complete e tolleranze conservate."
+    },
+    {
+      "id": "kernel/fk_quadrature.h",
+      "description": "Quadratura adattiva di Gauss-Kronrod 7-15 (nodi e pesi di QUADPACK), per integrali lungo le curve (lunghezze, aree, numeri di avvolgimento) e, annidata, sulle facce (proprieta' di massa)."
+    }
+  ],
+  "incoming": {
+    "total": 101,
+    "byKind": {
+      "call": 89,
+      "include": 12
+    },
+    "representativeEdges": [
+      {
+        "source": "cad_extrude.cpp",
+        "target": "kernel/fk_mass.cpp",
+        "kind": "call",
+        "count": 1
+      },
+      {
+        "source": "cad_forge.cpp",
+        "target": "kernel/fk_mass.cpp",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "cad_mass.cpp",
+        "target": "kernel/fk_mass.cpp",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "cad_mass.cpp",
+        "target": "kernel/fk_quadrature.h",
+        "kind": "call",
+        "count": 1
+      },
+      {
+        "source": "cad_mass.cpp",
+        "target": "kernel/fk_quadrature.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_quadrature.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve_length_cache.h",
+        "target": "kernel/fk_quadrature.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_loft.cpp",
+        "target": "kernel/fk_curve_length_cache.h",
+        "kind": "include",
+        "count": 1
+      }
+    ]
+  },
+  "outgoing": {
+    "total": 43,
+    "byKind": {
+      "call": 27,
+      "include": 16
+    },
+    "representativeEdges": [
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_bernstein.cpp",
+        "kind": "call",
+        "count": 11
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_bernstein.h",
+        "kind": "call",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_cancel.h",
+        "kind": "call",
+        "count": 8
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_curve.h",
+        "kind": "call",
+        "count": 4
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_bernstein.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_bspline.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_cancel.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "include",
+        "count": 1
+      }
+    ]
+  }
+}

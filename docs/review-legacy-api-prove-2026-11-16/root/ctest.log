@@ -1,0 +1,277 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 37
+      Start  37: forgecad_chamfer_preview_state_tests
+
+37: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--chamfer-preview-editing"
+37: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+37: Environment variables: 
+37:  QT_QPA_PLATFORM=offscreen
+37:  QT_QPA_OFFSCREEN_NO_GLX=1
+37:  QT_QPA_PLATFORMTHEME=
+37:  QT_STYLE_OVERRIDE=Fusion
+37:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+37: Test timeout computed to be: 120
+37: CASE mode=0 pending=0
+37: PASS Enter refreshes typed field without closing dialog
+37: PASS Up arrow preserves immediate preview update
+37: PASS Down arrow restores field and preview definition
+37: PASS typed value committed by real Tab focus lifecycle
+37: PASS Tab refreshes key and generation
+37: PASS old geometry invalidated after Tab
+37: PASS label stops declaring old preview ready
+37: VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+37: PASS ready preview matches field after Tab
+37: PASS new result becomes ready
+37: PASS real confirmation creates chamfer
+37: PASS confirmation uses updated numeric value
+37: COMMIT matches_shown=1 shown_volume=472.188 actual_volume=472.188 pointer_same=1
+37: PASS confirmed geometry matches updated preview volume
+37: PASS single confirmation applies once and returns
+37: PASS dialog cleanup releases preview callback and lock
+37: CASE mode=0 pending=1
+37: PASS Enter refreshes typed field without closing dialog
+37: PASS Up arrow preserves immediate preview update
+37: PASS Down arrow restores field and preview definition
+37: PASS real uncancelled worker before Tab mutation
+37: PASS typed value committed by real Tab focus lifecycle
+37: PASS Tab refreshes key and generation
+37: PASS old geometry invalidated after Tab
+37: PASS label stops declaring old preview ready
+37: PASS Tab mutation cancels previous real worker
+37: VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+37: PASS ready preview matches field after Tab
+37: PASS new result becomes ready
+37: PASS real confirmation creates chamfer
+37: PASS confirmation uses updated numeric value
+37: COMMIT matches_shown=1 shown_volume=472.188 actual_volume=472.188 pointer_same=1
+37: PASS confirmed geometry matches updated preview volume
+37: PASS single confirmation applies once and returns
+37: PASS dialog cleanup releases preview callback and lock
+37: CASE mode=1 pending=0
+37: PASS Enter refreshes typed field without closing dialog
+37: PASS Up arrow preserves immediate preview update
+37: PASS Down arrow restores field and preview definition
+37: PASS typed value committed by real Tab focus lifecycle
+37: PASS Tab refreshes key and generation
+37: PASS old geometry invalidated after Tab
+37: PASS label stops declaring old preview ready
+37: VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+37: PASS ready preview matches field after Tab
+37: PASS new result becomes ready
+37: PASS real confirmation creates chamfer
+37: PASS confirmation uses updated numeric value
+37: COMMIT matches_shown=1 shown_volume=476.875 actual_volume=476.875 pointer_same=1
+37: PASS confirmed geometry matches updated preview volume
+37: PASS single confirmation applies once and returns
+37: PASS dialog cleanup releases preview callback and lock
+37: CASE mode=1 pending=1
+37: PASS Enter refreshes typed field without closing dialog
+37: PASS Up arrow preserves immediate preview update
+37: PASS Down arrow restores field and preview definition
+37: PASS real uncancelled worker before Tab mutation
+37: PASS typed value committed by real Tab focus lifecycle
+37: PASS Tab refreshes key and generation
+37: PASS old geometry invalidated after Tab
+37: PASS label stops declaring old preview ready
+37: PASS Tab mutation cancels previous real worker
+37: VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+37: PASS ready preview matches field after Tab
+37: PASS new result becomes ready
+37: PASS real confirmation creates chamfer
+37: PASS confirmation uses updated numeric value
+37: COMMIT matches_shown=1 shown_volume=476.875 actual_volume=476.875 pointer_same=1
+37: PASS confirmed geometry matches updated preview volume
+37: PASS single confirmation applies once and returns
+37: PASS dialog cleanup releases preview callback and lock
+37: CASE mode=2 pending=0
+37: PASS Enter refreshes typed field without closing dialog
+37: PASS Up arrow preserves immediate preview update
+37: PASS Down arrow restores field and preview definition
+37: PASS typed value committed by real Tab focus lifecycle
+37: PASS Tab refreshes key and generation
+37: PASS old geometry invalidated after Tab
+37: PASS label stops declaring old preview ready
+37: VISIBLE ui=30 preview=30 label=pronta (in ambra nella vista)
+37: PASS ready preview matches field after Tab
+37: PASS new result becomes ready
+37: PASS real confirmation creates chamfer
+37: PASS confirmation uses updated numeric value
+37: COMMIT matches_shown=1 shown_volume=479.278 actual_volume=479.278 pointer_same=1
+37: PASS confirmed geometry matches updated preview volume
+37: PASS single confirmation applies once and returns
+37: PASS dialog cleanup releases preview callback and lock
+37: CASE mode=2 pending=1
+37: PASS Enter refreshes typed field without closing dialog
+37: PASS Up arrow preserves immediate preview update
+37: PASS Down arrow restores field and preview definition
+37: PASS real uncancelled worker before Tab mutation
+37: PASS typed value committed by real Tab focus lifecycle
+37: PASS Tab refreshes key and generation
+37: PASS old geometry invalidated after Tab
+37: PASS label stops declaring old preview ready
+37: PASS Tab mutation cancels previous real worker
+37: VISIBLE ui=30 preview=30 label=pronta (in ambra nella vista)
+37: PASS ready preview matches field after Tab
+37: PASS new result becomes ready
+37: PASS real confirmation creates chamfer
+37: PASS confirmation uses updated numeric value
+37: COMMIT matches_shown=1 shown_volume=479.278 actual_volume=479.278 pointer_same=1
+37: PASS confirmed geometry matches updated preview volume
+37: PASS single confirmation applies once and returns
+37: PASS dialog cleanup releases preview callback and lock
+37: PRE8 RESULT passed=90 failed=0
+ 1/10 Test  #37: forgecad_chamfer_preview_state_tests .........   Passed    1.84 sec
+test 58
+      Start  58: forgecad_linked_drawing_tests
+
+58: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--linked-drawings"
+58: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+58: Environment variables: 
+58:  QT_QPA_PLATFORM=offscreen
+58:  QT_QPA_OFFSCREEN_NO_GLX=1
+58:  QT_QPA_PLATFORMTHEME=
+58:  QT_STYLE_OVERRIDE=Fusion
+58:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+58: Test timeout computed to be: 10000000
+58: PASS tavola da modello valutato: riuso B-rep senza cache, errori conservati, viste e provenienza
+58: PASS tavole collegate: una/più, anteprima e UUID; toolbar 2D gruppi/blocco/persistenza/aggiornamento; nessuna modifica file
+58: PASS linked lightweight drawings and GUI
+ 2/10 Test  #58: forgecad_linked_drawing_tests ................   Passed    1.36 sec
+test 66
+      Start  66: forgecad_surface_tools_tests
+
+66: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--surface-tools"
+66: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+66: Environment variables: 
+66:  QT_QPA_PLATFORM=offscreen
+66:  QT_QPA_OFFSCREEN_NO_GLX=1
+66:  QT_QPA_PLATFORMTHEME=
+66:  QT_STYLE_OVERRIDE=Fusion
+66:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+66: Test timeout computed to be: 180
+66: PASS individual fill influence, picking identity and persistence
+66: PASS superfici: rete/estensione/poli, dipendenze, rigenerazione, Undo/Redo, UI/mouse, formato53, errori atomici, revisioni e sola lettura
+ 3/10 Test  #66: forgecad_surface_tools_tests .................   Passed    0.76 sec
+test 70
+      Start  70: forgecad_drawing_multisheet_tests
+
+70: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--drawing-multisheet"
+70: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+70: Environment variables: 
+70:  QT_QPA_PLATFORM=offscreen
+70:  QT_QPA_OFFSCREEN_NO_GLX=1
+70:  QT_QPA_PLATFORMTHEME=
+70:  QT_STYLE_OVERRIDE=Fusion
+70:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+70: Test timeout computed to be: 120
+70: PASS pattern cache identity: selective migration, geometry/names invariant, cache16 and archived snapshots
+70: PASS drawing identity: visibility, exact legacy verification, geometry/precision rejection and native reopen with dimensions
+70: PASS multisheet preparation: two calculations instead of five, cancellation atomic, presentation/history preserved
+70: PASS multifoglio: codec1/2, UUID, isolamento datum/quote, schede/riordino, Undo globale, PDF3/1, modello10->16, revisioni A/B e Salva con nome
+ 4/10 Test  #70: forgecad_drawing_multisheet_tests ............   Passed    1.22 sec
+test 85
+      Start  85: forgecad_extension_panel_tests
+
+85: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--extend-contour-pick"
+85: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+85: Environment variables: 
+85:  QT_QPA_PLATFORM=offscreen
+85:  QT_QPA_OFFSCREEN_NO_GLX=1
+85:  QT_QPA_PLATFORMTHEME=
+85:  QT_STYLE_OVERRIDE=Fusion
+85:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+85: Test timeout computed to be: 60
+85: PASS Estendi: comando reale, pannello prima dei bordi, mouse, contorni, anteprima, Invio/Esc/chiusura e Undo/Redo
+85: Estensione: scelta del contorno completo OK
+ 5/10 Test  #85: forgecad_extension_panel_tests ...............   Passed    0.72 sec
+test 90
+      Start  90: forgecad_body_sketch_reference_cache_tests
+
+90: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--body-sketch-reference-cache"
+90: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+90: Environment variables: 
+90:  QT_QPA_PLATFORM=offscreen
+90:  QT_QPA_OFFSCREEN_NO_GLX=1
+90:  QT_QPA_PLATFORMTHEME=
+90:  QT_STYLE_OVERRIDE=Fusion
+90:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+90: Test timeout computed to be: 30
+90: PASS body sketch reference cache
+ 6/10 Test  #90: forgecad_body_sketch_reference_cache_tests ...   Passed    0.02 sec
+test 91
+      Start  91: forgecad_linked_sketch_reference_tests
+
+91: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--linked-sketch-references"
+91: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+91: Environment variables: 
+91:  QT_QPA_PLATFORM=offscreen
+91:  QT_QPA_OFFSCREEN_NO_GLX=1
+91:  QT_QPA_PLATFORMTHEME=
+91:  QT_STYLE_OVERRIDE=Fusion
+91:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+91: Test timeout computed to be: 60
+91: PASS linked sketch references (solver, quote, snap, Pierce, datum, storia, IO, mouse, Undo)
+ 7/10 Test  #91: forgecad_linked_sketch_reference_tests .......   Passed    0.08 sec
+test 101
+      Start 101: forgecad_display_mesh_tests
+
+101: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--display-mesh"
+101: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+101: Environment variables: 
+101:  QT_QPA_PLATFORM=offscreen
+101:  QT_QPA_OFFSCREEN_NO_GLX=1
+101:  QT_QPA_PLATFORMTHEME=
+101:  QT_STYLE_OVERRIDE=Fusion
+101:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+101: Test timeout computed to be: 10000000
+101: PASS display float, anteprime, cache precedenti e picking
+ 8/10 Test #101: forgecad_display_mesh_tests ..................   Passed    0.02 sec
+test 168
+      Start 168: forgecad_drawing_editor_tests
+
+168: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_drawing_editor_tests
+168: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+168: Environment variables: 
+168:  QT_QPA_PLATFORM=offscreen
+168:  QT_QPA_OFFSCREEN_NO_GLX=1
+168:  QT_QPA_PLATFORMTHEME=
+168:  QT_STYLE_OVERRIDE=Fusion
+168: Test timeout computed to be: 60
+168: PASS drawing sheet GUI, metadata bytes=957
+ 9/10 Test #168: forgecad_drawing_editor_tests ................   Passed    0.14 sec
+test 171
+      Start 171: forgecad_drawing_layout_history_tests
+
+171: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_drawing_layout_history_tests
+171: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+171: Environment variables: 
+171:  QT_QPA_PLATFORM=offscreen
+171:  QT_QPA_OFFSCREEN_NO_GLX=1
+171:  QT_QPA_PLATFORMTHEME=
+171:  QT_STYLE_OVERRIDE=Fusion
+171: Test timeout computed to be: 60
+171: PASS layout alignment, atomic deletion, local history, drag and source barriers
+10/10 Test #171: forgecad_drawing_layout_history_tests ........   Passed    0.32 sec
+
+The following tests passed:
+	forgecad_chamfer_preview_state_tests
+	forgecad_linked_drawing_tests
+	forgecad_surface_tools_tests
+	forgecad_drawing_multisheet_tests
+	forgecad_extension_panel_tests
+	forgecad_body_sketch_reference_cache_tests
+	forgecad_linked_sketch_reference_tests
+	forgecad_display_mesh_tests
+	forgecad_drawing_editor_tests
+	forgecad_drawing_layout_history_tests
+
+100% tests passed out of 10
+
+Total Test time (real) =   6.53 sec

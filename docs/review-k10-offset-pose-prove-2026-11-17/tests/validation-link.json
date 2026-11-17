@@ -1,0 +1,18 @@
+[
+  "c++",
+  "-std=c++17",
+  "-O2",
+  "-g",
+  "-fno-fast-math",
+  "-ffp-contract=off",
+  "-I/home/myungit/Linux_CAD_forFree/kernel",
+  "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+  "/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+  "/tmp/k10-offset-pose-review/tests/curve-validation.o",
+  "/tmp/k10-offset-pose-review/tests/offset-validation.o",
+  "/tmp/k10-offset-pose-review/core/fk_offset.candidate.o",
+  "/tmp/k10-offset-pose-review/tests/libforgekernel-baseline.a",
+  "-pthread",
+  "-o",
+  "/tmp/k10-offset-pose-review/tests/candidate-validation-tests"
+]

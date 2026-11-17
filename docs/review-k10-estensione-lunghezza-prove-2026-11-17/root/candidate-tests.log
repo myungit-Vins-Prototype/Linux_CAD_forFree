@@ -1,0 +1,7 @@
+[  OK  ] SheetArcZeroSpeedCannotPublishShortReach
+[  OK  ] SheetArcRegularCurveCannotPublishExhaustedNewtonReach
+[  OK  ] SheetArcNaturalPositiveDistancesUsePhysicalReach
+[  OK  ] SheetArcOppositeDirectionAndPoseScaleKeepPhysicalReach
+[  OK  ] SheetArcLinearAndCylinderControlsKeepTheirPhysicalContract
+[  OK  ] SheetArcCancellationDoesNotPublishOrMutateInput
+6/6 test superati

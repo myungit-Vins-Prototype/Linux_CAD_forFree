@@ -1,0 +1,26 @@
+{
+  "scope": "Observed core probe byte comparisons, not our runtime executions",
+  "comparisons": [
+    {
+      "baseline": "/tmp/k10-rational-pcurve-review/core/poly-baseline.jsonl",
+      "candidate": "/tmp/k10-rational-pcurve-review/core/poly-candidate.jsonl",
+      "sha256": "47fa8415739cc50816edf303b77d63a8231d236754b136b694edbdb90714f4bb",
+      "bytes": 357558,
+      "byteIdentical": true
+    },
+    {
+      "baseline": "/tmp/k10-rational-pcurve-review/core/poly-baseline.log",
+      "candidate": "/tmp/k10-rational-pcurve-review/core/poly-candidate.log",
+      "sha256": "ba68b0d0c55519c965ab2c4e95905b9494761710f9808754300d29c23315fc48",
+      "bytes": 6662,
+      "byteIdentical": true
+    },
+    {
+      "baseline": "/tmp/k10-rational-pcurve-review/core/edge-baseline.log",
+      "candidate": "/tmp/k10-rational-pcurve-review/core/edge-candidate.log",
+      "sha256": "1f3eea99f36894b8648728452b85d1dc95a8f6c974626a521e57b84de4bd5440",
+      "bytes": 399,
+      "byteIdentical": true
+    }
+  ]
+}

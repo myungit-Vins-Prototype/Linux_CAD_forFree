@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""Exact original IEEE rational E/S verification and nonpolynomial E proof."""
+from pathlib import Path
+import types,sys,json,hashlib,math,time
+root=Path(__file__).parent
+for name in ['fraction_common','verify_tensor_fraction']:
+ m=types.ModuleType(name);m.__file__=str(root/(name+'.py.txt'));sys.modules[name]=m
+ exec(compile(Path(m.__file__).read_text(),m.__file__,'exec'),m.__dict__)
+from fraction_common import F,exact
+from verify_tensor_fraction import verify,surface_data,compose,normalize
+from fraction_common import source_spans,mul,add,scale
+
+def trim(p):
+ p=list(p)
+ while len(p)>1 and p[-1]==0:p.pop()
+ return p
+
+def remainder(p,q):
+ p=trim(p);q=trim(q)
+ while any(p) and len(p)>=len(q):
+  shift=len(p)-len(q);f=p[-1]/q[-1]
+  for i,x in enumerate(q):p[i+shift]-=f*x
+  p=trim(p)
+ return p
+
+def gcd(p,q):
+ while any(q):p,q=q,remainder(p,q)
+ return [x/p[-1] for x in p]
+
+def power(b):
+ n=len(b)-1;p=[F(0)]*(n+1)
+ for i,x in enumerate(b):
+  for k in range(i,n+1):p[k]+=x*math.comb(n,i)*math.comb(n-i,k-i)*(-1)**(k-i)
+ return trim(p)
+
+inp=Path(sys.argv[1]);out=Path(sys.argv[2]);j=json.loads(inp.read_text());assert j['scope']=='actual-curve-wrapper-ledger'
+assert j['sourceImmutable'] and j['unifyHistoryNullByteIdentical']
+assert len(j['records'])==4 and sum(x['rationalE'] for x in j['records'])==4 and sum(x['rationalQ'] for x in j['records'])==4
+assert j['emittedContracts']==(4 if j['finalCandidate'] else 0)
+records=[];nonpolynomial=[];start=time.monotonic()
+for r in j['records']:
+ cap=exact(j['prefitCap']);assert exact(r['budget'])==exact(r['edgeTolerance'])==cap>0
+ if j['finalCandidate']:assert r['runtimeStatus']=='Certified' and F(0)<=exact(r['runtimeUpper'])<=cap and exact(r['pcurveTolerance'])==cap
+ for key in ['curve','pcurve']:
+  e=r[key];links=trims=transforms=0
+  while e['type'] in ['trimmed','transformed']:
+   links+=1;assert links<=32
+   if e['type']=='trimmed':
+    trims+=1;a,b=map(exact,e['range']);lo,hi=map(exact,r['range']);assert a<=lo<hi<=b
+   else:
+    assert key=='curve';transforms+=1
+   e=e['basis']
+  assert links==(5 if key=='curve' else 2) and trims==(3 if key=='curve' else 2) and transforms==(2 if key=='curve' else 0)
+  w=list(map(exact,e['weights']));assert e['degree']==3 and min(w)>0 and len(set(w))>1
+  spans=source_spans(normalize(r[key]),tuple(map(exact,r['range'])));assert len(spans)==1
+  actual=spans[0];denominator=power(actual['w']);found=False
+  for axis,h in enumerate(actual['h']):
+   numerator=power(h);common=gcd(numerator,denominator);reducedDegree=len(denominator)-len(common)
+   if reducedDegree>0:found=True;break
+  assert found,'Rationality must affect actual transformed function, not just base storage'
+  nonpolynomial.append({'fin':r['fin'],'source':key,'coordinate':axis,'wrapperLinks':links,'trims':trims,'transforms':transforms,'originalWeightFractions':list(map(str,w)),'actualTransformedNumeratorPower':list(map(str,numerator)),'denominatorPower':list(map(str,denominator)),'gcdDegree':len(common)-1,'reducedDenominatorDegree':reducedDegree,'nonpolynomial':True})
+ # Explicit original-polynomial-S denominator identity. Stored common weight7
+ # stays in independent math; production may cancel that common factor exactly.
+ surface=surface_data(r['surface']);pu,pv,U,V,nu,nv,_,W=surface
+ assert len(set(W))==1 and W[0]==7 and pu==pv==2
+ lo,hi=map(exact,r['range']);spans=source_spans(normalize(r['pcurve']),(lo,hi));assert len(spans)==1
+ uv=spans[0];_,ws=compose(surface,uv,pu,pv);powerD=[F(1)]
+ for unused in range(pu+pv):powerD=mul(powerD,uv['w'])
+ assert not any(add(ws,scale(powerD,W[0]),-1)), 'Missing D^(pu+pv) for polynomial S'
+ v=verify(r);v.update(rationalE=r['rationalE'],runtimeStatus=r['runtimeStatus'],runtimeUpper=r['runtimeUpper']);records.append(v)
+result={'pass':all(x['pass'] for x in records),'inputSHA256':hashlib.sha256(inp.read_bytes()).hexdigest(),'method':'Exact Fraction original homogeneous E/S Cox composition, full E/Q knot partition and all closed intersected S cells; Euclidean rational Bernstein numerator/denominator enclosure','records':records,'genuineRationalEAndQ':nonpolynomial,'originalPolynomialSDenominatorIdentity':'Wsbar=7*D^4 exactly on all4 actual fins; production normalized branch uses D^4','elapsed':time.monotonic()-start,'scope':'Internal ledger integration on actual Body::buildSheet/unify final4 mixed-E-wrapper/double-TrimQ fins; not a new public extendSheet or mapper family'}
+out.write_text(json.dumps(result,indent=2)+'\n');print('Actual4fin Fraction PASS,4mixed-wrapperE and4doubleTrimQ genuine rational; polynomialS Wsbar=7D^4',flush=True)

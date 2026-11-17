@@ -1,0 +1,242 @@
+[
+  {
+    "case": "SheetJoinCanonicalReversal",
+    "face": 2,
+    "fin": 9,
+    "edge": 7,
+    "status": "Certified",
+    "E": "bspline3",
+    "Q": "line",
+    "S": [
+      2,
+      2
+    ],
+    "cap": 1e-07,
+    "outside": []
+  },
+  {
+    "case": "SheetJoinCanonicalReversal",
+    "face": 2,
+    "fin": 10,
+    "edge": 8,
+    "status": "Failed",
+    "E": "bspline3",
+    "Q": "line",
+    "S": [
+      2,
+      2
+    ],
+    "cap": 1e-07,
+    "outside": [
+      {
+        "axis": 0,
+        "endpoint": "1090119742472183/4503599627370496",
+        "exactOutside": "9779707066709236791384065277/89202980794122492566142873090593446023921664",
+        "outsideDouble": 1.0963430795300972e-16
+      },
+      {
+        "axis": 1,
+        "endpoint": "1094419911553989/4503599627370496",
+        "exactOutside": "127/2251799813685248",
+        "outsideDouble": 5.639932965095795e-14
+      }
+    ]
+  },
+  {
+    "case": "SheetJoinFaceSense",
+    "face": 2,
+    "fin": 12,
+    "edge": 10,
+    "status": "Certified",
+    "E": "bspline3",
+    "Q": "line",
+    "S": [
+      2,
+      2
+    ],
+    "cap": 1e-07,
+    "outside": []
+  },
+  {
+    "case": "SheetJoinFaceSense",
+    "face": 2,
+    "fin": 11,
+    "edge": 9,
+    "status": "Failed",
+    "E": "bspline3",
+    "Q": "line",
+    "S": [
+      2,
+      2
+    ],
+    "cap": 1e-07,
+    "outside": [
+      {
+        "axis": 0,
+        "endpoint": "1090119742472183/4503599627370496",
+        "exactOutside": "9779707066709236791384065277/89202980794122492566142873090593446023921664",
+        "outsideDouble": 1.0963430795300972e-16
+      },
+      {
+        "axis": 1,
+        "endpoint": "1094419911553989/4503599627370496",
+        "exactOutside": "127/2251799813685248",
+        "outsideDouble": 5.639932965095795e-14
+      }
+    ]
+  },
+  {
+    "case": "SheetJoinImplicitPolynomial",
+    "face": 2,
+    "fin": 9,
+    "edge": 7,
+    "status": "Certified",
+    "E": "bspline3",
+    "Q": "line",
+    "S": [
+      2,
+      2
+    ],
+    "cap": 1e-07,
+    "outside": []
+  },
+  {
+    "case": "SheetJoinImplicitPolynomial",
+    "face": 2,
+    "fin": 10,
+    "edge": 8,
+    "status": "Failed",
+    "E": "bspline3",
+    "Q": "line",
+    "S": [
+      2,
+      2
+    ],
+    "cap": 1e-07,
+    "outside": [
+      {
+        "axis": 0,
+        "endpoint": "1090119742472183/4503599627370496",
+        "exactOutside": "9779707066709236791384065277/89202980794122492566142873090593446023921664",
+        "outsideDouble": 1.0963430795300972e-16
+      },
+      {
+        "axis": 1,
+        "endpoint": "1094419911553989/4503599627370496",
+        "exactOutside": "127/2251799813685248",
+        "outsideDouble": 5.639932965095795e-14
+      }
+    ]
+  },
+  {
+    "case": "SheetJoinLargeScale",
+    "face": 2,
+    "fin": 9,
+    "edge": 7,
+    "status": "Certified",
+    "E": "bspline3",
+    "Q": "line",
+    "S": [
+      2,
+      2
+    ],
+    "cap": 2.3314373249140545e-06,
+    "outside": []
+  },
+  {
+    "case": "SheetJoinLargeScale",
+    "face": 2,
+    "fin": 10,
+    "edge": 8,
+    "status": "Failed",
+    "E": "bspline3",
+    "Q": "line",
+    "S": [
+      2,
+      2
+    ],
+    "cap": 2.3314373249140545e-06,
+    "outside": [
+      {
+        "axis": 1,
+        "endpoint": "1094419911553989/4503599627370496",
+        "exactOutside": "127/2251799813685248",
+        "outsideDouble": 5.639932965095795e-14
+      }
+    ]
+  },
+  {
+    "case": "SheetJoinRational",
+    "face": 2,
+    "fin": 9,
+    "edge": 7,
+    "status": "Certified",
+    "E": "bspline3",
+    "Q": "line",
+    "S": [
+      2,
+      2
+    ],
+    "cap": 1e-07,
+    "outside": []
+  },
+  {
+    "case": "SheetJoinRational",
+    "face": 2,
+    "fin": 10,
+    "edge": 8,
+    "status": "Failed",
+    "E": "bspline3",
+    "Q": "line",
+    "S": [
+      2,
+      2
+    ],
+    "cap": 1e-07,
+    "outside": [
+      {
+        "axis": 1,
+        "endpoint": "273699811434167/1125899906842624",
+        "exactOutside": "25/562949953421312",
+        "outsideDouble": 4.440892098500626e-14
+      }
+    ]
+  },
+  {
+    "case": "SheetJoinSmallScale",
+    "face": 2,
+    "fin": 9,
+    "edge": 7,
+    "status": "Certified",
+    "E": "bspline3",
+    "Q": "line",
+    "S": [
+      2,
+      2
+    ],
+    "cap": 1e-07,
+    "outside": []
+  },
+  {
+    "case": "SheetJoinSmallScale",
+    "face": 2,
+    "fin": 10,
+    "edge": 8,
+    "status": "Failed",
+    "E": "bspline3",
+    "Q": "line",
+    "S": [
+      2,
+      2
+    ],
+    "cap": 1e-07,
+    "outside": [
+      {
+        "axis": 0,
+        "endpoint": "1094419911553989/4503599627370496",
+        "exactOutside": "61906623203143963310434975/44601490397061246283071436545296723011960832",
+        "outsideDouble": 1.3879944964176116e-18
+      }
+    ]
+  }
+]

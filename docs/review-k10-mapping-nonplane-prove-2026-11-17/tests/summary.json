@@ -1,0 +1,64 @@
+{
+  "testSourceSha256": "ee301ceaf193008457b263c13ce36fe9c0fbf3e75011bcbcea5ead3bd1af75e3",
+  "testSourceFrozen": true,
+  "baselineLibrarySha256": "ea1825d26334bd83b1169859a425fa1efb451ceab9136ea8c4e388542857960b",
+  "candidateRelease": {
+    "exit": 0,
+    "seconds": 0.3532439030095702
+  },
+  "sanitizer": {
+    "runs": [
+      {
+        "label": "calibration",
+        "command": [
+          "/tmp/k10-mapping-nonplane-review/tests/leak-calibration"
+        ],
+        "exit": 23,
+        "seconds": 0.021829391000210308,
+        "binarySha256": "45e6841769cd6d7b0c1cadb22d5a4038a79ae58c5b636521a216fb5b241e63cd"
+      },
+      {
+        "label": "tests",
+        "command": [
+          "/tmp/k10-mapping-nonplane-review/tests/asan/mapping-tests"
+        ],
+        "exit": 0,
+        "seconds": 3.941607507993467,
+        "binarySha256": "55b637e2fb89a612c09fad56d7dbe40f5c49951b4670db66117323c3e136044f"
+      }
+    ],
+    "env": {
+      "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1",
+      "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1",
+      "LSAN_OPTIONS": "exitcode=23"
+    },
+    "scope": "Three changed production TUs and four test TUs plus fk_test_main are instrumented. Remaining kernel archive is frozen Release ea1825. Executed outside ptrace; calibration verifies leak detection."
+  },
+  "fraction": {
+    "pass": true,
+    "records": 52,
+    "seconds": 3.4892392909969203,
+    "groups": {
+      "cylinder": {
+        "fins": 24,
+        "maximumUpperBound": 1.07186647510359e-08,
+        "cells": 144
+      },
+      "nurbs": {
+        "fins": 24,
+        "maximumUpperBound": 8.180498453328736e-10,
+        "cells": 24
+      },
+      "quilt-rational": {
+        "fins": 4,
+        "maximumUpperBound": 1.1633061947451104e-10,
+        "cells": 4
+      }
+    }
+  },
+  "compiler": "GCC16.2.1 C++17 strict -fno-fast-math -ffp-contract=off",
+  "changedTUCount": 3,
+  "instrumentedTestTUCount": 4,
+  "mainInstrumented": true,
+  "sourceAndProductionEditsByTestAgent": false
+}

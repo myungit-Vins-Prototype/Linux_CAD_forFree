@@ -1,0 +1,168 @@
+{
+  "pass": true,
+  "records": [
+    {
+      "case": "canonical",
+      "face": 0,
+      "fin": 2,
+      "edge": 2,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "449e0ae92807c36376c50dd4d13f28ae6b50a9d4ac07ac4da9ea6a3d09a9875c"
+    },
+    {
+      "case": "canonical",
+      "face": 0,
+      "fin": 3,
+      "edge": 3,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "449e0ae92807c36376c50dd4d13f28ae6b50a9d4ac07ac4da9ea6a3d09a9875c"
+    },
+    {
+      "case": "canonical",
+      "face": 1,
+      "fin": 11,
+      "edge": 2,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "449e0ae92807c36376c50dd4d13f28ae6b50a9d4ac07ac4da9ea6a3d09a9875c"
+    },
+    {
+      "case": "face-sense",
+      "face": 0,
+      "fin": 3,
+      "edge": 3,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "312f21806b90d0b07a21fc67f8a3fe3a6b505c96d489efafd5810862649b1866"
+    },
+    {
+      "case": "face-sense",
+      "face": 0,
+      "fin": 4,
+      "edge": 4,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "312f21806b90d0b07a21fc67f8a3fe3a6b505c96d489efafd5810862649b1866"
+    },
+    {
+      "case": "face-sense",
+      "face": 1,
+      "fin": 8,
+      "edge": 4,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "312f21806b90d0b07a21fc67f8a3fe3a6b505c96d489efafd5810862649b1866"
+    },
+    {
+      "case": "implicit",
+      "face": 0,
+      "fin": 2,
+      "edge": 2,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "449e0ae92807c36376c50dd4d13f28ae6b50a9d4ac07ac4da9ea6a3d09a9875c"
+    },
+    {
+      "case": "implicit",
+      "face": 0,
+      "fin": 3,
+      "edge": 3,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "449e0ae92807c36376c50dd4d13f28ae6b50a9d4ac07ac4da9ea6a3d09a9875c"
+    },
+    {
+      "case": "implicit",
+      "face": 1,
+      "fin": 11,
+      "edge": 2,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "449e0ae92807c36376c50dd4d13f28ae6b50a9d4ac07ac4da9ea6a3d09a9875c"
+    },
+    {
+      "case": "large",
+      "face": 0,
+      "fin": 2,
+      "edge": 2,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "025fa968a080aa75822527b074b9f99bf61fb4eddf81427853113d90278eb2d1"
+    },
+    {
+      "case": "large",
+      "face": 0,
+      "fin": 3,
+      "edge": 3,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "025fa968a080aa75822527b074b9f99bf61fb4eddf81427853113d90278eb2d1"
+    },
+    {
+      "case": "large",
+      "face": 1,
+      "fin": 11,
+      "edge": 2,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "025fa968a080aa75822527b074b9f99bf61fb4eddf81427853113d90278eb2d1"
+    },
+    {
+      "case": "rational",
+      "face": 0,
+      "fin": 2,
+      "edge": 2,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "654ea4ec44ef73275118e42e0a3fdaddb8455d57f869a725ca83d2aad382b108"
+    },
+    {
+      "case": "rational",
+      "face": 0,
+      "fin": 3,
+      "edge": 3,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "654ea4ec44ef73275118e42e0a3fdaddb8455d57f869a725ca83d2aad382b108"
+    },
+    {
+      "case": "rational",
+      "face": 1,
+      "fin": 11,
+      "edge": 2,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "654ea4ec44ef73275118e42e0a3fdaddb8455d57f869a725ca83d2aad382b108"
+    },
+    {
+      "case": "small",
+      "face": 0,
+      "fin": 2,
+      "edge": 2,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "cafeb08ead04bbac0662faffa38137184efbd94b1b3479afc6543d958acf85f7"
+    },
+    {
+      "case": "small",
+      "face": 0,
+      "fin": 3,
+      "edge": 3,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "cafeb08ead04bbac0662faffa38137184efbd94b1b3479afc6543d958acf85f7"
+    },
+    {
+      "case": "small",
+      "face": 1,
+      "fin": 11,
+      "edge": 2,
+      "original_ieee_geometry_and_caps_equal": true,
+      "runtime_upper_identical": true,
+      "tester_trace_sha256": "cafeb08ead04bbac0662faffa38137184efbd94b1b3479afc6543d958acf85f7"
+    }
+  ],
+  "scope": "Independent fresh public API export compared to separately instrumented staging post-unify traces; exact IEEE coefficient strings and fixed metadata equal, not a byte comparison of whole JSON documents"
+}

@@ -1,0 +1,10 @@
+# INERT SINGLE-STEP ORACLE: does not call any kernel or execute a loop.
+import math
+from fractions import Fraction
+lo=1e20; hi=lo+1e9; step=.5*3.141592653589793238462643383279502884
+k=float(math.ceil(lo/step)); tolerance=1e-12*max(1.,abs(hi)); t=k*step
+assert k+1.==k
+assert t<hi-tolerance
+assert not(t>lo+tolerance)
+assert Fraction(math.ulp(k))==8192
+print("Fixed loop state established: ULP8192, no append, no index advance")

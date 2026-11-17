@@ -1,0 +1,331 @@
+{
+  "graphSHA256": "ddede39b7a038a055edc1421dd131c1dfb346c5c29db08bcc9b2d27f5a2c71ef",
+  "nodes": [
+    {
+      "id": "kernel/fk_curve_algo.cpp",
+      "description": "Proiezioni esatte: limita i tratti Bezier al range con bounds inclusivi, conservando ordine/candidati e filtri conservativi entro distanza; lunghezze e quadratura invariate."
+    },
+    {
+      "id": "kernel/fk_curve_algo.h",
+      "description": "Interrogazioni sulle curve: proiezione di un punto, lunghezza d'arco."
+    },
+    {
+      "id": "kernel/fk_extrude.cpp",
+      "description": "Estrusione lineare di un profilo piano in un solido B-rep esatto."
+    },
+    {
+      "id": "kernel/fk_sheet.cpp",
+      "description": "Taglio, rifilo ed estensione di lamine; offset NURBS planari certificati. Famiglia ISO scelta dalle pcurve sorgenti originali con limite fisico continuo e ancore per incidenza; giunti ISO verificati sui due supporti a cap fisso e fin ricontrollate dopo build/unify. Newton resta una costruzione campionata; fin Newton su supporti nativi quadratici/bicubici anche razionali positivi sono verificate continuamente con budget prefit e candidate UV nel dominio, dopo build/unify tramite mappa edge esplicita, con fallimenti riconosciuti terminali e famiglie unsupported legacy."
+    },
+    {
+      "id": "kernel/fk_sheet.h",
+      "description": "Taglio e rifilo di lamine; selezione del pezzo piu vicino condivisa con estensione, senza ripetere le intersezioni."
+    },
+    {
+      "id": "kernel/fk_surface_tools.cpp",
+      "description": "Reti a celle Coons cucite, prolungamento e selezione dai pezzi gia intersecati senza secondo split, modifica relativa di poli/pesi con ricostruzione dei bordi e trim UV conservati."
+    },
+    {
+      "id": "kernel/tests/test_sheet.cpp",
+      "description": "Verifica: test sheet."
+    },
+    {
+      "id": "kernel/tests/test_surface_tools.cpp",
+      "description": "Reti non planari, curve invertite e incroci invalidi; estensione a piani/facce curve, target spezzati e tra estrusioni ortogonali da spline; poli/pesi, trim/fori, topologia e input degeneri."
+    }
+  ],
+  "incoming": {
+    "count": 300,
+    "typed": {
+      "call": 163,
+      "include": 137
+    },
+    "relevantEdges": [
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_curve_algo.cpp",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_extrude.cpp",
+        "target": "kernel/fk_extrude.cpp",
+        "kind": "call",
+        "count": 21
+      },
+      {
+        "source": "kernel/fk_sheet.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "kernel/fk_sheet.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_sheet.cpp",
+        "target": "kernel/fk_sheet.cpp",
+        "kind": "call",
+        "count": 89
+      },
+      {
+        "source": "kernel/fk_sheet.cpp",
+        "target": "kernel/fk_sheet.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_surface_tools.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "call",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_surface_tools.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_surface_tools.cpp",
+        "target": "kernel/fk_sheet.cpp",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "kernel/fk_surface_tools.cpp",
+        "target": "kernel/fk_sheet.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_surface_tools.cpp",
+        "target": "kernel/fk_surface_tools.cpp",
+        "kind": "call",
+        "count": 28
+      },
+      {
+        "source": "kernel/tests/test_sheet.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "call",
+        "count": 4
+      },
+      {
+        "source": "kernel/tests/test_sheet.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/tests/test_sheet.cpp",
+        "target": "kernel/fk_extrude.cpp",
+        "kind": "call",
+        "count": 1
+      },
+      {
+        "source": "kernel/tests/test_sheet.cpp",
+        "target": "kernel/fk_sheet.cpp",
+        "kind": "call",
+        "count": 36
+      },
+      {
+        "source": "kernel/tests/test_sheet.cpp",
+        "target": "kernel/fk_sheet.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/tests/test_sheet.cpp",
+        "target": "kernel/tests/test_sheet.cpp",
+        "kind": "call",
+        "count": 44
+      },
+      {
+        "source": "kernel/tests/test_surface_tools.cpp",
+        "target": "kernel/fk_extrude.cpp",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "kernel/tests/test_surface_tools.cpp",
+        "target": "kernel/fk_sheet.cpp",
+        "kind": "call",
+        "count": 3
+      },
+      {
+        "source": "kernel/tests/test_surface_tools.cpp",
+        "target": "kernel/fk_sheet.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/tests/test_surface_tools.cpp",
+        "target": "kernel/fk_surface_tools.cpp",
+        "kind": "call",
+        "count": 18
+      },
+      {
+        "source": "kernel/tests/test_surface_tools.cpp",
+        "target": "kernel/tests/test_surface_tools.cpp",
+        "kind": "call",
+        "count": 40
+      }
+    ]
+  },
+  "outgoing": {
+    "count": 201,
+    "typed": {
+      "call": 131,
+      "include": 70
+    },
+    "relevantEdges": [
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_curve_algo.cpp",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_extrude.cpp",
+        "target": "kernel/fk_extrude.cpp",
+        "kind": "call",
+        "count": 21
+      },
+      {
+        "source": "kernel/fk_sheet.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "kernel/fk_sheet.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_sheet.cpp",
+        "target": "kernel/fk_sheet.cpp",
+        "kind": "call",
+        "count": 89
+      },
+      {
+        "source": "kernel/fk_sheet.cpp",
+        "target": "kernel/fk_sheet.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_surface_tools.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "call",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_surface_tools.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_surface_tools.cpp",
+        "target": "kernel/fk_sheet.cpp",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "kernel/fk_surface_tools.cpp",
+        "target": "kernel/fk_sheet.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_surface_tools.cpp",
+        "target": "kernel/fk_surface_tools.cpp",
+        "kind": "call",
+        "count": 28
+      },
+      {
+        "source": "kernel/tests/test_sheet.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "call",
+        "count": 4
+      },
+      {
+        "source": "kernel/tests/test_sheet.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/tests/test_sheet.cpp",
+        "target": "kernel/fk_extrude.cpp",
+        "kind": "call",
+        "count": 1
+      },
+      {
+        "source": "kernel/tests/test_sheet.cpp",
+        "target": "kernel/fk_sheet.cpp",
+        "kind": "call",
+        "count": 36
+      },
+      {
+        "source": "kernel/tests/test_sheet.cpp",
+        "target": "kernel/fk_sheet.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/tests/test_sheet.cpp",
+        "target": "kernel/tests/test_sheet.cpp",
+        "kind": "call",
+        "count": 44
+      },
+      {
+        "source": "kernel/tests/test_surface_tools.cpp",
+        "target": "kernel/fk_extrude.cpp",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "kernel/tests/test_surface_tools.cpp",
+        "target": "kernel/fk_sheet.cpp",
+        "kind": "call",
+        "count": 3
+      },
+      {
+        "source": "kernel/tests/test_surface_tools.cpp",
+        "target": "kernel/fk_sheet.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/tests/test_surface_tools.cpp",
+        "target": "kernel/fk_surface_tools.cpp",
+        "kind": "call",
+        "count": 18
+      },
+      {
+        "source": "kernel/tests/test_surface_tools.cpp",
+        "target": "kernel/tests/test_surface_tools.cpp",
+        "kind": "call",
+        "count": 40
+      }
+    ]
+  }
+}

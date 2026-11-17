@@ -1,0 +1,37 @@
+from pathlib import Path
+import json,re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-offset-pose-review/root')
+b=json.loads((T/'build-result.json').read_text());c=json.loads((T/'ctest-final-result.json').read_text());g=json.loads((T/'general-result.json').read_text());a=json.loads((T/'architecture-audit.json').read_text());p=json.loads((T/'app-startup-result.json').read_text());assert b['exit']==c['exit']==g['exit']==0 and c['actual_passed']==21 and not c['skipped'] and p['alive'];assert '483/483' in (T/'general.log').read_text()
+# Staging evidence must be frozen and reviewed before publishing these results.
+san=json.loads((T.parent/'tests/final-proof/san-runtime-results.json').read_text());assert [r['exit'] for r in san['results']]==[23,0]
+assert '19/19' in (T.parent/'tests/final-proof/san-combined-sanitizer.log').read_text();assert '3/3' in (T.parent/'tests/final-proof/candidate-three-final.log').read_text()
+rows='''| Verifica | Esito e perimetro |
+| --- | --- |
+| Build completa | PASS, app e runner aggiornati, circa@SECONDS@s. |
+| CTest pertinenti | 21/21 test distinti PASS, zero skip:17kernel più4UI sul runner finale. Dettaglio del primo avvio e della ripetizione sotto. |
+| Kernel generale | 483/483 PASS, incluso il test storico dei quattro svuotamenti non trasformati e le regressioni giunti originali. |
+| Nuovi test | 3/3 PASS; identico sorgente sul codice precedente:1/3PASS e2FAIL reali del fit. Controlli di spessore, genealogia, codec e input immutato. |
+| Regressioni mirate precedenti | 16/16 CurveFitValidation/OffsetValidation PASS; sorgenti invariati, inclusi cancellazione, input invalidi, atomicità e singolarità. |
+| ASan/UBSan/LSan | 19/19 PASS: un TU di produzione modificato (offset),3TUtest/main strumentati; resto kernel Release. Calibrazione19byte intenzionali rilevati, exit23 fuori ptrace. Non certifica l'intera app. |
+| Audit indipendente API finale | Caso composto chiuso1,25:22facce/2shells,22origini di faccia dichiarate, input immutato, codec e checkBody PASS.16 misure interne per genealogia, massimo5,740538e-8mm; verifiche puntuali, non certificato continuo. |
+| Caso aperto aggiuntivo | Scala+rotazione, apertura della faccia5 dichiarata, spessore1,25: prima FAIL, dopo PASS;21facce/1shell, input e storia preservati. Prova aggiuntiva staged, non un quarto test permanente. |
+| Controesempio esatto | Fraction dimostra il difetto del vecchio arresto UV e l'applicazione del passo nel caso piano analitico. |
+| Avvio app | Wayland PASS5s con configurazione temporanea, eseguibile effettivo aggiornato verificato; nessun documento o processo utente toccato. Non è verifica pixel/GL. |
+| Architettura | @NODES@nodi/@EDGES@relazioni/@UNITS@TU, zero errori AST; hash/configurazione/HTML e call/include/reference nei due versi verificati. |
+| Conservazione | Baseline5977file e25pacchetti precedenti preservati; API locali, moduli K10 precedenti, regressioni originali e fixture immutati. Index vuoto, nessun commit/push. |
+'''.replace('@SECONDS@',str(round(b['seconds']))).replace('@NODES@',str(a['nodes'])).replace('@EDGES@',str(a['edges'])).replace('@UNITS@',str(a['units']))
+report=(T/'report-draft.md').read_text().replace('@VALIDATION@',rows+'''\nNel primo avvio CTest, sovrapposto al completamento della build, due test UI non avviano il runner (`BAD_COMMAND`, permission denied). A build conclusa sono stati rieseguiti tutti e quattro i test UI sul binario definitivo, tutti PASS: anche i due precedentemente riusciti sono esclusi dal conteggio finale perché precedevano il relink. I17test kernel già ricompilati sono conservati; log/JUnit iniziali, ripetizione e risultato aggregato restano distinti nel pacchetto. Non è stato modificato codice per recuperare questi errori di avvio.\n''')
+q=R/'docs/code-review-2026-11-15.md';review=q.read_text();top='''**K10 offset/posa, prosecuzione verificata:** rimosso l'arresto UV prematuro della proiezione locale, senza aumentare tolleranze. Riproduttore Superfici scalato e scalato+ruotato ora riesce, anche aperto nel caso aggiuntivo. App completa,21CTest,483kernel,3nuovi/19sanitizer,auditAPI/Fractionpredicato/mappa PASS; costo aggiuntivo e limiti espliciti. K10 generale parziale; nessun commit/push. [Rapporto e prove](review-k10-offset-pose-2026-11-17.md).
+
+''';idx=review.index('**K10 carrier razionali');review=review[:idx]+top+review[idx:];review=review.replace('Limiti geometrici preesistenti: fit offset di Superfici.prt scalato/ruotato e unione grezza Flacone3 nell\'ordine inverso (l\'app ha già un recupero validato).','Limite geometrico preesistente aperto: unione grezza Flacone3 nell\'ordine inverso (l\'app ha già un recupero validato). Il riproduttore trasformato Superfici è ora corretto nei casi documentati sopra.')
+q=R/'CLAUDE.md';memory=q.read_text();idx=memory.index('**17/11 — Offset/Superfici');end=memory.index('17/11 K10 carrier2/3',idx);memory=memory[:idx]+'''**17/11 — Offset/Superfici trasformato verificato, nessun commit/push.**
+Tre Sol: stopUVrelativo rimosso;cap invariati. Chiusi scala/scala+posa e aperto scala+posa PASS.
+App/21CTest/483kernel/3nuovi/19sanitizer/auditAPI/Fractionpredicato/avvio/mappa PASS.
+Più lavoro proiezione;K10 globale parziale.25pacchetti/API preservati,33rilievi invariati.
+[Prove/costi/limiti](docs/review-k10-offset-pose-2026-11-17.md).
+
+'''+memory[end:]
+memory=memory.replace('- Svuotamento `Superfici.prt`: riusciti fondo piano aperto e guscio chiuso a 0,5/1 mm sul modello originale. La variante con\n  geometria scalata 2,5 e ruotata 0,42 rad fallisce ancora il fit di un bordo offset; anche il prototipo locale fallisce. Limite generale aperto.','- Svuotamento `Superfici.prt`: originali aperto/chiuso0,5/1mm verificati. Fixture scalata2,5, anche ruotata0,42, ora\n  riesce a1,25mm dopo correzione proiezioneUV; aperto aggiuntivo PASS. Non è prova universale per superfici libere.\n  [Prove e costo](docs/review-k10-offset-pose-2026-11-17.md).')
+memory=memory.replace('UI9/UI10: palette ealtezzaSezione/massa/Raccordo; app/12CTest+3mirati/74Wayland/mappa PASS.\n958ed68 CI Linux/macOS PASS; schedeWayland timeout/offscreenPASS.','UI9/UI10: app/12CTest+3mirati/74Wayland/mappa eCI958ed68 PASS; schedeWayland timeout/offscreenPASS.')
+assert len(memory.encode())<=16384 and len(re.findall(r'^\*\*',memory,re.M))<=10
+(R/'docs/review-k10-offset-pose-2026-11-17.md').write_text(report);(R/'docs/code-review-2026-11-15.md').write_text(review);(R/'CLAUDE.md').write_text(memory);print('CLAUDE bytes',len(memory.encode()))

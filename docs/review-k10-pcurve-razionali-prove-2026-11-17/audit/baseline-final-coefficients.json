@@ -1,0 +1,87 @@
+{
+  "pass": true,
+  "baselineSHA256": "bf7b9774e796cc2df65cd1ec2692b34cb466ae47bc864fb1aa16a5f7fa69e375",
+  "finalSHA256": "3169732453b395786ef23a987f9d4775a8cb1742cd964d8a79d77a4d3271d3c5",
+  "records": [
+    {
+      "fin": 0,
+      "rationalE": true,
+      "rationalQ": true,
+      "unchanged": {
+        "curve": true,
+        "surface": true,
+        "pcurve": true,
+        "range": true,
+        "edgeTolerance": true,
+        "sense": true,
+        "sourceEdge": true,
+        "sourceFin": true
+      },
+      "pcurveIdentical": true,
+      "baselineStatus": "Unsupported",
+      "finalStatus": "Certified",
+      "baselineFinTolerance": "0x0p+0",
+      "finalFinTolerance": "0x1.ad7f29abcaf48p-24"
+    },
+    {
+      "fin": 1,
+      "rationalE": true,
+      "rationalQ": true,
+      "unchanged": {
+        "curve": true,
+        "surface": true,
+        "pcurve": true,
+        "range": true,
+        "edgeTolerance": true,
+        "sense": true,
+        "sourceEdge": true,
+        "sourceFin": true
+      },
+      "pcurveIdentical": true,
+      "baselineStatus": "Unsupported",
+      "finalStatus": "Certified",
+      "baselineFinTolerance": "0x0p+0",
+      "finalFinTolerance": "0x1.ad7f29abcaf48p-24"
+    },
+    {
+      "fin": 2,
+      "rationalE": true,
+      "rationalQ": true,
+      "unchanged": {
+        "curve": true,
+        "surface": true,
+        "pcurve": true,
+        "range": true,
+        "edgeTolerance": true,
+        "sense": true,
+        "sourceEdge": true,
+        "sourceFin": true
+      },
+      "pcurveIdentical": true,
+      "baselineStatus": "Unsupported",
+      "finalStatus": "Certified",
+      "baselineFinTolerance": "0x0p+0",
+      "finalFinTolerance": "0x1.ad7f29abcaf48p-24"
+    },
+    {
+      "fin": 3,
+      "rationalE": true,
+      "rationalQ": true,
+      "unchanged": {
+        "curve": true,
+        "surface": true,
+        "pcurve": true,
+        "range": true,
+        "edgeTolerance": true,
+        "sense": true,
+        "sourceEdge": true,
+        "sourceFin": true
+      },
+      "pcurveIdentical": true,
+      "baselineStatus": "Unsupported",
+      "finalStatus": "Certified",
+      "baselineFinTolerance": "0x0p+0",
+      "finalFinTolerance": "0x1.ad7f29abcaf48p-24"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "command": [
+    "/usr/bin/c++",
+    "-std=c++17",
+    "-O2",
+    "-g",
+    "-ffp-contract=off",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "-c",
+    "/tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp",
+    "-o",
+    "/tmp/k10-pcurve-pole-review/root/test.o"
+  ],
+  "exit": 0,
+  "seconds": 1.1660546469938708
+}

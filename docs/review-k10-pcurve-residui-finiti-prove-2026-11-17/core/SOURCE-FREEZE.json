@@ -1,0 +1,18 @@
+{
+  "baseline": {
+    "path": "/tmp/k10-pcurve-pole-review/core/baseline/kernel/fk_pcurve.cpp",
+    "sha256": "ad5e5ce7082274aee5c279772f30caa56b21689b7b4b7331d27543444c58df79"
+  },
+  "candidate": {
+    "path": "/tmp/k10-pcurve-pole-review/core/kernel/fk_pcurve.cpp",
+    "sha256": "7d7574589225ba9e35899aab76285d824ee7f0bbbe3be48139d212775e1df85b"
+  },
+  "patch": {
+    "path": "/tmp/k10-pcurve-pole-review/core/candidate.patch",
+    "sha256": "228a194c192183c2cd01a68b2a1d28583dcd617ceab35bd9ac08585058344d10"
+  },
+  "repository_source_unchanged": true,
+  "verification": "static only; no compile/runtime performed by core agent",
+  "scope": "pcurveDeviation invalid/nonfinite metric and three finite measured acceptance checks",
+  "pending": "root baseline/candidate serial tests, app build, memory/report integration"
+}

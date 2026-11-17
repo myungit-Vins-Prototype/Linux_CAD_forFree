@@ -1,0 +1,27 @@
+from pathlib import Path
+import json,subprocess,time,hashlib,os,sys
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-global-audit-review/root');K=R/'kernel';lib=R/'forgecad-release/kernel/libforgekernel.a';C=Path('/tmp/k10-global-audit-review/core');N=Path('/tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def run(name,args,allow=(0,),env=None,timeout=600):
+ start=time.monotonic()
+ with (T/(name+'.log')).open('w') as log:
+  try:code=subprocess.run(['/usr/bin/time','-v','-o',str(T/(name+'-time.txt'))]+list(map(str,args)),cwd=R,stdout=log,stderr=subprocess.STDOUT,env=env,timeout=timeout).returncode
+  except subprocess.TimeoutExpired:code=124
+ j={'command':list(map(str,args)),'exit':code,'seconds':time.monotonic()-start};(T/(name+'-result.json')).write_text(json.dumps(j,indent=2)+'\n');print(name,j['exit'],round(j['seconds'],3),flush=True)
+ if code not in allow:print((T/(name+'.log')).read_text()[-6000:]);raise SystemExit(1)
+ return j
+flags=['/usr/bin/c++','-std=c++17','-O2','-g','-ffp-contract=off','-Wall','-Wextra','-Wpedantic','-I'+str(K),'-I'+str(K/'tests')]
+if sys.argv[1]=='staged':
+ freeze=json.loads((T/'test-freeze.json').read_text());assert sha(N)==freeze['sha256'];assert sha(C/'kernel/fk_mapping_fit.cpp')=='03d21ceab86aead510559aee7101ade9a4aba8b1ef516671943b0bfa823fd001';initial=sha(lib);assert initial=='2bd551b222b2c07cbfaa02635ebf999562ef90ec8f00b0ba7ba398c1b2028f1d'
+ run('compile-test',flags+['-c',N,'-o',T/'test.o']);run('compile-main',flags+['-c',K/'tests/fk_test_main.cpp','-o',T/'main.o']);run('link-baseline',flags+[T/'main.o',T/'test.o',lib,'-o',T/'baseline-tests']);run('baseline-tests',[T/'baseline-tests'],allow=(1,),timeout=120)
+ repro=T/'reproducer.cpp';repro.write_bytes((C/'reproducer.cpp.txt').read_bytes());run('compile-reproducer',flags+[repro,lib,'-o',T/'baseline-reproducer']);run('baseline-reproducer',[T/'baseline-reproducer'],allow=(0,1));assert sha(lib)==initial
+ run('compile-candidate',flags+['-c',C/'kernel/fk_mapping_fit.cpp','-o',T/'candidate.o']);run('link-candidate',flags+[T/'main.o',T/'test.o',T/'candidate.o',lib,'-o',T/'candidate-tests']);run('candidate-tests',[T/'candidate-tests'],timeout=120)
+ run('link-reproducer-candidate',flags+[repro,T/'candidate.o',lib,'-o',T/'candidate-reproducer']);run('candidate-reproducer',[T/'candidate-reproducer'],allow=(0,1))
+ (T/'staged-library.json').write_text(json.dumps({'sha256':initial,'bytes':lib.stat().st_size,'path':str(lib),'unchanged_after_runs':sha(lib)==initial,'copied':False},indent=2)+'\n')
+elif sys.argv[1]=='sanitizer':
+ san=flags+['-O1','-fsanitize=address,undefined','-fno-omit-frame-pointer']
+ for name,p in [('san-test',N),('san-main',K/'tests/fk_test_main.cpp'),('san-provider',C/'kernel/fk_mapping_fit.cpp')]:run(name+'-compile',san+['-c',p,'-o',T/(name+'.o')])
+ run('san-link',san+[T/'san-main.o',T/'san-test.o',T/'san-provider.o',lib,'-o',T/'san-tests']);env=os.environ.copy();env.update(ASAN_OPTIONS='detect_leaks=1:halt_on_error=1',UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1',LSAN_OPTIONS='exitcode=23');run('san-tests',[T/'san-tests'],env=env,timeout=120)
+elif sys.argv[1]=='build':
+ run('build',['cmake','--build','forgecad-release','--target','forgecad','forgekernel_mapping_nonplane_validation_tests','forgekernel_surface_mapping_tests','--parallel','1']);paths=['forgecad-release/forgecad','forgecad-release/kernel/libforgekernel.a','forgecad-release/kernel/forgekernel_mapping_nonplane_validation_tests','forgecad-release/kernel/forgekernel_surface_mapping_tests'];(T/'binaries.json').write_text(json.dumps({p:sha(R/p) for p in paths},indent=2)+'\n')
+elif sys.argv[1]=='ctest':run('ctest',['ctest','--test-dir','forgecad-release','--output-on-failure','-V','--parallel','1','--output-junit',T/'ctest.xml','-R','^(forgekernel_mapping_nonplane_validation_tests|forgekernel_surface_mapping_tests)$'])
+elif sys.argv[1]=='architecture':run('architecture',['python3','tools/generate_architecture.py','--build-dir','forgecad-release','--jobs','1'],timeout=1200)

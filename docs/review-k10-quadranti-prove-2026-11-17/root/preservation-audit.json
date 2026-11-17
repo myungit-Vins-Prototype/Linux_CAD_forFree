@@ -1,0 +1,24 @@
+{
+  "baseline_files": 7510,
+  "changed_existing": [
+    "CLAUDE.md",
+    "docs/code-review-2026-11-15.md",
+    "kernel/CMakeLists.txt",
+    "kernel/fk_curve.cpp",
+    "tools/generate_architecture.py"
+  ],
+  "preserved_existing": 7505,
+  "previous_packages": 35,
+  "previous_artifacts": 4888,
+  "HEAD_origin_main": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "index_empty": true,
+  "no_commit_push_UI_CI_general483": true,
+  "CLAUDE_bytes": 16333,
+  "ctest_passed": 4,
+  "new_groups": 4,
+  "baseline_safe_groups_run_passed": 1,
+  "baseline_pathological_watchdogs": 2,
+  "legacy_filtered": 4,
+  "ordinary_finite_probe_bit_identical": true,
+  "nonprogress_rejected_and_cancellation_pre_and_during_propagated": true
+}

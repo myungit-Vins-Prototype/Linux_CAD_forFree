@@ -1,0 +1,24 @@
+{
+  "final_librarySHA256": "2bd551b222b2c07cbfaa02635ebf999562ef90ec8f00b0ba7ba398c1b2028f1d",
+  "actual_fins": 4,
+  "E_links_trims_transforms": [
+    5,
+    3,
+    2
+  ],
+  "Q_links_trims_transforms": [
+    2,
+    2,
+    0
+  ],
+  "actual_E_Q_genuinely_rational": true,
+  "direct_positive": 9,
+  "negative_witnesses": 4,
+  "antiFlatten_ratio": 16,
+  "negative_Q_peak": 8.659420760637576e-07,
+  "negative_ratio": 10.82427595079697,
+  "exact_invalid_inner_trims_native_domains_valid": 2,
+  "compatibility48_6_7_exports_byte_identical": true,
+  "E_S_Q_range_edgeTol_sense_genealogy_preserved": true,
+  "TrimLine_candidate_positive_is_static_only": true
+}

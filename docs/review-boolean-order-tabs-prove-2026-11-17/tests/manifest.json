@@ -1,0 +1,95 @@
+{
+  "scope": "read-only identical-operand RAW boolean order reproduction",
+  "files": [
+    {
+      "path": "HANDOFF.txt",
+      "bytes": 3265,
+      "sha256": "e4dcfb0a63f5b5266ff73413177cf5e958adbdc05f1c8478a4ec10ea093c6d3c"
+    },
+    {
+      "path": "build_raw_snapshot.py.txt",
+      "bytes": 1639,
+      "sha256": "3fd111ff7941ff2fe5e26bd44bca4e50bebdf3f55d142d623a578b27908aaf1f"
+    },
+    {
+      "path": "document-freeze.json",
+      "bytes": 360,
+      "sha256": "95e9971824ec599fa52d5dcf74bd8d8a38e959873f584cbb11be00191939fabb"
+    },
+    {
+      "path": "environment.json",
+      "bytes": 2752,
+      "sha256": "0ba2c04e6e13d0bb69a575d5221705abbb63500a0e001d49166c85479e2ca3d3"
+    },
+    {
+      "path": "extract-compile.log",
+      "bytes": 848,
+      "sha256": "bedb7fed8618281161a9582a89d720a2c12b1cdf7a390fb935902234315d7e83"
+    },
+    {
+      "path": "extract-link-command.json",
+      "bytes": 8387,
+      "sha256": "63329e4a61dae7d55313bb2541d4bab6f1b506656b26a8179b892936167cec45"
+    },
+    {
+      "path": "extract-link.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "extract.cpp.txt",
+      "bytes": 1781,
+      "sha256": "35ed55671478abcefbc178f347e9bf3cc1fc26e145422ca0dc0d86ef8f4fd54f"
+    },
+    {
+      "path": "features.json",
+      "bytes": 6610,
+      "sha256": "3864f7279ea94f62481c6601727675851f8d4e3008c4488e96c3a5f1e413f956"
+    },
+    {
+      "path": "graph-summary.json",
+      "bytes": 122636,
+      "sha256": "2e29ba2077615406ae534853dc478fde929495d21213d2b0f3f3efba8b456c8d"
+    },
+    {
+      "path": "historical-verification.json",
+      "bytes": 1721,
+      "sha256": "5fd3c8ecf595dc6118ef0f0fd10089d5e8841ed491d5e97290f37740659c844f"
+    },
+    {
+      "path": "library-freeze.json",
+      "bytes": 191,
+      "sha256": "67629c67f5d0965581685085b32bc2e30d5019676f2cbc348498d17b25fc594f"
+    },
+    {
+      "path": "raw-original-forward.log",
+      "bytes": 894,
+      "sha256": "c891e5c7bbd902efddfac5a969c514674cad6e34cbb3cce07d070979ba17a3d8"
+    },
+    {
+      "path": "raw-original-reverse.log",
+      "bytes": 915,
+      "sha256": "bebf56faab10d0d52ed93988adf4a962d84c179f6974232560621b95e0c059c5"
+    },
+    {
+      "path": "raw-original-runs.json",
+      "bytes": 716,
+      "sha256": "2eb6a4f916203b6ecad5ba45e9afecf01a994add0e0c0bcda1c90914d6f80474"
+    },
+    {
+      "path": "raw_union.cpp.txt",
+      "bytes": 3863,
+      "sha256": "0725d2cbbfbc70e3dc1f1f399a616f354fc49db596c791fe9819c0446e5dae14"
+    },
+    {
+      "path": "snapshot-compile.log",
+      "bytes": 1124,
+      "sha256": "21b0c217f6ebb81617bce017b9548e723152a1dc5a84684b696847a62d40c97e"
+    },
+    {
+      "path": "snapshot-decoder.patch",
+      "bytes": 1050,
+      "sha256": "5641c75225b88080720678d2e074ad17515b1948c623f4089ca43db580e34e6f"
+    }
+  ]
+}

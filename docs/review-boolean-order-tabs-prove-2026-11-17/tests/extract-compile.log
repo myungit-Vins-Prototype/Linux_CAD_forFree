@@ -1,0 +1,9 @@
+/tmp/boolean-order-review/tests/extract.cpp: In function ‘int main(int, char**)’:
+/tmp/boolean-order-review/tests/extract.cpp:30:79: warning: ignoring return value of ‘virtual bool QFile::open(QIODeviceBase::OpenMode)’, declared with attribute ‘nodiscard’ [-Wunused-result]
+   30 |     QFile output(QString::fromLocal8Bit(argv[2])+"/features.json");output.open(QIODevice::WriteOnly);output.write(QJsonDocument(result).toJson());
+      |                                                                    ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/qt6/QtCore/QFile:1,
+                 from /tmp/boolean-order-review/tests/extract.cpp:5:
+/usr/include/qt6/QtCore/qfile.h:271:32: note: declared here
+  271 |     QFILE_MAYBE_NODISCARD bool open(OpenMode flags) override;
+      |                                ^~~~

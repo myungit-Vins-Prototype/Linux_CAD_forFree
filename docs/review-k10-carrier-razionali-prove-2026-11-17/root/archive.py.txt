@@ -1,0 +1,35 @@
+from pathlib import Path
+import hashlib,json
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-next-review');P=R/'docs/review-k10-carrier-razionali-prove-2026-11-17'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+assert not P.exists(),'Never overwrite a sealed proof package'
+renames={}
+for source,label in [(T/'core/final-proof','core'),(T/'tests/final-proof','tests'),(T/'audit/final-proof','audit'),(T/'audit/superfici-proof','superfici-open')]:
+ assert source.is_dir(),source
+ for p in source.rglob('*'):
+  if p.is_file():
+   p.read_text();assert p.suffix not in {'.o','.a','.body','.prt'};original=Path(label)/p.relative_to(source);archived=Path(str(original)+'.txt') if p.suffix in {'.cpp','.h','.py'} else original;renames[str(original)]=str(archived);q=P/archived;q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes())
+rootfiles=['baseline.json','status-before.txt','seals-before.json','architecture-before.json','architecture-audit.json','architecture-incident.json','architecture-generate.log','integrated-sources.json','build.log','build-result.json','test-target-build.log','ctest.log','ctest.xml','ctest-result.json','general.log','general-result.json','app-startup.log','app-startup-result.json','preservation-audit.json','validator-compile-flags.json','checks.py','verify.py','document.py','app_smoke.py','integrate.py','archive.py']
+for name in rootfiles:
+ p=T/'root'/name;p.read_text();q=P/'root'/(name+'.txt' if p.suffix=='.py' else name);q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes())
+files=set(json.loads((T/'root/integrated-sources.json').read_text()))|{'CLAUDE.md','docs/review-k10-carrier-razionali-2026-11-17.md','docs/code-review-2026-11-15.md','docs/history/claude-prima-k10-carrier-razionali-2026-11-17.md'}
+manifest={}
+for name in sorted(files):
+ p=R/name;q=P/'integrated'/(name+'.txt');q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes());manifest[name]=sha(p)
+(P/'archive-paths.json').write_text(json.dumps({k:v for k,v in renames.items() if k!=v},indent=2)+'\n')
+(P/'source-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+a=json.loads((T/'root/architecture-audit.json').read_text())
+(P/'README.txt').write_text(f'''K10 native rational carrier S2/3 and bounded pcurve construction, 17 November 2026.
+Three GPT-6.1 Sol agents, local changes only: no commit/push. HEAD/origin main47c7c19 unchanged;33 functional defects unchanged. Previous9 API source changes and24 sealed proof packages preserved.
+Complete app build PASS166s;16/16 CTest, zero SKIP;483/483 general kernel;67/67 targeted Release and scoped ASan/UBSan/LSan PASS. Only2 modified production TUs provider+ledger,4 test TUs and main instrumented; remaining kernel Release. Intentional19-byte leak calibration exit23 outside ptrace. No app-wide leak certification.
+Six fresh public operations,18 final fins including common+extra: all runtime Certified and original prefit cap retained; input unchanged. Rational without user history byte-identical. Independent Fraction18/18 on original IEEE E/Q/S after unify;18 common spans/18 carrier branches. All18 coefficient/range/cap records agree with separate private post-unify traces. Separate exact active-cell denominator example covers crossing/negative polynomial extension; not attributed to public18 fins.
+Provider supports native positive rational S degrees2/3, including mixed; native E cubic and Q degree1/3 or Line remain polynomial/exact-constant-weight. E/Q variable weights, wrappers/instances/other S families remain Unsupported. Recognized failures terminal, original cap fixed, no tolerance slack or sampled proof fallback.
+Initial broader provider alone caused6 real public failures for UV domain overshoots. Construction now prepares candidateQ inside natural domain before ONE proof and assignment. Line always becomes a degree1 BSpline preserving edge parameter speed, including exact halfULP containment countercase; polynomial Q poles bounded on a copy, shared/unplanned originals unchanged. Residual proof, not clamping, determines acceptance. No global Newton, trim/topology/carrier preservation claim.
+Wayland startup5s with isolated config and own process termination only; no pixel/GL certification. Architecture {a['nodes']}nodes/{a['edges']}edges/{a['units']}TU, hashes/HTML/configuration and both-direction edges verified; generated graph/HTML ignored and not archived.
+Superfici-open is an unresolved separate transformed shell repro on existing anonymous fixture: current offset fit and historical local prototype both fail. No user CAD files included or modified. Flacone inverse raw kernel and full UI Wayland/macOS remain outside this delta. Prior CI does not certify these uncommitted sources.
+Only UTF8 text/JSON/XML/inert source snapshots. Source extensions cpp/h/py receive extra .txt if necessary; archive-paths.json maps changed staging names. Component seals/manifests address their staging paths; root SHA256SUMS addresses actual archive paths. Read report, HANDOFF and individual README files for exact attribution, resource limits and recipe.
+''')
+entries=[]
+for p in sorted(P.rglob('*')):
+ if p.is_file():p.read_text();entries.append((str(p.relative_to(P)),sha(p)))
+seal=P/'SHA256SUMS';seal.write_text(''.join(h+'  '+f+'\n' for f,h in entries));result={'files_without_seal':len(entries),'bytes_without_seal':sum((P/f).stat().st_size for f,h in entries),'seal_sha256':sha(seal),'path':str(P)};(T/'root/package-result.json').write_text(json.dumps(result,indent=2)+'\n');print(result)

@@ -1,0 +1,40 @@
+{
+  "sourceReadSha256": "ad5e5ce7082274aee5c279772f30caa56b21689b7b4b7331d27543444c58df79",
+  "parentReportedRuntimeNotExecutedByAudit": {
+    "probeSourceSha256": "8d53de55191ceefa240f5c617f4a49cca3dea060557c56289923c72b5d15ee00",
+    "cases": [
+      {
+        "api": "pcurveDeviation",
+        "input": "PlaneXY; C(t)=(t,0,1); Q(t)=(t,0); range[0,1]; samples=-1 or0",
+        "actualReported": "0",
+        "correctFiniteGeometryGap": "1",
+        "reason": "negative count skips loop; zero divides0/0 in t and NaN gap is ignored by std::max."
+      },
+      {
+        "api": "pcurveDeviation and exactPCurve",
+        "input": "Native Circle3/2 with finite center(DBL_MAX,0), radius.5DBL_MAX, XY basis, range[0,.1]",
+        "actualReported": "point nonfinite; deviation0; exactPCurve non-null",
+        "scope": "Constructors accept finite coefficients, but evaluated geometry overflows. Not a valid-scale CAD body failure.",
+        "reason": "Original and candidate evaluations become nonfinite; their undefined residual NaN is ignored by max."
+      },
+      {
+        "api": "fitPCurve",
+        "input": "PlaneXY; native rational cubic E degree3, knots[1,1,1,1,2,2,2,2], poles all0, weights21/29/37/45; query[0,1] outside natural[1,2]; tolerance1e-8",
+        "actualReported": "sourcePointFinite=0 returned=1 deviation=0 witnessFinite=0",
+        "attribution": "Root executed copied proposed reproduction; this observer did not compile/execute.",
+        "exactAlgebraIndependent": "W(t)=24t\u22123; H=0; at t=1/8 W=0 exactly in stored IEEE arithmetic, yielding0/0. See out-of-domain-nan-algebra.json.",
+        "scope": "Deliberately invalid outside-native-domain query, not valid CAD-body failure."
+      }
+    ]
+  },
+  "staticVerification": "The std::max and loop behavior independently follows source semantics. max+halfmax overflows despite finite coefficients; planarCurve constructs a finite-parameter Circle2 before its evaluation. No new public runtime is attributed to this observer.",
+  "fixChecklist": [
+    "Fail closed to +Infinity for count<=0, malformed range/breakpoints/parameters, invalid UV/curve/surface points or nonfinite distance.",
+    "Validate unsorted breakpoints before sort to avoid NaN comparator input.",
+    "Reject nonfinite measured deviation explicitly at exact/Hermite/linear acceptance so Inf<=Inf cannot pass with toleranceInf.",
+    "Retain existing positive-count finite formulas, probes, cap allocation and legacy50x policy; no full-domain certificate claimed.",
+    "Avoid signed counter overflow when samples==INT_MAX (size_t/wider count or final iteration break)."
+  ],
+  "nearPoleConclusionUnchanged": "No public nearPole/largephase failure proved; first-delimitation final-proof manifestcde57e8a remains sealed.",
+  "proposedOutOfDomainNaN": "Now executed by ROOT and confirmed as above; first sealed package intentionally retains historical proposed-only status at its freeze."
+}

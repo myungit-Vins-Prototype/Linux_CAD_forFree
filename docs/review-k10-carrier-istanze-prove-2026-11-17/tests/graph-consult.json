@@ -1,0 +1,3050 @@
+{
+  "nodes": [
+    {
+      "id": "kernel/fk_bspline_surface.cpp",
+      "group": "kernel",
+      "description": "Superfici NURBS con jet locali double e istanze immutabili: estensione periodica opzionale del dominio clamped, isoparametriche e breakpoints coerenti, estremi distinti per la chiusura; copie atomiche delle cache Bezier/proiezione/isoparametriche e pubblicazione unica del risultato concorrente.",
+      "lines": 484,
+      "symbols": [
+        "ForgeCad::Kernel::BSplineSurface::BSplineSurface",
+        "ForgeCad::Kernel::BSplineSurface::bezierPatches",
+        "ForgeCad::Kernel::BSplineSurface::cachedBezierPatches",
+        "ForgeCad::Kernel::BSplineSurface::cachedPatchTree",
+        "ForgeCad::Kernel::BSplineSurface::cachedSharpKnotLines",
+        "ForgeCad::Kernel::BSplineSurface::evaluate",
+        "ForgeCad::Kernel::BSplineSurface::knotIso",
+        "ForgeCad::Kernel::BSplineSurface::operator=",
+        "ForgeCad::Kernel::BSplineSurface::uBreakpoints",
+        "ForgeCad::Kernel::BSplineSurface::uDomain",
+        "ForgeCad::Kernel::BSplineSurface::uIso",
+        "ForgeCad::Kernel::BSplineSurface::uIsoCurve",
+        "ForgeCad::Kernel::BSplineSurface::vBreakpoints",
+        "ForgeCad::Kernel::BSplineSurface::vDomain",
+        "ForgeCad::Kernel::BSplineSurface::vIso",
+        "ForgeCad::Kernel::BSplineSurface::vIsoCurve",
+        "ForgeCad::Kernel::breaks",
+        "ForgeCad::Kernel::wrapped"
+      ]
+    },
+    {
+      "id": "kernel/fk_bspline_surface.h",
+      "group": "kernel",
+      "description": "Superfici B-spline e NURBS a prodotto tensoriale con nodi espansi (come BSplineCurve).",
+      "lines": 117,
+      "symbols": [
+        "ForgeCad::Kernel::BSplineSurface::BSplineSurface",
+        "ForgeCad::Kernel::BSplineSurface::basis",
+        "ForgeCad::Kernel::BSplineSurface::isRational",
+        "ForgeCad::Kernel::BSplineSurface::isUPeriodic",
+        "ForgeCad::Kernel::BSplineSurface::isVPeriodic",
+        "ForgeCad::Kernel::BSplineSurface::operator=",
+        "ForgeCad::Kernel::BSplineSurface::placement",
+        "ForgeCad::Kernel::BSplineSurface::pole",
+        "ForgeCad::Kernel::BSplineSurface::type",
+        "ForgeCad::Kernel::BSplineSurface::uDegree",
+        "ForgeCad::Kernel::BSplineSurface::uKnots",
+        "ForgeCad::Kernel::BSplineSurface::uPeriod",
+        "ForgeCad::Kernel::BSplineSurface::uPoleCount",
+        "ForgeCad::Kernel::BSplineSurface::vDegree",
+        "ForgeCad::Kernel::BSplineSurface::vKnots",
+        "ForgeCad::Kernel::BSplineSurface::vPeriod",
+        "ForgeCad::Kernel::BSplineSurface::vPoleCount",
+        "ForgeCad::Kernel::BSplineSurface::weight"
+      ]
+    },
+    {
+      "id": "kernel/fk_quilt_mapping.cpp",
+      "group": "kernel",
+      "description": "Appiattimento B-rep con bordo topologico comune; una faccia Plane conserva i coefficienti dei contorni tramite mappa affine e limite di arrotondamento, altri casi usano fit;  Jacobiani e deformazione campionata; origine suggerita e genealogia esplicita. Mappa comune e reversibile piano/quilt tramite coordinate di lunghezza d arco sulle isocurve esatte; una faccia o due facce tangenti con giunzione U, trim e piegatura solida lungo le normali. Monotonia dai poli, origine/metrica esatte sulla giunzione, cache per piegatura e nodi espliciti del fit; offset Plane analitico senza fit di contorni UV superfluo, fin Plane delegate al controllo continuo. Nessuna proiezione per raggi o isometria generale promessa.",
+      "lines": 734,
+      "symbols": [
+        "ForgeCad::Kernel::ArcSlice::ArcSlice",
+        "ForgeCad::Kernel::ArcSlice::at",
+        "ForgeCad::Kernel::ArcSlice::distanceAt",
+        "ForgeCad::Kernel::Chart::Chart",
+        "ForgeCad::Kernel::Chart::originAndScale",
+        "ForgeCad::Kernel::Chart::parameter",
+        "ForgeCad::Kernel::Chart::xAt",
+        "ForgeCad::Kernel::Meridian::Meridian",
+        "ForgeCad::Kernel::Meridian::lengthAt",
+        "ForgeCad::Kernel::Meridian::parameter",
+        "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact",
+        "ForgeCad::Kernel::SurfaceQuiltMap::Data::flatPoint",
+        "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap",
+        "ForgeCad::Kernel::SurfaceQuiltMap::bend",
+        "ForgeCad::Kernel::SurfaceQuiltMap::flatten",
+        "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet",
+        "ForgeCad::Kernel::SurfaceQuiltMap::fold",
+        "ForgeCad::Kernel::require",
+        "ForgeCad::Kernel::surfaceQuiltAnchor",
+        "ForgeCad::Kernel::uniform",
+        "ForgeCad::Kernel::window"
+      ]
+    },
+    {
+      "id": "kernel/fk_surface_curve_bounds.cpp",
+      "group": "kernel",
+      "description": "Costruzione condivisa della candidata UV nel dominio naturale prima della prova continua E(t)-S(Q(t)); E/Q polynomiali e carrier NURBS nativi2/3 a pesi positivi. Coefficienti originali, intervalli outward, denominatore positivo sulle celle attive, partizione comune, budget e cancellazione; nessun recupero campionato dopo Failed.",
+      "lines": 514,
+      "symbols": [
+        "ForgeCad::Kernel::detail::I::I",
+        "ForgeCad::Kernel::detail::Work::visit",
+        "ForgeCad::Kernel::detail::basis",
+        "ForgeCad::Kernel::detail::cells",
+        "ForgeCad::Kernel::detail::choose",
+        "ForgeCad::Kernel::detail::elevated",
+        "ForgeCad::Kernel::detail::exact",
+        "ForgeCad::Kernel::detail::finite",
+        "ForgeCad::Kernel::detail::finitePoles",
+        "ForgeCad::Kernel::detail::hull",
+        "ForgeCad::Kernel::detail::onRange",
+        "ForgeCad::Kernel::detail::operator*",
+        "ForgeCad::Kernel::detail::operator+",
+        "ForgeCad::Kernel::detail::operator-",
+        "ForgeCad::Kernel::detail::operator/",
+        "ForgeCad::Kernel::detail::outward",
+        "ForgeCad::Kernel::detail::parameter",
+        "ForgeCad::Kernel::detail::polynomialWeights",
+        "ForgeCad::Kernel::detail::product",
+        "ForgeCad::Kernel::detail::residual",
+        "ForgeCad::Kernel::detail::restrictP",
+        "ForgeCad::Kernel::detail::scaled",
+        "ForgeCad::Kernel::detail::snapshot",
+        "ForgeCad::Kernel::detail::sum",
+        "ForgeCad::Kernel::detail::surfaceCurvePCurveCandidate",
+        "ForgeCad::Kernel::detail::surfaceCurveResidualBound",
+        "ForgeCad::Kernel::detail::validKnots",
+        "ForgeCad::Kernel::detail::weights",
+        "ForgeCad::Kernel::detail::whole"
+      ]
+    },
+    {
+      "id": "kernel/fk_surface_curve_bounds.h",
+      "group": "kernel",
+      "description": "Contratti distinti per costruire la candidata UV privata e certificare il residuo continuo bordo/SP-curve/superficie: parametro originale, cap fisico prefissato, unsupported/certificato/fallito espliciti.",
+      "lines": 43,
+      "symbols": []
+    },
+    {
+      "id": "kernel/fk_surface_mapping.cpp",
+      "group": "kernel",
+      "description": "Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: conserva i carrier supportati; fin Plane e native NURBS2/3 certificate nel continuo al cap prefit. Candidata UV costruita prima della prova, Failed terminale; genealogia, E/S/Q, parametri, versi e budget delle fin emesse ricontrollati anche senza history utente. Bordi 3D, carrier rispetto alla mappa e altre famiglie restano campionati; nessuna mesh di calcolo.",
+      "lines": 629,
+      "symbols": [
+        "ForgeCad::Kernel::affineImage",
+        "ForgeCad::Kernel::basis2",
+        "ForgeCad::Kernel::checked",
+        "ForgeCad::Kernel::commonSurfaceWrapAnchor",
+        "ForgeCad::Kernel::detail::mapBodyByFunction",
+        "ForgeCad::Kernel::faceWindow",
+        "ForgeCad::Kernel::fitMappedSurface",
+        "ForgeCad::Kernel::fitSurfaceWrapPlacement",
+        "ForgeCad::Kernel::lineImage",
+        "ForgeCad::Kernel::mapBody",
+        "ForgeCad::Kernel::mappedHistory",
+        "ForgeCad::Kernel::placeRigidBody",
+        "ForgeCad::Kernel::require",
+        "ForgeCad::Kernel::unrollFace",
+        "ForgeCad::Kernel::withFaceMapping",
+        "ForgeCad::Kernel::wrapBodyOnFaces",
+        "ForgeCad::Kernel::wrapBodyOnSurface"
+      ]
+    },
+    {
+      "id": "kernel/fk_transform.cpp",
+      "group": "kernel",
+      "description": "Trasformazioni esatte, specchi e scala uniforme: topologia e genealogia distinte, griglie NURBS condivise tramite istanze e trasformazioni successive composte, trim singolari conservati nelle pose senza cambio del parametro.",
+      "lines": 319,
+      "symbols": [
+        "ForgeCad::Kernel::Transformer::Transformer",
+        "ForgeCad::Kernel::Transformer::curve",
+        "ForgeCad::Kernel::Transformer::frame",
+        "ForgeCad::Kernel::Transformer::improper",
+        "ForgeCad::Kernel::Transformer::point",
+        "ForgeCad::Kernel::Transformer::scale",
+        "ForgeCad::Kernel::Transformer::surface",
+        "ForgeCad::Kernel::Transformer::unit",
+        "ForgeCad::Kernel::faceNormalSample",
+        "ForgeCad::Kernel::mirrorBody",
+        "ForgeCad::Kernel::mirroredBody",
+        "ForgeCad::Kernel::scaleBody",
+        "ForgeCad::Kernel::transformBody",
+        "ForgeCad::Kernel::transformCurve",
+        "ForgeCad::Kernel::transformSurface"
+      ]
+    },
+    {
+      "id": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "group": "tests",
+      "description": "Regressioni mapping nonPlane: picco del carrier invisibile ai campioni rifiutato, fin finali dei box e carrier razionale effettivo certificate, cap prefit, genealogia anche senza history, input/target immutati, fallimenti atomici e cancellazione.",
+      "lines": 246,
+      "symbols": [
+        "MappingNonPlaneCancellationPreservesInputsAndOutputs",
+        "MappingNonPlaneCylinderFinalFinsAndNullHistory",
+        "MappingNonPlaneFarOutsideCannotBeRepairedByClamping",
+        "MappingNonPlaneHiddenCarrierPeakRejectedAtomically",
+        "MappingNonPlaneQuadraticTargetFinalFinsAndNullHistory",
+        "MappingNonPlaneRationalCarrierFinalFinsAndNullHistory",
+        "historyStamp",
+        "identityImage",
+        "narrowSupport",
+        "rationalTarget",
+        "sourceIndex",
+        "unitSheet",
+        "verifyFinalFins"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "cad_cuda_tessellation.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "cad_cuda_tessellation.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_dimension.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_drawing_dimension.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_drawing_dimension.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_local_section_display.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_pattern.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_surface_mapping.cpp",
+      "target": "kernel/fk_quilt_mapping.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_surface_mapping.cpp",
+      "target": "kernel/fk_surface_mapping.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_surface_mapping.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_surface_poles_model.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 26
+    },
+    {
+      "source": "cad_surface_poles_model.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_surface_poles_session.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "cad_surface_tools.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "cad_surface_tools.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "reference",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_dialogs_mapping.cpp",
+      "target": "kernel/fk_quilt_mapping.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_mapping.cpp",
+      "target": "kernel/fk_surface_mapping.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_dialogs_surface_tools.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_surface_tools.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "forgeCad2026_dialogs_surface_tools.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_blend_contact_breaks.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "kernel/fk_blend_contact_breaks.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_blend_contact_breaks.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_blend_loop.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_blend_loop.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_blend_mitre.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_blend_mitre.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "kernel/fk_blend_mitre.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_blend_polar.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "kernel/fk_blend_polar.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_blend_polar.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_body_io.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 53
+    },
+    {
+      "source": "kernel/fk_body_io.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_body_io.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "reference",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_boundary.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_bspline_isoline.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_bspline_isoline.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 23
+    },
+    {
+      "source": "kernel/fk_bspline_isoline.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_bspline_surface.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "kernel/fk_bspline_surface.cpp",
+      "target": "kernel/fk_bspline_basis.cpp",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "kernel/fk_bspline_surface.cpp",
+      "target": "kernel/fk_bspline_basis.h",
+      "kind": "call",
+      "count": 23
+    },
+    {
+      "source": "kernel/fk_bspline_surface.cpp",
+      "target": "kernel/fk_bspline_basis.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_bspline_surface.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 49
+    },
+    {
+      "source": "kernel/fk_bspline_surface.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 56
+    },
+    {
+      "source": "kernel/fk_bspline_surface.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_bspline_surface.cpp",
+      "target": "kernel/fk_math.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_bspline_surface.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 86
+    },
+    {
+      "source": "kernel/fk_bspline_surface.cpp",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_bspline_surface.h",
+      "target": "kernel/fk_bspline.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_bspline_surface.h",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_bspline_surface.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/fk_bspline_surface.h",
+      "target": "kernel/fk_math.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_bspline_surface.h",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_bspline_surface.h",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_bspline_surface.h",
+      "target": "kernel/fk_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_classify.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_classify.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_curve_fit_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_curve_fit_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 28
+    },
+    {
+      "source": "kernel/fk_curve_fit_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_curve_surface.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 16
+    },
+    {
+      "source": "kernel/fk_curve_surface.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 45
+    },
+    {
+      "source": "kernel/fk_curve_surface.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_face_normal_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "kernel/fk_face_normal_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "kernel/fk_face_normal_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_fill.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "kernel/fk_fill.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_iges.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "kernel/fk_iges.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_loft.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_loft_guide_constraints.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "kernel/fk_loft_guide_constraints.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 43
+    },
+    {
+      "source": "kernel/fk_loft_guide_constraints.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_loft_merge.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "kernel/fk_loft_merge.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 29
+    },
+    {
+      "source": "kernel/fk_loft_merge.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_mapping_carrier.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_mapping_fit.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_marching.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "kernel/fk_marching.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 30
+    },
+    {
+      "source": "kernel/fk_nurbs.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_nurbs.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_nurbs_join.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 13
+    },
+    {
+      "source": "kernel/fk_nurbs_join.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 54
+    },
+    {
+      "source": "kernel/fk_nurbs_join.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_offset.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "kernel/fk_offset.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "kernel/fk_offset.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_offset.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_offset_support.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_offset_support.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "kernel/fk_offset_support.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_pcurve.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_pcurve.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "kernel/fk_pcurve.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_body_check.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_body_check.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_classify.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_classify_uv.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_curve.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 26
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_curve_ops.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_curve_ops.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_history.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_history.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_mapping_fit.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_mapping_fit.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_mapping_fit.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_math.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 208
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_offset.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_offset.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_pcurve.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_planar_flatten.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_planar_flatten.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_quilt_mapping.cpp",
+      "kind": "call",
+      "count": 88
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_quilt_mapping.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_quilt_mapping.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_surface.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_surface_mapping.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_surface_mapping.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 45
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 60
+    },
+    {
+      "source": "kernel/fk_sheet.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_sheet.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "kernel/fk_sheet.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_sheet_join_validation.cpp",
+      "target": "kernel/fk_surface_curve_bounds.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_sheet_join_validation.cpp",
+      "target": "kernel/fk_surface_curve_bounds.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_shell.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_shell.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "kernel/fk_shell.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_step.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_step.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "kernel/fk_step.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_step.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_stored_surface.h",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_stored_surface.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "kernel/fk_stored_surface.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_algo.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "kernel/fk_surface_algo.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 27
+    },
+    {
+      "source": "kernel/fk_surface_algo.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_curve_bounds.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "kernel/fk_surface_curve_bounds.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_curve_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_surface_curve_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 28
+    },
+    {
+      "source": "kernel/fk_surface_curve_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_curve_bounds.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "kernel/fk_surface_curve_bounds.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_curve_bounds.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "kernel/fk_surface_curve_bounds.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 26
+    },
+    {
+      "source": "kernel/fk_surface_curve_bounds.cpp",
+      "target": "kernel/fk_surface_curve_bounds.cpp",
+      "kind": "call",
+      "count": 176
+    },
+    {
+      "source": "kernel/fk_surface_curve_bounds.cpp",
+      "target": "kernel/fk_surface_curve_bounds.h",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "kernel/fk_surface_curve_bounds.cpp",
+      "target": "kernel/fk_surface_curve_bounds.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_curve_bounds.h",
+      "target": "kernel/fk_curve.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_curve_bounds.h",
+      "target": "kernel/fk_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_distance.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_distance.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_surface_distance.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_body_check.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_body_check.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_classify.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_classify.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_classify_uv.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_curve.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 23
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_curve_fit_bounds.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_curve_ops.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_curve_ops.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_curve_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_curve_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_history.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_history.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_mapping_carrier.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_mapping_carrier.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_mapping_fit.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_mapping_fit.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_math.cpp",
+      "kind": "call",
+      "count": 21
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 180
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_offset.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_offset.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_pcurve.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "call",
+      "count": 13
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_quilt_mapping.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_quilt_mapping.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_sew.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_surface.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 26
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_surface_algo.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_surface_curve_bounds.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_surface_curve_bounds.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_surface_mapping.cpp",
+      "kind": "call",
+      "count": 92
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_surface_mapping.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 64
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 60
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_transform.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_poles.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_surface_poles.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "kernel/fk_surface_poles_constraints.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "kernel/fk_surface_poles_constraints.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 52
+    },
+    {
+      "source": "kernel/fk_surface_poles_conversion.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/fk_surface_poles_conversion.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 25
+    },
+    {
+      "source": "kernel/fk_surface_poles_conversion.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_poles_influence.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_surface_poles_influence.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_poles_jets.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 27
+    },
+    {
+      "source": "kernel/fk_surface_poles_jets.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_refit.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_surface_refit.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_surface_refit.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_tools.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_sweep.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_sweep.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_sweep_analytic_bridge.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_sweep_analytic_bridge.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_sweep_surface_validation.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_sweep_surface_validation.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "kernel/fk_sweep_surface_validation.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_thicken.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_thicken.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_thicken.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_body_check.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_body_check.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_history.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_history.h",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_history_tools.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_history_tools.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_math.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 26
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_pcurve.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_surface.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 21
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_surface_algo.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 36
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 46
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 46
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_transform.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/occt/fk_occt_import.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/fk_test_util.h",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/fk_test_util.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "kernel/tests/fk_test_util.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/probe_code_review.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/probe_trimmed_sphere.h",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/tests/probe_trimmed_sphere.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/tests/probe_trimmed_sphere.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/surface_tools_fixture.h",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_blend.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/tests/test_blend_boundary_validation.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/tests/test_blend_boundary_validation.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "kernel/tests/test_blend_boundary_validation.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_blend_cavity.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/tests/test_blend_cavity.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_blend_cavity_regressions.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_blend_cavity_regressions.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_blend_cavity_regressions.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_blend_cavity_regressions.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_blend_contact_breaks.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_blend_contact_breaks.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "kernel/tests/test_blend_contact_breaks.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_blend_mitre_validation.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_blend_profiles.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_blend_transitions.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_blend_transitions.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_blend_transitions.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_blend_transitions.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_body_io.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_bspline_cache.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 25
+    },
+    {
+      "source": "kernel/tests/test_bspline_cache.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "kernel/tests/test_bspline_cache.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_bspline_isoline.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/tests/test_bspline_plane_jets.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_bspline_plane_jets.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_bspline_surface.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 28
+    },
+    {
+      "source": "kernel/tests/test_bspline_surface.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "kernel/tests/test_curve_surface.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/tests/test_disjoint_union.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_draft.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/tests/test_exchange_robustness.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_face_normal_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_face_parameter_classify.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_fill.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_history.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/tests/test_history.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_history.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/tests/test_loft.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/tests/test_loft.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_loft.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_loft_complexity.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/tests/test_loft_complexity.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_loft_complexity.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_loft_guide_constraints.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/tests/test_loft_guide_constraints.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "kernel/tests/test_loft_guide_constraints.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_loft_knots.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_loft_knots.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_loft_projected_guides.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_loft_shape.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_carrier_validation.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_carrier_validation.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_carrier_validation.cpp",
+      "target": "kernel/fk_surface_mapping.cpp",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "kernel/tests/test_mapping_diagonal_validation.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_diagonal_validation.cpp",
+      "target": "kernel/fk_surface_mapping.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_body_check.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_body_check.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_body_io.cpp",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_body_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_history.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_history.h",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_mapping_fit.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_math.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 25
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_pcurve.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_primitives.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_primitives.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_quilt_mapping.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_quilt_mapping.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_sheet.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_sheet.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_surface.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_surface_curve_bounds.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_surface_curve_bounds.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_surface_mapping.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_surface_mapping.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_surface_mapping.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/tests/fk_test.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/tests/fk_test.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/tests/fk_test_main.cpp",
+      "kind": "call",
+      "count": 31
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "kind": "call",
+      "count": 26
+    },
+    {
+      "source": "kernel/tests/test_mapping_pcurve_validation.cpp",
+      "target": "kernel/fk_quilt_mapping.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/tests/test_mapping_pcurve_validation.cpp",
+      "target": "kernel/fk_surface_mapping.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_marching.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/tests/test_marching.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_marching_seed_grid.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/tests/test_marching_seed_grid.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_nurbs.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "kernel/tests/test_nurbs_supports.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 13
+    },
+    {
+      "source": "kernel/tests/test_nurbs_supports.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 31
+    },
+    {
+      "source": "kernel/tests/test_nurbs_supports.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/tests/test_offset.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/tests/test_offset.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/tests/test_offset.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_offset_split_creases.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/tests/test_offset_split_creases.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "kernel/tests/test_offset_split_creases.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_open_offset.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "kernel/tests/test_open_offset.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_pcurve.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_planar_flatten_validation.cpp",
+      "target": "kernel/fk_quilt_mapping.cpp",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "kernel/tests/test_polar_blend.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_polar_blend.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_sheet_join_ledger.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_sheet_join_ledger.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_sheet_join_validation.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 21
+    },
+    {
+      "source": "kernel/tests/test_sheet_join_validation.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_shell_pose.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_step.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_surface_algo.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 16
+    },
+    {
+      "source": "kernel/tests/test_surface_algo.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "kernel/tests/test_surface_curve_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_surface_curve_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_surface_curve_bounds.cpp",
+      "target": "kernel/fk_surface_curve_bounds.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/tests/test_surface_curve_bounds.cpp",
+      "target": "kernel/fk_surface_curve_bounds.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_surface_curve_fit_validation.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/tests/test_surface_curve_fit_validation.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "kernel/tests/test_surface_curve_fit_validation.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_surface_curve_rational.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "kernel/tests/test_surface_curve_rational.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_surface_curve_rational.cpp",
+      "target": "kernel/fk_surface_curve_bounds.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_surface_curve_rational.cpp",
+      "target": "kernel/fk_surface_curve_bounds.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_surface_instances.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "kernel/tests/test_surface_instances.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "kernel/tests/test_surface_instances.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_surface_instances.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "reference",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_surface_instances.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping.cpp",
+      "target": "kernel/fk_quilt_mapping.cpp",
+      "kind": "call",
+      "count": 22
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping.cpp",
+      "target": "kernel/fk_surface_mapping.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "kernel/tests/test_surface_parameterization.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/tests/test_surface_parameterization.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_surface_poles_constraints.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/tests/test_surface_poles_constraints.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 25
+    },
+    {
+      "source": "kernel/tests/test_surface_poles_constraints.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_surface_poles_conversion.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "kernel/tests/test_surface_poles_conversion.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "kernel/tests/test_surface_poles_conversion.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_surface_poles_influence.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_surface_tools.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_surface_tools.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "kernel/tests/test_thicken.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "kernel/tests/test_thicken.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_tolerance.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_tolerance.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_transform.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_transform.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_transform.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "kernel/tests/test_trimmed_face_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_trimmed_face_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_trimmed_face_bounds.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_circular_pattern_fit.h",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_cuda_tessellation.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_cuda_tessellation.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_cuda_tessellation.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_drawing.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_derived.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_dimension_controls.h",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_drawing_dimension_controls.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_dimensions.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_drawing_dimensions.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_silhouette.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_drawing_silhouette.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_feature_faces.h",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_gpu_broad_phase.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_mesh_export_backends.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "tests/test_metal_tessellation.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_projected_drawing.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_projected_drawing.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_surface_poles_analytic.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_surface_poles_soft.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_surface_tools_gui.h",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tools/benchmark_surface_distance.py",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    }
+  ]
+}

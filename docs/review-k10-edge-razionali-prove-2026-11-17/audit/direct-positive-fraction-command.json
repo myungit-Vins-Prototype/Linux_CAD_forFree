@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "python3",
+    "/tmp/k10-rational-edge-review/audit/verify_public_fins.py.txt",
+    "/tmp/k10-rational-edge-review/tests/candidate-originals.jsonl",
+    "/tmp/k10-rational-edge-review/audit/direct-positive-fraction-result.json",
+    "rational-native,rational-reverse-trim,rational-placed,rational-peak-flat,rational-ledger-actual"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "observedExit": 0
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "which": "baseline",
+    "scale": 2.5,
+    "rotated": true,
+    "thickness": 1.25,
+    "openingFace": 5,
+    "exit": 1,
+    "seconds": 5.322383403996355
+  },
+  {
+    "which": "candidate",
+    "scale": 2.5,
+    "rotated": true,
+    "thickness": 1.25,
+    "openingFace": 5,
+    "exit": 0,
+    "seconds": 18.99378175099264
+  }
+]

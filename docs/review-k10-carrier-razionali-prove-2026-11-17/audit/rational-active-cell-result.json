@@ -1,0 +1,39 @@
+{
+  "pass": true,
+  "method": "Exact Fraction original homogeneous Cox composition, all closed cell branches, exact Bernstein restriction to active portions",
+  "purpose": "Whole-interval negative denominator coefficient outside an active cell does not invalidate the independently justified positive original-weight lower bound on its active portion.",
+  "delta_fraction": "1/1073741824",
+  "records": [
+    {
+      "cell_u": 2,
+      "active_interval": [
+        "0",
+        "1/2"
+      ],
+      "full_cell_denominator_min_coefficient": "-3",
+      "active_denominator_min_coefficient": "1",
+      "original_weight_minimum": "1",
+      "residual_upper_fraction": "316912650057057350374175801345/340282366920938463463374607431768211456",
+      "residual_upper_mm": 9.313225746154787e-10,
+      "pass": true
+    },
+    {
+      "cell_u": 4,
+      "active_interval": [
+        "1/2",
+        "1"
+      ],
+      "full_cell_denominator_min_coefficient": "-3",
+      "active_denominator_min_coefficient": "1",
+      "original_weight_minimum": "1",
+      "residual_upper_fraction": "316912650057057350374175801345/340282366920938463463374607431768211456",
+      "residual_upper_mm": 9.313225746154787e-10,
+      "pass": true
+    }
+  ],
+  "not_claimed": [
+    "public CAD result",
+    "production runtime",
+    "general rational E/Q support"
+  ]
+}

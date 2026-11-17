@@ -1,0 +1,49 @@
+{
+  "files": [
+    {
+      "path": "COMMANDS.txt",
+      "sha256": "61d2ce449e58b0898ed7b3fdac4988c697a19691f3a5ff10f6c6cb5687529daa",
+      "bytes": 515
+    },
+    {
+      "path": "HANDOFF.md",
+      "sha256": "07c1f691d30e86b8db62156dbc59db8a7219a0284fdcab3d46b92efba91e85c8",
+      "bytes": 4480
+    },
+    {
+      "path": "SOURCE-FREEZE.json",
+      "sha256": "37b5f1d8a31e39bee8ba730eac797c5467a3a4aaaceb774afc425ae4f8eecadc",
+      "bytes": 566
+    },
+    {
+      "path": "candidate.patch",
+      "sha256": "9fcb03f53b5b455ec62f9c4bb77b2fa9a356d34b5d8a5469d6301d81f472a463",
+      "bytes": 7048
+    },
+    {
+      "path": "fk_mapping_fit.baseline.cpp.txt",
+      "sha256": "f9187aa9903c07096fe029dad8f271cf850d12d6c6a273b9ed538c2afc5a8b27",
+      "bytes": 13356
+    },
+    {
+      "path": "graph-evidence.json",
+      "sha256": "013ff5003b59d805176b0249c33cc29d4d1d25604804c6e8b10d72acacc27713",
+      "bytes": 442395
+    },
+    {
+      "path": "kernel/fk_mapping_fit.cpp.txt",
+      "sha256": "03d21ceab86aead510559aee7101ade9a4aba8b1ef516671943b0bfa823fd001",
+      "bytes": 14743
+    },
+    {
+      "path": "reproducer.cpp.txt",
+      "sha256": "8f7598f3e08ec8a03da7808962f7083d768d5c87b7159845bf4e29b393a770bd",
+      "bytes": 1172
+    },
+    {
+      "path": "static-source-check.json",
+      "sha256": "2b3e3b05565c13a2107b5df95c902c745b89ff905ed4d76938d26133689a8eb7",
+      "bytes": 1041
+    }
+  ]
+}

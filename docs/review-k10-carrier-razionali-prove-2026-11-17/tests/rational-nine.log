@@ -1,0 +1,10 @@
+[  OK  ] RationalCarrierNativeQuadraticCubicAndMixedIdentity
+[  OK  ] RationalCarrierCellExtrapolatedDenominatorMayBeNegative
+[  OK  ] RationalCarrierWeightGaugeAndPhysicalScale
+[  OK  ] RationalCarrierNonUnitDomainTrimAndCorrelatedReverse
+[  OK  ] RationalCarrierChangedWeightIsRecognizedGap
+[  OK  ] RationalCarrierUVOutsideOriginalDomainFails
+[  OK  ] RationalCarrierCancellationPropagates
+[  OK  ] RationalCarrierHiddenKnotCellPeakFailsContinuously
+[  OK  ] RationalCarrierFixedOriginalScalarLimitFailsClosed
+9/9 test superati

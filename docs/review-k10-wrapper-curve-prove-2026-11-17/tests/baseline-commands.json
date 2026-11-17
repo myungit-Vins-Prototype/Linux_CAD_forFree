@@ -1,0 +1,23 @@
+[
+  [
+    "/usr/bin/c++",
+    "-std=c++17",
+    "-O2",
+    "-g",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "-c",
+    "/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+    "-o",
+    "/tmp/k10-curve-wrapper-review/tests/main.o"
+  ],
+  [
+    "/usr/bin/c++",
+    "/tmp/k10-curve-wrapper-review/tests/new.o",
+    "/tmp/k10-curve-wrapper-review/tests/main.o",
+    "/tmp/k10-curve-wrapper-review/root/libforgekernel-baseline.a",
+    "-lpthread",
+    "-o",
+    "/tmp/k10-curve-wrapper-review/tests/baseline-new-tests"
+  ]
+]

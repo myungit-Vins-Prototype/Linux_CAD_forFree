@@ -1,0 +1,9 @@
+{
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "MassVerticalSplineSkipsNullFlux"
+  ],
+  "exit": 0,
+  "seconds": 0.021304103996953927,
+  "watchdog_seconds": 600
+}

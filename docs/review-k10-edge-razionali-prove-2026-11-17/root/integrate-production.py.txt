@@ -1,0 +1,7 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-rational-edge-review');B=json.loads((T/'root/baseline.json').read_text());sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+expected={'kernel/fk_surface_curve_bounds.cpp':'32b161a97903c5ca746a87b3bde59fb3c79566316d0f274a189127cc396f62e6','kernel/fk_surface_curve_bounds.h':'b6ccad5f246b08c9e69523e485f978600b51ae46104d64d12b18c53dbd487d00'}
+for f,h in expected.items():assert sha(R/f)==B[f] and sha(T/'core'/f)==h,f
+for f in expected:(R/f).write_bytes((T/'core'/f).read_bytes())
+(T/'root/production-freeze.json').write_text(json.dumps(expected,indent=2)+'\n');print(expected)

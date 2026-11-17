@@ -1,0 +1,439 @@
+#include "fk_surface_curve_bounds.h"
+#include "fk_bspline.h"
+#include "fk_bspline_surface.h"
+#include "fk_cancel.h"
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstdint>
+#include <utility>
+#include <vector>
+
+namespace ForgeCad::Kernel::detail {
+namespace {
+constexpr double infinity = std::numeric_limits<double>::infinity();
+// Fixed work/storage limits, independent of the requested geometric budget.
+constexpr std::size_t maxScalars = 2000000;
+constexpr std::size_t maxVisits = 16384;
+constexpr std::size_t maxCellsPerNode = 256;
+constexpr int maxDepth = 24;
+struct ProofFailed {};
+struct Work {
+    std::size_t remaining = maxVisits;
+    void visit() {
+        cancellationPoint();
+        if (!remaining) throw ProofFailed{};
+        --remaining;
+    }
+};
+struct I {
+    double lo = 0, hi = 0;
+    I() = default;
+    explicit I(double value) : lo(value), hi(value) {}
+    I(double first, double last) : lo(first), hi(last) {}
+};
+bool finite(I value) {
+    return std::isfinite(value.lo) && std::isfinite(value.hi) && value.lo <= value.hi;
+}
+bool exact(I value, double number) { return value.lo == number && value.hi == number; }
+I whole() { return {-infinity, infinity}; }
+I outward(double lo, double hi) {
+    if (!std::isfinite(lo) || !std::isfinite(hi) || lo > hi) return whole();
+    return {std::nextafter(lo, -infinity), std::nextafter(hi, infinity)};
+}
+I operator+(I a, I b) {
+    if (!finite(a) || !finite(b)) return whole();
+    if (exact(a, 0)) return b;
+    if (exact(b, 0)) return a;
+    if (a.lo == a.hi && b.lo == b.hi && a.lo == -b.lo) return I(0);
+    return outward(a.lo + b.lo, a.hi + b.hi);
+}
+I operator-(I a, I b) {
+    if (!finite(a) || !finite(b)) return whole();
+    if (exact(b, 0)) return a;
+    if (a.lo == a.hi && b.lo == b.hi && a.lo == b.lo) return I(0);
+    if (exact(a, 0)) return {-b.hi, -b.lo};
+    return outward(a.lo - b.hi, a.hi - b.lo);
+}
+I operator*(I a, I b) {
+    if (!finite(a) || !finite(b)) return whole();
+    if (exact(a, 0) || exact(b, 0)) return I(0);
+    if (exact(a, 1)) return b;
+    if (exact(b, 1)) return a;
+    if (exact(a, -1)) return {-b.hi, -b.lo};
+    if (exact(b, -1)) return {-a.hi, -a.lo};
+    const double products[] = {a.lo * b.lo, a.lo * b.hi, a.hi * b.lo, a.hi * b.hi};
+    for (double value : products) if (!std::isfinite(value)) return whole();
+    return outward(*std::min_element(products, products + 4), *std::max_element(products, products + 4));
+}
+I operator/(I a, I b) {
+    if (!finite(a) || !finite(b) || !(b.lo > 0)) return whole();
+    if (exact(a, 0)) return I(0);
+    if (exact(b, 1)) return a;
+    const double quotients[] = {a.lo / b.lo, a.lo / b.hi, a.hi / b.lo, a.hi / b.hi};
+    for (double value : quotients) if (!std::isfinite(value)) return whole();
+    return outward(*std::min_element(quotients, quotients + 4), *std::max_element(quotients, quotients + 4));
+}
+using P = std::vector<I>;
+template<int N> using VP = std::array<P, N>;
+template<int N> using Point = std::array<I, N>;
+
+P elevated(P values, std::size_t degree) {
+    while (values.size() <= degree) {
+        const auto n = values.size();
+        P next(n + 1);
+        next.front() = values.front(); next.back() = values.back();
+        for (std::size_t i = 1; i < n; ++i) {
+            const I t = I(double(i)) / I(double(n));
+            next[i] = values[i - 1] * t + values[i] * (I(1) - t);
+        }
+        values = std::move(next);
+    }
+    return values;
+}
+P sum(P a, P b, bool subtract = false) {
+    const auto degree = std::max(a.size(), b.size()) - 1;
+    a = elevated(std::move(a), degree); b = elevated(std::move(b), degree);
+    for (std::size_t i = 0; i < a.size(); ++i) a[i] = subtract ? a[i] - b[i] : a[i] + b[i];
+    return a;
+}
+P scaled(P values, I factor) {
+    for (I &value : values) value = value * factor;
+    return values;
+}
+// Degrees never exceed 21 in the supported rational residual. The binomial
+// integers are exact (<2^53); only their ratio needs outward rounding.
+double choose(int n, int k) {
+    std::uint64_t value = 1;
+    for (int i = 1; i <= std::min(k, n - k); ++i) value = value * std::uint64_t(n - i + 1) / std::uint64_t(i);
+    return double(value);
+}
+P product(const P &a, const P &b) {
+    const int m = int(a.size()) - 1, n = int(b.size()) - 1;
+    if (m + n > 21) throw ProofFailed{};
+    P values(std::size_t(m + n + 1));
+    for (int i = 0; i <= m; ++i)
+        for (int j = 0; j <= n; ++j) {
+            const I factor = I(choose(m, i)) * I(choose(n, j)) / I(choose(m + n, i + j));
+            values[std::size_t(i + j)] = values[std::size_t(i + j)] + a[std::size_t(i)] * b[std::size_t(j)] * factor;
+        }
+    return values;
+}
+I hull(const P &values) {
+    I result(infinity, -infinity);
+    for (I value : values) {
+        if (!finite(value)) return whole();
+        result.lo = std::min(result.lo, value.lo); result.hi = std::max(result.hi, value.hi);
+    }
+    return result;
+}
+// Polar form, retaining original parameter anchors. It also encloses
+// roundoff slivers outside [0,1]; no rounded Bezier conversion is trusted.
+P restrictP(const P &original, I first, I last) {
+    if (exact(first, 0) && exact(last, 1)) return original;
+    const int degree = int(original.size()) - 1;
+    P result(original.size());
+    for (int pole = 0; pole <= degree; ++pole) {
+        P values = original;
+        for (int r = 1; r <= degree; ++r) {
+            const I t = r <= degree - pole ? first : last;
+            for (int j = 0; j <= degree - r; ++j)
+                values[std::size_t(j)] = values[std::size_t(j)] * (I(1) - t) + values[std::size_t(j + 1)] * t;
+        }
+        result[std::size_t(pole)] = values.front();
+    }
+    return result;
+}
+I parameter(double value, double lo, double hi) {
+    if (value == lo) return I(0);
+    if (value == hi) return I(1);
+    return (I(value) - I(lo)) / (I(hi) - I(lo));
+}
+bool validKnots(const std::vector<double> &knots, int degree, int count) {
+    if (count <= degree || knots.size() != std::size_t(count + degree + 1)) return false;
+    for (std::size_t i = 0; i < knots.size(); ++i)
+        if (!std::isfinite(knots[i]) || (i && knots[i] < knots[i - 1])) return false;
+    if (!(knots[std::size_t(degree)] < knots[std::size_t(count)])) return false;
+    // The supported curves/carriers are position-continuous at internal knots.
+    for (int i = degree + 1, multiplicity = 1; i < count; ++i) {
+        multiplicity = knots[std::size_t(i)] == knots[std::size_t(i - 1)] ? multiplicity + 1 : 1;
+        if (multiplicity > degree) return false;
+    }
+    return true;
+}
+template<int N> struct Source {
+    int degree = 1;
+    std::vector<double> knots;
+    std::vector<Point<N>> poles;
+    std::array<I, N> originalHull;
+};
+template<int N> Source<N> snapshot(const BSplineCurve<N> &curve, const Point<N> &origin) {
+    Source<N> result; result.degree = curve.degree(); result.knots = curve.knots();
+    for (int axis = 0; axis < N; ++axis) result.originalHull[std::size_t(axis)] = I(infinity, -infinity);
+    result.poles.reserve(std::size_t(curve.poleCount()));
+    for (const auto &pole : curve.poles()) {
+        cancellationPoint();
+        Point<N> point;
+        for (int axis = 0; axis < N; ++axis) {
+            const I value(pole[axis]);
+            point[std::size_t(axis)] = value - origin[std::size_t(axis)];
+            auto &bound = result.originalHull[std::size_t(axis)];
+            bound.lo = std::min(bound.lo, pole[axis]); bound.hi = std::max(bound.hi, pole[axis]);
+        }
+        result.poles.push_back(point);
+    }
+    return result;
+}
+template<int N> VP<N> onRange(const Source<N> &source, const Interval &query) {
+    const int count = int(source.poles.size()), p = source.degree;
+    int k = int(std::upper_bound(source.knots.begin(), source.knots.end(), query.lo) - source.knots.begin()) - 1;
+    k = std::clamp(k, p, count - 1);
+    const double lo = source.knots[std::size_t(k)], hi = source.knots[std::size_t(k + 1)];
+    if (!(lo <= query.lo && query.hi <= hi && lo < hi)) throw ProofFailed{};
+    bool bezier = true;
+    for (int j = 1; j <= p; ++j)
+        bezier = bezier && source.knots[std::size_t(k - p + j)] == lo && source.knots[std::size_t(k + j)] == hi;
+    VP<N> values;
+    for (int pole = 0; pole <= p; ++pole) {
+        auto point = source.poles[std::size_t(k - p + pole)];
+        if (!bezier) {
+            std::vector<Point<N>> original(source.poles.begin() + k - p, source.poles.begin() + k + 1);
+            for (int r = 1; r <= p; ++r) {
+                const double t = r <= p - pole ? lo : hi;
+                for (int j = p; j >= r; --j) {
+                    const I alpha = (I(t) - I(source.knots[std::size_t(k - p + j)])) /
+                        (I(source.knots[std::size_t(k + j - r + 1)]) - I(source.knots[std::size_t(k - p + j)]));
+                    for (int axis = 0; axis < N; ++axis)
+                        original[std::size_t(j)][std::size_t(axis)] = original[std::size_t(j - 1)][std::size_t(axis)] * (I(1) - alpha)
+                            + original[std::size_t(j)][std::size_t(axis)] * alpha;
+                }
+            }
+            point = original.back();
+        }
+        for (int axis = 0; axis < N; ++axis) values[std::size_t(axis)].push_back(point[std::size_t(axis)]);
+    }
+    for (auto &value : values) value = restrictP(value, parameter(query.lo, lo, hi), parameter(query.hi, lo, hi));
+    return values;
+}
+// Original local Cox basis polynomial on one selected carrier knot cell.
+// Q is polynomial on this t interval; all neighboring cell polynomials are
+// checked, including their extensions over the remainder of the interval.
+std::vector<P> basis(const std::vector<double> &knots, int cell, const P &q, int order) {
+    std::vector<P> previous(1, P{I(1)});
+    for (int degree = 1; degree <= order; ++degree) {
+        std::vector<P> current(std::size_t(degree + 1), P{I(0)});
+        for (int r = 0; r <= degree; ++r) {
+            const int i = cell - degree + r;
+            const double a = knots[std::size_t(i)], b = knots[std::size_t(i + degree)];
+            const double c = knots[std::size_t(i + 1)], d = knots[std::size_t(i + degree + 1)];
+            if (r && a < b)
+                current[std::size_t(r)] = sum(current[std::size_t(r)], product(previous[std::size_t(r - 1)],
+                    scaled(sum(q, P{I(a)}, true), I(1) / (I(b) - I(a)))));
+            if (r < degree && c < d)
+                current[std::size_t(r)] = sum(current[std::size_t(r)], product(previous[std::size_t(r)],
+                    scaled(sum(P{I(d)}, q, true), I(1) / (I(d) - I(c)))));
+        }
+        previous = std::move(current);
+    }
+    return previous;
+}
+std::vector<int> cells(const std::vector<double> &knots, int count, I image, int degree) {
+    std::vector<int> result;
+    int i = int(std::lower_bound(knots.begin() + degree, knots.begin() + count + 1, image.lo) - knots.begin()) - 1;
+    for (i = std::max(degree, i); i < count && knots[std::size_t(i)] <= image.hi; ++i)
+        if (knots[std::size_t(i)] < knots[std::size_t(i + 1)] && knots[std::size_t(i + 1)] >= image.lo) {
+            result.push_back(i);
+            if (result.size() > maxCellsPerNode) break;
+        }
+    return result;
+}
+struct Carrier {
+    std::vector<double> u, v;
+    int nu = 0, nv = 0, pu = 3, pv = 3;
+    std::vector<Point<3>> poles;
+    std::vector<I> weights; // Empty preserves the polynomial fast path.
+    double minimumWeight = 1;
+};
+double residual(const Carrier &surface, int ku, int kv, const VP<2> &uv, const VP<3> &edge) {
+    const auto u = basis(surface.u, ku, uv[0], surface.pu), v = basis(surface.v, kv, uv[1], surface.pv);
+    VP<3> composed{P{I(0)}, P{I(0)}, P{I(0)}};
+    P denominator{I(0)};
+    const bool rational = !surface.weights.empty();
+    for (int i = 0; i <= surface.pu; ++i)
+        for (int j = 0; j <= surface.pv; ++j) {
+            const P factor = product(u[std::size_t(i)], v[std::size_t(j)]);
+            const auto index = std::size_t((ku - surface.pu + i) * surface.nv + kv - surface.pv + j);
+            const auto &pole = surface.poles[index];
+            if (rational) denominator = sum(denominator, scaled(factor, surface.weights[index]));
+            for (int axis = 0; axis < 3; ++axis)
+                composed[std::size_t(axis)] = sum(composed[std::size_t(axis)], scaled(factor, pole[std::size_t(axis)]));
+        }
+    double lower = 1;
+    if (rational) {
+        const I bounds = hull(denominator);
+        if (!finite(bounds)) return infinity;
+        // Only the subset where this cell is ACTIVE is relevant. Q has
+        // already been proved inside the natural domain, where the original
+        // B-spline basis is nonnegative and sums to one. Hence W>=min(w).
+        // The cell polynomial may be negative outside that subset; its full
+        // interval hull is a second enclosure, not the positivity argument.
+        lower = std::max(surface.minimumWeight, bounds.lo);
+        if (!(lower > 0) || !std::isfinite(lower)) return infinity;
+    }
+    double largest = 0;
+    for (int axis = 0; axis < 3; ++axis) {
+        const P projected = rational ? product(edge[std::size_t(axis)], denominator) : edge[std::size_t(axis)];
+        const I value = hull(sum(composed[std::size_t(axis)], projected, true));
+        if (!finite(value)) return infinity;
+        largest = std::max({largest, std::fabs(value.lo), std::fabs(value.hi)});
+    }
+    if (largest == 0) return 0;
+    // max |coordinate| * sqrt(3) bounds the Euclidean norm without squaring
+    // small values into underflow. Both operations are rounded outwards.
+    const double numerator = std::nextafter(largest * std::nextafter(std::sqrt(3.0), infinity), infinity);
+    return rational ? (I(numerator) / I(lower)).hi : numerator;
+}
+template<int N> bool finitePoles(const BSplineCurve<N> &curve) {
+    for (const auto &pole : curve.poles()) {
+        cancellationPoint();
+        for (int axis = 0; axis < N; ++axis) if (!std::isfinite(pole[axis])) return false;
+    }
+    return true;
+}
+template<class Weight> int weights(int count, Weight weight) {
+    bool equal = true;
+    const double first = weight(0);
+    for (int i = 0; i < count; ++i) {
+        cancellationPoint();
+        const double value = weight(i);
+        if (!(value > 0) || !std::isfinite(value)) return -1;
+        equal = equal && value == first;
+    }
+    return equal ? 1 : 0;
+}
+}
+
+SurfaceCurveBoundResult surfaceCurveResidualBound(const CurvePtr<3> &edge, const SurfacePtr &surface,
+                                                  const CurvePtr<2> &pcurve, const Interval &range,
+                                                  double budget) {
+    cancellationPoint();
+    const SurfaceCurveBoundResult failed;
+    const SurfaceCurveBoundResult unsupported{SurfaceCurveBoundStatus::Unsupported, infinity};
+    if (!edge || !surface || !pcurve || !range.isFinite() || !(range.lo < range.hi)
+        || !std::isfinite(range.length()) || !(budget > 0) || !std::isfinite(budget)) return failed;
+    const auto *e = dynamic_cast<const BSplineCurve<3> *>(edge.get());
+    const auto *q = dynamic_cast<const BSplineCurve<2> *>(pcurve.get());
+    const auto *line = dynamic_cast<const Line<2> *>(pcurve.get());
+    const auto *s = dynamic_cast<const BSplineSurface *>(surface.get());
+    if (!e || !s || (!q && !line) || e->degree() != 3 || (q && q->degree() != 1 && q->degree() != 3)
+        || (s->uDegree() != 2 && s->uDegree() != 3) || (s->vDegree() != 2 && s->vDegree() != 3) || s->basis() || s->isUPeriodic() || s->isVPeriodic()) return unsupported;
+    const int ne = e->poleCount(), nq = q ? q->poleCount() : 0, nu = s->uPoleCount(), nv = s->vPoleCount();
+    if (ne < 4 || (q && nq <= q->degree()) || nu <= s->uDegree() || nv <= s->vDegree() || ne > 100000 || nq > 100000
+        || std::size_t(nu) > maxScalars / (3 * std::size_t(nv))
+        || 3 * std::size_t(nu) * std::size_t(nv) + 16 * std::size_t(ne + nq) > maxScalars) return failed;
+    if (!validKnots(e->knots(), 3, ne) || !validKnots(s->uKnots(), s->uDegree(), nu) || !validKnots(s->vKnots(), s->vDegree(), nv)
+        || (q && !validKnots(q->knots(), q->degree(), nq)) || !finitePoles(*e) || (q && !finitePoles(*q))) return failed;
+    if (range.lo < e->domain().lo || range.hi > e->domain().hi
+        || (q && (range.lo < q->domain().lo || range.hi > q->domain().hi))) return failed;
+    const int ew = weights(ne, [&](int i) { return e->weight(i); });
+    const int qw = q ? weights(nq, [&](int i) { return q->weight(i); }) : 1;
+    const int sw = weights(nu * nv, [&](int i) { return s->weight(i / nv, i % nv); });
+    if (ew < 0 || qw < 0 || sw < 0) return failed;
+    if (!ew || !qw) return unsupported;
+    // Account for the fourth homogeneous scalar before snapshot allocation.
+    if (!sw && 4 * std::size_t(nu) * std::size_t(nv) + 16 * std::size_t(ne + nq) > maxScalars) return failed;
+    // Polynomial partition of unity allows one ORIGINAL translation to be
+    // subtracted from both E and S, retaining small residuals at large poses.
+    const auto anchor = e->poles().front();
+    Point<3> origin{I(anchor[0]), I(anchor[1]), I(anchor[2])};
+    const auto edgeData = snapshot<3>(*e, origin);
+    const auto uvData = q ? snapshot<2>(*q, Point<2>{I(0), I(0)}) : Source<2>{};
+    Carrier carrier{s->uKnots(), s->vKnots(), nu, nv, s->uDegree(), s->vDegree(), {}, {}, infinity};
+    if (!sw) carrier.weights.reserve(std::size_t(nu) * std::size_t(nv));
+    carrier.poles.reserve(std::size_t(nu) * std::size_t(nv));
+    for (int i = 0; i < nu; ++i)
+        for (int j = 0; j < nv; ++j) {
+            cancellationPoint();
+            const Vec3 point = s->pole(i, j);
+            Point<3> centered;
+            for (int axis = 0; axis < 3; ++axis) {
+                if (!std::isfinite(point[axis])) return failed;
+                centered[std::size_t(axis)] = I(point[axis]) - origin[std::size_t(axis)];
+            }
+            if (!sw) {
+                const double weight = s->weight(i, j);
+                carrier.minimumWeight = std::min(carrier.minimumWeight, weight);
+                carrier.weights.push_back(I(weight));
+                for (I &coordinate : centered) coordinate = coordinate * I(weight);
+            }
+            carrier.poles.push_back(centered);
+        }
+    std::array<I, 2> uvHull;
+    if (q) uvHull = uvData.originalHull;
+    else {
+        const auto o = line->origin(), d = line->direction();
+        for (int axis = 0; axis < 2; ++axis) {
+            if (!std::isfinite(o[axis]) || !std::isfinite(d[axis])) return failed;
+            uvHull[std::size_t(axis)] = hull(P{I(o[axis]) + I(d[axis]) * I(range.lo), I(o[axis]) + I(d[axis]) * I(range.hi)});
+        }
+    }
+    std::vector<double> cuts{range.lo, range.hi};
+    for (const auto *knots : {&edgeData.knots, &uvData.knots})
+        for (double value : *knots) if (value > range.lo && value < range.hi) cuts.push_back(value);
+    std::sort(cuts.begin(), cuts.end()); cuts.erase(std::unique(cuts.begin(), cuts.end()), cuts.end());
+    if (cuts.size() > maxVisits) return failed;
+    struct Node { Interval range; int depth; };
+    Work work; double upper = 0;
+    try {
+        for (std::size_t cut = 1; cut < cuts.size(); ++cut) {
+            std::vector<Node> stack{{{cuts[cut - 1], cuts[cut]}, 0}};
+            while (!stack.empty()) {
+                work.visit();
+                const Node node = stack.back(); stack.pop_back();
+                const auto actual = onRange(edgeData, node.range);
+                VP<2> uv;
+                if (q) uv = onRange(uvData, node.range);
+                else {
+                    const auto o = line->origin(), d = line->direction();
+                    for (int axis = 0; axis < 2; ++axis)
+                        uv[std::size_t(axis)] = {I(o[axis]) + I(d[axis]) * I(node.range.lo), I(o[axis]) + I(d[axis]) * I(node.range.hi)};
+                }
+                std::array<I, 2> image;
+                bool inDomain = true;
+                const Interval domains[] = {s->uDomain(), s->vDomain()};
+                for (int axis = 0; axis < 2; ++axis) {
+                    image[std::size_t(axis)] = hull(uv[std::size_t(axis)]);
+                    // Intersection with the exact ORIGINAL pole hull is a
+                    // second independent enclosure, not a clamp to the domain.
+                    auto &value = image[std::size_t(axis)];
+                    value.lo = std::max(value.lo, uvHull[std::size_t(axis)].lo);
+                    value.hi = std::min(value.hi, uvHull[std::size_t(axis)].hi);
+                    inDomain = inDomain && finite(value) && value.lo >= domains[axis].lo && value.hi <= domains[axis].hi;
+                }
+                bool passed = inDomain; double local = 0;
+                if (inDomain) {
+                    const auto us = cells(carrier.u, nu, image[0], carrier.pu), vs = cells(carrier.v, nv, image[1], carrier.pv);
+                    passed = !us.empty() && !vs.empty() && us.size() <= maxCellsPerNode / vs.size();
+                    if (passed) {
+                        for (int ku : us) {
+                            for (int kv : vs) {
+                                work.visit();
+                                const double bound = residual(carrier, ku, kv, uv, actual);
+                                local = std::max(local, bound);
+                                if (!std::isfinite(bound) || bound > budget) { passed = false; break; }
+                            }
+                            if (!passed) break;
+                        }
+                    }
+                }
+                if (passed) { upper = std::max(upper, local); continue; }
+                const double mid = node.range.lo + 0.5 * (node.range.hi - node.range.lo);
+                if (node.depth >= maxDepth || !(node.range.lo < mid && mid < node.range.hi)) return failed;
+                stack.push_back({{mid, node.range.hi}, node.depth + 1});
+                stack.push_back({{node.range.lo, mid}, node.depth + 1});
+            }
+        }
+    } catch (const ProofFailed &) { return failed; }
+    return {SurfaceCurveBoundStatus::Certified, upper};
+}
+}

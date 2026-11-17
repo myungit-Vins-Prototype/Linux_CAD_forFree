@@ -1,0 +1,337 @@
+[
+  {
+    "file": "/tmp/k10-next-review/core/ledger.o",
+    "bytes": 910848,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/core/probe-bounded-candidates",
+    "bytes": 4141936,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/core/probe-old-polynomial",
+    "bytes": 4321176,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/core/probe-rational",
+    "bytes": 4141496,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/core/provider.o",
+    "bytes": 912952,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/audit/export-actual-native-carrier",
+    "bytes": 57992064,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/audit/libforgekernel-final.a",
+    "bytes": 181399774,
+    "magic": "213c617263683e0a"
+  },
+  {
+    "file": "/tmp/k10-next-review/audit/export-actual.o",
+    "bytes": 301896,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/audit/probe-scale-rotation",
+    "bytes": 60141776,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/export-rational-witness",
+    "bytes": 5676536,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/candidate-tests",
+    "bytes": 63676184,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/ledger-tests.o",
+    "bytes": 2808952,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/final-diagnostic-tests",
+    "bytes": 59894984,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/final-trace-export.o",
+    "bytes": 524736,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/ledger-final-diagnostic.o",
+    "bytes": 912784,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/rational-tests.o",
+    "bytes": 1686768,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/diagnostic-tests",
+    "bytes": 59664480,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/trace-export.o",
+    "bytes": 522608,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/ledger-diagnostic.o",
+    "bytes": 524864,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/existing33.o",
+    "bytes": 2837536,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/provider-tests.o",
+    "bytes": 2205480,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/libforgekernel-baseline.a",
+    "bytes": 180980982,
+    "magic": "213c617263683e0a"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/san/leak-calibration",
+    "bytes": 87144,
+    "magic": "7f454c4602010100"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/san/candidate-tests",
+    "bytes": 73966536,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/san/existing33.o",
+    "bytes": 6749552,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/san/main.o",
+    "bytes": 219072,
+    "magic": "7f454c4602010100"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/san/ledger-tests.o",
+    "bytes": 5816768,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/san/rational-tests.o",
+    "bytes": 2822712,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/san/provider-tests.o",
+    "bytes": 3321104,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/san/provider.o",
+    "bytes": 3018944,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-next-review/tests/san/ledger.o",
+    "bytes": 1985664,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/audit/public-pose-probe",
+    "bytes": 57669752,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/audit/libforgekernel-final.a",
+    "bytes": 181403942,
+    "magic": "213c617263683e0a"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/tests/candidate-validation-tests",
+    "bytes": 56508016,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/tests/curve-validation.o",
+    "bytes": 1782864,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/tests/offset-validation.o",
+    "bytes": 1482272,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/tests/candidate-tests",
+    "bytes": 58980240,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/tests/baseline-tests",
+    "bytes": 58251480,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/tests/test_shell_pose.o",
+    "bytes": 942520,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/tests/candidate-probe",
+    "bytes": 58830768,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/tests/baseline-probe",
+    "bytes": 58097912,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/tests/libforgekernel-baseline.a",
+    "bytes": 181399774,
+    "magic": "213c617263683e0a"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/core/probe-profile-after",
+    "bytes": 61439704,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/core/fk_offset.profile-after.o",
+    "bytes": 9757368,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/core/probe-profile-before",
+    "bytes": 61438824,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/core/fk_offset.profile-before.o",
+    "bytes": 9758216,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/core/probe-candidate",
+    "bytes": 61435344,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/core/fk_offset.candidate.o",
+    "bytes": 9750856,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/core/probe-diagnostic",
+    "bytes": 61431200,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/core/fk_offset.diagnostic.o",
+    "bytes": 9754544,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/core/probe",
+    "bytes": 60394952,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/core/libforgekernel-frozen.a",
+    "bytes": 181399774,
+    "magic": "213c617263683e0a"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/tests/san/leak-calibration",
+    "bytes": 87160,
+    "magic": "7f454c4602010100"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/tests/san/candidate-tests",
+    "bytes": 79418600,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/tests/san/offset.o",
+    "bytes": 26893784,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/tests/san/main.o",
+    "bytes": 219072,
+    "magic": "7f454c4602010100"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/tests/san/offset-validation.o",
+    "bytes": 3239592,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/tests/san/curve-validation.o",
+    "bytes": 3163752,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/k10-offset-pose-review/tests/san/pose-tests.o",
+    "bytes": 2215944,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/boolean-order-review/audit/inspect_reverse_gap",
+    "bytes": 55114144,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/boolean-order-review/audit/inspect_metadata",
+    "bytes": 55110144,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/boolean-order-review/tests/raw_union",
+    "bytes": 55492688,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/boolean-order-review/tests/extract",
+    "bytes": 23203088,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/boolean-order-review/tests/cad_document_io_snapshot.o",
+    "bytes": 565536,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/boolean-order-review/tests/extract.o",
+    "bytes": 63728,
+    "magic": "7f454c4602010103"
+  },
+  {
+    "file": "/tmp/boolean-order-review/tests/libforgekernel-baseline.a",
+    "bytes": 181403942,
+    "magic": "213c617263683e0a"
+  },
+  {
+    "file": "/tmp/boolean-order-review/core/raw-sequential",
+    "bytes": 55127488,
+    "magic": "7f454c4602010103"
+  }
+]

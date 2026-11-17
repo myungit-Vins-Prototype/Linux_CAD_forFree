@@ -1,0 +1,11 @@
+from pathlib import Path
+import subprocess,time,json
+repo=Path('/home/myungit/Linux_CAD_forFree');stage=Path('/tmp/k10-mapping-nonplane-review/tests');cand=Path('/tmp/k10-mapping-nonplane-review/root/candidate/kernel');objs=[stage/'release'/n for n in ['fk_surface_curve_bounds.o','fk_sheet_join_validation.o','fk_surface_mapping.o']];results=[]
+for name,source in [('candidate-public',stage/'baseline_probe.cpp'),('candidate-rational',Path('/tmp/k10-mapping-nonplane-review/audit/probe_public_rational.cpp.txt'))]:
+ command=['/usr/bin/c++','-std=c++17','-O2','-g','-fno-fast-math','-ffp-contract=off','-I'+str(cand),'-I'+str(repo/'kernel'),'-x','c++',str(source),'-x','none',*[str(x)for x in objs],str(stage/'libforgekernel-baseline.a'),'-lpthread','-o',str(stage/name)]
+ with (stage/(name+'-build.log')).open('w')as log:r=subprocess.run(command,stdout=log,stderr=subprocess.STDOUT)
+ assert r.returncode==0
+ command=[str(stage/name),str(stage/(name+('.jsonl'if name=='candidate-public'else'.json')))];start=time.monotonic()
+ with(stage/(name+'.log')).open('w')as log:r=subprocess.run(command,stdout=log,stderr=subprocess.STDOUT)
+ results.append({'name':name,'exit':r.returncode,'seconds':time.monotonic()-start,'command':command});assert r.returncode==0
+(stage/'candidate-export-runs.json').write_text(json.dumps(results,indent=2));print(results)

@@ -1,0 +1,6 @@
+{
+  "initial_check": "Expected implementation .cpp target for template arcLength; assertion was too specific",
+  "observed": "Resolved call targets declaration in fk_curve_algo.h, owner arcParameter at lines63 and79; implementation .cpp read separately",
+  "source_or_generator_change": false,
+  "repair": "Validate actual resolved header target and inspect both header and implementation connections"
+}

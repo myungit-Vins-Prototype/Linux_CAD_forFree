@@ -1,0 +1,8 @@
+{
+  "command": [
+    "/tmp/k10-quadrant-review/root/baseline-tests",
+    "SafeControls"
+  ],
+  "exit": 0,
+  "seconds": 0.0035027660051127896
+}

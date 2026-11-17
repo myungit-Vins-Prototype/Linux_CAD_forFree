@@ -1,0 +1,74 @@
+{
+  "mixedMapGuard": {
+    "file": "kernel/fk_surface_mapping.cpp",
+    "lines": [
+      125,
+      146,
+      147
+    ],
+    "assessment": "No public failure demonstrated from the mixed subtraction alone. Correct when carrierMap(p)==map(p) at admitted source points.",
+    "productionReachability": [
+      {
+        "caller": "SurfaceQuiltMap::bend",
+        "file": "kernel/fk_quilt_mapping.cpp",
+        "lines": [
+          241,
+          268,
+          730
+        ],
+        "reason": "carrierOnly changes the trim check only; UV computation and resulting point/normal are the same for admitted points, with shared longitudinal parameter cache."
+      },
+      {
+        "caller": "wrapBodyOnFaces/withFaceMapping",
+        "file": "kernel/fk_surface_mapping.cpp",
+        "lines": [
+          505,
+          548,
+          580,
+          593
+        ],
+        "reason": "carrier extension is selected only if no interior hit exists. If ordinary map(p) succeeds on an interior hit, extension does not replace that selected contact. Floating iteration/seed roundoff is not proved identical, but no concrete failure attributed."
+      }
+    ],
+    "caution": "Two callbacks that differ everywhere give an algebraic counterexample but violate intended extension compatibility; not counted as a public CAD bug."
+  },
+  "finiteGlobalWitness": {
+    "status": "proposed inert reproduction; not compiled or executed by this observer",
+    "api": "detail::mapBodyByFunction",
+    "source": "Unit XY planar quadrilateral with explicit Line3 edges and Line2 pcurves",
+    "map": "F(x,y,z)=(x,y,z+2^-10 b(x)b(y)); b(s)=(1-r^2)^4 if |r|<1 else0; r=1024(s-1/16)",
+    "regularity": "C3 globally; DF triangular with diagonal(1,1,1), determinant1 everywhere. Input edges fixed pointwise.",
+    "missedByCurrentProbes": "Support square [(1/16)-(1/1024),(1/16)+(1/1024)]^2 excludes guard samples0,.5,1 and their steps h~1.4e-5, initial corner finite difference stencils0..004 and.996..1, and fit probes.125,.25,.5,.75,.875. Thus every inspected fit datum is planar while exact centerZ=2^-10.",
+    "nominalBudget": ".2*min(1e-6,linearResolution()) (carrier fit); no tolerance increase proposed",
+    "scope": "Internal real-caller callback witness, not a newly reproduced user CAD failure. Documents a concrete unproved global map budget despite valid final-fin certificates; does not claim a fix or global certificate."
+  },
+  "invertPointPostcondition": {
+    "file": "kernel/fk_surface_algo.cpp",
+    "baselineSha256": "216592a617cbd8f49b5c61d0f08c19bfa80d605af1e3710a2c819f9a8e6eec0e",
+    "contract": "fk_surface_algo.h31\u201338: true yields UV on surface within tolerance, near input estimate by periodic unwrapping.",
+    "finding": "Newton/projection residual checked before final unwrapNear; unwrapping adds rounded IEEE multiples of approximate period, changing the evaluated point. Returning true unconditionally after unwrap fails the delivered-UV postcondition.",
+    "rootReportedWitness": {
+      "surface": "CylindricalSurface(Frame3(),10)",
+      "point": "s.point(.25,2)",
+      "initialUV": [
+        100000000.0,
+        2
+      ],
+      "tolerance": 1e-08,
+      "scale": 10,
+      "resultUVU": "99999998.307304859",
+      "residual": "6.33460856e-8",
+      "attribution": "Executed by parent/root, not this observer; numerical values are root-reported."
+    },
+    "proposal": "After every UV mutation and final unwrap: if UV nonfinite return false before surface evaluation; evaluate final distance and return finite(distance)&&distance<=tolerance. Keep chosen periodic branch, no canonical reset/slack.",
+    "semanticLimit": "Conservative false may indicate no sufficiently accurate double UV near the requested branch, not proof that p lies off the mathematical surface.",
+    "candidateSha256": "2b385177a309a5a832f43394f4f4456294031cf3b30d7d0695743cedf6b83a37",
+    "candidateAudit": "No static blocker: finite UV short-circuits invalid evaluation; final physical residual must be finite and <= unchanged tolerance, after BSpline branch decisions and periodic unwrap. No change to Newton iterations/projection/branch choice.",
+    "remainingLimits": [
+      "Only invertPoint output at return is checked. Later caller-side UV mutations, manual periodic unwrapping or nearPole regularization are outside this guard.",
+      "Callers must respect false; this review does not establish behavior of code which ignores the return value.",
+      "A point on the mathematical surface can conservatively yield false if a nearby unwrapped double parameter cannot deliver the requested physical accuracy. No global impossibility claim.",
+      "This is a final evaluated residual check, not an interval certificate of projection global optimality or Newton convergence."
+    ]
+  }
+}

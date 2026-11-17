@@ -1,0 +1,241 @@
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve_algo.cpp.o
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_profile.cpp.o
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_mass.cpp.o
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft.cpp.o
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_profiles.cpp.o
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_sections.cpp.o
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_exchange.cpp.o
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_step.cpp.o
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_iges.cpp.o
+[  4%] Linking CXX static library libforgekernel.a
+[ 43%] Built target forgekernel
+[ 43%] Built target forgecad_compute_autogen_timestamp_deps
+[ 43%] Automatic MOC and UIC for target forgecad_compute
+[ 43%] Built target forgecad_compute_autogen
+[ 43%] Built target forgecad_compute
+[ 43%] Impronta dei sorgenti della geometria
+[ 43%] Built target forgecad_autogen_timestamp_deps
+[ 43%] Automatic MOC and UIC for target forgecad
+[ 43%] Built target forgecad_autogen
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_circular_pattern_fit.cpp.o
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_constraints.cpp.o
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_cuda_tessellation.cpp.o
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_curve_extract.cpp.o
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_curve_solver.cpp.o
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_datum.cpp.o
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_display_cache.cpp.o
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_document_io.cpp.o
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_document_precision.cpp.o
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_document_read.cpp.o
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_document_recovery.cpp.o
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_document_tabs.cpp.o
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing.cpp.o
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_browser.cpp.o
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_derived.cpp.o
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_dimension.cpp.o
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_editor.cpp.o
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp: In member function ‘bool ForgeCad::DrawingSheetEditor::Impl::numberingPointer(QPointF, bool)’:
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:448:9: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+  448 |         if(!numberingPanel)return false;if(!click)return true;
+      |         ^~
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:448:41: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+  448 |         if(!numberingPanel)return false;if(!click)return true;
+      |                                         ^~
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp: In member function ‘void ForgeCad::DrawingSheetEditor::Impl::clearOverlay(bool)’:
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:1379:9: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+ 1379 |         for(auto *item:overlay)delete item;overlay.clear();
+      |         ^~~
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:1379:44: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+ 1379 |         for(auto *item:overlay)delete item;overlay.clear();
+      |                                            ^~~~~~~
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp: In member function ‘void ForgeCad::DrawingSheetEditor::Impl::numberingDialog()’:
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:2703:9: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+ 2703 |         if(readOnly||computing)return;if(numberingPanel){numberingPanel->raise();return;}
+      |         ^~
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:2703:39: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+ 2703 |         if(readOnly||computing)return;if(numberingPanel){numberingPanel->raise();return;}
+      |                                       ^~
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp: In member function ‘QString ForgeCad::DrawingSheetEditor::clearCenterMarks(const QUuid&)’:
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:3353:5: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+ 3353 |     if(impl_->computing||impl_->readOnly)return QStringLiteral("Tavola occupata o in sola lettura.");if(!impl_->viewFor(id))return QStringLiteral("Seleziona una vista.");
+      |     ^~
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:3353:102: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+ 3353 |     if(impl_->computing||impl_->readOnly)return QStringLiteral("Tavola occupata o in sola lettura.");if(!impl_->viewFor(id))return QStringLiteral("Seleziona una vista.");
+      |                                                                                                      ^~
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_file.cpp.o
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_frame.cpp.o
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_local_section_depth.cpp.o
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_local_section_display.cpp.o
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_local_section_tool.cpp.o
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_page.cpp.o
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_preparation.cpp.o
+/home/myungit/Linux_CAD_forFree/cad_drawing_preparation.cpp: In function ‘ForgeCad::PreparedDrawingView ForgeCad::prepareDrawingView(const DrawingModelSnapshot&, const DrawingView&, const DrawingViewLayout&, DrawingSilhouetteCache, const std::function<void(int)>&, const std::vector<DrawingCurve>*, const DrawingSilhouetteResult*)’:
+/home/myungit/Linux_CAD_forFree/cad_drawing_preparation.cpp:46:9: warning: this ‘else’ clause does not guard... [-Wmisleading-indentation]
+   46 |         else if(layout.interruption)result.display->warnings.append(QStringLiteral("Interruzione non verificabile: modello non disponibile."));phase(4);validateDrawingViewPaths(definition,layout,result.curves,result.contours);phase(5);return result;
+      |         ^~~~
+/home/myungit/Linux_CAD_forFree/cad_drawing_preparation.cpp:46:144: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘else’
+   46 |         else if(layout.interruption)result.display->warnings.append(QStringLiteral("Interruzione non verificabile: modello non disponibile."));phase(4);validateDrawingViewPaths(definition,layout,result.curves,result.contours);phase(5);return result;
+      |                                                                                                                                                ^~~~~
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_release.cpp.o
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_release_ui.cpp.o
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_restore.cpp.o
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_revision_ui.cpp.o
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_revisions.cpp.o
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_sheet.cpp.o
+/home/myungit/Linux_CAD_forFree/cad_drawing_sheet.cpp: In function ‘QString ForgeCad::decodeDrawingSheet(const QByteArray&, DrawingSheet&)’:
+/home/myungit/Linux_CAD_forFree/cad_drawing_sheet.cpp:256:142: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::firstDimension’ [-Wmissing-field-initializers]
+  256 |             prepared.dimensionNumbering={n["enabled"].toBool(),n["firstNumber"].toInt(),n["diameter"].toDouble(),n["rowTolerance"].toDouble()};
+      |                                                                                                                                              ^
+/home/myungit/Linux_CAD_forFree/cad_drawing_sheet.cpp:256:142: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::excludePatterns’ [-Wmissing-field-initializers]
+/home/myungit/Linux_CAD_forFree/cad_drawing_sheet.cpp:256:142: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::assignments’ [-Wmissing-field-initializers]
+/home/myungit/Linux_CAD_forFree/cad_drawing_sheet.cpp:287:169: warning: missing initializer for member ‘ForgeCad::DrawingTitleBlock::items’ [-Wmissing-field-initializers]
+  287 |             prepared.titleBlock={block["visible"].toBool(),block["code"].toString(),block["organization"].toString(),block["author"].toString(),block["date"].toString()};}
+      |                                                                                                                                                                         ^
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_sheets_ui.cpp.o
+[ 47%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_silhouette.cpp.o
+[ 52%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_template.cpp.o
+[ 52%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_template_editor.cpp.o
+[ 52%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_visibility.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_window.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_element_names.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_ellipse.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_export.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_expression.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_extrude.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_feature_build.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_feature_dependencies.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_feature_faces.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_features.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_fill_pattern.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_fillet_paths.cpp.o
+[ 60%] Building CXX object CMakeFiles/forgecad.dir/cad_forge.cpp.o
+/home/myungit/Linux_CAD_forFree/cad_forge.cpp: In function ‘std::vector<ForgeCad::Kernel::LoftContact> ForgeCad::loftContacts(QVector<std::pair<std::shared_ptr<const Kernel::Body>, EdgePoint> >&)’:
+/home/myungit/Linux_CAD_forFree/cad_forge.cpp:1530:27: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+ 1530 |         contacts.push_back({body, face});
+      |         ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~
+[ 60%] Building CXX object CMakeFiles/forgecad.dir/cad_history.cpp.o
+[ 60%] Building CXX object CMakeFiles/forgecad.dir/cad_history_chain.cpp.o
+[ 60%] Building CXX object CMakeFiles/forgecad.dir/cad_history_graph.cpp.o
+[ 65%] Building CXX object CMakeFiles/forgecad.dir/cad_icons.cpp.o
+[ 65%] Building CXX object CMakeFiles/forgecad.dir/cad_import.cpp.o
+[ 65%] Building CXX object CMakeFiles/forgecad.dir/cad_kernel.cpp.o
+[ 69%] Building CXX object CMakeFiles/forgecad.dir/cad_loft_correspondence.cpp.o
+[ 69%] Building CXX object CMakeFiles/forgecad.dir/cad_loft_correspondence_editor.cpp.o
+[ 69%] Building CXX object CMakeFiles/forgecad.dir/cad_loft_diagnostics.cpp.o
+[ 69%] Building CXX object CMakeFiles/forgecad.dir/cad_mass.cpp.o
+[ 69%] Building CXX object CMakeFiles/forgecad.dir/cad_measure.cpp.o
+[ 69%] Building CXX object CMakeFiles/forgecad.dir/cad_memory.cpp.o
+[ 69%] Building CXX object CMakeFiles/forgecad.dir/cad_model_history.cpp.o
+[ 69%] Building CXX object CMakeFiles/forgecad.dir/cad_native_revisions.cpp.o
+[ 73%] Building CXX object CMakeFiles/forgecad.dir/cad_overlay_renderer.cpp.o
+[ 73%] Building CXX object CMakeFiles/forgecad.dir/cad_pattern.cpp.o
+[ 73%] Building CXX object CMakeFiles/forgecad.dir/cad_pattern_variation.cpp.o
+[ 73%] Building CXX object CMakeFiles/forgecad.dir/cad_pattern_variation_editor.cpp.o
+[ 73%] Building CXX object CMakeFiles/forgecad.dir/cad_projected_curve.cpp.o
+[ 73%] Building CXX object CMakeFiles/forgecad.dir/cad_revision_client.cpp.o
+[ 73%] Building CXX object CMakeFiles/forgecad.dir/cad_revision_recovery_ui.cpp.o
+[ 73%] Building CXX object CMakeFiles/forgecad.dir/cad_revision_store.cpp.o
+[ 73%] Building CXX object CMakeFiles/forgecad.dir/cad_shape_analysis.cpp.o
+[ 73%] Building CXX object CMakeFiles/forgecad.dir/cad_sketch_edit.cpp.o
+[ 73%] Building CXX object CMakeFiles/forgecad.dir/cad_sketch_offset.cpp.o
+[ 73%] Building CXX object CMakeFiles/forgecad.dir/cad_sketch_reference_usage.cpp.o
+[ 73%] Building CXX object CMakeFiles/forgecad.dir/cad_sketch_refs.cpp.o
+[ 73%] Building CXX object CMakeFiles/forgecad.dir/cad_snap.cpp.o
+[ 73%] Building CXX object CMakeFiles/forgecad.dir/cad_snapshot_chunks.cpp.o
+[ 73%] Building CXX object CMakeFiles/forgecad.dir/cad_solid_trim.cpp.o
+[ 78%] Building CXX object CMakeFiles/forgecad.dir/cad_spatial_sketch.cpp.o
+[ 78%] Building CXX object CMakeFiles/forgecad.dir/cad_storyboard_selection.cpp.o
+[ 78%] Building CXX object CMakeFiles/forgecad.dir/cad_surface_mapping.cpp.o
+[ 78%] Building CXX object CMakeFiles/forgecad.dir/cad_surface_poles_interaction.cpp.o
+[ 78%] Building CXX object CMakeFiles/forgecad.dir/cad_surface_poles_model.cpp.o
+[ 78%] Building CXX object CMakeFiles/forgecad.dir/cad_surface_poles_session.cpp.o
+[ 78%] Building CXX object CMakeFiles/forgecad.dir/cad_surface_poles_visibility.cpp.o
+[ 78%] Building CXX object CMakeFiles/forgecad.dir/cad_surface_tools.cpp.o
+[ 78%] Building CXX object CMakeFiles/forgecad.dir/cad_topology_ref.cpp.o
+[ 78%] Building CXX object CMakeFiles/forgecad.dir/cad_workspace.cpp.o
+[ 82%] Building CUDA object CMakeFiles/forgecad.dir/cuda_support.cu.o
+[ 82%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026.cpp.o
+[ 82%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_application_theme.cpp.o
+[ 86%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_camera.cpp.o
+[ 86%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_analysis.cpp.o
+[ 86%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_common.cpp.o
+[ 86%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_fillet.cpp.o
+[ 86%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_mapping.cpp.o
+[ 86%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_projection.cpp.o
+[ 86%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_sketch.cpp.o
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp: In function ‘bool spatialSketchDialog(QMainWindow*, CadViewport*, const QString&, int, const ExtrusionObject&, const std::function<QString(const ExtrusionObject&)>&)’:
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp:896:5: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+  896 |     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("spatialSketchDialog"));dialog.setWindowTitle(title);
+      |     ^~
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp:896:83: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+  896 |     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("spatialSketchDialog"));dialog.setWindowTitle(title);
+      |                                                                                   ^~~~~~
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp: In function ‘bool extractedCurveDialog(QMainWindow*, CadViewport*, const QString&, int, const ExtrusionObject&, const std::function<QString(const ExtrusionObject&)>&)’:
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp:1023:5: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+ 1023 |     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("extractedCurveDialog"));dialog.setWindowTitle(title);dialog.setModal(false);
+      |     ^~
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp:1023:83: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+ 1023 |     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("extractedCurveDialog"));dialog.setWindowTitle(title);dialog.setModal(false);
+      |                                                                                   ^~~~~~
+[ 86%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_solids.cpp.o
+[ 86%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_surface_tools.cpp.o
+[ 91%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_surfaces.cpp.o
+[ 91%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_trim.cpp.o
+[ 91%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_feature_preview.cpp.o
+[ 91%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_fillet_handles.cpp.o
+[ 91%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_glass_compositor.cpp.o
+[ 91%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_gpu_picker.cpp.o
+[ 91%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_gui.cpp.o
+[ 91%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_gui_common.cpp.o
+[ 91%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_menu.cpp.o
+[ 91%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_operation_illustration.cpp.o
+[ 91%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_ribbon_editor.cpp.o
+[ 91%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_ribbon_preview.cpp.o
+[ 91%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_scene_renderer.cpp.o
+[ 91%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_sketch_curvature.cpp.o
+[ 91%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_storyboard.cpp.o
+[ 91%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_ui_glass.cpp.o
+[ 95%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport.cpp.o
+[ 95%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_body_box.cpp.o
+[ 95%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_document.cpp.o
+[ 95%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_document_lifetime.cpp.o
+[ 95%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_interaction.cpp.o
+[100%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_loft_diagnostics.cpp.o
+[100%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_parameter_dimensions.cpp.o
+[100%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_pole_visibility.cpp.o
+[100%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_preview.cpp.o
+[100%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_render.cpp.o
+[100%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_scene.cpp.o
+[100%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_selection.cpp.o
+[100%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_sketch.cpp.o
+[100%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_sketch_reference.cpp.o
+[100%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_storyboard.cpp.o
+[100%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_zoom.cpp.o
+[100%] Building CXX object CMakeFiles/forgecad.dir/forgecad_autogen/2SEMU33LXP/qrc_forgecad.cpp.o
+[100%] Building CXX object CMakeFiles/forgecad.dir/forgecad_autogen/mocs_compilation.cpp.o
+[100%] Linking CXX executable forgecad
+[100%] Built target forgecad
+[100%] Built target forgekernel
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_quadrature_validation_tests.dir/tests/fk_test_main.cpp.o
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_quadrature_validation_tests.dir/tests/test_quadrature_validation.cpp.o
+[100%] Linking CXX executable forgekernel_quadrature_validation_tests
+[100%] Built target forgekernel_quadrature_validation_tests
+[100%] Built target forgekernel
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_arc_length_validation_tests.dir/tests/test_arc_length_validation.cpp.o
+[100%] Linking CXX executable forgekernel_arc_length_validation_tests
+[100%] Built target forgekernel_arc_length_validation_tests
+[100%] Built target forgekernel
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_bspline_derivative_tests.dir/tests/test_bspline_derivatives.cpp.o
+[100%] Linking CXX executable forgekernel_bspline_derivative_tests
+[100%] Built target forgekernel_bspline_derivative_tests
+[ 90%] Built target forgekernel
+[ 90%] Linking CXX executable forgekernel_sheet_arc_validation_tests
+[100%] Built target forgekernel_sheet_arc_validation_tests
+[ 66%] Built target forgekernel
+[ 66%] Built target forgekernel_occt
+[ 66%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_blend_features.cpp.o
+[ 66%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_boolean.cpp.o
+[ 66%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_curve_algo.cpp.o
+[ 66%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_mass.cpp.o
+[ 66%] Linking CXX executable ../forgekernel_tests
+[100%] Built target forgekernel_tests

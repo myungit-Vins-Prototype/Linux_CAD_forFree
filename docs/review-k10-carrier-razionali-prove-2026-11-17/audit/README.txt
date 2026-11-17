@@ -1,0 +1,15 @@
+K10 native S2/3 razionale: audit indipendente finale17novembre2026
+
+Esito: nessun blocker rilevato sul provider01e69c5... e ledger802e63... congelati. API pubblica extendSheet fresca1/1 PASS con6casi: ImplicitPolynomial, Rational, SmallScale, LargeScale, FaceSense, CanonicalReversal;3fin percaso, incluseextra. Tutte18postunifyCertified/runtimeupperentrocap e finTol=edgeTol=capPrefit, sourceimmutato. Rational senza history utente produce B-rep serializzato byte-identico. Driver sceglie tramite cap costruttivo e genealogia dichiarata, mai prossimita. SourceedgeTol0asserito, facce devono essere dichiarate e discendenti/generate dalle entita sorgenti previste.
+
+Verificatore Fraction indipendente18/18 PASS sugli stessi dati IEEE originali: Rationalmax2.7377891700712104e-11 mm entro1e-7; implicitmax2.0590078385308308e-10 entro1e-7; largemax1.4746546961717545e-7 entro2.3314373249140545e-6 gia fissato prima fit. Diciotto campate comuni e18ramicarrier, nessuna subdivision necessaria. Dati E/Qclamped controllati esplicitamente prima del riuso del vecchio estrattore Fraction; Sdegree2/3 e pesi positivi, budget/metadataesatti. Confronto contro trace separate testerpostunify:18/18 coefficienti/range/cap IEEE esattamente uguali; non e confronto byte di interi JSON.
+
+Due prove distinte: (1) reali18fin dopo build/unify; (2) certificato sintetico Fraction di duecelle chiuse attraversate daQ, con denominatore cellaesteso coeffmin-3 ma denomattivo>=1 e Hcostante2^-30. Solo il secondo esercita crossing/negativita fuori dalla porzione attiva; non viene attribuito ai18pubblici che hanno un ramo per fin. I test aggiuntivi67 e sanitizer appartengono al pacchetto tester separato, non sono esecuzioni dell'auditor.
+
+La prima sola estensione famiglia provocava6FAIL pubblici veri per pcurve fuori dominio. I dump prehelper e la diagnosi endpointFraction12record sono distinti da output riusciti: non si indebolisce dominio/cap, si costruisce una nuovaQbounded PRIMA dell unica prova continua, assegnata soloCertified. Provider mai clampa. Leggere rational-review.txt per dimostrazione denominatore attivo, outward e risorse e per invarianti del helper.
+
+Limiti: E/Qrazionali variabili, wrapper, istanze e altre famiglie ancoraUnsupported legacy. Nessun certificato su solverNewton, trim globale, iniettivitaUV, topologia o preservazione globale dei carrier. Ledger rifiuta reparametrizzazioni o ricostruzioni non mappate. Il vecchio estrattore Fraction non e usato qui per curve E/Qunclamped. I fallimenti riconosciuti restano terminali.
+
+Libreria congelata afaf62c432e948555b799138f4dc2178ba9e98392b1d4bae3712f5610efebc04. Sorgenti inerti e ricette complete incluse. Nessun ELF/.o/.a/.body/.prt/CAD o file utente nel pacchetto; nessuna repoedit/commit/push dell'auditor. Sigilli precedenti immutati.
+
+Separatamente: superfici-proof conserva il limite storico ancora aperto (shell scalato2.5+ruotato.42), repro attuale fallito e prototipo locale non risolutivo; nessun fix rivendicato da questo delta.

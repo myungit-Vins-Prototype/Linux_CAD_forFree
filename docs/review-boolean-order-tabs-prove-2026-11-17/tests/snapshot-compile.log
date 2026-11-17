@@ -1,0 +1,9 @@
+/tmp/boolean-order-review/tests/cad_document_io_snapshot.cpp: In function ‘void ForgeCad::{anonymous}::applyBodyCache(const QByteArray&, const QByteArray&, DocumentState&, bool, const ForgeCad::DocumentReadLimits&, quint8)’:
+/tmp/boolean-order-review/tests/cad_document_io_snapshot.cpp:1325:136: warning: ignoring return value of ‘virtual bool QFile::open(QIODeviceBase::OpenMode)’, declared with attribute ‘nodiscard’ [-Wunused-result]
+ 1325 |         if (i == 13 || i == 14) { QFile raw(QStringLiteral("/tmp/boolean-order-review/tests/snapshot-record-%1.body").arg(i)); raw.open(QIODevice::WriteOnly); raw.write(record.data); }
+      |                                                                                                                                ~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/qt6/QtCore/QFile:1,
+                 from /tmp/boolean-order-review/tests/cad_document_io_snapshot.cpp:21:
+/usr/include/qt6/QtCore/qfile.h:271:32: note: declared here
+  271 |     QFILE_MAYBE_NODISCARD bool open(OpenMode flags) override;
+      |                                ^~~~

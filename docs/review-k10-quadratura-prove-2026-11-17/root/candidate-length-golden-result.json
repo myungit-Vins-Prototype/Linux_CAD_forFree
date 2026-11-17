@@ -1,0 +1,8 @@
+{
+  "command": [
+    "/tmp/k10-quadrature-review/root/candidate-length-golden"
+  ],
+  "exit": 0,
+  "seconds": 0.002525641000829637,
+  "watchdog_seconds": 10
+}

@@ -1,0 +1,62 @@
+from pathlib import Path
+import json,re,hashlib,subprocess
+root=Path('/home/myungit/Linux_CAD_forFree');base=Path('/tmp/legacy-api-review');out=base/'cross-audit'
+def function(text,name):
+ m=re.search(r'^.*\b'+re.escape(name)+r'\(',text,re.M)
+ assert m,name
+ start=m.start();i=text.index('{',m.start());depth=0;state='code'
+ while i<len(text):
+  c=text[i];n=text[i:i+2]
+  if state=='line':
+   if c=='\n':state='code'
+  elif state=='block':
+   if n=='*/':state='code';i+=1
+  elif state in ['"',"'"]:
+   if c=='\\':i+=1
+   elif c==state:state='code'
+  else:
+   if n=='//':state='line';i+=1
+   elif n=='/*':state='block';i+=1
+   elif c in ['"',"'"]:state=c
+   elif c=='{':depth+=1
+   elif c=='}':
+    depth-=1
+    if depth==0:return text[start:i+1]
+  i+=1
+ raise AssertionError(name)
+checks=[]
+def record(name,passed,**details):
+ assert passed,name
+ checks.append({'check':name,'pass':True,**details})
+def same(file,stage,names):
+ a=(base/stage/'before'/file).read_text();b=(base/stage/'after'/file).read_text()
+ for name in names:
+  x=function(a,name);y=function(b,name);record(name+' body preserved',x==y,file=file,sha256=hashlib.sha256(x.encode()).hexdigest())
+ return a,b
+a,b=same('forgeCad2026_viewport_selection.cpp','extend',['CadViewport::beginExtendPick','CadViewport::startEdgePick','CadViewport::edgePicked','CadViewport::cancelEdgePick','CadViewport::pickReferences','CadViewport::beginBlendEdit'])
+old=function(a,'CadViewport::finishEdgePick');new=function(b,'CadViewport::finishEdgePick');expected=old.replace('''    if (extend) {
+        if (extendPickFinished_) extendPickFinished_(body, points);
+    } else if (edited >= 0) {''','''    if (extend) return;
+    if (edited >= 0) {''');record('finishEdgePick exact targeted replacement',new==expected)
+record('extend return precedes both blend/edit completion callbacks',new.index('if (extend) return;')<new.index('edgeEditFinished_')<new.index('edgePickFinished_'))
+record('finishEdgePick common cleanup remains before extend return',new.index('cancelEdgePick(true);')<new.index('if (points.isEmpty())')<new.index('if (extend) return;'))
+h=(base/'extend/after/forgeCad2026_viewport.h').read_text();record('extend state flags retained',all(x in h for x in ['edgePickExtend_','edgePickLinear_','edgePickChanged_','edgePickPanelAccept_','edgePickPanelCancel_','setEdgePickPanelKeyCallbacks']))
+record('orphan extend API and callback field absent',not any(x in h+b for x in ['setExtendPickCallback','setEdgePickLinear','resumeExtendPick','extendPickFinished_']))
+a,b=same('cad_drawing_editor.cpp','drawing',['DrawingSheetEditor::updateModel','DrawingSheetEditor::installPreparedModel','DrawingSheetEditor::isReadOnly'])
+old=function(a,'DrawingSheetEditor::setReadOnly');new=function(b,'DrawingSheetEditor::setReadOnly');expected=old.replace('impl_->refreshHiddenAction();impl_->refreshHistoryActions();impl_->updateAction->setEnabled(!impl_->readOnly&&bool(impl_->provider));','impl_->refreshHiddenAction();impl_->refreshHistoryActions();');record('setReadOnly exact removal only of dead provider action enable',new==expected)
+record('dead editor action/provider/setter absent',not any(x in b for x in ['drawingUpdateModelAction','setModelProvider','impl_->provider','impl_->updateAction','QAction *updateAction=nullptr','std::function<DrawingEditorModel()> provider;']))
+record('removed drawing action absent from icon table and readOnly findChild loop','drawingUpdateModelAction' not in b)
+a,b=same('cad_drawing_window.cpp','drawing',['DrawingWindow::updateFromSource','DrawingWindow::refreshTitle','DrawingWindow::refreshEditAccess','DrawingWindow::requireEditAccess','DrawingWindow::refreshModelUpdateNotice'])
+old=function(a,'DrawingWindow::installEditor');new=function(b,'DrawingWindow::installEditor');expected=old.replace('''    // Il comando del contenitore verifica percorso, identita' e impronta.
+    next->findChild<QAction *>("drawingUpdateModelAction")->setVisible(false);
+''','');record('installEditor exact removal only of removed action dereference',new==expected)
+record('saved-source action retained and connected',all(x in b for x in ['drawingReloadSourceAction','connect(updateAction_,&QAction::triggered,this,[this]{report(updateFromSource());});','updateAction_->setEnabled(editor_&&!editAccess_.readOnly&&!busy_);']))
+record('removed drawing action has no container reference','drawingUpdateModelAction' not in b)
+files=[]
+for stage in ['extend','drawing']:
+ for f in sorted((base/stage/'after').iterdir()):
+  old=base/stage/'before'/f.name;baseline=subprocess.check_output(['git','show','47c7c19c4faf490995e8ff64f10d83d8a6abb077:'+f.name],cwd=root);record('baseline matches HEAD47 '+f.name,old.read_bytes()==baseline)
+  inc=lambda s:[x for x in s.splitlines() if x.startswith('#include')];record('includes unchanged '+f.name,inc(old.read_text())==inc(f.read_text()))
+  files.append({'file':f.name,'baselineSHA256':hashlib.sha256(old.read_bytes()).hexdigest(),'afterSHA256':hashlib.sha256(f.read_bytes()).hexdigest(),'workingTreeMatchesCandidate':(root/f.name).read_bytes()==f.read_bytes()})
+result={'baselineHead':'47c7c19c4faf490995e8ff64f10d83d8a6abb077','checks':checks,'files':files,'status':'PASS','compileAndRuntimePerformed':False,'limits':'Static body/branch/action closure audit only. Root owns build, existing regressions and graph refresh. No external consumers claim; no new mirror tests.'}
+(out/'results.json').write_text(json.dumps(result,indent=2,ensure_ascii=False));print('Static cross-audit PASS',len(checks),'checks;',len(files),'candidate files')

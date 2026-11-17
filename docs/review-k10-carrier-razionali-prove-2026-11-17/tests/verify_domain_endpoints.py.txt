@@ -1,0 +1,26 @@
+# Inert independent exact endpoint diagnostic; run from the proof directory.
+import json
+from fractions import Fraction
+from pathlib import Path
+
+def exact(hex_string):
+    return Fraction.from_float(float.fromhex(hex_string))
+
+names = ['ImplicitPolynomial', 'SmallScale', 'LargeScale', 'Rational', 'FaceSense', 'CanonicalReversal']
+for name in names:
+    rows = [json.loads(line) for line in Path('SheetJoin' + name + '.jsonl').read_text().splitlines()]
+    for row in rows:
+        q, s = row['pcurve'], row['surface']
+        assert q['type'] == 'line'
+        domains = [(exact(s['uKnots'][s['uDegree']]), exact(s['uKnots'][s['uPoleCount']])),
+                   (exact(s['vKnots'][s['vDegree']]), exact(s['vKnots'][s['vPoleCount']]))]
+        outside = []
+        for endpoint in row['range']:
+            t = exact(endpoint)
+            for axis in range(2):
+                value = exact(q['origin'][axis]) + exact(q['direction'][axis]) * t
+                lo, hi = domains[axis]
+                if value < lo or value > hi:
+                    outside.append((axis, str(t), str(lo-value if value < lo else value-hi)))
+        assert bool(outside) == (row['status'] == 'Failed')
+        print(name, row['face'], row['fin'], row['status'], outside)

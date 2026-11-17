@@ -1,0 +1,32 @@
+{
+  "HEAD_origin_main_unchanged": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "index_empty": true,
+  "no_commit_or_push": true,
+  "baseline_files": 6398,
+  "preserved_existing": 6391,
+  "changed_existing": [
+    "CLAUDE.md",
+    "docs/code-review-2026-11-15.md",
+    "kernel/CMakeLists.txt",
+    "kernel/fk_surface_curve_bounds.cpp",
+    "kernel/fk_surface_curve_bounds.h",
+    "kernel/tests/test_surface_curve_bounds.cpp",
+    "tools/generate_architecture.py"
+  ],
+  "previous_proof_packages_preserved": 28,
+  "previous_proof_artifacts": 3804,
+  "CLAUDE_bytes": 16201,
+  "binary_hashes": {
+    "forgecad-release/forgecad": "1ce44fceec73cbda6c911cb6d35d2305eced931dd025f7bf5ec68b860a798720",
+    "forgecad-release/kernel/libforgekernel.a": "57c11033779f33893b07d166c682a0c5e8e3d24c14c98abfee43c7253ca62fa7",
+    "forgecad-release/kernel/forgekernel_surface_curve_bounds_tests": "c9575e003f51edac6d10ba399efb6cb287dda1ea956d4d02f0ee1699737eadbc",
+    "forgecad-release/kernel/forgekernel_mapping_nonplane_validation_tests": "c7620477f462e6f62554d2a0d4ba022a78353d750486221f00c703da579639ec",
+    "forgecad-release/kernel/forgekernel_surface_mapping_tests": "10ccc1fe7413c1997868119f4194b1ead768c2c0d65f60aa484d9dae5b8661f3",
+    "forgecad-release/kernel/forgekernel_sheet_join_validation_tests": "e355a860390175ff6f347e6d84a3b92ddcd9a8ff721639f0bacdae1751e29665",
+    "forgecad-release/kernel/forgekernel_surface_instances_tests": "a9550a9bdc31ccab29b69be0edd4d7a41cf7404e3e8dd739604815d128e752cd",
+    "forgecad-release/kernel/forgekernel_tolerance_tests": "6c9127fdc0f4ace67847c2198f82da8ce5cd8544f9683a6f661c3d823f99a4e1"
+  },
+  "UI_runner_unchanged_not_run": "52c77cc2435c2024aa37cc853ecd035facc0e0c37958c369882c52e9b572440f",
+  "no_UI_tests_no_new_CI_no_general483_run": true,
+  "final_api_and_Fraction_bound_to_root_lib": true
+}

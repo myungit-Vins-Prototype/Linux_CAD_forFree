@@ -1,0 +1,2 @@
+from pathlib import Path
+p=Path('/tmp/k10-quadrature-review/root/architecture.log');s=p.read_text();lines=s.splitlines();print('\n'.join(lines[-3:]));print('Unità segnalate con errori:',sum(' ERRORI' in l for l in lines))

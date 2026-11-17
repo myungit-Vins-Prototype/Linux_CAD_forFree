@@ -1,0 +1,24 @@
+{
+  "argv": [
+    "g++",
+    "-O2",
+    "-std=c++17",
+    "-ffp-contract=off",
+    "-fno-fast-math",
+    "-I",
+    "kernel",
+    "-x",
+    "c++",
+    "/tmp/k10-mapping-nonplane-review/audit/probe_public_rational.cpp.txt",
+    "-x",
+    "none",
+    "/tmp/boolean-order-review/tests/libforgekernel-baseline.a",
+    "-lpthread",
+    "-o",
+    "/tmp/k10-mapping-nonplane-review/audit/probe-public-rational-baseline"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "exit": 0,
+  "elapsed": 1.8047689079976408,
+  "librarySHA256": "ea1825d26334bd83b1169859a425fa1efb451ceab9136ea8c4e388542857960b"
+}

@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+"""Finite exact algebra checks of general extraction against original Cox polynomials.
+No floating production oracle or samples are used. These checks support review
+of the extraction identity; they are not exhaustive proof of all input doubles.
+"""
+from fractions import Fraction as F
+from math import comb,nextafter
+from pathlib import Path
+import json,hashlib
+
+def add(a,b):
+ c=[F(0)]*max(len(a),len(b))
+ for i,x in enumerate(a):c[i]+=x
+ for i,x in enumerate(b):c[i]+=x
+ return c
+
+def mul(a,b):
+ c=[F(0)]*(len(a)+len(b)-1)
+ for i,x in enumerate(a):
+  for j,y in enumerate(b):c[i+j]+=x*y
+ return c
+
+def scale(a,b):return [x*b for x in a]
+
+def original_cox(U,p,P,k,a,b):
+ # Global original Cox recurrence in monomial x, with t=a+(b-a)*x.
+ B=[[F(i==k)] for i in range(len(U)-1)]
+ for d in range(1,p+1):
+  C=[]
+  for i in range(len(U)-d-1):
+   x=[F(0)] if U[i+d]==U[i] else scale(mul([a-U[i],b-a],B[i]),1/(U[i+d]-U[i]))
+   y=[F(0)] if U[i+d+1]==U[i+1] else scale(mul([U[i+d+1]-a,a-b],B[i+1]),1/(U[i+d+1]-U[i+1]))
+   C.append(add(x,y))
+  B=C
+ c=[F(0)]
+ for x,q in zip(B,P):c=add(c,scale(x,q))
+ c += [F(0)]*(p+1-len(c))
+ return [sum((c[j]*F(comb(i,j),comb(p,j)) for j in range(i+1)),F(0)) for i in range(p+1)]
+
+def polar_original(U,p,P,k,a,b):
+ out=[]
+ for pole in range(p+1):
+  D=P[k-p:k+1].copy()
+  for r in range(1,p+1):
+   t=a if r<=p-pole else b
+   for j in range(p,r-1,-1):
+    alpha=(t-U[k-p+j])/(U[k+j-r+1]-U[k-p+j])
+    D[j]=D[j-1]*(1-alpha)+D[j]*alpha
+  out.append(D[-1])
+ return out
+
+cases=[]
+for p in [1,3]:
+ # Both nonclamped natural endpoints and clamped repeated internal knots.
+ vectors=[list(map(F,range(2*p+6))),[F(0)]*(p+1)+[F(1,3)]*p+[F(2,3)]+[F(1)]*(p+1),
+          [F(0)]*(p+1)+[F.from_float(.5),F.from_float(nextafter(.5,1))]+[F(1)]*(p+1)]
+ for vi,U in enumerate(vectors):
+  n=len(U)-p-1
+  for seed in range(7):
+   P=[F(((i+1)*(seed+3)*17)%37-18,seed+1) for i in range(n)]
+   for k in range(p,n):
+    if U[k]>=U[k+1]:continue
+    for x,y in [(F(0),F(1)),(F(1,4),F(3,4)),(F(0),F(1,2))]:
+     a=U[k]+(U[k+1]-U[k])*x;b=U[k]+(U[k+1]-U[k])*y
+     c=original_cox(U,p,P,k,a,b);d=polar_original(U,p,P,k,a,b)
+     assert c==d,(p,vi,seed,k,x,y,c,d)
+     cases.append((p,vi,seed,k,str(x),str(y)))
+result={'pass':True,'exact_coefficient_equalities':len(cases),'comparison':'Original global Cox monomial recurrence converted algebraically to Bernstein versus polar de Boor on original controls','families':['degree1','degree3','unclamped natural endpoints','clamped C0 and simple internal knots','one-ULP internal knot gap','full spans and strict subranges'],'limitation':'Finite algebra identity checks, not exhaustive runtime or a proof by sampling.'}
+print(json.dumps(result,indent=2))
+Path(__file__).with_name('extraction-identity-result.json').write_text(json.dumps(result,indent=2)+'\n')

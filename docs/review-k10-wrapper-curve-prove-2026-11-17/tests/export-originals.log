@@ -1,0 +1,13 @@
+trim-line status=1 upper=2.4613922385709629e-14
+trim-BSpline status=1 upper=3.5382513429457592e-14
+mixed-native status=1 upper=5.8157677722419546e-13
+mixed-instance status=1 upper=7.4223334551817224e-13
+singular-affine status=1 upper=3.7413162026278634e-12
+original-affine-gap status=2 upper=inf
+rounded-affine-surrogate status=1 upper=2.115258955021921e-15
+wrapped-peak-flat status=1 upper=3.5891430888704525e-08
+wrapped-peak status=2 upper=inf
+wrapper-ledger-actual status=1 upper=3.5891430888704525e-08
+exact-trim-Q-valid status=1 upper=2.1537182087495922e-14
+exact-trim-Q-invalid status=2 upper=inf
+exact-trim-E-invalid status=2 upper=inf

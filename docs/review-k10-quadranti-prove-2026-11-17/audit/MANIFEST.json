@@ -1,0 +1,64 @@
+{
+  "package": "independent-quadrant-progress-audit",
+  "candidateSha256": "7f47f426d3d19182cc2261741beb4fc6efb94ac72994946c2009863219b98011",
+  "cppRuntimeByAudit": false,
+  "scalarSingleStepOracleExecuted": true,
+  "payloadInertTextOnly": true,
+  "files": [
+    {
+      "path": "README.txt",
+      "bytes": 2748,
+      "sha256": "d83b8afbd2b14dbc82fb25db8b0d9f7c7b6743c84140394e626a6d6bbc0cefdd"
+    },
+    {
+      "path": "candidate-fk_curve.cpp.txt",
+      "bytes": 6236,
+      "sha256": "7f47f426d3d19182cc2261741beb4fc6efb94ac72994946c2009863219b98011"
+    },
+    {
+      "path": "candidate.patch.txt",
+      "bytes": 1016,
+      "sha256": "e1ba3d72f401d8ae2a69c8958b7a83bdf883bcfc1b40bb5910780924b1e48fd4"
+    },
+    {
+      "path": "graph-consult.json",
+      "bytes": 1384319,
+      "sha256": "40caf4a145e77bddf9552756cb5a48811d156e6d03d20c4d407dbbb496d1d61e"
+    },
+    {
+      "path": "independent-candidate-review.json",
+      "bytes": 1346,
+      "sha256": "469e804275c5250354a024a3c958fe81c3fd87a03b419aedc083fdf49d79d4ba"
+    },
+    {
+      "path": "proposed-native-probe.cpp.txt",
+      "bytes": 764,
+      "sha256": "cc8b7f480b7958445745fdb39e5577cc6c0a7bd56b6c2d1b03fc3ee770458032"
+    },
+    {
+      "path": "root-probe.cpp.txt",
+      "bytes": 1268,
+      "sha256": "db335148d052112e158829f9cf772bf2ea6be3bd0cb1d4aed4a3dfaf48201474"
+    },
+    {
+      "path": "root-runtime-attribution.json",
+      "bytes": 4009,
+      "sha256": "990ac95792706077c45bc2ef7de2b4a84a95e74c2a92cbfcf78d4b41f4b67b40"
+    },
+    {
+      "path": "single-step-oracle.json",
+      "bytes": 1332,
+      "sha256": "830ad2c9f71444f2a4f0a8d045653da4490442da66d2b64f8ec90c59c52042aa"
+    },
+    {
+      "path": "single-step-oracle.py.txt",
+      "bytes": 428,
+      "sha256": "401f8e65bcec0506ab8d8ec981bf387849c2dce6558cf9883ef4699b64dfb14a"
+    },
+    {
+      "path": "static-context.json",
+      "bytes": 1860,
+      "sha256": "fb75882a34981f97d792ca66f8e14aa758bac4ad2b42b697d8451b825ff6891e"
+    }
+  ]
+}

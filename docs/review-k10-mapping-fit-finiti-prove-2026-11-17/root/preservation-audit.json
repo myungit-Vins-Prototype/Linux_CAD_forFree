@@ -1,0 +1,21 @@
+{
+  "baseline_files": 7111,
+  "changed_existing": [
+    "CLAUDE.md",
+    "docs/code-review-2026-11-15.md",
+    "kernel/CMakeLists.txt",
+    "kernel/fk_mapping_fit.cpp",
+    "tools/generate_architecture.py"
+  ],
+  "preserved_existing": 7106,
+  "previous_packages": 32,
+  "previous_artifacts": 4501,
+  "HEAD_origin_main": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "index_empty": true,
+  "no_commit_push_UI_CI_general483": true,
+  "CLAUDE_bytes": 16333,
+  "ctest_passed": 2,
+  "new_groups": 6,
+  "runner_total": 12,
+  "baseline_new_groups_passed": 3
+}

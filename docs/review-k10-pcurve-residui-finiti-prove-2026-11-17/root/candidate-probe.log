@@ -1,0 +1,5 @@
+samples=-1 deviation=inf
+samples=0 deviation=inf
+samples=1 deviation=1
+samples=16 deviation=1
+nonfinitepoint=1 deviation=inf exact=0

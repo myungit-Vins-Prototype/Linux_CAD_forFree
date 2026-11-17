@@ -1,0 +1,22 @@
+K10 — pcurveDeviation e accettazione di errori non finiti
+
+Freeze test
+/tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp
+SHA256b3ad0796e0b78a830a7188103e81eb47c48b32ff9a5f4804bfc71423ae4543be,6800byte,6 FK_TEST.
+Rimossa prima del freeze soltanto la costanteglobale cubicKnots inutilizzata. Nessuna modifica dopo lo SHA comunicato. Questo agente ha scritto solo testi: nessuna compilazione/runtime, repoedit, archivecopy, UI o riuso di vecchi binari. Root possiede integrazioneCMake/targetstandalone, baseline/candidate/SAN seriali e regressioni pertinenti.
+
+Consultazione
+Letti AGENTS/CLAUDE, fk_pcurve.h/.cpp, API native di Curve/Surface e patchstagingcore. Consultati descrizioni e link call/include/ref in entrambi i versi, conservati in graph-consult.json. I riproduttori runtime iniziali samples<=0/Circleoverflow e il fitNURBS extrapolato sono evidenza di root, non esecuzioni di questo agente.
+
+Sei gruppi
+1.PCurveDeviationFiniteControlsAndSampledKnotPeaks: gap0/1 con samples1/4/16; gapvariabile2 al nodo originale.25 di E oppureQ, presente anche quando samples=1percampata. Verifica l'unione dei breakpoint delle due curve. Questo è un controllo della metrica campionata documentata, non un certificato continuo globale.
+2.PCurveDeviationInvalidSamplesAndRangesReturnInfinity: samples0/-1 e range nullo/inverso/NaN/Inf/spanoverflow restituiscono esplicitamente +Inf, nonNaN/zero.
+3.PCurveDeviationNonFiniteNativeEvaluationsNeverLookExact: costruttori PUBBLICI validi, valori finiti originali ma Circle3/Circle2 concenterDBL_MAX eR=.5MAX producono punti/UVInf; Plane conorigineMAX eUVfinita produce puntoS nonfinito. Si isolano C, Q, S e la coppia C/Qoverflow senza classi finte o dati contraffatti. Sono test di robustezza numerica fuori dal box nominale, non una promessa di precisione CAD in quelle coordinate.
+4.PCurveDeviationOverflowGapFromFinitePointsIsInfinity: punti3D finiti conZ1e200 causano overflow della norma del gap; punti a±.75MAX causano overflow della sottrazione. Le precondizioni finite sui punti sono controllate separatamente dal risultato +Inf.
+5.PCurveAcceptanceNeedsFiniteDeviationEvenWithInfiniteTolerance: exactPCurve deve rifiutare Circleoverflow e gapnorm∞ anche contol∞. I positivi finiti restano ammessi contolnormale e∞, senza imporre un nuovo divieto generale sulla tolleranza∞. Include il riproduttorefit forte: BSpline3 pubblica conpoli0,pesi21/29/37/45,dominionaturale[1,2], queryDELIBERATAfuoridominio[0,1]. Il denominatore estrapolatoW=24t−3 si annulla a.125 e C(.125)NaN: exactnullptr efitnullptr condevsentinella-123 invariata, anchetol∞. Queryvalida[1,2] sulla stessa curva deve avereexact/fit finiti e scarto0. Non si dichiara che ogni extrapolazione sia invalida: questa contiene una vera singolarità del denominatore.
+6.PCurveDeviationAndAcceptancePropagateCancellation: tokenpresettato propagato comeOperationCancelled da metrica/exact/fit; devsentinella-123 invariata nel fit.
+
+Limiti e significato
+Sono API reali kernel, nessun hookproduzione o subclassfittizia. Non è un riproduttore CAD pubblico valido su una singolarità di superficie. In particolare il rischio privato NearPole segnalato da root resta distinto dal POLO del denominatore di curva in extrapolazione qui esercitato; non è rivendicata una regressioneCADNearPole.
+Il campionamento ordinario e il fallbacklineare legacy50x non sono sostituiti con certificazione continua né indeboliti dai test. La correzione richiede solo che un errore NONFINITO non diventi successo, nemmeno nel confrontoInf<=Inf. Il testfit pubblico copre il rifiuto finale dell'intero fit e non attribuisce un percorso internoHermite/Linear non osservato separatamente.
+Nessun risultato baseline/candidate/SAN dichiarato da questo agente. Root esegue prima dell'integrazione, conserva le prove e aggiorna memoria/grafo. I sigilli precedenti non sono modificati. Nessuna tolleranza alzata per far riuscire geometrie normali: tol∞ compare soltanto come test della barriera di accettazione e controllo di compatibilità esplicitamente richiesto.

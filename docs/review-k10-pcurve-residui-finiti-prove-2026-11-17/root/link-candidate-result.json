@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/usr/bin/c++",
+    "-std=c++17",
+    "-O2",
+    "-g",
+    "-ffp-contract=off",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "/tmp/k10-pcurve-pole-review/root/main.o",
+    "/tmp/k10-pcurve-pole-review/root/test.o",
+    "/tmp/k10-pcurve-pole-review/root/candidate.o",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+    "-o",
+    "/tmp/k10-pcurve-pole-review/root/candidate-tests"
+  ],
+  "exit": 0,
+  "seconds": 0.4144238580047386
+}

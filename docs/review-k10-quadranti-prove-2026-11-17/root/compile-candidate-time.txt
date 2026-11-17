@@ -1,0 +1,23 @@
+	Command being timed: "/usr/bin/c++ -std=c++17 -O2 -g -ffp-contract=off -Wall -Wextra -Wpedantic -I/home/myungit/Linux_CAD_forFree/kernel -I/home/myungit/Linux_CAD_forFree/kernel/tests -c /tmp/k10-quadrant-review/core/kernel/fk_curve.cpp -o /tmp/k10-quadrant-review/root/candidate.o"
+	User time (seconds): 0.65
+	System time (seconds): 0.01
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.67
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 146960
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 7171
+	Voluntary context switches: 7
+	Involuntary context switches: 18
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

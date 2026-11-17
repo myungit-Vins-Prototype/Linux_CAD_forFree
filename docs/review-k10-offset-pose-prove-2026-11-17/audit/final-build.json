@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "/usr/bin/c++",
+    "-O3",
+    "-DNDEBUG",
+    "-std=gnu++17",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-ffp-contract=off",
+    "-fno-fast-math",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-x",
+    "c++",
+    "/tmp/k10-offset-pose-review/audit/probe_public_pose.cpp.txt",
+    "-x",
+    "none",
+    "/tmp/k10-offset-pose-review/audit/libforgekernel-final.a",
+    "-o",
+    "/tmp/k10-offset-pose-review/audit/public-pose-probe"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "returncode": 0,
+  "elapsed_seconds": 1.1380192469950998
+}

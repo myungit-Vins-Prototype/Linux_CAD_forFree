@@ -1,0 +1,330 @@
+{
+  "scope": "Staged nonPlane mapping tests and continuous final-fin residual audit",
+  "files": [
+    {
+      "path": "HANDOFF.txt",
+      "bytes": 4889,
+      "sha256": "dbb10d28074e2ca82555d61da7b451d2f202f45453b8abf79d83e6295644525d"
+    },
+    {
+      "path": "asan/build-result.json",
+      "bytes": 208,
+      "sha256": "6b464b0f3fb0cb77c47c74f39ae0b376698dafdd510d47bce5aeab8004ec53a2"
+    },
+    {
+      "path": "asan/calibration.log",
+      "bytes": 998,
+      "sha256": "683a6bb0ee432c60b39c62bf5654e691eb090d0ca16ecf27883108f405f3086c"
+    },
+    {
+      "path": "asan/compile-commands.json",
+      "bytes": 4584,
+      "sha256": "2ca184ad9780779f2b085629acd4a372b912b5b7bbb6b44cb7063edfbedaa498"
+    },
+    {
+      "path": "asan/compile-results.json",
+      "bytes": 929,
+      "sha256": "c6d22a9396ee6c188e6c483cb25917275b2f74bdb1cf25a03da94521c023a58a"
+    },
+    {
+      "path": "asan/fk_sheet_join_validation.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/fk_surface_curve_bounds.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/fk_surface_mapping.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/fk_test_main.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/link-command.json",
+      "bytes": 1114,
+      "sha256": "4f21dc5f13ed69f836074a0727629c8dc03207c52127158eb41e63718591ab70"
+    },
+    {
+      "path": "asan/link.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/run-results.json",
+      "bytes": 949,
+      "sha256": "5a299c1525c2852d02accb5cd090716203935e0cef8a213651664c7337644f9f"
+    },
+    {
+      "path": "asan/source-hashes.json",
+      "bytes": 1347,
+      "sha256": "543244ccba7c221a98c38e0d90eb6eee30a408bc942c3de7a15c99369c901655"
+    },
+    {
+      "path": "asan/test_mapping_nonplane_validation.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/test_sheet_join_ledger.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/test_surface_curve_bounds.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/test_surface_curve_rational.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/tests.log",
+      "bytes": 2399,
+      "sha256": "d44cd441e6d53f5b932116714811be0518a3deae16b611b02e5c7d742505ea07"
+    },
+    {
+      "path": "baseline-fins.jsonl",
+      "bytes": 366604,
+      "sha256": "af0a274dfce1661e752e4f33a91039577dcf1661bd886b1cc8271a47cadbc615"
+    },
+    {
+      "path": "baseline-metadata.json",
+      "bytes": 1872,
+      "sha256": "88782746f733785a352dd46bdc77a90b511195d62c06c4da958795c68a28dae5"
+    },
+    {
+      "path": "baseline-probe.log",
+      "bytes": 6944,
+      "sha256": "d54a9a5030e38b0d412ed6c7a063482196e46c9440dfbb3ddfee8966b7c18ee5"
+    },
+    {
+      "path": "baseline-tests.log",
+      "bytes": 4305,
+      "sha256": "d66d6bfbbaea9b0fdd681601818af48c137a8807346aec0a84707ae8e86dd21a"
+    },
+    {
+      "path": "baseline_probe.cpp.txt",
+      "bytes": 7661,
+      "sha256": "dac95d0fc9d2edb49052c750f4612eb7607c21e37bed4ecbc324b931142eebba"
+    },
+    {
+      "path": "build_overlay.py.txt",
+      "bytes": 2751,
+      "sha256": "c339853b1130ad2193f3b63d418b0634e8c4749e901b48f5a0e6f73087f47f1d"
+    },
+    {
+      "path": "candidate-export-runs.json",
+      "bytes": 507,
+      "sha256": "1fa6237391c62b21581be7e7d1f39f033522a170608722d288a7c62b1b70c3de"
+    },
+    {
+      "path": "candidate-final-52.json",
+      "bytes": 727853,
+      "sha256": "1cc68dd7089f9d06ccc3865f484e261db5d6c9679e6449d9c22ae81bfeac4d3e"
+    },
+    {
+      "path": "candidate-fraction-52.json",
+      "bytes": 17510,
+      "sha256": "2b9a8f9787ea9b85e788e654caa57323f39b0075d80dc1fe0e5ee78be7ab828c"
+    },
+    {
+      "path": "candidate-fraction-52.log",
+      "bytes": 12393,
+      "sha256": "ad132864682e25b9aacca59c7f15154edc355a2ffca403ebf316a3658d3ef46e"
+    },
+    {
+      "path": "candidate-manifest.json",
+      "bytes": 429,
+      "sha256": "380801a61fb38337e1ab2ac332b101ae248b394bc8b691910ed4dfed11e9cbd7"
+    },
+    {
+      "path": "candidate-public.log",
+      "bytes": 6662,
+      "sha256": "ba68b0d0c55519c965ab2c4e95905b9494761710f9808754300d29c23315fc48"
+    },
+    {
+      "path": "candidate-rational.log",
+      "bytes": 57,
+      "sha256": "a18ceaabeb40000c120d59ec18e328c3f16e44f94edb7cef5bdee66cc4f0ae8d"
+    },
+    {
+      "path": "candidate-review.json",
+      "bytes": 1138,
+      "sha256": "7eb6ef3443303bbcff9329776991bd19b2c9ddd127397239de4d78fbaac52a67"
+    },
+    {
+      "path": "candidate.patch",
+      "bytes": 23100,
+      "sha256": "d260d6c752ed49570d2d4f5dca691312239024c59aa3410c02450bdeb81cb355"
+    },
+    {
+      "path": "export_candidate.py.txt",
+      "bytes": 1348,
+      "sha256": "546eb2effa43b30d0495f586334dba40566a1ad20399270b57de8cb05bbaf491"
+    },
+    {
+      "path": "fk_sheet_join_validation.cpp.txt",
+      "bytes": 4271,
+      "sha256": "15e314c0f54241ab8d682290db24065e1a033ed430c6e54474ead062b84f258a"
+    },
+    {
+      "path": "fk_surface_curve_bounds.cpp.txt",
+      "bytes": 26028,
+      "sha256": "24b34d948e7834caf261c8c8e733de067a24795738aae31ac6749390cc9a2c28"
+    },
+    {
+      "path": "fk_surface_curve_bounds.h.txt",
+      "bytes": 2543,
+      "sha256": "6f2256143a51864b01d903ab1daa08570c802a69226d33cb6c76b7842000ea41"
+    },
+    {
+      "path": "fk_surface_mapping.cpp.txt",
+      "bytes": 42106,
+      "sha256": "019423a02a6504b3d6e1d659ba9b3b0707397878d5b8bad3340efd52f2b45d3a"
+    },
+    {
+      "path": "fraction_common.py.txt",
+      "bytes": 4133,
+      "sha256": "6c201bca580c820cbedb5ba4e2b5b397af7958046266fe96528bb9de3aafe2cb"
+    },
+    {
+      "path": "graph-consult.json",
+      "bytes": 53570,
+      "sha256": "d62c0da5d725a6301c883df615dd8cf8b26b2e32999096dee0f874ce32801c59"
+    },
+    {
+      "path": "leak_calibration.cpp.txt",
+      "bytes": 216,
+      "sha256": "b73910ded67c00d23c4e402c1b73dcf990cfb4b0c5f517003ac5952134dde35d"
+    },
+    {
+      "path": "library-freeze.json",
+      "bytes": 176,
+      "sha256": "5082184eaf3aaaa2634842b1386732a2404e87092ccc2c294ff9dcb2b6653e5a"
+    },
+    {
+      "path": "narrow-witness-result.json",
+      "bytes": 2770,
+      "sha256": "4cd95c1cd6cbfce410de030f67a757b9ce51c99fef9ed59f7255ef8a5aacaaef"
+    },
+    {
+      "path": "probe_public_rational.cpp.txt",
+      "bytes": 6360,
+      "sha256": "b78ed83d893e607d7dfbe7f65625f913d361297f73580de65d61e249c0d22104"
+    },
+    {
+      "path": "release/build-result.json",
+      "bytes": 208,
+      "sha256": "19f902e42b2e21c9422e9ec697391063f944200076d54ff11bf473efacd51758"
+    },
+    {
+      "path": "release/compile-commands.json",
+      "bytes": 4072,
+      "sha256": "820334558096654fc7fb2bf10db4b4fdbdb9f82449dd26d9bcfad5df5ec1f80c"
+    },
+    {
+      "path": "release/compile-results.json",
+      "bytes": 929,
+      "sha256": "c6d22a9396ee6c188e6c483cb25917275b2f74bdb1cf25a03da94521c023a58a"
+    },
+    {
+      "path": "release/fk_sheet_join_validation.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/fk_surface_curve_bounds.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/fk_surface_mapping.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/fk_test_main.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/link-command.json",
+      "bytes": 1078,
+      "sha256": "02c678294c8c1ce4064c52d4a47549970d22b5cc48773ac5d5a05a6f88f9d889"
+    },
+    {
+      "path": "release/link.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/run-result.json",
+      "bytes": 48,
+      "sha256": "8a396cdfaa9d60a8baac19aa13a069ecf0498f178977cd362ae74cab42847d6b"
+    },
+    {
+      "path": "release/source-hashes.json",
+      "bytes": 1347,
+      "sha256": "543244ccba7c221a98c38e0d90eb6eee30a408bc942c3de7a15c99369c901655"
+    },
+    {
+      "path": "release/test_mapping_nonplane_validation.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/test_sheet_join_ledger.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/test_surface_curve_bounds.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/test_surface_curve_rational.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/tests.log",
+      "bytes": 2399,
+      "sha256": "d44cd441e6d53f5b932116714811be0518a3deae16b611b02e5c7d742505ea07"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 1996,
+      "sha256": "19270d4b110cc0e8086cde2327ecca00d2bf8fd2ef1059b2d6a0f75fd7748234"
+    },
+    {
+      "path": "test_mapping_nonplane_validation.cpp.txt",
+      "bytes": 11521,
+      "sha256": "ee301ceaf193008457b263c13ce36fe9c0fbf3e75011bcbcea5ead3bd1af75e3"
+    },
+    {
+      "path": "verify_narrow_witness.py.txt",
+      "bytes": 2954,
+      "sha256": "436404df57187cd2006bcccc3c0a93c85e116cf987ded09975f146a071455f8a"
+    },
+    {
+      "path": "verify_public_fins.py.txt",
+      "bytes": 2876,
+      "sha256": "35b6b3454577ce3cd99b800c6542c804b9a47c1c45a1ff7ebbf0ad723d6297e5"
+    },
+    {
+      "path": "verify_tensor_fraction.py.txt",
+      "bytes": 5760,
+      "sha256": "08fccbe94b071f2c478e0d268f6a8b3fb60ea663f0a7c456033d826e44b63cf3"
+    }
+  ]
+}

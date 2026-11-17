@@ -1,0 +1,10 @@
+{
+  "tests/test_sheet_arc_validation.cpp": "tests/test_sheet_arc_validation.cpp.txt",
+  "root/archive.py": "root/archive.py.txt",
+  "root/finalize-docs.py": "root/finalize-docs.py.txt",
+  "root/cleanup.py": "root/cleanup.py.txt",
+  "root/verify.py": "root/verify.py.txt",
+  "root/integrate.py": "root/integrate.py.txt",
+  "root/probe.cpp": "root/probe.cpp.txt",
+  "root/run.py": "root/run.py.txt"
+}

@@ -1,0 +1,78 @@
+{
+  "status": "Prova storica letta, NON rieseguita in questa review",
+  "result_sha256": "2fae2b4f73a04cc970fd072a2b4332dc9acf5b32325955afcf072b61a11f93af",
+  "data_sha256": "d3f0b7ebb5a75624155d0a4b2b791fb91cacb1da81efb3ff6a303e334bba5417",
+  "result": {
+    "input_sha256": "d3f0b7ebb5a75624155d0a4b2b791fb91cacb1da81efb3ff6a303e334bba5417",
+    "scope": "public-extendSheet-actual-Newton-fin-pair",
+    "provenance": {
+      "sourceEdge": 1,
+      "sourceFaces": [
+        0,
+        1
+      ],
+      "edge": 2
+    },
+    "method": "Exact Fraction original IEEE homogeneous tensor composition and complete common knot partition; no production provider or extractor.",
+    "not_claimed": [
+      "Newton algorithm continuous certification",
+      "Global trim membership",
+      "All generated fins"
+    ],
+    "records": [
+      {
+        "fin": 2,
+        "edge": 2,
+        "face": 0,
+        "budget": 1.152655473666892e-07,
+        "pass": true,
+        "upper_mm": 1.526929851153793e-08,
+        "cells": 60,
+        "leaves": 60,
+        "branches": 62,
+        "max_depth": 0,
+        "elapsed_seconds": 3.3338313549975283
+      },
+      {
+        "fin": 11,
+        "edge": 2,
+        "face": 1,
+        "budget": 1.1543642712308158e-07,
+        "pass": true,
+        "upper_mm": 1.5439309150134088e-08,
+        "cells": 60,
+        "leaves": 60,
+        "branches": 66,
+        "max_depth": 0,
+        "elapsed_seconds": 6.027116146997287
+      }
+    ]
+  },
+  "actual_representations": [
+    {
+      "fin": 2,
+      "curve_degree": 3,
+      "curve_poles": 49,
+      "pcurve_degree": 3,
+      "pcurve_poles": 181,
+      "surface_degrees": [
+        3,
+        3
+      ],
+      "surface_poles": 31228
+    },
+    {
+      "fin": 11,
+      "curve_degree": 3,
+      "curve_poles": 49,
+      "pcurve_degree": 3,
+      "pcurve_poles": 181,
+      "surface_degrees": [
+        3,
+        3
+      ],
+      "surface_poles": 3568
+    }
+  ],
+  "actual_scope_note": "Nei due export letti E/Q/S hanno pesi tutti uguali e nessuna istanza basis: perimetro polinomiale del prossimo delta, non prova runtime nuova."
+}

@@ -1,0 +1,18 @@
+from pathlib import Path
+import json,re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-newton-review/root');a=json.loads((T/'architecture-audit.json').read_text());build=json.loads((T/'build-result.json').read_text());first=json.loads((T/'first-build-result.json').read_text());ct=json.loads((T/'ctest-result.json').read_text());s=(T/'report-draft.md').read_text().replace('SAN_PENDING','6/6 PASS con ASan/UBSan e rilevazione leak attiva; una TU produzione, nuova TU test e main strumentati, resto kernel Release. Non certifica la memoria dell’intera app.').replace('BUILD_PENDING',f"PASS; app costruita nel primo passaggio ({first['seconds']:.2f}s), completamento app/target nel secondo ({build['seconds']:.2f}s), compilazioni seriali.").replace('CTEST_PENDING',f"4/4 PASS senza skip in {ct['seconds']:.2f}s: nuova inversione UV, mapping nonPlane, sheet join e istanze.").replace('ARCH_PENDING',f"PASS: {a['nodes']} nodi, {a['edges']} relazioni, {a['units']} TU; hash sorgenti/configurazione/HTML e collegamenti nei due versi verificati;33 pacchetti precedenti preservati.")
+s=s.replace('I test sulle grandi fasi verificano', 'Il primo comando di build ha completato l’app ma il processo Make, avviato prima della rigenerazione, non riconosceva ancora il nuovo target. Una seconda invocazione sui Makefile aggiornati ha completato tutti i target; log del tentativo iniziale conservato. Non è stato modificato il codice per questo passaggio.\n\nI test sulle grandi fasi verificano');assert '_PENDING' not in s;(R/'docs/review-k10-inversione-periodica-2026-11-17.md').write_text(s)
+p=R/'docs/code-review-2026-11-15.md';s=p.read_text();head='# Review generale ForgeCAD — 15 novembre 2026\n\n';assert s.startswith(head)
+if s.startswith(head+'**K10 inversione periodica,'):s=head+s[len(head):].split('\n\n',1)[1]
+s=head+'''**K10 inversione periodica, prosecuzione verificata:** invertPoint poteva restituire true oltre cap dopo riporto UV vicino alla stima; ora ricontrolla UV/residuo finali, conservando ramo e tolleranza. Riproduttore cilindrico con errore6,3346e-8mm contro cap1e-8; fasi maggiori fino a errori millimetrici. App/4CTest/6nuovi+sanitizer/mappa PASS; nessun UI o commit/push. K10 globale e riporti manuali restano aperti,33rilievi invariati. [Rapporto e limiti](review-k10-inversione-periodica-2026-11-17.md).
+
+'''+s[len(head):];p.write_text(s)
+p=R/'CLAUDE.md';s=p.read_text();i=s.index('**17/11 — K10 inversione periodica in revisione;');j=s.index('\nQ/E razionali17/11:',i);s=s[:i]+'''**17/11 — K10 inversione periodica verificata; nessun commit/push.**
+UV finali dopo unwrap entro cap o false; app/4CTest/6nuovi+SAN/mappa PASS.
+[Rapporto](docs/review-k10-inversione-periodica-2026-11-17.md).
+RAM/fit:14GiB liberati; app/2CTest/6nuovi+SAN/mappa PASS. [Prove](docs/review-k10-mapping-fit-finiti-2026-11-17.md).
+Wrapper: app/6CTest/67mirati+SAN/Fraction/mappa PASS. [Prove](docs/review-k10-wrapper-curve-2026-11-17.md).
+'''+s[j:]
+old='''Cache M1/M2: snapshot/CAS, copie atomiche e shared_ptr; app/47CTest/5ASan/TSan PASS,
+runner325 poi timeout300s,nessun GL. [Prove](docs/cache-bspline-2026-11-15.md); dettagli in memoria precedente.''';new='''Cache M1/M2: snapshot/CAS e copie atomiche; app/47CTest/5ASan/TSan PASS, timeout generale documentato.
+[Prove e limiti](docs/cache-bspline-2026-11-15.md).''';assert old in s;s=s.replace(old,new);assert len(s.encode())<=16384,len(s.encode());assert len(re.findall(r'^\*\*',s,re.M))<=10;p.write_text(s);print('memory',len(s.encode()),len(s.splitlines()))

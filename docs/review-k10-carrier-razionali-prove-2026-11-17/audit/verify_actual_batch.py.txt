@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Final native-carrier fin export preflight + independent exact certification."""
+from pathlib import Path
+import json,sys,types,hashlib,time,math
+root=Path(__file__).parent
+for name in ['fraction_common','verify_tensor_fraction']:
+ m=types.ModuleType(name);m.__file__=str(root/(name+'.py.txt'));sys.modules[name]=m
+ exec(compile(Path(m.__file__).read_text(),m.__file__,'exec'),m.__dict__)
+from verify_tensor_fraction import verify
+indir=Path(sys.argv[1]);results=[];start=time.monotonic()
+def fv(x):return float.fromhex(x)
+for path in sorted(indir.glob('*.json')):
+ j=json.loads(path.read_text());assert j['scope']=='public-extendSheet-final-native-carrier-fins'
+ cap=fv(j['prefitCap']);assert cap>0 and math.isfinite(cap) and len(j['records'])==3
+ assert j['sourceEdgeTolerancesAllZero']
+ for r in j['records']:
+  assert fv(r['budget'])==fv(r['edgeTolerance'])==fv(r['pcurveTolerance'])==cap
+  assert r['runtimeStatus']=='Certified' and 0<=fv(r['runtimeUpper'])<=cap
+  assert r['sourceFace']>=0 and r['sourceGeneratorEdge']>=0
+  for key in ['curve','pcurve']:
+   c=r[key]
+   if c['type']=='line':assert key=='pcurve';continue
+   assert c['type']=='bspline' and not c.get('basis')
+   p=c['degree'];U=list(map(fv,c['knots']));W=list(map(fv,c.get('weights',[])))
+   assert (p==3 if key=='curve' else p in [1,3])
+   assert U[:p+1]==[U[p]]*(p+1) and U[-p-1:]==[U[-p-1]]*(p+1),'Reused source_spans requires clamped E/Q'
+   assert not W or min(W)>0 and len(set(W))==1
+  s=r['surface'];assert s['uDegree'] in [2,3] and s['vDegree'] in [2,3] and not s.get('basis')
+  W=list(map(fv,s['weights']));assert W and min(W)>0 and all(math.isfinite(x) for x in W)
+  if j['case']=='rational':assert len(set(W))>1
+  v=verify(r);assert v['pass'];v.update(case=j['case'],input_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),runtime_upper=fv(r['runtimeUpper']),metadata_equal_fixed_cap=True)
+  results.append(v);print(v,flush=True)
+expected={'implicit','rational','small','large','face-sense','canonical'}
+assert {r['case'] for r in results}==expected and len(results)==18
+out={'pass':True,'scope':'18 final emitted fins of six actual public extendSheet cases; includes common and extra, post-unify','method':'Exact Fraction original IEEE homogeneous Cox/de Boor composition, complete common E/Q knot partition, all closed intersected carrier cells. No production provider/extractor invoked.','records':results,'elapsed_seconds':time.monotonic()-start,'not_claimed':['Newton solver certification','global trim/topology/carrier preservation','variable rational E/Q support']}
+Path(sys.argv[2]).write_text(json.dumps(out,indent=2)+'\n')

@@ -1,0 +1,9 @@
+{
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "MassParallelPreservesFirstFailureAndCancellation"
+  ],
+  "exit": 0,
+  "seconds": 0.023971613991307095,
+  "watchdog_seconds": 600
+}

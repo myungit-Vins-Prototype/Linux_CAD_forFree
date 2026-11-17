@@ -1,0 +1,30 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-mapping-nonplane-review/root');D=T/'candidate';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();b=json.loads((T/'baseline.json').read_text());m=json.loads((T/'candidate-manifest.json').read_text())
+for name,h in m.items():assert sha(D/name)==h and sha(R/name)==b[name],name
+for name in ['kernel/CMakeLists.txt','tools/generate_architecture.py']:assert sha(R/name)==b[name],name
+name='kernel/tests/test_mapping_nonplane_validation.cpp';test=Path('/tmp/k10-mapping-nonplane-review/tests/test_mapping_nonplane_validation.cpp');assert sha(test)=='ee301ceaf193008457b263c13ce36fe9c0fbf3e75011bcbcea5ead3bd1af75e3';assert not (R/name).exists();m[name]=sha(test)
+cm=(R/'kernel/CMakeLists.txt').read_text();cm+='''
+# Mapping nonPlane: residuo continuo e contratto delle fin dopo build.
+add_executable(forgekernel_mapping_nonplane_validation_tests tests/fk_test_main.cpp
+    tests/test_mapping_nonplane_validation.cpp)
+target_link_libraries(forgekernel_mapping_nonplane_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_mapping_nonplane_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_mapping_nonplane_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_mapping_nonplane_validation_tests COMMAND forgekernel_mapping_nonplane_validation_tests)
+set_tests_properties(forgekernel_mapping_nonplane_validation_tests PROPERTIES TIMEOUT 180)
+'''
+gen=(R/'tools/generate_architecture.py').read_text()
+descriptions={
+'kernel/fk_surface_mapping.cpp':"Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: conserva i carrier supportati; fin Plane e native NURBS2/3 certificate nel continuo al cap prefit. Candidata UV costruita prima della prova, Failed terminale; genealogia, E/S/Q, parametri, versi e budget delle fin emesse ricontrollati anche senza history utente. Bordi 3D, carrier rispetto alla mappa e altre famiglie restano campionati; nessuna mesh di calcolo.",
+'kernel/fk_surface_curve_bounds.cpp':"Costruzione condivisa della candidata UV nel dominio naturale prima della prova continua E(t)-S(Q(t)); E/Q polynomiali e carrier NURBS nativi2/3 a pesi positivi. Coefficienti originali, intervalli outward, denominatore positivo sulle celle attive, partizione comune, budget e cancellazione; nessun recupero campionato dopo Failed.",
+'kernel/fk_surface_curve_bounds.h':"Contratti distinti per costruire la candidata UV privata e certificare il residuo continuo bordo/SP-curve/superficie: parametro originale, cap fisico prefissato, unsupported/certificato/fallito espliciti.",
+'kernel/fk_sheet_join_validation.cpp':"Usa la costruzione UV condivisa per le sole fin Newton pianificate; mantiene E/S/parametro e cap prefit, certifica prima di assegnare Q e ricontrolla i discendenti dopo unify anche senza history utente. Niente epsilon UV o recupero campionato dopo Failed; Unsupported conserva la via legacy."}
+lines=gen.splitlines(True)
+for f,desc in descriptions.items():
+ matches=[i for i,l in enumerate(lines) if l.startswith(" '"+f+"':")];assert len(matches)==1,(f,matches);i=matches[0];lines[i]=" '"+f+"': ('kernel', "+repr(desc)+"),\n"
+gen=''.join(lines);marker=" 'kernel/tests/test_mapping_pcurve_validation.cpp':";i=gen.index(marker)
+gen=gen[:i]+" 'kernel/tests/test_mapping_nonplane_validation.cpp': ('tests', 'Regressioni mapping nonPlane: picco del carrier invisibile ai campioni rifiutato, fin finali dei box e carrier razionale effettivo certificate, cap prefit, genealogia anche senza history, input/target immutati, fallimenti atomici e cancellazione.'),\n"+gen[i:]
+for name in json.loads((T/'candidate-manifest.json').read_text()):(R/name).write_bytes((D/name).read_bytes())
+(R/'kernel/tests/test_mapping_nonplane_validation.cpp').write_bytes(test.read_bytes());(R/'kernel/CMakeLists.txt').write_text(cm);(R/'tools/generate_architecture.py').write_text(gen)
+m.update({name:sha(R/name) for name in ['kernel/CMakeLists.txt','tools/generate_architecture.py']});(T/'integrated-sources.json').write_text(json.dumps(m,indent=2)+'\n');print(m)

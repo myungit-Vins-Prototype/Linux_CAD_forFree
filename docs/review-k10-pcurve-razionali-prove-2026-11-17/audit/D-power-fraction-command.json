@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "python3",
+    "/tmp/k10-rational-pcurve-review/audit/verify_D_power_witness.py.txt",
+    "/tmp/k10-rational-pcurve-review/tests/candidate-originals.jsonl",
+    "/tmp/k10-rational-pcurve-review/audit/D-power-witness-result.json"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "observedExit": 0
+}

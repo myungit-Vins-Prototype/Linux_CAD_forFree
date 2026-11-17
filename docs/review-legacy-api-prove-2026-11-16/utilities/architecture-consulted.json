@@ -1,0 +1,3027 @@
+{
+  "head": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "graphSha256": "5efd0872f307e6659c1fad13683c8f8cbb9d42d929c8e4df714e2874a3989798",
+  "nodes": [
+    {
+      "id": "cad_forge.cpp",
+      "group": "features",
+      "description": "Adatta sketch e parametri al kernel; booleane con genealogia ricondotta agli operandi e recupero dell’unione commutativa nell’ordine inverso dopo un errore geometrico; conversione mesh float con filtro comune dei triangoli degeneri per scena e anteprime, ID topologici coerenti. Il riepilogo delle curve proiettate usa lo scarto della catena finale dopo le giunte.",
+      "lines": 2419,
+      "symbols": [
+        "ForgeCad::appendDisplayTriangle",
+        "ForgeCad::declaredConstruction",
+        "ForgeCad::declaredExtrusionRoot",
+        "ForgeCad::declaredModification",
+        "ForgeCad::declaredRevolutionRoot",
+        "ForgeCad::declaredRoot",
+        "ForgeCad::declaredSheet",
+        "ForgeCad::forgeBlend",
+        "ForgeCad::forgeBlendHasEffect",
+        "ForgeCad::forgeBlendPreviewDisplay",
+        "ForgeCad::forgeBoolean",
+        "ForgeCad::forgeBooleanWithHistory",
+        "ForgeCad::forgeBoundarySurface",
+        "ForgeCad::forgeClosestSheetPiece",
+        "ForgeCad::forgeDeleteFaces",
+        "ForgeCad::forgeDeleteFacesSeparated",
+        "ForgeCad::forgeDraft",
+        "ForgeCad::forgeExtendSheet",
+        "ForgeCad::forgeExtrusion",
+        "ForgeCad::forgeExtrusionPreviewDisplay",
+        "ForgeCad::forgeFillContactFaces",
+        "ForgeCad::forgeFillSurface",
+        "ForgeCad::forgeHelixBase",
+        "ForgeCad::forgeImported",
+        "ForgeCad::forgeIntersectRay",
+        "ForgeCad::forgeLocalPreviewDisplay",
+        "ForgeCad::forgeLoft",
+        "ForgeCad::forgeOffsetFaces",
+        "ForgeCad::forgePickFace",
+        "ForgeCad::forgePlanarCurves",
+        "ForgeCad::forgePlanarSketch",
+        "ForgeCad::forgePrimitive",
+        "ForgeCad::forgeProjectedCurves",
+        "ForgeCad::forgeProjectedCut",
+        "ForgeCad::forgeProjectionDirection",
+        "ForgeCad::forgeReferencedLoft",
+        "ForgeCad::forgeRevolution",
+        "ForgeCad::forgeRuledSurface",
+        "ForgeCad::forgeScale",
+        "ForgeCad::forgeSew",
+        "ForgeCad::forgeSheetPieces",
+        "ForgeCad::forgeShell",
+        "ForgeCad::forgeSketchFrame",
+        "ForgeCad::forgeSketchSegments",
+        "ForgeCad::forgeSurfaceConstructionCurves",
+        "ForgeCad::forgeSweep",
+        "ForgeCad::forgeTessellate",
+        "ForgeCad::forgeThicken",
+        "ForgeCad::forgeThread",
+        "ForgeCad::forgeThreadFaceInfo",
+        "ForgeCad::forgeTrimBoth",
+        "ForgeCad::forgeTrimPlaneTool",
+        "ForgeCad::forgeTrimSheet",
+        "ForgeCad::forgeTrimSketchTool",
+        "ForgeCad::forgeWarmPickCaches",
+        "ForgeCad::lineSegment",
+        "ForgeCad::loftContacts",
+        "ForgeCad::loftEndConditions",
+        "ForgeCad::loftGuideSequence",
+        "ForgeCad::microFeatureHint",
+        "ForgeCad::setError",
+        "ForgeCad::sketchLineFromWorld",
+        "ForgeCad::sketchSegmentsWithSources",
+        "ForgeCad::surfaceConstructionCurvesSerial",
+        "ForgeCad::sweptHelicalTool",
+        "ForgeCad::toDisplay",
+        "ForgeCad::toVec",
+        "ForgeCad::trimTool",
+        "ForgeCad::trimToolReach"
+      ]
+    },
+    {
+      "id": "cad_forge.h",
+      "group": "features",
+      "description": "Adatta sketch e parametri al kernel; booleane con genealogia ricondotta agli operandi e recupero dell’unione commutativa nell’ordine inverso dopo un errore geometrico; conversione mesh float con filtro comune dei triangoli degeneri per scena e anteprime, ID topologici coerenti.",
+      "lines": 249,
+      "symbols": [
+        "ForgeCad::forgeLoft"
+      ]
+    },
+    {
+      "id": "cad_sketch_refs.cpp",
+      "group": "sketch",
+      "description": "Proiezioni, contatti e Pierce esatti associativi degli schizzi, inclusi contorni apparenti di facce analitiche proiettati lungo la normale anche su piani esterni al corpo: immagini affini delle curve implicite, sorgenti persistenti per chiavi genealogiche, cache automatiche proiettate direttamente dallo snapshot B-rep senza risolvere i nomi appena creati, refresh e conversioni esplicite visibili senza duplicati; identita leggibili persistenti e diagnostica di tutte le sorgenti rotte con i vincoli interessati. Helix con Transformed usa un fit diretto2D con controllo continuo dopo recalculateCurve e pubblicazione atomica. Helix nuda o solo rifilata conserva il percorso quinticoC2 legacy; altri Other restano fallback campionati. Traversal dei wrapper limitato e cancellabile.",
+      "lines": 1014,
+      "symbols": [
+        "ForgeCad::appendBodySketchReferences",
+        "ForgeCad::appendFixedReferenceLine",
+        "ForgeCad::appendLinkedSketchReference",
+        "ForgeCad::appendProjectedCurve",
+        "ForgeCad::appendProjectedSketchEntity",
+        "ForgeCad::appendReferenceProjection",
+        "ForgeCad::appendSectionCurves",
+        "ForgeCad::appendSegment",
+        "ForgeCad::appendSketchContactReference",
+        "ForgeCad::appendSketchContactReferences",
+        "ForgeCad::basisOf",
+        "ForgeCad::nearestBodyEdge",
+        "ForgeCad::needsProjectionFit",
+        "ForgeCad::onOneSide",
+        "ForgeCad::projectLinkedReference",
+        "ForgeCad::projectReferencePath",
+        "ForgeCad::projectionBasis",
+        "ForgeCad::refreshCurvePierce",
+        "ForgeCad::refreshLinkedSketchReferences",
+        "ForgeCad::refreshSurfacePierce",
+        "ForgeCad::sameSectionCurve",
+        "ForgeCad::sameSketchSource",
+        "ForgeCad::selectSectionBranches",
+        "ForgeCad::sketchAxisReference",
+        "ForgeCad::sketchPlaneReference",
+        "ForgeCad::sketchReferenceLabel",
+        "ForgeCad::sketchReferenceSourceIndex"
+      ]
+    },
+    {
+      "id": "cad_sketch_refs.h",
+      "group": "sketch",
+      "description": "Proiezioni, contatti e Pierce esatti associativi degli schizzi, inclusi contorni apparenti di facce analitiche proiettati lungo la normale anche su piani esterni al corpo: immagini affini delle curve implicite, sorgenti persistenti per chiavi genealogiche, cache automatiche proiettate direttamente dallo snapshot B-rep senza risolvere i nomi appena creati, refresh e conversioni esplicite visibili senza duplicati; identita leggibili persistenti e diagnostica di tutte le sorgenti rotte con i vincoli interessati. Helix con Transformed usa un fit diretto2D con controllo continuo dopo recalculateCurve e pubblicazione atomica. Helix nuda o solo rifilata conserva il percorso quinticoC2 legacy; altri Other restano fallback campionati. Traversal dei wrapper limitato e cancellabile.",
+      "lines": 89,
+      "symbols": []
+    }
+  ],
+  "incidentSummaries": [
+    {
+      "source": "cad_extrude.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "cad_extrude.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_feature_build.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 38
+    },
+    {
+      "source": "cad_feature_build.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_feature_build.cpp",
+      "target": "cad_sketch_refs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_feature_faces.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_features.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_features.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_fill_pattern.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_fill_pattern.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_cuda_tessellation.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_cuda_tessellation.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_curve_solver.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_curve_solver.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_datum.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_datum.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_datum.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_element_names.cpp",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_element_names.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_features.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_features.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_features.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 271
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_forge.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_kernel.cpp",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_kernel.h",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_kernel.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_loft_correspondence.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_loft_correspondence.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_loft_diagnostics.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_loft_diagnostics.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_topology_ref.cpp",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_topology_ref.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_blend.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_blend.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_blend.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_blend_paths.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_boolean.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_boundary.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_boundary.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_classify.cpp",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_classify.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 27
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_curve_ops.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_curve_ops.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_draft.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_draft.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_extrude.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_extrude.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_extrude.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_fill.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_fill.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_fill.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_helix.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_helix.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_history.cpp",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_history.h",
+      "kind": "call",
+      "count": 22
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_history_tools.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_history_tools.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 27
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "call",
+      "count": 36
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_loft.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_loft.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_loft.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_math.cpp",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 262
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_micro.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_micro.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_nurbs.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_nurbs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_offset.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_offset.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_parallel.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_parallel.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_planar.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_planar.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "call",
+      "count": 13
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_primitives.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_primitives.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_profile.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_profile.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_project.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_project.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_project.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_revolve.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_revolve.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_revolve.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_sew.cpp",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_sew.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_sheet.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_sheet.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_shell.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_shell.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_step.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_step.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_stored_surface.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_stored_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_surface_algo.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_sweep.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_sweep.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_tessellate.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_tessellate.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_tessellate.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_thicken.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_thicken.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_thicken.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 129
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 180
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_transform.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_unify.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_unify.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.h",
+      "target": "cad_features.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.h",
+      "target": "kernel/fk_loft.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.h",
+      "target": "kernel/fk_math.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.h",
+      "target": "kernel/fk_profile.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.h",
+      "target": "kernel/fk_sweep.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_history_graph.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_history_graph.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_loft_correspondence.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_loft_correspondence.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_loft_correspondence_editor.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_loft_correspondence_editor.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_loft_diagnostics.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_loft_diagnostics.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_pattern.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_pattern.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_pattern_variation.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_pattern_variation.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_pattern_variation.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_pattern_variation.cpp",
+      "target": "cad_sketch_refs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_projected_curve.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_projected_curve.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_constraints.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_constraints.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_curve_solver.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_curve_solver.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_datum.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_datum.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_datum.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_feature_dependencies.cpp",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_feature_dependencies.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_kernel.cpp",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_kernel.h",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_kernel.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_sketch_apparent.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_sketch_apparent.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 94
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_sketch_refs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_sketch_section_selection.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_sketch_section_selection.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_topology_ref.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_topology_ref.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 40
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_apparent_contour.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_apparent_contour.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_boolean.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_classify.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_classify.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 29
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_curve_ops.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_curve_ops.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_helix.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_helix.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_helix_projection.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_helix_projection.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_math.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 134
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_nurbs.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_nurbs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_offset.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_offset.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_sew.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_sew.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_sheet.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_sheet.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_sketch_projection.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_sketch_projection.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 24
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 36
+    },
+    {
+      "source": "cad_sketch_refs.h",
+      "target": "cad_sketch_edit.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.h",
+      "target": "kernel/fk_curve.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.h",
+      "target": "kernel/fk_topology.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "cad_sketch_refs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_analysis.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_dialogs_analysis.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_analysis.cpp",
+      "target": "cad_sketch_refs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_common.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_common.cpp",
+      "target": "cad_sketch_refs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_sketch.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_sketch.cpp",
+      "target": "cad_sketch_refs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_solids.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_solids.cpp",
+      "target": "cad_forge.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_solids.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_solids.cpp",
+      "target": "cad_sketch_refs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_surfaces.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_dialogs_surfaces.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_surfaces.cpp",
+      "target": "cad_sketch_refs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_trim.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_dialogs_trim.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_feature_preview.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "forgeCad2026_feature_preview.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "cad_sketch_refs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_document.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "forgeCad2026_viewport_document.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "forgeCad2026_viewport_interaction.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_internal.h",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_internal.h",
+      "target": "cad_sketch_refs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_selection.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "forgeCad2026_viewport_sketch.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 13
+    },
+    {
+      "source": "forgeCad2026_viewport_sketch_reference.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_all_history.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_blend_history.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_boolean_history.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_declared_history_cache.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_display_mesh.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_document_lifetime.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_document_read.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_extrusion_history.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_feature_faces.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_loft_correspondence.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_next_body_union.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_pattern_placements.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_projected_curve_references.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 16
+    },
+    {
+      "source": "tests/test_revolution_history.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_sketch_apparent.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_sketch_construction.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_sketch_construction.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_sketch_intersections.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_sketch_linked_refs.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_sketch_linked_refs.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 41
+    },
+    {
+      "source": "tests/test_sketch_projection_fit_validation.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_sketch_projection_fit_validation.h",
+      "target": "cad_sketch_refs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_sketch_projection_gui.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_sketch_tools_refs.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_storyboard_panel_selection.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_storyboard_review.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_thread_edges.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 87
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_forge.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_sketch_refs.h",
+      "kind": "include",
+      "count": 1
+    }
+  ],
+  "relevantSymbolEdges": [
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_topology_ref.cpp",
+      "kind": "call",
+      "count": 17,
+      "sites": [
+        {
+          "line": 2398,
+          "symbol": "ForgeCad::edgeReference",
+          "owner": "ForgeCad::forgePickFace"
+        }
+      ]
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 8,
+      "sites": [
+        {
+          "line": 2380,
+          "symbol": "FaceHit::operator=",
+          "owner": "ForgeCad::forgePickFace"
+        }
+      ]
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_classify.cpp",
+      "kind": "call",
+      "count": 10,
+      "sites": [
+        {
+          "line": 2377,
+          "symbol": "ForgeCad::Kernel::firstRayHit",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2410,
+          "symbol": "ForgeCad::Kernel::firstRayHit",
+          "owner": "ForgeCad::forgeIntersectRay"
+        }
+      ]
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 27,
+      "sites": [
+        {
+          "line": 2397,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::forgePickFace"
+        }
+      ]
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1911,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::forgeFillContactFaces"
+        }
+      ]
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 262,
+      "sites": [
+        {
+          "line": 2377,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2386,
+          "symbol": "ForgeCad::Kernel::Frame3::zDir",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2386,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2386,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2389,
+          "symbol": "ForgeCad::Kernel::Frame3::origin",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2389,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2390,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2410,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::forgeIntersectRay"
+        }
+      ]
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 20,
+      "sites": [
+        {
+          "line": 2384,
+          "symbol": "ForgeCad::Kernel::Surface::type",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2385,
+          "symbol": "ForgeCad::Kernel::Plane::frame",
+          "owner": "ForgeCad::forgePickFace"
+        }
+      ]
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 4,
+      "sites": [
+        {
+          "line": 588,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::forgeBlend"
+        },
+        {
+          "line": 854,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::forgeClosestSheetPiece"
+        },
+        {
+          "line": 2080,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::surfaceConstructionCurvesSerial"
+        }
+      ]
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 129,
+      "sites": [
+        {
+          "line": 2383,
+          "symbol": "ForgeCad::Kernel::Body::face",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2394,
+          "symbol": "ForgeCad::Kernel::Body::loopFins",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2395,
+          "symbol": "ForgeCad::Kernel::Body::edge",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2395,
+          "symbol": "ForgeCad::Kernel::Body::fin",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2398,
+          "symbol": "ForgeCad::Kernel::Body::fin",
+          "owner": "ForgeCad::forgePickFace"
+        }
+      ]
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 180,
+      "sites": [
+        {
+          "line": 2376,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2378,
+          "symbol": "ForgeCad::Kernel::Id::valid",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2383,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2393,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2394,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2395,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::forgePickFace"
+        },
+        {
+          "line": 2398,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::forgePickFace"
+        }
+      ]
+    },
+    {
+      "source": "cad_pattern_variation.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 5,
+      "sites": [
+        {
+          "line": 503,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ForgeCad::refreshVariantSketch"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_constraints.cpp",
+      "kind": "call",
+      "count": 6,
+      "sites": [
+        {
+          "line": 331,
+          "symbol": "ForgeCad::makeConstraint",
+          "owner": "ForgeCad::appendProjectedCurve"
+        },
+        {
+          "line": 335,
+          "symbol": "ForgeCad::makeConstraint",
+          "owner": "ForgeCad::appendProjectedCurve"
+        },
+        {
+          "line": 519,
+          "symbol": "ForgeCad::makeConstraint",
+          "owner": "ForgeCad::appendSketchContactReferences"
+        },
+        {
+          "line": 625,
+          "symbol": "ForgeCad::makeConstraint",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "line": 996,
+          "symbol": "ForgeCad::refersTo",
+          "owner": "ForgeCad::refreshLinkedSketchReferences"
+        },
+        {
+          "line": 997,
+          "symbol": "ForgeCad::constraintName",
+          "owner": "ForgeCad::refreshLinkedSketchReferences"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_feature_dependencies.cpp",
+      "kind": "call",
+      "count": 11,
+      "sites": [
+        {
+          "line": 787,
+          "symbol": "ForgeCad::isBodyRef",
+          "owner": "ForgeCad::appendLinkedSketchReference"
+        },
+        {
+          "line": 787,
+          "symbol": "ForgeCad::isSketchRef",
+          "owner": "ForgeCad::appendLinkedSketchReference"
+        },
+        {
+          "line": 790,
+          "symbol": "ForgeCad::isSketchRef",
+          "owner": "ForgeCad::appendLinkedSketchReference"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 94,
+      "sites": [
+        {
+          "line": 192,
+          "symbol": "ForgeCad::appendSegment",
+          "owner": "ForgeCad::appendProjectedCurve"
+        },
+        {
+          "line": 309,
+          "symbol": "ForgeCad::appendSegment",
+          "owner": "ForgeCad::appendProjectedCurve"
+        },
+        {
+          "line": 518,
+          "symbol": "ForgeCad::appendSegment",
+          "owner": "ForgeCad::appendSketchContactReferences"
+        },
+        {
+          "line": 618,
+          "symbol": "ForgeCad::appendFixedReferenceLine::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_refs.cpp:613:24)::operator()",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "line": 619,
+          "symbol": "ForgeCad::appendFixedReferenceLine::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_refs.cpp:613:24)::operator()",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "line": 624,
+          "symbol": "ForgeCad::appendSegment",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "line": 662,
+          "symbol": "ForgeCad::appendSegment",
+          "owner": "ForgeCad::projectReferencePath"
+        },
+        {
+          "line": 702,
+          "symbol": "ForgeCad::appendSegment",
+          "owner": "ForgeCad::appendReferenceProjection"
+        },
+        {
+          "line": 755,
+          "symbol": "ForgeCad::appendSegment",
+          "owner": "ForgeCad::projectLinkedReference"
+        },
+        {
+          "line": 772,
+          "symbol": "ForgeCad::appendSegment",
+          "owner": "ForgeCad::projectLinkedReference"
+        },
+        {
+          "line": 788,
+          "symbol": "ForgeCad::sketchReferenceSourceIndex",
+          "owner": "ForgeCad::appendLinkedSketchReference"
+        },
+        {
+          "line": 793,
+          "symbol": "ForgeCad::sameSketchSource",
+          "owner": "ForgeCad::appendLinkedSketchReference"
+        },
+        {
+          "line": 812,
+          "symbol": "ForgeCad::projectLinkedReference",
+          "owner": "ForgeCad::appendLinkedSketchReference"
+        },
+        {
+          "line": 823,
+          "symbol": "ForgeCad::appendLinkedSketchReference::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_refs.cpp:821:37)::operator()",
+          "owner": "ForgeCad::appendLinkedSketchReference"
+        },
+        {
+          "line": 824,
+          "symbol": "ForgeCad::appendLinkedSketchReference::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_refs.cpp:821:37)::operator()",
+          "owner": "ForgeCad::appendLinkedSketchReference"
+        },
+        {
+          "line": 830,
+          "symbol": "ForgeCad::appendReferenceProjection",
+          "owner": "ForgeCad::appendLinkedSketchReference"
+        },
+        {
+          "line": 831,
+          "symbol": "ForgeCad::sketchReferenceLabel",
+          "owner": "ForgeCad::appendLinkedSketchReference"
+        },
+        {
+          "line": 885,
+          "symbol": "ForgeCad::appendSegment",
+          "owner": "ForgeCad::appendBodySketchReferences"
+        },
+        {
+          "line": 965,
+          "symbol": "ForgeCad::sketchReferenceLabel",
+          "owner": "ForgeCad::refreshLinkedSketchReferences"
+        },
+        {
+          "line": 968,
+          "symbol": "ForgeCad::projectLinkedReference",
+          "owner": "ForgeCad::refreshLinkedSketchReferences"
+        },
+        {
+          "line": 969,
+          "symbol": "ForgeCad::selectSectionBranches",
+          "owner": "ForgeCad::refreshLinkedSketchReferences"
+        },
+        {
+          "line": 985,
+          "symbol": "ForgeCad::sketchReferenceLabel",
+          "owner": "ForgeCad::refreshLinkedSketchReferences"
+        },
+        {
+          "line": 991,
+          "symbol": "ForgeCad::sketchReferenceSourceIndex",
+          "owner": "ForgeCad::refreshLinkedSketchReferences"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 40,
+      "sites": [
+        {
+          "line": 621,
+          "symbol": "ConstraintRef::operator==",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "line": 810,
+          "symbol": "SketchObject::SketchObject",
+          "owner": "ForgeCad::appendLinkedSketchReference"
+        },
+        {
+          "line": 811,
+          "symbol": "SketchFrame::operator=",
+          "owner": "ForgeCad::appendLinkedSketchReference"
+        },
+        {
+          "line": 812,
+          "symbol": "GeometryRef::GeometryRef",
+          "owner": "ForgeCad::appendLinkedSketchReference"
+        },
+        {
+          "line": 966,
+          "symbol": "SketchObject::SketchObject",
+          "owner": "ForgeCad::refreshLinkedSketchReferences"
+        },
+        {
+          "line": 967,
+          "symbol": "SketchFrame::operator=",
+          "owner": "ForgeCad::refreshLinkedSketchReferences"
+        },
+        {
+          "line": 968,
+          "symbol": "GeometryRef::GeometryRef",
+          "owner": "ForgeCad::refreshLinkedSketchReferences"
+        },
+        {
+          "line": 989,
+          "symbol": "CurveObject::operator=",
+          "owner": "ForgeCad::refreshLinkedSketchReferences"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 168,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::nearestBodyEdge"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 134,
+      "sites": [
+        {
+          "line": 169,
+          "symbol": "ForgeCad::Kernel::Interval::operator=",
+          "owner": "ForgeCad::nearestBodyEdge"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 24,
+      "sites": [
+        {
+          "line": 165,
+          "symbol": "ForgeCad::Kernel::Body::edges",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "line": 166,
+          "symbol": "ForgeCad::Kernel::Body::edge",
+          "owner": "ForgeCad::nearestBodyEdge"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 36,
+      "sites": [
+        {
+          "line": 165,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "line": 166,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::nearestBodyEdge"
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 83,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ForgeCad::resolvePointAttachment"
+        },
+        {
+          "line": 169,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ForgeCad::constrainIntersection"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_document.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 8,
+      "sites": [
+        {
+          "line": 2007,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "CadViewport::refreshSurfacePierceSketches"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_interaction.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 620,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "CadViewport::mousePressEvent"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_selection.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 4,
+      "sites": [
+        {
+          "line": 1819,
+          "symbol": "ForgeCad::forgePickFace",
+          "owner": "CadViewport::cachedRayFace"
+        },
+        {
+          "line": 1821,
+          "symbol": "ForgeCad::forgePickFace",
+          "owner": "CadViewport::cachedRayFace"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_sketch.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 13,
+      "sites": [
+        {
+          "line": 491,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "CadViewport::selectSketchReference"
+        },
+        {
+          "line": 600,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "CadViewport::appendReferenceAt"
+        },
+        {
+          "line": 646,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "CadViewport::addSectionReferences"
+        },
+        {
+          "line": 2301,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "CadViewport::solveActive"
+        },
+        {
+          "line": 2314,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "CadViewport::solveActiveDrag"
+        },
+        {
+          "line": 3328,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "CadViewport::sketchReferenceCache"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_sketch_reference.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 130,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "CadViewport::updateSketchReferenceHover"
+        },
+        {
+          "line": 203,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "CadViewport::selectSketchReferenceAt"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_display_mesh.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 8,
+      "sites": [
+        {
+          "line": 68,
+          "symbol": "ForgeCad::forgePickFace",
+          "owner": "ViewportInteractionTest::displayMeshTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_projected_curve_references.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 16,
+      "sites": [
+        {
+          "line": 16,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::projectedCurveReferences"
+        },
+        {
+          "line": 19,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::projectedCurveReferences"
+        },
+        {
+          "line": 27,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::projectedCurveReferences"
+        },
+        {
+          "line": 32,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::projectedCurveReferences"
+        },
+        {
+          "line": 37,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::projectedCurveReferences"
+        },
+        {
+          "line": 66,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::projectedCurveReferences"
+        },
+        {
+          "line": 70,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::projectedCurveReferences"
+        },
+        {
+          "line": 83,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::projectedCurveReferences"
+        },
+        {
+          "line": 95,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::projectedCurveReferences"
+        },
+        {
+          "line": 97,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::projectedCurveReferences"
+        },
+        {
+          "line": 99,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::projectedCurveReferences"
+        },
+        {
+          "line": 101,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::projectedCurveReferences"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_sketch_apparent.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 96,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::sketchApparent"
+        },
+        {
+          "line": 103,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::sketchApparent"
+        },
+        {
+          "line": 109,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::sketchApparent"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_sketch_construction.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 73,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::sketchReferenceUsage"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_sketch_intersections.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 38,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::intersectionSnaps"
+        },
+        {
+          "line": 50,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::intersectionSnaps"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_sketch_linked_refs.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 41,
+      "sites": [
+        {
+          "line": 101,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::bodySketchReferenceCacheRegressions"
+        },
+        {
+          "line": 102,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::bodySketchReferenceCacheRegressions"
+        },
+        {
+          "line": 107,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::bodySketchReferenceCacheRegressions"
+        },
+        {
+          "line": 112,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::bodySketchReferenceCacheRegressions"
+        },
+        {
+          "line": 150,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 158,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 162,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 172,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 176,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 177,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 186,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 189,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 194,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 195,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 197,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 199,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 213,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 216,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 218,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 223,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 224,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 229,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 232,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 308,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::linkedSketchReferences"
+        },
+        {
+          "line": 355,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::linkedReferenceVisibility"
+        },
+        {
+          "line": 388,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::linkedReferenceVisibility"
+        },
+        {
+          "line": 436,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::linkedReferenceVisibility"
+        },
+        {
+          "line": 444,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::linkedReferenceVisibility"
+        },
+        {
+          "line": 447,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::linkedReferenceVisibility"
+        },
+        {
+          "line": 457,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::linkedReferenceVisibility"
+        },
+        {
+          "line": 539,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::sectionReferenceSubsets"
+        },
+        {
+          "line": 547,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::sectionReferenceSubsets"
+        },
+        {
+          "line": 550,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::sectionReferenceSubsets"
+        },
+        {
+          "line": 552,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::sectionReferenceSubsets"
+        },
+        {
+          "line": 564,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::sectionReferenceSubsets"
+        },
+        {
+          "line": 568,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::sectionReferenceSubsets"
+        },
+        {
+          "line": 572,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::sectionReferenceSubsets"
+        },
+        {
+          "line": 574,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::sectionReferenceSubsets"
+        },
+        {
+          "line": 579,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::sectionReferenceSubsets"
+        },
+        {
+          "line": 581,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::sectionReferenceSubsets"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_sketch_tools_refs.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 136,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::sketchToolsReferences"
+        },
+        {
+          "line": 151,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::sketchToolsReferences"
+        },
+        {
+          "line": 155,
+          "symbol": "ForgeCad::refreshLinkedSketchReferences",
+          "owner": "ViewportInteractionTest::sketchToolsReferences"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_storyboard_panel_selection.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 141,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::mirrorDeleteOnce"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_storyboard_review.h",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 97,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::storyboardIncrementalRegressions"
+        },
+        {
+          "line": 299,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::storyboardReviewRegressions"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 87,
+      "sites": [
+        {
+          "line": 8061,
+          "symbol": "ForgeCad::forgePickFace",
+          "owner": "ViewportInteractionTest::pickOwner"
+        },
+        {
+          "line": 8064,
+          "symbol": "ForgeCad::forgePickFace",
+          "owner": "ViewportInteractionTest::pickOwner"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 18,
+      "sites": [
+        {
+          "line": 263,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ViewportInteractionTest::constructionDimensionRegressions"
+        }
+      ]
+    }
+  ],
+  "targetUses": {
+    "forgeIntersectRay": {
+      "incomingReferences": [],
+      "outgoingDependencies": [
+        {
+          "source": "cad_forge.cpp",
+          "target": "kernel/fk_classify.cpp",
+          "kind": "call",
+          "line": 2410,
+          "symbol": "ForgeCad::Kernel::firstRayHit",
+          "owner": "ForgeCad::forgeIntersectRay"
+        },
+        {
+          "source": "cad_forge.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 2410,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::forgeIntersectRay"
+        }
+      ]
+    },
+    "nearestBodyEdge": {
+      "incomingReferences": [],
+      "outgoingDependencies": [
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "kernel/fk_curve_algo.h",
+          "kind": "call",
+          "line": 168,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 169,
+          "symbol": "ForgeCad::Kernel::Interval::operator=",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 165,
+          "symbol": "ForgeCad::Kernel::Body::edges",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 166,
+          "symbol": "ForgeCad::Kernel::Body::edge",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 165,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 166,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::nearestBodyEdge"
+        }
+      ]
+    },
+    "appendFixedReferenceLine": {
+      "incomingReferences": [],
+      "outgoingDependencies": [
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "cad_constraints.cpp",
+          "kind": "call",
+          "line": 625,
+          "symbol": "ForgeCad::makeConstraint",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "cad_sketch_refs.cpp",
+          "kind": "call",
+          "line": 618,
+          "symbol": "ForgeCad::appendFixedReferenceLine::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_refs.cpp:613:24)::operator()",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "cad_sketch_refs.cpp",
+          "kind": "call",
+          "line": 619,
+          "symbol": "ForgeCad::appendFixedReferenceLine::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_refs.cpp:613:24)::operator()",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "cad_sketch_refs.cpp",
+          "kind": "call",
+          "line": 624,
+          "symbol": "ForgeCad::appendSegment",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "cad_types.h",
+          "kind": "call",
+          "line": 621,
+          "symbol": "ConstraintRef::operator==",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        }
+      ]
+    }
+  }
+}

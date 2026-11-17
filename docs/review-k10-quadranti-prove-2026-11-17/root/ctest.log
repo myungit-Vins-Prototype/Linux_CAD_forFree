@@ -1,0 +1,71 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 239
+    Start 239: forgekernel_curve_projection_tests
+
+239: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_curve_projection_tests
+239: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+239: Test timeout computed to be: 180
+239: [  OK  ] CurveProjectionRationalKnotsWeightsAndJets
+239: [  OK  ] CurveProjectionAffineShearNestedWrappers
+239: [  OK  ] CurveProjectionLinesDegenerateAndUnsupportedConics
+239: [  OK  ] CurveProjectionInvalidAndCancellation
+239: [  OK  ] CurveProjectionFillRationalAndBodyRoundtrip
+239: 5/5 test superati
+1/4 Test #239: forgekernel_curve_projection_tests ..................   Passed    0.00 sec
+test 254
+    Start 254: forgekernel_invert_point_validation_tests
+
+254: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_invert_point_validation_tests
+254: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+254: Test timeout computed to be: 120
+254: [  OK  ] InvertPointCylinderValidatesFinalUnwrappedResidual
+254: [  OK  ] InvertPointConeSphereValidateFinalUnwrappedResidual
+254: [  OK  ] InvertPointTorusValidatesBothFinalPeriodicCoordinates
+254: [  OK  ] InvertPointModeratePeriodicSeedsKeepNearbyBranch
+254: [  OK  ] InvertPointPlaneAndClosedNonPeriodicSplineControls
+254: [  OK  ] InvertPointNonFinitePeriodicSeedsCannotReturnSuccess
+254: 6/6 test superati
+2/4 Test #254: forgekernel_invert_point_validation_tests ...........   Passed    0.00 sec
+test 255
+    Start 255: forgekernel_pcurve_deviation_validation_tests
+
+255: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_pcurve_deviation_validation_tests
+255: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+255: Test timeout computed to be: 120
+255: [  OK  ] PCurveDeviationFiniteControlsAndSampledKnotPeaks
+255: [  OK  ] PCurveDeviationInvalidSamplesAndRangesReturnInfinity
+255: [  OK  ] PCurveDeviationNonFiniteNativeEvaluationsNeverLookExact
+255: [  OK  ] PCurveDeviationOverflowGapFromFinitePointsIsInfinity
+255: [  OK  ] PCurveAcceptanceNeedsFiniteDeviationEvenWithInfiniteTolerance
+255: [  OK  ] PCurveDeviationAndAcceptancePropagateCancellation
+255: 6/6 test superati
+3/4 Test #255: forgekernel_pcurve_deviation_validation_tests .......   Passed    0.00 sec
+test 256
+    Start 256: forgekernel_quadrant_breakpoints_validation_tests
+
+256: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_quadrant_breakpoints_validation_tests
+256: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+256: Test timeout computed to be: 30
+256: [  OK  ] QuadrantBreakpointsSafeControls
+256: [  OK  ] QuadrantBreakpointsInvalidRanges
+256: [  OK  ] QuadrantBreakpointsNonProgressRange
+256: [  OK  ] QuadrantBreakpointsCancellationPreset
+256: 4/4 test superati
+4/4 Test #256: forgekernel_quadrant_breakpoints_validation_tests ...   Passed    0.00 sec
+
+The following tests passed:
+	forgekernel_curve_projection_tests
+	forgekernel_invert_point_validation_tests
+	forgekernel_pcurve_deviation_validation_tests
+	forgekernel_quadrant_breakpoints_validation_tests
+
+100% tests passed out of 4
+
+Total Test time (real) =   0.01 sec

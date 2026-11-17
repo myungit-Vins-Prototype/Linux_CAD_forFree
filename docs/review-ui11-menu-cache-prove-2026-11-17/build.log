@@ -1,0 +1,15 @@
+[ 43%] Built target forgekernel
+[ 43%] Built target forgecad_compute_autogen_timestamp_deps
+[ 43%] Built target forgecad_compute_autogen
+[ 43%] Built target forgecad_compute
+[ 43%] Built target forgecad_autogen_timestamp_deps
+[ 43%] Automatic MOC and UIC for target forgecad
+[ 43%] Built target forgecad_autogen
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_gui.cpp.o
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_ribbon_preview.cpp.o
+[ 43%] Linking CXX executable forgecad
+[100%] Built target forgecad
+Built target forgecad_application_theme_tests_autogen_timestamp_deps
+Automatic MOC and UIC for target forgecad_application_theme_tests
+Built target forgecad_application_theme_tests_autogen
+Built target forgecad_application_theme_tests

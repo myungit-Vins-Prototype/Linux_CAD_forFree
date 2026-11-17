@@ -1,0 +1,7 @@
+[  OK  ] MappingFitFiniteCubicQuinticGridsAndDeviation
+[  OK  ] MappingFitNonFiniteInteriorProbeCannotPublishSurface
+[  OK  ] MappingFitNonFiniteCornerAndStencilValuesReject
+[  OK  ] MappingFitEveryAnalyticJetVectorMustBeFinite
+[  OK  ] MappingFitToleranceAndGridPreflightBeforeCallbacks
+[  OK  ] MappingFitCallbackErrorsAndCancellationDoNotPublish
+6/6 test superati

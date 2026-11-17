@@ -1,0 +1,21 @@
+from pathlib import Path
+import subprocess,concurrent.futures,json,time,hashlib,sys
+repo=Path('/home/myungit/Linux_CAD_forFree');stage=Path('/tmp/k10-instance-carrier-review/tests');candidate=Path('/tmp/k10-instance-carrier-review/root/candidate/kernel');library=stage.parent/'root/libforgekernel-baseline.a';mode=sys.argv[1];assert mode in('release','asan');out=stage/mode;out.mkdir(exist_ok=True)
+sources=[candidate/'fk_surface_curve_bounds.cpp',stage/'test_surface_curve_instances.cpp',stage/'test_surface_curve_bounds.cpp']+[repo/'kernel/tests'/n for n in ['test_surface_curve_rational.cpp','test_sheet_join_ledger.cpp','test_mapping_nonplane_validation.cpp','fk_test_main.cpp']]
+h=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();assert h(library)=='a0c5530e331c08d86fc5c4fa29e4477e66fa1ff4c6c646df15d959f211e9531c';(out/'source-hashes.json').write_text(json.dumps({str(p):h(p)for p in sources+[candidate/'fk_surface_curve_bounds.h']},indent=2))
+flags=['-std=c++17','-O2'if mode=='release'else'-O1','-g','-Wall','-Wextra','-Wpedantic','-fno-fast-math','-ffp-contract=off','-I'+str(candidate),'-I'+str(repo/'kernel'),'-I'+str(repo/'kernel/tests')]
+if mode=='asan':flags+=['-fsanitize=address,undefined','-fno-omit-frame-pointer']
+commands=[['/usr/bin/c++',*flags,'-c',str(s),'-o',str(out/(s.stem+'.o'))]for s in sources];(out/'compile-commands.json').write_text(json.dumps(commands,indent=2));start=time.monotonic()
+def compile_one(command):
+ with(out/(Path(command[-1]).stem+'.compile.log')).open('w')as log:r=subprocess.run(command,stdout=log,stderr=subprocess.STDOUT)
+ return {'source':command[-3],'exit':r.returncode}
+with concurrent.futures.ThreadPoolExecutor(max_workers=2)as pool:results=list(pool.map(compile_one,commands))
+(out/'compile-results.json').write_text(json.dumps(results,indent=2));assert all(r['exit']==0 for r in results),results
+args=['/usr/bin/c++',*flags,*[str(out/(s.stem+'.o'))for s in sources],str(library),'-lpthread','-o',str(out/'instance-tests')];(out/'link-command.json').write_text(json.dumps(args,indent=2))
+with(out/'link.log').open('w')as log:r=subprocess.run(args,stdout=log,stderr=subprocess.STDOUT)
+assert r.returncode==0
+(out/'build-result.json').write_text(json.dumps({'seconds':time.monotonic()-start,'binarySha256':h(out/'instance-tests'),'librarySha256':h(library)},indent=2));print(mode,'BUILT',time.monotonic()-start)
+if mode=='release':
+ start=time.monotonic()
+ with(out/'tests.log').open('w')as log:r=subprocess.run([str(out/'instance-tests')],stdout=log,stderr=subprocess.STDOUT)
+ (out/'run-result.json').write_text(json.dumps({'exit':r.returncode,'seconds':time.monotonic()-start},indent=2));print((out/'tests.log').read_text());assert r.returncode==0

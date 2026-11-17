@@ -1,0 +1,12 @@
+{
+  "baseline_sha256": "a56cbc9bd3f06f60f7b1ef6bd2c94cf660dc2099da81466993decd43b831f3bc",
+  "candidate_sha256": "7f47f426d3d19182cc2261741beb4fc6efb94ac72994946c2009863219b98011",
+  "patch_sha256": "e1ba3d72f401d8ae2a69c8958b7a83bdf883bcfc1b40bb5910780924b1e48fd4",
+  "baseline_source_unchanged": true,
+  "modified_paths": [
+    "kernel/fk_curve.cpp"
+  ],
+  "header_unchanged": true,
+  "verification": "static only; no compilation or pathological-loop execution",
+  "pending": "root/tester watchdog baseline, candidate tests, build and CLAUDE/report integration"
+}

@@ -1,0 +1,26 @@
+{
+  "baseline_files": 7800,
+  "changed_existing": [
+    "CLAUDE.md",
+    "docs/code-review-2026-11-15.md",
+    "kernel/CMakeLists.txt",
+    "kernel/fk_curve_algo.cpp",
+    "kernel/fk_curve_length_cache.h",
+    "tools/generate_architecture.py"
+  ],
+  "preserved_existing": 7794,
+  "previous_packages": 37,
+  "previous_artifacts": 5170,
+  "HEAD_origin_main": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "index_empty": true,
+  "no_commit_push_UI_CI_general483": true,
+  "CLAUDE_bytes": 16315,
+  "ctest_passed": 3,
+  "new_groups": 6,
+  "baseline_safe_groups_run_passed": 1,
+  "legacy_filtered": 8,
+  "ordinary_probe_byte_identical": true,
+  "native_unit_length_recovered_both_reparametrizations": true,
+  "quad_header_public_header_and_tolerances_unchanged": true,
+  "baseline_watchdog_native_norm_overflow": 124
+}

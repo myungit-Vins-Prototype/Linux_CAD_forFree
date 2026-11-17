@@ -1,0 +1,17 @@
+from pathlib import Path
+import hashlib,json
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/legacy-api-review');P=R/'docs/review-legacy-api-prove-2026-11-16';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+assert not P.exists();P.mkdir()
+def cp(a,b):
+ data=a.read_bytes();assert not data.startswith(b'\x7fELF') and b'\0' not in data;data.decode('utf-8')
+ if b.suffix in ['.cpp','.h','.py','.sh']:b=b.with_name(b.name+'.txt')
+ b.parent.mkdir(parents=True,exist_ok=True);b.write_bytes(data)
+for folder in ['extend','drawing','utilities','cross-audit','k10-next','root']:
+ src=T/folder;dest='k10' if folder=='k10-next' else folder;assert src.is_dir()
+ for f in sorted(src.rglob('*')):
+  if not f.is_file() or '__pycache__' in f.parts:continue
+  if f.suffix in ['.json','.txt','.md','.patch','.diff','.log','.py','.cpp','.h','.xml'] or f.name=='SHA256SUMS':cp(f,P/dest/f.relative_to(src))
+for f in json.loads((T/'root/integrated-sources.json').read_text()):cp(R/f,P/'integrated'/f)
+(P/'README.txt').write_text('Seven orphan application API entries removed coherently, local-only review2026-11-16. Three GPT-6.1 Sol agents produced staged deltas, cross audit35static checks, root full app build10CTest/architecture/startup. No new mirror tests, no kernel modifications, no global leak or native macOS/OpenGL claim. Prior22proof seals immutable. Sources/scripts inert; no ELF, objects, libraries or CAD. Upstream manifests record original staging paths; .cpp/.h/.py filenames become .txt here with identical bytes, rootSHA256SUMS describes curated paths. K10 directory is a read-only next-step plan, not implementation or new test evidence. HEAD/origin/main47c7c19 and index unchanged: no git add, commit or push performed. Functional bug count33 unchanged; original22orphan candidates classified16removed/6intentionally retained.\n')
+files=sorted(f for f in P.rglob('*') if f.is_file());size=sum(f.stat().st_size for f in files);assert size<30_000_000
+(P/'SHA256SUMS').write_text(''.join(sha(f)+'  '+str(f.relative_to(P))+'\n' for f in files));print('Archived',len(files),size,'bytes; seal',sha(P/'SHA256SUMS'))

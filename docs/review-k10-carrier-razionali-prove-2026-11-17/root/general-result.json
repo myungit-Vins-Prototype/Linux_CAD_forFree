@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "seconds": 514.9908668849966,
+  "command": [
+    "./forgecad-release/kernel/forgekernel_tests"
+  ]
+}

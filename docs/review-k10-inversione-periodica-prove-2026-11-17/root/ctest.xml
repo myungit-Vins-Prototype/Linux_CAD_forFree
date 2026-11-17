@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="4"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="39"
+	timestamp="2026-11-17T12:42:17"
+	>
+	<testcase name="forgekernel_surface_instances_tests" classname="forgekernel_surface_instances_tests" time="0.651468" status="run">
+		<properties/>
+		<system-out>[  OK  ] SurfaceInstanceExactJetsAndPoles
+[  OK  ] SurfaceInstanceFlattenedAndImmutable
+[  OK  ] SurfaceInstanceSharesBezierPolesAndBounds
+[  OK  ] SurfaceInstanceBinarySharingAndLegacyRead
+[  OK  ] SurfaceInstanceRejectsInvalidPlacementAndRecords
+[  OK  ] SurfaceInstanceStepReplicaRoundTrip
+[  OK  ] SurfaceInstanceStepRejectsCycles
+[  OK  ] SurfaceInstanceStepReadsStandardMirrorAndScale
+[  OK  ] SurfaceInstancePreservesSingularTrimsAndMesh
+[  OK  ] SurfaceInstanceSewPolarWedgesAndCap
+[  OK  ] SurfaceInstanceZeroRadiusAtHighValenceCusp
+[  OK  ] BodyReadPoolExactSharingAndRecordIdentity
+[  OK  ] BodyReadPoolRejectsNearDuplicatesAndSurvivesPool
+[  OK  ] BodyReadPoolConcurrentDocuments
+14/14 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_sheet_join_validation_tests" classname="forgekernel_sheet_join_validation_tests" time="38.8129" status="run">
+		<properties/>
+		<system-out>[  OK  ] SheetJoinImplicitPolynomial
+[  OK  ] SheetJoinTangentPolynomial
+[  OK  ] SheetJoinRigidPose
+[  OK  ] SheetJoinSmallScale
+[  OK  ] SheetJoinLargeScale
+[  OK  ] SheetJoinRational
+[  OK  ] SheetJoinReverseSelection
+[  OK  ] SheetJoinFaceSense
+[  OK  ] SheetJoinCanonicalReversal
+[  OK  ] SheetJoinLowerBoundary
+[  OK  ] SheetJoinTangentRigidPose
+[  OK  ] SheetJoinTangentSmallScale
+[  OK  ] SheetJoinTangentLargeScale
+[  OK  ] SheetJoinTangentRational
+[  OK  ] SheetJoinTangentReverseSelection
+[  OK  ] SheetJoinTangentFaceSense
+[  OK  ] SheetJoinTangentCanonicalReversal
+[  OK  ] SheetJoinTangentLowerBoundary
+[  OK  ] SheetJoinHiddenNarrowKnots
+[  OK  ] SheetJoinTangentGapBudget
+[  OK  ] SheetJoinTangentTrimmedSupport
+[  OK  ] SheetJoinHiddenNarrowPhases
+[  OK  ] SheetJoinHiddenNarrowPose
+[  OK  ] SheetJoinHiddenNarrowSmallScale
+[  OK  ] SheetJoinHiddenNarrowLargeScale
+[  OK  ] SheetJoinHiddenNarrowReverseSelection
+[  OK  ] SheetJoinTangentGapPose
+[  OK  ] SheetJoinCancellationAtomic
+[  OK  ] SheetJoinInvalid...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_mapping_nonplane_validation_tests" classname="forgekernel_mapping_nonplane_validation_tests" time="0.24677" status="run">
+		<properties/>
+		<system-out>[  OK  ] MappingNonPlaneCylinderFinalFinsAndNullHistory
+[  OK  ] MappingNonPlaneQuadraticTargetFinalFinsAndNullHistory
+[  OK  ] MappingNonPlaneRationalCarrierFinalFinsAndNullHistory
+[  OK  ] MappingNonPlaneHiddenCarrierPeakRejectedAtomically
+[  OK  ] MappingNonPlaneFarOutsideCannotBeRepairedByClamping
+[  OK  ] MappingNonPlaneCancellationPreservesInputsAndOutputs
+[  OK  ] MappingFitFiniteCubicQuinticGridsAndDeviation
+[  OK  ] MappingFitNonFiniteInteriorProbeCannotPublishSurface
+[  OK  ] MappingFitNonFiniteCornerAndStencilValuesReject
+[  OK  ] MappingFitEveryAnalyticJetVectorMustBeFinite
+[  OK  ] MappingFitToleranceAndGridPreflightBeforeCallbacks
+[  OK  ] MappingFitCallbackErrorsAndCancellationDoNotPublish
+12/12 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_invert_point_validation_tests" classname="forgekernel_invert_point_validation_tests" time="0.00175183" status="run">
+		<properties/>
+		<system-out>[  OK  ] InvertPointCylinderValidatesFinalUnwrappedResidual
+[  OK  ] InvertPointConeSphereValidateFinalUnwrappedResidual
+[  OK  ] InvertPointTorusValidatesBothFinalPeriodicCoordinates
+[  OK  ] InvertPointModeratePeriodicSeedsKeepNearbyBranch
+[  OK  ] InvertPointPlaneAndClosedNonPeriodicSplineControls
+[  OK  ] InvertPointNonFinitePeriodicSeedsCannotReturnSuccess
+6/6 test superati
+</system-out>
+	</testcase>
+</testsuite>

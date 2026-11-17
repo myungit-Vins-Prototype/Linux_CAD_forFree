@@ -1,0 +1,4 @@
+patching file kernel/fk_surface_curve_bounds.cpp
+patching file kernel/fk_surface_curve_bounds.h
+patching file kernel/fk_sheet_join_validation.cpp
+patching file kernel/fk_surface_mapping.cpp

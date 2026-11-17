@@ -1,0 +1,17 @@
+from pathlib import Path
+import hashlib,json
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-arc-review/root');b=json.loads((T/'baseline.json').read_text());sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();paths=['kernel/fk_sheet.cpp','kernel/CMakeLists.txt','tools/generate_architecture.py'];test=Path('/tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp');candidate=Path('/tmp/k10-arc-review/core/kernel/fk_sheet.cpp');new='kernel/tests/test_sheet_arc_validation.cpp'
+for f in paths:assert sha(R/f)==b[f],f
+assert sha(candidate)=='d584e6cf0622bcb59f8a4f57b19230279ab7fd7b7509a48b39a2b3e28ff8df76';assert sha(test)==json.loads((T/'test-freeze.json').read_text())['sha256'];assert not (R/new).exists()
+cm=(R/paths[1]).read_text()+'''
+# Estensione: lunghezza fisica sul parametro finale, senza successi non convergenti.
+add_executable(forgekernel_sheet_arc_validation_tests tests/fk_test_main.cpp
+    tests/test_sheet_arc_validation.cpp)
+target_link_libraries(forgekernel_sheet_arc_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_sheet_arc_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_sheet_arc_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_sheet_arc_validation_tests COMMAND forgekernel_sheet_arc_validation_tests)
+set_tests_properties(forgekernel_sheet_arc_validation_tests PROPERTIES TIMEOUT 120)
+'''
+gen=(R/paths[2]).read_text();anchor=" 'kernel/fk_sheet.cpp':";assert gen.count(anchor)==1;start=gen.index(anchor);end=gen.index('\n',start);line=gen[start:end];assert line.endswith("'),");line=line[:-3]+" Inversione della lunghezza d arco: dopo gli ultimi passi Newton verifica direzione, finitezza e lunghezza fisica del parametro restituito sul reach, entro il budget1e-9scala fissato sull input; quadratura stimata1e-13 e60iterazioni invariate, fallimenti non convergenti terminali.'),";gen=gen[:start]+line+"\n 'kernel/tests/test_sheet_arc_validation.cpp': ('tests', 'Estensione pubblica su Extrusion e tensor B-spline: richiesti3mm contro1mm o178.534mm prima del guard, rifiuto atomico, positivi con fin/carrier effettivi e oracolo distanza, verso opposto/posa/scala, lineare/cilindro e cancellazione. Nessun certificato globale della quadratura.'),"+gen[end:]
+(R/paths[0]).write_bytes(candidate.read_bytes());(R/new).write_bytes(test.read_bytes());(R/paths[1]).write_text(cm);(R/paths[2]).write_text(gen);j={f:sha(R/f) for f in paths+[new]};(T/'integrated-sources.json').write_text(json.dumps(j,indent=2)+'\n');print(j)

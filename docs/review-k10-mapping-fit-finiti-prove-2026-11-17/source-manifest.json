@@ -1,0 +1,11 @@
+{
+  "AGENTS.md": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+  "CLAUDE.md": "da0b65615c0a61e26baad0a5977548c6fb133d9c35b9b71efbe3c1f475109de7",
+  "docs/code-review-2026-11-15.md": "c005c533784953c2ffb4eaab99a0c76266bc65213824a4523c3abb8980715b47",
+  "docs/history/claude-prima-k10-mapping-fit-finiti-2026-11-17.md": "aca875b58655bf5edd95f51cbd193bed3d1754674bda8d52d7973685a46f7459",
+  "docs/review-k10-mapping-fit-finiti-2026-11-17.md": "f66424b694311b38ba12bb98cf71af3cc6cb3071141717bfcaeaf7bd966c5cf0",
+  "kernel/CMakeLists.txt": "fddd1de7db25f3fa950c4cbc88bb348780dfc704d8189568a57245c8480b42d3",
+  "kernel/fk_mapping_fit.cpp": "03d21ceab86aead510559aee7101ade9a4aba8b1ef516671943b0bfa823fd001",
+  "kernel/tests/test_mapping_fit_validation.cpp": "821b8930879f26a03ac496178ed5ed71839a85e9bd991440f6d63f76e97f9dad",
+  "tools/generate_architecture.py": "18ff195e8c8d464ba395a243910443b2f1c48fa3b39b0453087f64606f8a6558"
+}

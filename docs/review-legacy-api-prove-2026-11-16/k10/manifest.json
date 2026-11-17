@@ -1,0 +1,22 @@
+{
+  "commands.txt": {
+    "sha256": "89a803241170c03fade7e31786982bbf849084d3590a541c0f6c4b85c8b5ae83",
+    "bytes": 659
+  },
+  "PLAN.md": {
+    "sha256": "725bf41f1d732f03fd6f915ac6beb6d7975b1a1d14afc03d263d122671d4bf4f",
+    "bytes": 3707
+  },
+  "evidence.json": {
+    "sha256": "0bdd2505b61ca3c38d0810f3cecaa15ca3e2c45709b3bd793777d02363c19eae",
+    "bytes": 181391
+  },
+  "historical-offline-evidence.json": {
+    "sha256": "2f0a8858a527822e4e7f5789b18c88e360d7635ecf185f525f456133f474bd23",
+    "bytes": 2110
+  },
+  "source-evidence.txt": {
+    "sha256": "bff84a4f2fb1640e69d5507dfca2de9aff9f38d0d599d04952c2be1434001c1e",
+    "bytes": 25839
+  }
+}

@@ -281,7 +281,7 @@ struct BlendModel {
             }
         throw std::logic_error("blendEdges: vertice non trovato nel loop");
     }
-    Body build(BodyHistory *history = nullptr) const {
+    Body build(BodyHistory *history = nullptr, std::vector<EdgeId> *modelEdges = nullptr) const {
         // Solo i vertici usati, rinumerati.
         std::vector<int> used(points.size(), -1);
         std::vector<Vec3> kept;
@@ -355,6 +355,13 @@ struct BlendModel {
             for (const auto &[index, origins] : generatedFaces)
                 declared.declareOrigins(EntityKind::Face, resultFaces.at(std::size_t(index)).index, origins);
             *history = std::move(declared);
+        }
+        if (modelEdges) {
+            const auto resultEdges = body.edges();
+            std::vector<EdgeId> mapped(edges.size());
+            for (std::size_t i = 0; i < edgeMap.size(); ++i)
+                if (edgeMap[i] >= 0) mapped[i] = resultEdges.at(std::size_t(edgeMap[i]));
+            *modelEdges = std::move(mapped);
         }
         return body;
     }

@@ -1,0 +1,11 @@
+{
+  "AGENTS.md": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+  "CLAUDE.md": "5353c98c64007a575e867cc4fa0facbba885fd1a6703c2c2d440139286e7168b",
+  "docs/code-review-2026-11-15.md": "76c53027575ed07bd817c52205d32a83f47fc4218a538998fc6db3ec8f3b959c",
+  "docs/history/claude-prima-k10-estensione-lunghezza-2026-11-17.md": "b5921aa6f17b79162bad215b4ae4ab151bca424eeaf28f3945893b8bf234ab4b",
+  "docs/review-k10-estensione-lunghezza-2026-11-17.md": "8aeeb318ec9e6db4bf6d965ec0e9c357b8759e634cfd23f2bd5e512c493accee",
+  "kernel/CMakeLists.txt": "5d37b868578db3a2c234537d8fdabdbb0e6969583fe0657633235d968db20ad8",
+  "kernel/fk_sheet.cpp": "d584e6cf0622bcb59f8a4f57b19230279ab7fd7b7509a48b39a2b3e28ff8df76",
+  "kernel/tests/test_sheet_arc_validation.cpp": "daf3c3a211260e07c3f35325314443b3b7010db75120df9986cf173068c136af",
+  "tools/generate_architecture.py": "f5632e933c8155b1be83961efd0cb02ffaf7d924d4cfd5b5ccfb41e7939e4027"
+}

@@ -1,0 +1,16 @@
+{
+  "AGENTS.md": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+  "CLAUDE.md": "aca875b58655bf5edd95f51cbd193bed3d1754674bda8d52d7973685a46f7459",
+  "docs/code-review-2026-11-15.md": "a9262d823c085347c32d64b53290c1236d030c7a47ae4227bb51a8306dfd23c0",
+  "docs/history/claude-prima-k10-wrapper-curve-2026-11-17.md": "390ae2ea37d5ae4e99c6d83e9a829b64a6c02d6513ec3472382f359a243ac771",
+  "docs/review-k10-wrapper-curve-2026-11-17.md": "73e77dcaf3f0061c99fd1d189a4fab81e10f1bc3b24109f7a9b58e033076a680",
+  "kernel/CMakeLists.txt": "e6de1fffcf28b34ada2bcb8abb7e2d45fa08ad94d253b7dbe73af410bbfe7d58",
+  "kernel/fk_surface_curve_bounds.cpp": "7dfb4c8f4b2d06ac1be0ef469d053232aa879fe2b762cf176567fabfd4059fba",
+  "kernel/fk_surface_curve_bounds.h": "dd92c62ce5707241743f70a34602af9b0b0e6eca048c765a23fc7a8e634a1aca",
+  "kernel/tests/test_surface_curve_bounds.cpp": "422234ef3517832c12f7d0c3059149b1a537409eb5de89d068d8cdac2634e46b",
+  "kernel/tests/test_surface_curve_instances.cpp": "58198e85b60bd38faa29d2c32dc026c35c6f8c261871fd33d8d0c5d36d1427f8",
+  "kernel/tests/test_surface_curve_rational_edges.cpp": "a7d9576f3b128bfeb5a45799c9e2bdc6396cd168314cd324ae38398e262dd1e2",
+  "kernel/tests/test_surface_curve_rational_pcurves.cpp": "4595201faa1b2977ed25bf1bfce8e058eb7106c391f25bd13b0474805d2e8261",
+  "kernel/tests/test_surface_curve_wrappers.cpp": "24d856c786e83f821aadd27fce3c37bd07f8053628c1fadd8f2f1f632ef82778",
+  "tools/generate_architecture.py": "14c24dbb98de7247a2f77d117d2469335f82509139857ccdad1394cbd3b4c1d8"
+}

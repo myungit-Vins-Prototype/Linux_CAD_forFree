@@ -1,0 +1,27 @@
+{
+  "mode": "ONE finite Python scalar iteration only; no C++ execution, no problematic loop",
+  "assumptions": "IEEE binary64 round-to-nearest; same stored kHalfPi as fk_math.h",
+  "rangeHex": [
+    "0x1.5af1d78b58c40p+66",
+    "0x1.5af1d78b67aabp+66"
+  ],
+  "kHalfPiHex": "0x1.921fb54442d18p+0",
+  "initialKHex": "0x1.b9be638027fc8p+65",
+  "initialKInteger": "63661977236758134784",
+  "kUlpExact": "8192",
+  "oneExactVsHalfUlp": {
+    "one": "1",
+    "halfUlp": "4096",
+    "roundingResult": "fl(k+1)=k"
+  },
+  "nextKHex": "0x1.b9be638027fc8p+65",
+  "exactNextMinusK": "0",
+  "tHex": "0x1.5af1d78b58c40p+66",
+  "toleranceHex": "0x1.7d78400010625p+26",
+  "loopCondition": true,
+  "pushCondition": false,
+  "remainingHiMargin": 899989504.0,
+  "induction": "Loop body pushes no value and changes no scalar except k+=1; fl(k+1)=k. Therefore state and true loop condition repeat indefinitely, absent external termination. Original body contains no cancellation point.",
+  "negativeInfinityCase": "lo=-Inf,hi=0 gives k=ceil(-Inf)=-Inf,t=-Inf,positive finite tolerance; loop condition true, push false, k+1=-Inf: same fixed-state induction. Not evaluated in a loop here.",
+  "geometricScope": "Actual native periodic Curve/Surface breakpoint APIs; enormous angular phases and invalid ranges. No ordinary CAD-body failure demonstrated."
+}

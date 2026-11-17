@@ -1,0 +1,23 @@
+{
+  "command": [
+    "/usr/bin/c++",
+    "-std=c++17",
+    "-O2",
+    "-g",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-I/tmp/k10-instance-carrier-review/root/candidate/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "/tmp/k10-instance-carrier-review/tests/baseline_probe.cpp",
+    "/tmp/k10-instance-carrier-review/tests/release/fk_surface_curve_bounds.o",
+    "/tmp/k10-instance-carrier-review/root/libforgekernel-baseline.a",
+    "-lpthread",
+    "-o",
+    "/tmp/k10-instance-carrier-review/tests/candidate-probe"
+  ],
+  "exit": 0,
+  "seconds": 0.03002398800163064,
+  "records": 4,
+  "exportSha256": "73387d8a6c8199ef3e40399157b9c48fa18651a594f92d00d31c5644d08be0bb",
+  "metadataAllCertifiedFixedCap": true
+}

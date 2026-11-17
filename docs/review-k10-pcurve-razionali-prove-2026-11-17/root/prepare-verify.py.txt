@@ -1,0 +1,8 @@
+from pathlib import Path
+p=Path('/tmp/k10-rational-pcurve-review/root/verify.py');s=Path('/tmp/k10-rational-edge-review/root/verify.py').read_text().replace('/tmp/k10-rational-edge-review/root','/tmp/k10-rational-pcurve-review/root')
+s=s.replace("'kernel/tests/test_surface_curve_rational_edges.cpp','kernel/fk_bspline_surface.cpp'", "'kernel/tests/test_surface_curve_rational_edges.cpp','kernel/tests/test_surface_curve_rational_pcurves.cpp','kernel/fk_bspline_surface.cpp'")
+s=s.replace("-{'kernel/tests/test_surface_curve_rational_edges.cpp'}", "-{'kernel/tests/test_surface_curve_rational_pcurves.cpp'}")
+s=s.replace('claude-prima-k10-edge-razionali-2026-11-17','claude-prima-k10-pcurve-razionali-2026-11-17')
+s=s.replace("assert linked('kernel/tests/test_surface_curve_rational_edges.cpp','kernel/fk_surface_curve_bounds.cpp','call','surfaceCurveResidualBound')", "assert linked('kernel/tests/test_surface_curve_rational_pcurves.cpp','kernel/fk_surface_curve_bounds.cpp','call','surfaceCurveResidualBound')\n assert linked('kernel/fk_surface_curve_bounds.cpp','kernel/fk_surface_curve_bounds.cpp','call','homogeneousBasis')\n assert linked('kernel/fk_surface_curve_bounds.cpp','kernel/fk_surface_curve_bounds.cpp','call','rationalUVResidual')")
+s=s.replace(";assert json.loads((T/'build-app-result.json').read_text())['exit']==0",'')
+start=s.index("\n audit=Path('/tmp/k10-rational-edge-review/audit/final-proof')");end=s.index("\n result={'HEAD_origin_main_unchanged'",start);s=s[:start]+s[end:];p.write_text(s)

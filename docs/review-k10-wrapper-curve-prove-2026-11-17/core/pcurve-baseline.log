@@ -1,0 +1,7 @@
+gauge=1 matchingQ3E3 status=1 upper=4.3320503398848943e-12
+gauge=1e+20 matchingQ3E3 status=1 upper=4.3193797592088264e-12
+gauge=9.9999999999999995e-21 matchingQ3E3 status=1 upper=4.483898068886737e-12
+gauge=1.0000000000000001e+50 matchingQ3E3 status=1 upper=4.2203256754808827e-12
+gauge=1e-50 matchingQ3E3 status=1 upper=4.3732329769755137e-12
+Dpower-correct status=1 upper=1.9998811938389073e-14
+Dpower-negative status=2 upper=inf

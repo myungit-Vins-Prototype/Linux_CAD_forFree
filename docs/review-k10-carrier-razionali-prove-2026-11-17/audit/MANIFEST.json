@@ -1,0 +1,189 @@
+{
+  "scope": "K10 independent native rational S final fin audit",
+  "files": [
+    {
+      "path": "README.txt",
+      "bytes": 3004,
+      "sha256": "d1f40ea19e19a0726d4d40acf753ae0be062db758045b7ed28459fc91269173a"
+    },
+    {
+      "path": "actual-final/canonical.json",
+      "bytes": 7143,
+      "sha256": "ed4641667604869f18b6f4a71922d2b9997bb8bf3367a7163b77ee1f7b0ed161"
+    },
+    {
+      "path": "actual-final/face-sense.json",
+      "bytes": 7144,
+      "sha256": "d9d5b6c58dc4ae3a8b96f4850ff7a44695e10d3afc2580e001ca24f56f7114f5"
+    },
+    {
+      "path": "actual-final/implicit.json",
+      "bytes": 7142,
+      "sha256": "68b99a434bbf4446ee3872ef673ea1d28d46c38a404f5159e88e62e7b23e0475"
+    },
+    {
+      "path": "actual-final/large.json",
+      "bytes": 7099,
+      "sha256": "8ba54f6af1f466cbc15c456650f2f313134dfc42afbc2f6f88f4ea5147287e90"
+    },
+    {
+      "path": "actual-final/rational.json",
+      "bytes": 7468,
+      "sha256": "30b17027b1339e47830bc4ae03f72b5ee30737bd827a992acdd7bbe266ea378d"
+    },
+    {
+      "path": "actual-final/small.json",
+      "bytes": 7427,
+      "sha256": "fe8864cf68cfb1c4f75bf7e83880699c6890316c895b28e6c0ad155f4c076834"
+    },
+    {
+      "path": "current-failed-domain-independent.json",
+      "bytes": 5226,
+      "sha256": "519a5eb6e8d4c6c29ef3588226c3748eac258123c79192ca84fe218130a2c4b7"
+    },
+    {
+      "path": "export_actual_native_carrier.cpp.txt",
+      "bytes": 5181,
+      "sha256": "4c151f23cee9664f0a7b8ff8288ac5007c9b450d267fe1b5ecdddcecad1acacb"
+    },
+    {
+      "path": "failed-before-helper/SheetJoinImplicitPolynomial.jsonl.txt",
+      "bytes": 4170,
+      "sha256": "f1e4645548563c5513c27fb3d6a23f439ddcd2122a9deca4564c21c8019f1dbc"
+    },
+    {
+      "path": "failed-before-helper/SheetJoinRational.jsonl.txt",
+      "bytes": 4436,
+      "sha256": "c4b153344b0a856f3a353a03006911448585ee251210626885c39dc9966aaa95"
+    },
+    {
+      "path": "final-api-run.json",
+      "bytes": 391,
+      "sha256": "97f3441e25dc2724da82775c0f3854760e3ee90c42325cdd027331c3d6933f39"
+    },
+    {
+      "path": "final-api-run.log",
+      "bytes": 269,
+      "sha256": "f447f440accfa509fd49e99755b928edb2fc13bd3b0fa082cdb90e2ec6bc8b1b"
+    },
+    {
+      "path": "final-build.json",
+      "bytes": 732,
+      "sha256": "bdd7726766a8ae6d5e2eed51be45c9a4c4b201e7d83894054aee61c288078a48"
+    },
+    {
+      "path": "final-build.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "final-fraction-results.json",
+      "bytes": 8304,
+      "sha256": "3b123e996ac903e78c44adb28c9e1c64e2fde86542233811f2e10185bbd2601f"
+    },
+    {
+      "path": "final-library.json",
+      "bytes": 1076,
+      "sha256": "92503fb19f0e02eacb20a9c577b7e3884079844ab661405fd2421ca5b2d7bf4c"
+    },
+    {
+      "path": "fraction_common.py.txt",
+      "bytes": 4133,
+      "sha256": "6c201bca580c820cbedb5ba4e2b5b397af7958046266fe96528bb9de3aafe2cb"
+    },
+    {
+      "path": "graph-consult-before.json",
+      "bytes": 6132,
+      "sha256": "454ac5092acc1266fa5905278b74c7fa63c4792d0ea576d2e0f87c764f6d47af"
+    },
+    {
+      "path": "independent-test-trace-comparison.json",
+      "bytes": 5236,
+      "sha256": "92af5476a2c2889d949e6ed067e0542282ba937009a96b5a9b026adc297726eb"
+    },
+    {
+      "path": "kernel__fk_blend_model.h.txt",
+      "bytes": 19786,
+      "sha256": "79ae3a57aa175799632503b9ec81993fd6174880a2773cd709059c5a3ab9661f"
+    },
+    {
+      "path": "kernel__fk_sheet.cpp.txt",
+      "bytes": 60281,
+      "sha256": "32dc9c3b46c89b049104897706270b080fecc8b419c4535242fd95092a408a9a"
+    },
+    {
+      "path": "kernel__fk_sheet_join_validation.cpp.txt",
+      "bytes": 8195,
+      "sha256": "802e63f376ef95861337fc83a8cdf4d0472931b770fc46cc6922105f4a1b1cf9"
+    },
+    {
+      "path": "kernel__fk_sheet_join_validation.h.txt",
+      "bytes": 1430,
+      "sha256": "4a17f508bc4db044869f7076e50f45484b79df204fb557d911acad44c965cb30"
+    },
+    {
+      "path": "kernel__fk_surface_curve_bounds.cpp.txt",
+      "bytes": 22081,
+      "sha256": "01e69c5c5bea9aa78cbad607750cc58aa3b3fd562ab86cccb889d02519a9cf7a"
+    },
+    {
+      "path": "kernel__fk_surface_curve_bounds.h.txt",
+      "bytes": 1741,
+      "sha256": "b44a33f8842ce44be82674594c48e1a6480ea76d66fb695010dd2885d8f4cfa6"
+    },
+    {
+      "path": "kernel__tests__fk_test_main.cpp.txt",
+      "bytes": 1613,
+      "sha256": "d4e8174aa18faf0d899dd5731be71f6029fa9113a8eab6385f7151a44f57e70c"
+    },
+    {
+      "path": "kernel__tests__test_sheet_join_validation.cpp.txt",
+      "bytes": 28440,
+      "sha256": "451b30b1488b94f3e817449a27779bef85ad0d28abf2896cabd4e22e4b5ab763"
+    },
+    {
+      "path": "rational-active-cell-result.json",
+      "bytes": 1342,
+      "sha256": "cd85d85485fad032aaf7787aeadfe6cec4d2591fee8e32663df8d12610898336"
+    },
+    {
+      "path": "rational-review.txt",
+      "bytes": 7020,
+      "sha256": "bb65e2416ca41384cb48ae8fd5cc6cc3ac7016232df3715ea8dbd839aba7b034"
+    },
+    {
+      "path": "reproduction.txt",
+      "bytes": 1276,
+      "sha256": "56675b1ac960df7089964a446db2b95e93ab808fdac90912fb06baad5f47a9e7"
+    },
+    {
+      "path": "source-evidence.json",
+      "bytes": 2057,
+      "sha256": "398289ec652e8403045068182ab4c372a2b641c7443b85832f0f049ab2357d2a"
+    },
+    {
+      "path": "verify_actual_batch.py.txt",
+      "bytes": 2644,
+      "sha256": "148c7859ff6e52025331356e9c3e8a53ee613706531bfc967c479693206115c5"
+    },
+    {
+      "path": "verify_failed_domain.py.txt",
+      "bytes": 1850,
+      "sha256": "8fc8ff2f5eb80d967f98a14e7fe249676df2a98645623339947e8d1ee869e05f"
+    },
+    {
+      "path": "verify_rational_active_cell.py.txt",
+      "bytes": 2311,
+      "sha256": "a62df8944a7525093a172ee4d9d727fb36a5dc4d3c07b7a75ee90f89fd9771f1"
+    },
+    {
+      "path": "verify_tensor_fraction.py.txt",
+      "bytes": 5760,
+      "sha256": "08fccbe94b071f2c478e0d268f6a8b3fb60ea663f0a7c456033d826e44b63cf3"
+    }
+  ],
+  "payload_files": 36,
+  "payload_bytes": 259540,
+  "allowed": "UTF8 text JSON inert source only",
+  "prior_seals": "unchanged"
+}

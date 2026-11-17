@@ -1,0 +1,8 @@
+{
+  "ownership": "Texts only: no compile/runtime/repo edit/archive copy. Root owns serial baseline/candidate verification.",
+  "files": {
+    "test_invert_point_validation.cpp": "c77471ae664519c94ca3c6d28258cec3c4794b64238990da079b721260e3d1d4",
+    "graph-consult.json": "ceed412ac18752b421cc4cdc431f0d0af01f97c405f625f990b5f7bacb6e2e9c",
+    "HANDOFF.txt": "2ca29033f18c9f339219990c1b12be6b338a50e20ddf7199f9d021a26cd56bf2"
+  }
+}

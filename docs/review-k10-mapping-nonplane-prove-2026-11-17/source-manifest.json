@@ -1,0 +1,14 @@
+{
+  "AGENTS.md": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+  "CLAUDE.md": "4b12acc9965d9efb0b833e9009f57a3ccb577073031e38f16b3ac8bf83cf8e1b",
+  "docs/code-review-2026-11-15.md": "620565f43eeeab063de207bc39eff58d1a626179f496bf27859810287f46dab7",
+  "docs/history/claude-prima-k10-mapping-nonplane-2026-11-17.md": "1b223cdcd6d8163736c194c9a54392911edaa8266d62f4367dde6e3f17ba0b1d",
+  "docs/review-k10-mapping-nonplane-2026-11-17.md": "9c6a3345a7e25b124acb8714015d4f3f0273d87b50d23e2a680c13b0dd47f778",
+  "kernel/CMakeLists.txt": "1c5a3022d5478429331ff5312e42383e343a847beb3d741524f0d631fd4f829c",
+  "kernel/fk_sheet_join_validation.cpp": "15e314c0f54241ab8d682290db24065e1a033ed430c6e54474ead062b84f258a",
+  "kernel/fk_surface_curve_bounds.cpp": "24b34d948e7834caf261c8c8e733de067a24795738aae31ac6749390cc9a2c28",
+  "kernel/fk_surface_curve_bounds.h": "6f2256143a51864b01d903ab1daa08570c802a69226d33cb6c76b7842000ea41",
+  "kernel/fk_surface_mapping.cpp": "019423a02a6504b3d6e1d659ba9b3b0707397878d5b8bad3340efd52f2b45d3a",
+  "kernel/tests/test_mapping_nonplane_validation.cpp": "ee301ceaf193008457b263c13ce36fe9c0fbf3e75011bcbcea5ead3bd1af75e3",
+  "tools/generate_architecture.py": "c3f135cec463e6c40428afe70ef6919dbad719503a22776b82b52b9d8379f8e4"
+}

@@ -1,0 +1,555 @@
+{
+  "nodes": [
+    {
+      "id": "cad_menu.h",
+      "group": "startup",
+      "description": "Popup comuni: palette della finestra, angoli antialias e padding dal raggio dei pannelli, spunte separate dalle icone.",
+      "lines": 40,
+      "symbols": [
+        "addCadMenu"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_menu.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 157,
+          "symbol": "addCadMenu",
+          "owner": "ForgeCad::DocumentTabsWindow::refreshDocumentActions"
+        }
+      ]
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 7,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 26,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_drawing_revision_ui.cpp",
+      "target": "cad_menu.h",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 61,
+          "symbol": "addCadMenu",
+          "owner": "ForgeCad::DrawingWindow::addRevisionMenus"
+        },
+        {
+          "line": 66,
+          "symbol": "addCadMenu",
+          "owner": "ForgeCad::DrawingWindow::addRevisionMenus"
+        }
+      ]
+    },
+    {
+      "source": "cad_drawing_revision_ui.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 8,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_drawing_sheets_ui.cpp",
+      "target": "cad_menu.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 37,
+          "symbol": "addCadMenu",
+          "owner": "ForgeCad::DrawingWindow::setupSheetActions"
+        }
+      ]
+    },
+    {
+      "source": "cad_drawing_sheets_ui.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 5,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_drawing_toolbars.h",
+      "target": "cad_menu.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 24,
+          "symbol": "addCadMenu",
+          "owner": "ForgeCad::DrawingToolbarController::DrawingToolbarController"
+        }
+      ]
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_menu.h",
+      "kind": "call",
+      "count": 6,
+      "sites": [
+        {
+          "line": 40,
+          "symbol": "addCadMenu",
+          "owner": "ForgeCad::DrawingWindow::DrawingWindow"
+        },
+        {
+          "line": 49,
+          "symbol": "addCadMenu",
+          "owner": "ForgeCad::DrawingWindow::DrawingWindow"
+        },
+        {
+          "line": 50,
+          "symbol": "addCadMenu",
+          "owner": "ForgeCad::DrawingWindow::DrawingWindow"
+        },
+        {
+          "line": 51,
+          "symbol": "addCadMenu",
+          "owner": "ForgeCad::DrawingWindow::DrawingWindow"
+        },
+        {
+          "line": 162,
+          "symbol": "addCadMenu",
+          "owner": "ForgeCad::DrawingWindow::installEditor"
+        },
+        {
+          "line": 167,
+          "symbol": "addCadMenu",
+          "owner": "ForgeCad::DrawingWindow::installEditor"
+        }
+      ]
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 10,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_menu.h",
+      "target": "forgeCad2026_menu.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 36,
+          "symbol": "CadMenu::CadMenu",
+          "owner": "addCadMenu"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_analysis.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 53,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_common.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 56,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_sketch.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 53,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_solids.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 58,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_surfaces.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 55,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "cad_menu.h",
+      "kind": "call",
+      "count": 37,
+      "sites": [
+        {
+          "line": 854,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 873,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 882,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 945,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 993,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1323,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1348,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1349,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1350,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1366,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1424,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1427,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1433,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1445,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1468,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1509,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1521,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1522,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1530,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1552,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1571,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1624,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1687,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1704,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 2618,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2619,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2861,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2880,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2897,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2938,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 3012,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 3024,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 3025,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 3030,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 3218,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 3655,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3917,
+          "symbol": "addCadMenu",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 115,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_menu.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "cad_menu.h",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 905,
+          "symbol": "addCadMenu",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 944,
+          "symbol": "addCadMenu",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 15,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_internal.h",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 74,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_ui_controls.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 2,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 68,
+          "symbol": "../cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "toolbar_editor.h",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 2,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "candidateSHA256": "048c8007849e807c2721a20e90387c855a2076ba3e56bcc90cf55320e3a804b7",
+  "testsSHA256": "88f9718de56f1488f24e0aa637c03f563d67868894437fc6af9f18c4f6f60e29",
+  "verdict": "No static blocker within authorized scope",
+  "readOnly": true,
+  "execution": "Independent Python scalar/Fraction only; no compilation or C++ execution by auditor",
+  "checked": [
+    "ordinary finite arithmetic and callback order retained; new fallback only when raw sums or results are nonfinite",
+    "15 original samples retained; no fallback callback replay",
+    "finite t checked before callback; scalar values and vector values/magnitudes checked",
+    "magnitude recovery separate from value/absolute recovery",
+    "normalized nonzero sample lost to zero rejected",
+    "frexp/scalbn product recovery avoids overflowing intermediate scale*half*sum",
+    "direct adaptivePanel finite arrays and valid error/magnitude checked before acceptance including depth30",
+    "noise combined error and both noise/deep child sums finite before use/return",
+    "overflow midpoint/half fallback, half0 on distinct endpoints rejected, stagnant midpoint only rejected for unaccepted panel",
+    "no new tolerance, relativeTolerance or roundoff validity contract; reverse orientation retained"
+  ],
+  "limits": [
+    "fallback divides by actual finite max sample, not necessarily a power of two; no exact interval/scaling proof claimed",
+    "finite weighted-product underflow to zero remains outside this scope; not an all-scale solution",
+    "quadrature remains sampled/adaptive with estimated error and legacy depth30; no continuous global error or convergence certificate",
+    "ordinary bit-path preservation verified statically; runtime byte comparison belongs to ROOT/test agent",
+    "read test source is not execution; no test success counts attributed to this audit"
+  ]
+}

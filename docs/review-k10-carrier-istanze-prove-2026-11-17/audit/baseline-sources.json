@@ -1,0 +1,50 @@
+[
+  {
+    "file": "kernel/fk_surface_curve_bounds.cpp",
+    "sha256": "24b34d948e7834caf261c8c8e733de067a24795738aae31ac6749390cc9a2c28"
+  },
+  {
+    "file": "kernel/fk_surface_curve_bounds.h",
+    "sha256": "6f2256143a51864b01d903ab1daa08570c802a69226d33cb6c76b7842000ea41"
+  },
+  {
+    "file": "kernel/fk_bspline_surface.cpp",
+    "sha256": "a1b4769fff26a4d8399dc46f2084ab52dd6a9a6e8b3a01791857c9261453af7e"
+  },
+  {
+    "file": "kernel/fk_bspline_surface.h",
+    "sha256": "f8324ce20d0d00164c74bdf6fd6b7d85d2003cd4933d86d2084a525dff2d88ae"
+  },
+  {
+    "file": "kernel/fk_math.cpp",
+    "sha256": "dd3e697be5cdb47ad3bd6629d71a86eba9c1655b024ea3798dcb09ebf274c16d"
+  },
+  {
+    "file": "kernel/fk_math.h",
+    "sha256": "c6b0e33615936f48e17a5a214c9ef4a7ca8beba58a9b4634cc90f0acfff7eebf"
+  },
+  {
+    "file": "kernel/fk_surface_mapping.cpp",
+    "sha256": "019423a02a6504b3d6e1d659ba9b3b0707397878d5b8bad3340efd52f2b45d3a"
+  },
+  {
+    "file": "kernel/fk_mapping_carrier.cpp",
+    "sha256": "1c769c5136df3502903afea4771636c939425735a975319e1d68848d0316ab25"
+  },
+  {
+    "file": "kernel/fk_sheet_join_validation.cpp",
+    "sha256": "15e314c0f54241ab8d682290db24065e1a033ed430c6e54474ead062b84f258a"
+  },
+  {
+    "file": "AGENTS.md",
+    "sha256": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac"
+  },
+  {
+    "file": "CLAUDE.md",
+    "sha256": "4b12acc9965d9efb0b833e9009f57a3ccb577073031e38f16b3ac8bf83cf8e1b"
+  },
+  {
+    "file": "docs/tolerance-policy.md",
+    "sha256": "2cf51f1ef37206a596ececffd3ed2365197ea9531e78e723d45e3426dd4b678c"
+  }
+]

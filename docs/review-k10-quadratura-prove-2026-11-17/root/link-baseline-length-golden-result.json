@@ -1,0 +1,23 @@
+{
+  "command": [
+    "/usr/bin/c++",
+    "-std=c++17",
+    "-O2",
+    "-g",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "/tmp/k10-quadrature-review/root/ordinary-length.cpp",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+    "-pthread",
+    "-o",
+    "/tmp/k10-quadrature-review/root/baseline-length-golden"
+  ],
+  "exit": 0,
+  "seconds": 0.883533072003047,
+  "watchdog_seconds": 600
+}

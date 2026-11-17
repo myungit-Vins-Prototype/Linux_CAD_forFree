@@ -227,22 +227,6 @@ QString CadViewport::beginExtendPick(bool linear, bool deferPreview) {
     return startEdgePick(false, true, false, deferPreview);
 }
 
-void CadViewport::setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback) { extendPickFinished_ = std::move(callback); }
-
-void CadViewport::setEdgePickLinear(bool linear) {
-    edgePickLinear_ = linear;
-    if (edgePicking_ && edgePickExtend_) edgePicked();
-}
-
-void CadViewport::resumeExtendPick(int body, const QVector<EdgePoint> &edges, bool linear) {
-    if (body < 0 || body >= extrusions_.size()) return;
-    selection_ = {SceneObjectKind::Extrusion, body, -1};
-    selectedFace_ = {};
-    if (!beginExtendPick(linear).isEmpty()) return;
-    pickReferences(body, edges);
-    edgePicked();
-}
-
 QString CadViewport::beginBlendEdit(int blend, double size, bool chamfer) {
     if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
     if (blend < 0 || blend >= extrusions_.size() || extrusions_.at(blend).feature != BodyFeature::Blend
@@ -1693,9 +1677,8 @@ void CadViewport::finishEdgePick() {
         clearBlendPreview();
         return;
     }
-    if (extend) {
-        if (extendPickFinished_) extendPickFinished_(body, points);
-    } else if (edited >= 0) {
+    if (extend) return;
+    if (edited >= 0) {
         if (edgeEditFinished_) edgeEditFinished_(edited, points, edgePickSize_, chamfer);
     } else if (edgePickFinished_) {
         edgePickFinished_(body, points, chamfer);

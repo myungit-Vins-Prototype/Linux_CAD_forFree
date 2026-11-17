@@ -1,0 +1,32 @@
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve.cpp.o
+[  0%] Linking CXX static library libforgekernel.a
+[ 37%] Built target forgekernel
+[ 37%] Built target forgecad_compute_autogen_timestamp_deps
+[ 41%] Automatic MOC and UIC for target forgecad_compute
+[ 41%] Built target forgecad_compute_autogen
+[ 41%] Built target forgecad_compute
+[ 45%] Impronta dei sorgenti della geometria
+[ 45%] Built target forgecad_autogen_timestamp_deps
+[ 45%] Automatic MOC and UIC for target forgecad
+[ 45%] Built target forgecad_autogen
+[ 45%] Building CXX object CMakeFiles/forgecad.dir/cad_document_io.cpp.o
+[ 45%] Linking CXX executable forgecad
+[100%] Built target forgecad
+[100%] Built target forgekernel
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_quadrant_breakpoints_validation_tests.dir/tests/fk_test_main.cpp.o
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_quadrant_breakpoints_validation_tests.dir/tests/test_quadrant_breakpoints_validation.cpp.o
+[100%] Linking CXX executable forgekernel_quadrant_breakpoints_validation_tests
+[100%] Built target forgekernel_quadrant_breakpoints_validation_tests
+[ 90%] Built target forgekernel
+[ 90%] Linking CXX executable forgekernel_curve_projection_tests
+[100%] Built target forgekernel_curve_projection_tests
+[ 90%] Built target forgekernel
+[ 90%] Linking CXX executable forgekernel_pcurve_deviation_validation_tests
+[100%] Built target forgekernel_pcurve_deviation_validation_tests
+[ 90%] Built target forgekernel
+[100%] Linking CXX executable forgekernel_invert_point_validation_tests
+[100%] Built target forgekernel_invert_point_validation_tests
+[ 64%] Built target forgekernel
+[ 64%] Built target forgekernel_occt
+[ 64%] Linking CXX executable ../forgekernel_tests
+[100%] Built target forgekernel_tests

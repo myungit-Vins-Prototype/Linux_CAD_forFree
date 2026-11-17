@@ -224,9 +224,6 @@ void forgeWarmPickCaches(const Kernel::Body &body);
 bool forgePickFace(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit, const Kernel::RayFaceIndex *index = nullptr,
                    const Kernel::Interval *window = nullptr);
 
-// Distanza lungo il raggio del primo punto del body colpito (geometria esatta).
-bool forgeIntersectRay(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index = nullptr);
-
 // Funzione che ha creato la faccia `face` di `picked` nel punto `point`:
 // la prima di `chain` (le funzioni da cui il corpo deriva, in ordine, con
 // i loro corpi) che ha una faccia sulla stessa superficie e che contiene il

@@ -1,0 +1,9 @@
+{
+  "kernel/fk_surface_curve_bounds.cpp": "32b161a97903c5ca746a87b3bde59fb3c79566316d0f274a189127cc396f62e6",
+  "kernel/fk_surface_curve_bounds.h": "b6ccad5f246b08c9e69523e485f978600b51ae46104d64d12b18c53dbd487d00",
+  "kernel/CMakeLists.txt": "f9e32ad04311e7c836de8c77a07af5f9c440d2994bfbddb65d28a8bfbf81c2f8",
+  "tools/generate_architecture.py": "1bf7e61490a3a93f520ac2a7cf666740fb5536c07e7d3c696d940b244e59456b",
+  "kernel/tests/test_surface_curve_bounds.cpp": "8f668fdad4f252f330d74d0dcb1d3eed365db6e5f9e6b3bdb303908be3f1e670",
+  "kernel/tests/test_surface_curve_instances.cpp": "d5f1dab3b182762a9be67302f4a24750e42257e8adf840ab335911e990eceac5",
+  "kernel/tests/test_surface_curve_rational_edges.cpp": "02f46f1e958939c040b396eae43a5b02fddb92babb78a8f74aa0c88bae865796"
+}

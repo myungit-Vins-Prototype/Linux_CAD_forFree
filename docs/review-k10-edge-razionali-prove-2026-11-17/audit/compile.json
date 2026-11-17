@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "g++",
+    "-O2",
+    "-std=c++17",
+    "-ffp-contract=off",
+    "-fno-fast-math",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-I",
+    "kernel",
+    "-x",
+    "c++",
+    "-c",
+    "/tmp/k10-rational-edge-review/audit/export_actual_ledger.cpp.txt",
+    "-o",
+    "/tmp/k10-rational-edge-review/audit/export-actual-ledger.o"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "exit": 0,
+  "elapsed": 1.8203469620057149,
+  "sourceSHA256": "9d6a3bb7921ce41eedaf45f8542222a2c8878c0ff21831ff5441b6c7abde8978",
+  "librarySHA256": "57c11033779f33893b07d166c682a0c5e8e3d24c14c98abfee43c7253ca62fa7"
+}

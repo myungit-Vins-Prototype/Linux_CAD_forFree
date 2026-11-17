@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+"""Compare actual output IEEE coefficients, separately from tolerance metadata."""
+from pathlib import Path
+import json,sys,hashlib
+baseline,staged,final,output=map(Path,sys.argv[1:])
+def load(p):
+ if p.suffix=='.jsonl':return [json.loads(x) for x in p.read_text().splitlines() if json.loads(x)['label']=='public-instance']
+ return json.loads(p.read_text())['records']
+b,a,f=map(load,[baseline,staged,final]);assert len(b)==len(a)==len(f)==4
+out=[]
+for x,y,z in zip(*(sorted(t,key=lambda v:v['fin']) for t in [b,a,f])):
+ r={'fin':z['fin'],'baselineToFinal':{k:x[k]==z[k] for k in ['curve','surface','pcurve','range']},'stagedToFinal':{k:y[k]==z[k] for k in ['curve','surface','pcurve','range','edgeTolerance','pcurveTolerance']},'baselineFinTolerance':x['pcurveTolerance'],'finalFinTolerance':z['pcurveTolerance'],'edgeTolerance':z['edgeTolerance']}
+ assert all(r['baselineToFinal'].values()) and all(r['stagedToFinal'].values());out.append(r)
+j={'pass':True,'scope':'Original E/S(base+stored placement)/Q/range compared exactly; sampled fin metadata deliberately becomes declared prefit cap','inputs':[{'path':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in [baseline,staged,final]],'records':out}
+output.write_text(json.dumps(j,indent=2)+'\n');print('Exact coefficients baseline/staged/final4/4 PASS')

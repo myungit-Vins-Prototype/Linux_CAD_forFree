@@ -1,0 +1,22 @@
+from pathlib import Path
+import json
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-mapping-nonplane-review/root');a=json.loads((T/'architecture-audit.json').read_text());assert a['nodes']==787 and a['edges']==11519 and a['units']==397
+report=(T/'report-draft.md').read_text().replace('ARCH_PENDING','787nodi/11.519relazioni/397TU, zero errori AST; hash, configurazione, HTML e chiamate nei due versi verificati.27pacchetti sigillati precedenti preservati.')
+assert 'ARCH_PENDING' not in report
+(R/'docs/review-k10-mapping-nonplane-2026-11-17.md').write_text(report)
+p=R/'docs/code-review-2026-11-15.md';s=p.read_text();title='# Review generale ForgeCAD — 15 novembre 2026\n\n';assert s.startswith(title)
+intro='''**K10 Mapping nonPlane, prosecuzione verificata:** falso successo interno con picco7,5e-4mm fra campioni ora rifiutato al cap8e-8mm prefissato. Controllo continuo sulle fin native riconosciute, candidata UV condivisa e registro post-build con genealogia anche senza history utente. App/8CTest/40mirati+sanitizer/API+Fraction52fin/mappa PASS. Nessun test UI né suite483 ripetuta;33rilievi invariati,K10 generale parziale. Nessun commit/push. [Rapporto e limiti](review-k10-mapping-nonplane-2026-11-17.md).\n\n'''
+s=title+intro+s[len(title):]
+s=s.replace('prioritàK10: estendere il controllo oltre i supporti nativi2/3 polinomiali/razionali positivi ora verificati;', 'prioritàK10: oltre le fin native2/3 polinomiali/razionali positive ora coperte anche nel mapping nonPlane, restano da verificare il carrier rispetto all’intera mappa e le altre famiglie;')
+p.write_text(s)
+p=R/'CLAUDE.md';s=p.read_text();x=s.index('**17/11 — K10 Mapping nonPlane integrato;');y=s.index('\nFlacone3 RAW2/2',x)
+s=s[:x]+'''**17/11 — K10 Mapping nonPlane corretto e verificato; nessun commit/push.**
+Picco fra campioni7,5e-4mm ora rifiutato al cap8e-8; candidata UV condivisa e fin finali
+certificate con genealogia anche senza history. Cap invariati,Failed terminale,Unsupported legacy.
+App/8CTest/40mirati+SAN/API+Fraction52fin/mappa787-11519-397 PASS; nessun UI/general483.
+K10 globale resta parziale. [Rapporto](docs/review-k10-mapping-nonplane-2026-11-17.md).
+[Memoria precedente](docs/history/claude-prima-k10-mapping-nonplane-2026-11-17.md).
+''' + s[y:]
+s=s.replace('UI9/UI10: app/12CTest+3mirati/74Wayland/mappa eCI958ed68 PASS; schedeWayland timeout/offscreenPASS.\n[Prove](docs/review-ui-colori-api-2026-11-16.md).','UI9/UI10: [prove storiche e limiti](docs/review-ui-colori-api-2026-11-16.md).')
+s=s.replace('CI046685e: Linux108PASS/2SKIP,macOS112PASS/1SKIP e483kernel PASS.\n[Log K12/OffsetLoft](docs/ci-sheet-join-2026-11-16.md).','CI046685e Linux/macOS PASS: [log e perimetro](docs/ci-sheet-join-2026-11-16.md).')
+assert len(s.encode())<=16384,len(s.encode());p.write_text(s);print('CLAUDE',len(s.encode()),'bytes',len(s.splitlines()),'lines')

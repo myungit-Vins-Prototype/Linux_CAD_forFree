@@ -1,0 +1,8 @@
+{
+  "command": [
+    "/tmp/k10-quadrant-review/root/candidate-probe",
+    "infinite"
+  ],
+  "exit": 0,
+  "seconds": 0.0034588889975566417
+}

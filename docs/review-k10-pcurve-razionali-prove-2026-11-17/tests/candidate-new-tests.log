@@ -1,0 +1,8 @@
+[  OK  ] RationalPCurveLinearAndCubicMatchOriginalParameter
+[  OK  ] RationalPCurvePolynomialCarrierNeedsDenominatorPower
+[  OK  ] RationalPCurveRationalCarrierAndPlacementKeepAllDenominators
+[  OK  ] RationalPCurveTrimReverseAndCarrierCellCrossings
+[  OK  ] RationalPCurveHiddenPeakIsNotAContinuousSampleProof
+[  OK  ] RationalPCurveLedgerSinglePlannedFinRejectsBeforeAssign
+[  OK  ] RationalPCurveDomainWrappersAndCancellationStayExplicit
+7/7 test superati

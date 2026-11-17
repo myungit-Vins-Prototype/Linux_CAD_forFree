@@ -1,0 +1,8 @@
+{
+  "command": [
+    "/tmp/k10-quadrature-review/root/baseline-length-golden"
+  ],
+  "exit": 0,
+  "seconds": 0.0029742459882982075,
+  "watchdog_seconds": 10
+}

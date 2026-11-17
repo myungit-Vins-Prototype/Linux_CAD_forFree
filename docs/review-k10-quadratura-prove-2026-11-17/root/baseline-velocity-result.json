@@ -1,0 +1,9 @@
+{
+  "command": [
+    "/tmp/k10-quadrature-review/root/baseline-probe",
+    "velocity"
+  ],
+  "exit": 124,
+  "seconds": 0.30129260499961674,
+  "watchdog_seconds": 0.3
+}

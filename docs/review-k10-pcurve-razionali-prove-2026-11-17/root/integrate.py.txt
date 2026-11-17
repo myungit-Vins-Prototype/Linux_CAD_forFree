@@ -1,0 +1,23 @@
+from pathlib import Path
+import json,hashlib,difflib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-rational-pcurve-review');B=json.loads((T/'root/baseline.json').read_text());sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();pairs={}
+for f in ['kernel/fk_surface_curve_bounds.cpp','kernel/fk_surface_curve_bounds.h']:pairs[f]=T/'core'/f
+for n in ['test_surface_curve_bounds.cpp','test_surface_curve_instances.cpp','test_surface_curve_rational_edges.cpp','test_surface_curve_rational_pcurves.cpp']:pairs['kernel/tests/'+n]=T/'tests'/n
+assert sha(pairs['kernel/fk_surface_curve_bounds.cpp'])=='5d85a734bf8ed6ee638843797cac8f2907c68427c1dafcd7e37268691fdd1ede'
+assert sha(pairs['kernel/tests/test_surface_curve_rational_pcurves.cpp'])=='9e3612e5ca27d7ce448dba6da6609f1875b494ce9eac0f0bc4fd3e00112ede62'
+W=T/'root/candidate';f='kernel/CMakeLists.txt';s=(R/f).read_text();old='tests/test_surface_curve_rational_edges.cpp)';assert old in s;s=s.replace(old,'tests/test_surface_curve_rational_edges.cpp tests/test_surface_curve_rational_pcurves.cpp)',1);p=W/f;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s);pairs[f]=p
+f='tools/generate_architecture.py';s=(R/f).read_text();s=s.replace('E cubica anche razionale positiva, Q polinomiale, S NURBS','E cubica e Q Line/BSpline1/3 anche razionali positive, S NURBS');s=s.replace('E cubica razionale positiva e Q polinomiale su carrier NURBS2/3','E cubica e Q1/3 razionali positive su carrier NURBS2/3');s=s.replace('Numeratori omogenei e denominatori originali positivi; budget fissato prima della prova.','Composizione Cox omogenea con denominatore Q anche per S polinomiale, immagini UV nel dominio e numeratori/denominatori originali; budget prefissato.');s=s.replace('scarti nascosti e registro delle fin; esclusioni Q e cancellazione.','scarti nascosti e registro delle fin; gap parametrici, wrapper e cancellazione.')
+pos=s.index(" 'kernel/tests/test_surface_curve_rational_edges.cpp':")
+s=s[:pos]+" 'kernel/tests/test_surface_curve_rational_pcurves.cpp': ('tests', 'Pcurve razionali lineari/cubiche: parametro originale, denominatore tensoriale su S polinomiale e razionale, pose/gauge, celle/trim/versi, picchi fra campioni, singola fin prima di assegnare e cancellazione.'),\n"+s[pos:];p=W/f;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s);pairs[f]=p
+reviewed={}
+for f,p in pairs.items():
+ if f in B:assert sha(R/f)==B[f],f
+ else:assert not (R/f).exists(),f
+ p.read_text()
+for n,lines in [('test_surface_curve_bounds.cpp',2),('test_surface_curve_instances.cpp',1),('test_surface_curve_rational_edges.cpp',1)]:
+ f='kernel/tests/'+n;diff=list(difflib.unified_diff((R/f).read_text().splitlines(),pairs[f].read_text().splitlines()));assert sum(x.startswith('-') and not x.startswith('---') for x in diff)==lines;assert sum(x.startswith('+') and not x.startswith('+++') for x in diff)==lines;reviewed[f]=diff
+(T/'root/reviewed-test-deltas.json').write_text(json.dumps(reviewed,indent=2)+'\n')
+manifest={f:sha(p) for f,p in pairs.items()}
+for f,p in pairs.items():(R/f).write_bytes(p.read_bytes())
+for f,h in manifest.items():assert sha(R/f)==h
+(T/'root/integrated-sources.json').write_text(json.dumps(manifest,indent=2)+'\n');print(manifest)

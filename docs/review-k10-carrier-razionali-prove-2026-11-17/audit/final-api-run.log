@@ -1,0 +1,8 @@
+exported implicit fins=3 cap=1e-07
+exported rational fins=3 cap=1e-07
+exported small fins=3 cap=1e-07
+exported large fins=3 cap=2.33144e-06
+exported face-sense fins=3 cap=1e-07
+exported canonical fins=3 cap=1e-07
+[  OK  ] ActualNativeCarrierFinalFins
+1/1 test superati

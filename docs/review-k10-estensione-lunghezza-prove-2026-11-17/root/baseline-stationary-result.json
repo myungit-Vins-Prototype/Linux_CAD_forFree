@@ -1,0 +1,10 @@
+{
+  "command": [
+    "/tmp/k10-arc-review/root/baseline-probe",
+    "dyadic",
+    "0"
+  ],
+  "exit": 0,
+  "seconds": 0.003216097000404261,
+  "watchdog_seconds": 20
+}

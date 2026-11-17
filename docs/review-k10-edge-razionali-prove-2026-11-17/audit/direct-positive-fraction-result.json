@@ -1,0 +1,89 @@
+{
+  "pass": true,
+  "input_sha256": "96422414784214f2f13a750f75aee4f22d3ab99af6fc3aa9fecf0a1b55e99d40",
+  "method": "Exact Fraction homogeneous original IEEE Cox/de Boor composition and Bernstein whole-interval hull; complete E/Q knot partition and all closed intersected S cells",
+  "records": [
+    {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 8e-08,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "label": "rational-native",
+      "runtimeStatus": 1,
+      "runtimeUpper": "0x1.1520cd1372fedp-44"
+    },
+    {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 8e-08,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "label": "rational-reverse-trim",
+      "runtimeStatus": 1,
+      "runtimeUpper": "0x1.27ad78ca951a3p-45"
+    },
+    {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 8e-08,
+      "pass": true,
+      "upper_mm": 2.2600968715583547e-16,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "label": "rational-placed",
+      "runtimeStatus": 1,
+      "runtimeUpper": "0x1.bb67ae8584caep-44"
+    },
+    {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 8e-08,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "label": "rational-peak-flat",
+      "runtimeStatus": 1,
+      "runtimeUpper": "0x1.8ae8576eea44ap-27"
+    },
+    {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 8e-08,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "label": "rational-ledger-actual",
+      "runtimeStatus": 1,
+      "runtimeUpper": "0x1.d71e296ddd178p-28"
+    }
+  ],
+  "elapsed": 0.015569191993563436,
+  "not_claimed": [
+    "Full mapping intent or carrier fit",
+    "Newton/branch correctness",
+    "Global trim/topology",
+    "Unsupported families"
+  ]
+}

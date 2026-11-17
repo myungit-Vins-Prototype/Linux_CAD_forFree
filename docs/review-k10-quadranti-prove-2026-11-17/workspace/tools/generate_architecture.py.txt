@@ -1,0 +1,950 @@
+#!/usr/bin/env python3
+"""Catalogo verificabile + dipendenze include + chiamate C++ risolte da libclang.
+
+Generazione: python3 tools/generate_architecture.py --build-dir build-linux
+Verifica senza libclang: python3 tools/generate_architecture.py --check
+Il build deve avere CMAKE_EXPORT_COMPILE_COMMANDS=ON. Non esegue i sorgenti.
+"""
+from __future__ import annotations
+import argparse
+import concurrent.futures
+import hashlib
+import json
+import os
+import posixpath
+from pathlib import Path
+import re
+import shlex
+import subprocess
+import sys
+import tempfile
+from contextlib import contextmanager
+
+ROOT = Path(__file__).resolve().parents[1]
+OUT = ROOT / 'docs/architecture'
+VERSION = 1
+GROUPS = [
+ ('startup', 'Avvio e finestra', 'Ingresso applicazione, menu, toolbar, azioni e coordinamento della finestra.'),
+ ('viewport', 'Viewport e interazione', 'Stato GUI della vista 3D, input, selezione, sketch e orchestrazione delle anteprime.'),
+ ('render', 'Rendering e camera', 'Camera, cache grafiche, passate OpenGL, trasparenza e picking GPU.'),
+ ('dialogs', 'Dialoghi e storyboard', 'Parametri dei comandi, dialoghi per dominio e albero della storia.'),
+ ('sketch', 'Sketch e vincoli', 'Geometria 2D/3D dello sketch, editing, snap, riferimenti e risoluzione dei vincoli.'),
+ ('features', 'Feature e ricostruzione', 'Operazioni parametriche, dipendenze, ricostruzione e calcolo delle anteprime.'),
+ ('documents', 'Documenti e revisioni', 'Persistenza, accesso, revisioni, recupero e metadati del modello.'),
+ ('drawing', 'Tavole 2D', 'Viste, sezioni, quote, presentazione ed esportazione delle tavole.'),
+ ('io', 'Importazione ed esportazione', 'Adattatori dei formati e integrazione con librerie esterne.'),
+ ('analysis', 'Analisi e mesh', 'Analisi geometrica, discretizzazione e supporto al calcolo.'),
+ ('kernel', 'Kernel geometrico', 'Matematica, curve, superfici, topologia B-rep e operazioni geometriche di base.'),
+ ('model', 'Modello e servizi comuni', 'Tipi condivisi, utilità e servizi applicativi trasversali.'),
+ ('tests', 'Test e benchmark', 'Verifiche automatiche e misure; non fanno parte dell’eseguibile distribuito.'),
+ ('build', 'Build e strumenti', 'Configurazione, generazione e confezionamento del software.')]
+# Descrizioni curate: aggiornare queste voci quando cambia il confine di un modulo.
+DESCRIPTIONS = {
+ 'fk_helix_projection': ('kernel', 'Proiezione di Helix nel parametro originale: snapshot di coefficienti IEEE, wrapper e frame; intervalli trigonometrici outward e resto Hermite continuo, fit cubico e ricontrollo dei poli2D effettivi, risorse finite e cancellazione. Nessuna certificazione del percorso quintico diretto legacy.'),
+ 'tests/test_sketch_projection_fit_validation.h': ('tests', 'Tredici gruppi Qt sulla proiezione Helix: due alias negativi a un milione di giri, otto varianti con pose/trim/affini/spirale e budget invariati, compatibilita quintica diretta, atomicita di errori e cancellazione, contratto e poli finali; exporter originale/effettivo in floathex.'),
+ 'kernel/fk_boolean_boundary.cpp': ('kernel', 'Certificati continui outward dei contatti fra retta e bordo ellittico: originali IEEE, monotonia, scarto dai carrier Plane/Cylinder e frame double; pcurve affine nel parametro originale con bound di Peano, input non finiti e famiglie non risolte rifiutati.'),
+ 'kernel/fk_boolean_boundary.h': ('kernel', 'Contratti interni dei certificati di contatto ellisse/retta finita e delle immagini UV affini; limite continuo o rifiuto, senza tolleranze aumentate e senza campionamento come autorizzazione.'),
+ 'kernel/fk_exchange.h': ('kernel', 'B-rep grezzo STEP/IGES e cucitura, AssemblyMap esplicita e obblighi transitori per le sole SP-curve Plane rimappate; metadati non persistiti, cap e genealogia di fin.'),
+ 'kernel/tests/test_sew_pcurve_validation.cpp': ('tests', 'Cucitura Plane: sei negativi fra fit nonaffine e riusi, compatibilita di scala e pesi razionali; cancellazione, residuo normale, metrica fisica con wrapper e controlli effettivi; exporter floathex delle fin originali e finali.'),
+ 'kernel/tests/test_offset_pcurve_validation.cpp': ('tests', 'Offset: sei regressioni negative della corrispondenza Plane/SP-curve, due compatibilita di rifilatura, atomicita e certificato duale con dati posseduti; exporter dei coefficienti finali.'),
+ 'tests/test_chamfer_preview_editing.h': ('tests', 'Sei scenari Smusso con veri eventi di tastiera: primaria, seconda distanza e angolo, anteprima pronta/worker pendente, Tab/Invio/frecce, annullamento, conferma e cleanup.'),
+ 'tests/test_preview_selection_state.h': ('tests', 'Sei scenari reali Mapping e Riempimento pattern: anteprima pronta e worker pendente, mutazione selezione, annullamento del token, generazione, pubblicazione tardiva, recupero e cleanup.'),
+ 'kernel/tests/test_boolean_boundary.cpp': ('tests', 'Regressioni indipendenti sui certificati di contatto e pcurve: budget, monotonia, versi, dati non finiti, overflow, parametri originali, pose e scale e famiglie rifiutate.'),
+ 'cad_ellipse': ('sketch', 'Definizione analitica delle ellissi da centro o quattro estremi reali: coppie di assi ortogonali, centro derivato, costruzione da tre clic e normalizzazione del trascinamento senza sostituire i riferimenti dei vincoli.'),
+ 'tests/test_ellipse_extremes.h': ('tests', 'Ellisse per estremi: geometria esatta, quattro punti quotabili e vincolabili, centro derivato, gradi di liberta, anteprima e creazione, trascinamento, codec70, compatibilita e Undo/Redo.'),
+ 'kernel/fk_project.cpp': ('kernel', 'Proiezione direzionale su corpi: fit cubico con limite continuo dagli originali Line/NURBS su una sola Plane; certificati immutabili senza riferimenti ai chiamanti, verifica dei poli effettivi dopo giunti e fusione primo/ultimo e scarto finale propagato. Scelta delle facce e famiglie non supportate restano campionate.'),
+ 'kernel/fk_project.h': ('kernel', 'Contratti della proiezione e delle catene: distinzione tra limite continuo Plane e fit campionato, provenienza opaca opzionale e scarto dopo giunta; rifiuto quando i poli finali superano il budget originale, nessuna promessa globale C1 o topologica.'),
+ 'kernel/tests/test_edge_offset_fit_validation.cpp': ('tests', 'Offset di bordi di estrusione con dettaglio nascosto: API pubblica, razionali, versi U e faccia, istanze/trim, sorgenti edge e generatore indipendenti, nodi, durata, rifiuto e cancellazione atomici; runner senza Qt/OCCT.'),
+ 'kernel/tests/test_projection_fit_validation.cpp': ('tests', 'Proiezioni Plane polinomiali e razionali con dettagli nascosti: pose, versi, scale, parametri, trim/istanze, nodi, parallelismo, durata dei certificati, giunti finali e rifiuto delle modifiche fuori budget; runner senza Qt/OCCT.'),
+ 'cad_forge.cpp': ('features', 'Adatta sketch e parametri al kernel; booleane con genealogia ricondotta agli operandi e recupero dell’unione commutativa nell’ordine inverso dopo un errore geometrico; conversione mesh float con filtro comune dei triangoli degeneri per scena e anteprime, ID topologici coerenti. Il riepilogo delle curve proiettate usa lo scarto della catena finale dopo le giunte.'),
+
+ 'cad_widget_context': ('startup', 'Risoluzione del contesto del documento incorporato: selezione del workspace proprietario per pannelli, blocco dei comandi e vetro dei menu; evita il primo viewport dell’intera applicazione.'),
+ 'cad_document_tabs': ('startup', 'Contenitore unico dei documenti 3D e 2D: pagine QMainWindow indipendenti, schede spostabili in alto/basso persistenti, apertura canonica senza duplicati, scorciatoie della pagina attiva, attivazione/accesso e pannelli flottanti. Chiusura con preflight di tutti i salvataggi e arresto asincrono del recupero 3D.'),
+ 'tests/test_document_theme_tabs.h': ('tests', 'Tema globale su schede 3D/2D visibili e nascoste, finestre separate, nuove pagine, soli documenti 2D e cambio foglio; menu, pannelli, icone e pixel, colori utente e contenuto della carta invariati. Sezione e report massa reali gia aperti: istruzione senza tagli, altezza necessaria e resize utente preservato, foreground/contrasto, errore e ritorno normale, documento/copia/selezione/scroll preservati senza ricalcolo al tema.'),
+ 'tests/test_document_tabs.h': ('tests', 'Regressioni del contenitore 3D/2D: apertura, deduplicazione, stato/Undo/GL persistente al cambio scheda, preferenza di posizione, menu dopo cambio foglio, chiusura con annullamento e recupero asincrono.'),
+
+ 'cad_sketch_section_selection': ('sketch', 'Selezione persistente dei rami di una sezione associativa: conserva gli indici sorgente prima della compattazione e valida i sottoinsiemi senza riagganci per vicinanza.'),
+ 'cad_sketch_reference_usage': ('sketch', 'Pulizia conservativa delle cache associative automatiche inutilizzate: preserva ogni vincolo, conversioni esplicite e consumatori a valle; rimappa indici e mantiene immutabili le copie Undo.'),
+
+ 'tests/test_pattern_variation.h': ('tests', 'Regressioni ripetizioni variabili: volumi analitici, lineari/circolari/griglie, esclusioni, quote del profilo, esclusione di antenati/corpi, conteggi schizzo, booleane, codec63/firma62 e Undo/Redo.'),
+ 'tests/test_sketch_construction.h': ('tests', 'Opzione persistente della costruzione fuori modifica: menu, rendering, bounds, picking e profili loft invariati; cache associative transitorie sui clic, pulizia dopo eliminazione, vincoli/consumatori, Offset/Pattern, codec e Undo/Redo.'),
+
+ 'cad_projected_curve': ('features', 'Curva 3D esatta da due schizzi: input selettivi, chiavi genealogiche di componente indipendenti dall ordine e riferimenti associativi anche ai rami impliciti, senza fit.'),
+ 'forgeCad2026_dialogs_projection.cpp': ('dialogs', 'Pannello della curva proiettata: schizzo su corpo oppure due schizzi, scelta indipendente delle singole curve, anteprima, ripristino selezione e messaggi sui rami.'),
+ 'tests/test_sketch_projection_gui.h': ('tests', 'Doppia proiezione nel pannello: input individuali, preview, rigenerazione da entrambi gli schizzi, Undo/Redo, codec e rifiuto delle approssimazioni implicite.'),
+ 'kernel/tests/test_face_normal_bounds.cpp': ('tests', 'Normali su facce rifilate: hull UV sui range reali, ripiegamenti fuori/dentro trim, fori, complementi, pesi, estrusioni e cancellazione.'),
+ 'kernel/tests/test_sketch_projection.cpp': ('tests', 'Curve da due proiezioni su piani generali: intervalli comuni e rami, NURBS esatte e intersezioni implicite, derivate e casi degeneri.'),
+ 'tests/test_fillet_selection_review.h': ('tests', 'Raccordi: scelta con eventi reali e occlusione tra corpi, base forzata durante modifica e cancellazione delle evidenziazioni quando la lista dei bordi viene nascosta; conferma con timer/worker pendente, richieste superate, riuso del puntatore, errore/correzione e Undo/Redo nei pannelli modali e incorporati.'),
+ 'kernel/tests/test_exchange_robustness.cpp': ('tests', 'Robustezza STEP/B-rep senza OCCT: annidamento sintattico, conteggi/nodi prima delle allocazioni con guardia nel runner, occorrenze coincidenti e MAPPED_ITEM distinti senza duplicare percorsi di visita.'),
+ 'tests/test_gui_3d_review.h': ('tests', 'Palette e pan; picking GPU prima del repaint dopo cambi camera/visibilita/filtro/istanze, visibilita effettiva condivisa con la scena, rendering e risorse vetro dopo reale ricreazione del contesto OpenGL.'),
+ 'tests/test_storyboard_merge_chain.h': ('tests', 'Sottrazione intermedia seguita da fusione: inserimento, cambio da corpo indipendente, volume analitico, cursore, Undo/Redo, codec con/senza cache e migrazione delle basi obsolete. Bersagli secondari/riferimenti espliciti conservati, cache indipendenti riusate e propagazione tramite schizzi.'),
+ 'tests/test_sketch_support.h': ('tests', 'Appoggio nominato dello schizzo: modifica parametrica della stessa faccia, perdita del nome senza salto di piano, cambio esplicito su XY, allineamento definizione, Undo/Redo, codec senza cache e rebuild; compatibilita legacy.'),
+ 'tests/test_feature_faces.h': ('tests', 'Confronta la ricerca condivisa delle facce con il picking singolo su base, smusso e traslazione; filtraggio della storia e dati di visualizzazione assenti.'),
+ 'tests/test_storyboard_review.h': ('tests', 'Rigenerazione incrementale: riuso identico dei B-rep precedenti e indipendenti, eliminazione con catena ricollegata, modifica datum, conferma invariata e Undo/Redo; dipendenze storyboard: rimappatura estrazioni multiple, componenti pattern referenziate dagli schizzi, sorgente featureOnly dopo inserimenti/riordino, visibilita al recupero del tip e dopo consumo, Undo/Redo e codec; detach iniettato durante rebuild responsivo.'),
+ 'tests/test_revision_access_gui.h': ('tests', 'Modelli e tavole: refresh revisioni transitorio conserva accesso e lock della sessione proprietaria; consultazione resta in sola lettura e corruzione persistente blocca le modifiche.'),
+ 'tests/test_extrusion_next_body.h': ('tests', 'Estrusione fino al prossimo corpo con booleane B-rep: versi, limiti analitici e copertura da piu strumenti, dipendenze dinamiche, genealogia, rollback, Undo/Redo e persistenza.'),
+ 'tests/test_extrusion_next_body_gui.h': ('tests', 'Pannello reale Fino al prossimo corpo, direzione visibile, anteprime nei due versi, conferma, Undo/Redo ed errori senza candidati; QA grafica opzionale.'),
+ '.github/workflows/ci.yml': ('build', 'GitHub Actions su Ubuntu26.04 e macOS15: compilazione Release completa senza CUDA e CTest autosufficienti CPU/offscreen, Metal su Apple; mirror Ubuntu principale per sorgenti dirette e mirrorlist APT, timeout download, log dipendenze/build e JUnit conservati, GPU assente distinta tramite SKIP.'),
+ 'cad_surface_tools': ('features', 'Strumenti superfici: estensione/rete/poli e sviluppo/deformazione associativi; codec JSON schema1/2 validato e registrazione della genealogia.'),
+ 'fk_surface_tools': ('kernel', 'Reti a celle Coons cucite, prolungamento e selezione dai pezzi gia intersecati senza secondo split, modifica relativa di poli/pesi con ricostruzione dei bordi e trim UV conservati.'),
+ 'forgeCad2026_dialogs_surface_tools.cpp': ('dialogs', 'Pannello superfici: griglie e refit, selezioni e trascinamento morbido opzionale con ampiezza U/V, vincoli G0/G1/G2 fra facce e passaggi interni, comando ribbon esplicito, anteprima e scarto vincolante.'),
+ 'kernel/tests/test_surface_tools.cpp': ('tests', 'Reti non planari, curve invertite e incroci invalidi; estensione a piani/facce curve, target spezzati e tra estrusioni ortogonali da spline; poli/pesi, trim/fori, topologia e input degeneri.'),
+ 'kernel/tests/surface_tools_fixture.h': ('tests', 'Fixture condivisa NURBS bicubica con trim UV e foro per prove geometriche e native delle superfici.'),
+ 'tests/test_surface_tools_gui.h': ('tests', 'Funzioni superficie: target multipli; poli in gruppo, assi globali/locali, Esc e anteprima al rilascio; icone distinte, dipendenze, cache, persistenza, revisioni e readonly.'),
+ 'fk_fill': ('kernel', 'Riempimenti con contorni/guide, contatti G0/G1/G2 per faccia, influenza locale e guida direzionale della forma; rapporti numerici e controllo di regolarita.'),
+
+ 'tests/test_drawing_break.cpp': ('tests', 'Viste interrotte: coordinate X/Y, quote originali, ritaglio, codec, dialogo, Undo, modello e PDF.'),
+ 'tests/test_projected_drawing_file.h': ('tests', 'File nativi e revisioni delle tavole proiettate, ausiliarie e interrotte; genealogia identica con/senza cache, migrazione legacy multifoglio e trasferimento della coppia prt/drw, protezione dello storico e PDF.'),
+ 'tests/test_sketch_slot_point.h': ('tests', 'Asola rettilinea e punto autonomo: mouse, geometria esatta, volume, vincoli, Undo/Redo, formato52 e comandi UI.'),
+ 'cad_curve_solver': ('sketch', 'Geometria esatta e campionamento delle curve; scomposizione asola in segmenti/archi e punti autonomi senza profilo.'),
+ 'fk_blend_contact_breaks': ('kernel', 'Eventi dei contatti del raccordo sui nodi degli appoggi B-spline, estremi e coincidenze numeriche con nodi del bordo; verifica delle normali laterali Bezier senza levigare discontinuita reali.'),
+ 'fk_loft_knots': ('kernel', 'Unione dei nodi delle guide del loft entro il solo arrotondamento, ancore di sezione e dettagli distinti preservati, controllo della variazione sui coefficienti raffinati comuni.'),
+ 'kernel/tests/test_loft_knots.cpp': ('tests', 'Guide con nodi a pochi ULP, unione con ancore esatte, curve razionali e dettagli significativi, continuita da molteplicita e invarianza geometrica degli offset a 3 mm, cuciture che attraversano tangenze con verifica della distanza su entrambi i supporti.'),
+ 'fk_blend_polar': ('kernel', 'Raccordo simultaneo di tutti i giunti di ventagli chiusi fra due poli: calotte sferiche comuni, limiti G1, cambi di convessita, riuso circolare certificato dai coefficienti NURBS, budget geometrico e genealogia esplicita.'),
+ 'kernel/tests/test_polar_blend.cpp': ('tests', 'Raggio positivo costante su 18 giunti ai poli, facce con cambi di convessita, tangenza e raggio geometrico, posa/scala/versi, genealogia, input immutabile, serializzazione, mesh e raggi non ammessi.'),
+ 'fk_blend_contour': ('kernel', 'Selezione esplicita di contorni chiusi di cavita estruse tramite generatrici analitiche e adiacenze topologiche, con rifiuto dei percorsi ambigui e controllo integrale delle SP-curve contro gli appoggi consumati o invertiti.'),
+ 'fk_nurbs_join': ('kernel', 'Concatenazione omogenea di carte NURBS G1: certificati sui coefficienti, propagazione del roundoff nei jet grado/campata e invarianza rispetto alla scala UV, scambio U/V e versi, elevazione esatta del grado e concatenazione dei trim polinomiali entro budget Bernstein.'),
+ 'kernel/tests/test_nurbs_supports.cpp': ('tests', 'Carte NURBS G1 e trim certificati, raggi intermedi e passaggi tangenti con intersezioni entro il fit, pose/scala/rinumerazione, eliminazione degli angoli artificiali tramite atlante completo e pieghe preservate con scale UV estreme; B-rep, genealogia per incidenza, sezioni circolari, persistenza e mesh.'),
+ 'fk_blend_mitre': ('kernel', 'Intersezioni dei raccordi a mitra: via quasi coincidente ISO con fit continuo sui due supporti originali, mappe UV esplicite e cap prefissato; installazione per identita delle fin pianificate e ricontrollo dei coefficienti realmente emessi. Newton e composizioni diagonali non supportate restano campionati; cancellazione e fallimenti del certificato terminali.'),
+ 'fk_blend_section_curve': ('kernel', 'Curve di riferimento delle sezioni e continuazioni dei bordi spline: concatenazione omogenea con parametro originale preservato; ISO riconosciute dai coefficienti originali e verificate continuamente su entrambi i supporti con cap prefissato. Installazione delle mappe per identita e ricontrollo delle fin emesse; famiglie non supportate e Newton restano campionati. Preservazione globale dei carrier estesi non certificata a runtime.'),
+ 'kernel/tests/test_blend_transitions.cpp': ('tests', 'Passaggi tangenti su supporti opposti: consumo dei tratti corti, tutti i semi e chiusura ciclica, specchio, scala e pose; raggio esatto, genealogia, codec e triangolazione. Contorni piani chiusi instradati al rifilo locale.'),
+ 'kernel/tests/test_blend_cavity.cpp': ('tests', 'Regressione del contorno a otto bordi su loft con piccole creste reali: selezione da ogni bordo, raggio costante, genealogia, persistenza, triangolazione e prolungamento esatto.'),
+ 'kernel/tests/test_blend_cavity_regressions.cpp': ('tests', 'Raccordo della cavita a raggio piccolo nei due ordini, con semi diversi, posa rigida e scala: raggio analitico, genealogia, input immutato, persistenza, SP-curve e triangolazione; consumo specifico e cancellazione transazionale.'),
+ 'kernel/tests/test_blend_mitre_validation.cpp': ('tests', 'Mitre ISO: picchi NURBS fra campioni, pose/pesi/versi e budget distinti; fin reali Body::buildSheet e mutazioni di carrier, UV, range, budget e incidenza. Diagonale coincidente valida conservata fuori certificazione; cancellazione.'),
+ 'kernel/tests/test_blend_boundary_validation.cpp': ('tests', 'Continuazioni dei bordi: parametro razionale originale, pose/scale/trim e mappe ISO affini; picco nascosto sul secondo supporto rifiutato atomicamente, cancellazione, budget invalidi, fin reali sul tratto aggiunto e mutazioni dei contratti. Famiglie non supportate esplicitamente campionate.'),
+ 'fk_blend_surface': ('kernel', 'Raccordi e smussi a palla rotolante: riordino delle transizioni tangenti su supporti opposti con consumo dei tratti corti e continuazione sulle guide adiacenti in entrambi i versi, raffinamento 3D del contatto sulle cuciture tangenti, copertura del fit e intersezioni locali smorzate entro il dominio delle pezze; consumo topologico di una frontiera terminale corta verso una quarta faccia e pezze d angolo, provenienza di bordi e vertici nuovi dichiarata per incidenza; sezioni normali e guida intrinseca per coperchi piani su fianchi B-spline tangenti, continuazione delle cuciture tangenti e raffinamento dei contatti accoppiati entro la risoluzione sorgente, chiusure terminali tangenti con Newton smorzato e continuazione unilaterale anche per bordi analitici, derivate unilaterali su tutti i nodi e scarto laterale misurato entro la risoluzione sorgente, tentativi atomici, limiti unilaterali a raggio zero con sezione collassata esatta anche a cuspidi di alta valenza, raffinamento presso le punte singolari, pezze intrinseche costanti tra collassi G1 dei ventagli polari e controllo dei contorni; curve terminali con quarto vincolo verificato, rifiuto dei tratti minimi fuori budget e continuazione alternativa lungo U sugli stessi supporti, estremi conservati e lavoro limitato cancellabile. Mitre ISO: delega costruzione e controllo delle fin al modulo dedicato, preserva pcurve e cap prefissati escludendole dall aumento delle tolleranze; altri rami restano campionati. Continuazioni dei bordi delegate al modulo section_curve con ledger transazionale, mappe pianificate e verifica delle fin finali; budget delle ISO certificate esclusi dagli aumenti.'),
+ 'fk_blend': ('kernel', 'Raccordi e smussi analitici: priorita al rifilo locale dei contorni piani chiusi e tangenti, preparazione anticipata degli appoggi NURBS G1 certificati per le facce selezionate, riuso della composizione e genealogia esplicita, ripiego sulle carte originali senza ripetere i tentativi composti; sezioni, utensili su appoggi curvi, catene tangenti, contorni misti, pezze terminali e raggi zero agli estremi aperti.'),
+ 'kernel/tests/test_blend_contact_breaks.cpp': ('tests', 'Eventi G1 nei due assi e versi, estremi e nodi del bordo a un ULP; rifiuto di creste reali, raggio R2 e offset interno 1 mm anche con perturbazioni entro risoluzione.'),
+ 'kernel/tests/test_blend.cpp': ('tests', 'Regressioni geometriche dei raccordi: volumi analitici indipendenti e confronti OCCT, piastre con contorno misto e 18 fori rettangolari, tangenze, assenza di anelli residui su appoggi sferici singoli, cuciture, supporti consumati, coperchi piani anche ruotati/traslati e catene aperte su cuciture tangenti elicoidali anche con perturbazione della rotazione di 1e-14 rad, con controlli di raggio, topologia e persistenza.'),
+ 'forgeCad2026.cpp': ('startup', 'Entry point Qt: avvio, opzioni e contenitore unico a schede 3D/2D, apertura dei documenti indicati da riga di comando.'),
+ 'forgeCad2026_application_theme': ('startup', 'Controller unico di palette e QSS globale su finestre e schede incorporate 3D/2D; applicazione coerente protetta dal reingresso, stile Fusion ripristinato dopo sostituzioni native e menu Tema persistente chiaro/scuro/desktop.'),
+ 'forgeCad2026_gui': ('startup', 'PdfWindow: sette fasi di inizializzazione di scena, menu, comandi, opzioni e toolbar, preferenze persistenti per normali al mouse e costruzione degli schizzi fuori modifica; workspace 3D incorporabile con apertura instradata alle schede e chiusura asincrona del recupero; modelli archiviati in sola lettura; storyboard con trascinamento dei creatori di corpi autonomi a uno stadio.'),
+ 'forgeCad2026_gui_common': ('startup', 'Helper condivisi dalla finestra, dai dialoghi e dal viewport.'),
+ 'forgeCad2026_viewport.cpp': ('viewport', 'Ciclo di vita e impostazioni pubbliche del coordinatore CadViewport; gabbia poli multipli, proiezione/picking del gizmo e delta vincolati agli assi 3D.'),
+ 'forgeCad2026_viewport.h': ('viewport', 'Contratto e stato privato del coordinatore GUI della vista 3D.'),
+ 'forgeCad2026_viewport_internal.h': ('viewport', 'Dipendenze di implementazione e template condivisi dai soli file viewport.'),
+ 'forgeCad2026_viewport_document.cpp': ('viewport', 'Apertura: ripara fusioni che scavalcano uno stadio e invalida le cache dipendenti; registra la genealogia completa della cache prima che le ripetizioni sostituiscano operandi runtime. Invalidazione incrementale per ID persistenti dopo eliminazione, soppressioni multiple e modifiche datum: semi prima della rimappatura e sola cascata delle dipendenze; sorgenti mancanti diagnosticate, geometrie indipendenti conservate. Soppressione: invalida il filtro dei corpi rilasciati; aggregati legacy conservati e risultati derivati gia salvati riuniti in un solo evento. Modifica: ricongiunge le fusioni dopo il cambio di corpo e conserva le preferenze di visibilita durante rollback e sincronizzazione. Documento e storia unificata: schizzi e piani autonomi, riordino, appoggi associativi e contesto storico; mesh richieste nei worker della geometria o nella coda differita, pubblicazione GUI, gruppi limitati nel cambio qualita e basi delle ripetizioni prima delle istanze.; permette il riordino dei creatori di corpi con un solo stadio, conservando ancoraggio delle catene e controlli delle dipendenze'),
+ 'forgeCad2026_viewport_interaction.cpp': ('viewport', 'Eventi Qt di mouse, tastiera, ruota e menu contestuali; proposte associative soltanto nei comandi attivi, Quota e snap di disegno; nessuna proposta al passaggio in Selezione; una sola richiesta snap per movimento di disegno, clic esterno esplicito separato dalla creazione dei vincoli.'),
+ 'forgeCad2026_viewport_selection.cpp': ('viewport', 'Filtri di selezione, hover, riferimenti, hit testing e funzione creatrice; preparazione delle cache storiche di selezione in un job a bassa priorita, senza competizione fra stadi condivisi.'),
+ 'forgeCad2026_viewport_sketch_reference.cpp': ('viewport', 'Selezione esplicita dei riferimenti distinta dagli agganci automatici: bordi e contorni apparenti proiettati, sezioni di faccia e punti Ctrl; hover Quota senza modifiche persistenti con identita sorgente, geometria proposta e vincoli compatibili; in Selezione risoluzione al solo clic; clic conserva la selezione locale e riusa una sola sorgente, anche in Quota.'),
+ 'tests/test_sketch_reference_hover.h': ('tests', 'Regressioni riferimenti esterni: Selezione senza proposte e badge nei comandi di disegno/Quota; bordo intero contro contatto puntuale, facce sezionate, centri Ctrl, hover senza cache/vincoli/Undo, selezione locale conservata, vincolo unico, Quota, codec e Undo/Redo; badge OpenGL opzionale.'),
+ 'forgeCad2026_viewport_sketch.cpp': ('viewport', 'Comandi schizzo, quote, snap e inferenze associative; scarta alla chiusura solo nuovi schizzi vuoti senza utilizzatori, conserva punti e costruzione; selezione esterna transitoria senza falso Undo/dirty, pulizia conservativa delle cache non usate alla modifica/deselezione/uscita e rimappatura delle selezioni.'),
+ 'forgeCad2026_viewport_preview.cpp': ('viewport', 'Riapertura editor con riuso immediato di B-rep, curve e visualizzazioni della scena, comprese tutte le componenti delle ripetizioni; nessun worker se le mesh sono pronte; il risultato completo sostituisce gli operandi anche quando sono stadi impliciti dello stesso corpo logico. Anteprime modificate asincrone con generazioni, cancellazione e snapshot; mesh mancanti preparate senza ricostruire la geometria. Sviluppo e rivestimento condividono hiddenOperands con il risultato definitivo, rispettando copia e sorgenti multiple.'),
+ 'forgeCad2026_viewport_parameter_dimensions.cpp': ('viewport', 'Quote temporanee dei soli schizzi della funzione ripetuta: rendering con grafica quota esistente, picking per ID persistente, evidenza delle selezionate e callback senza modifica documento.'),
+ 'forgeCad2026_viewport_render.cpp': ('viewport', 'Nasconde sempre le cache automatiche e mostra la costruzione esplicita in modifica oppure tramite opzione Visualizza, con highlight coerenti; prepara le mesh prima delle passate GL, protegge il paint rientrante e ripristina il contesto del widget; risultato completo senza ridisegnare la base disponibile al picker dei bordi; frame e overlay con normali uscenti dei piani nelle anteprime e, se abilitate nel menu Visualizza, al passaggio del mouse anche nella scelta dei riferimenti, gabbia NURBS, poli selezionati e gizmo colorato globale/locale; visibilita storica in schizzo, anteprime feature anche nello schizzo con vista sbloccata e prepass di profondita per trasparenza a singolo strato; sospende la superficie in anteprima nella scelta delle facce storiche.'),
+ 'tools/diagnose_menus.sh': ('build', 'Avvio diagnostico dei popup: log tema/attributi e immagini per strati, con protocollo Wayland opzionale.'),
+ 'tools/run_ribbon_preview.sh': ('build', 'Avvio esplicito della prova ribbon separata, senza sostituire l’app abituale.'),
+ 'forgeCad2026_ribbon_preview': ('startup', 'Ribbon del viewport: schede/gruppi adattivi, fascia superiore riservata; Conferma/Annulla contestuali invocano il pannello, Termina chiude lo schizzo; ritorno alla scheda Schizzo e stato sincronizzato al ciclo del pannello, identita esplicita del comando e pulsante attivo visibile anche oltre i promossi, configurazione persistente.'),
+ 'forgeCad2026_ribbon_editor': ('dialogs', 'Editor modale della ribbon: sezioni, comandi, separatori e ripristino su copia confermabile.'),
+ 'forgeCad2026_ribbon_preview_main.cpp': ('startup', 'Avvio separato della prova ribbon, preferenze isolate, cattura e regressione apertura documento/Blocco.'),
+ 'forgeCad2026_zoom': ('viewport', 'Normalizzazione input per backend, preferenze condivise e animazione temporale dello zoom per vista 3D e tavole.'),
+ 'forgeCad2026_viewport_scene.cpp': ('viewport', 'Coordinate scena/schermo, raggi e bounds: conserva la base interrogabile dal picker dei bordi mentre il renderer mostra solo il risultato completo; costruzione inclusa in modifica o tramite preferenza visiva, policy condivisa con rendering/picking; in scelta riferimenti storici esclude gli operandi futuri ripristinati dalla preview e mantiene visibili le basi selezionabili; zoom al cursore e piani di riferimento. Scena sorgente coerente con il reference picker anche in creazione, con storia futura esclusa, operandi espliciti e curve 3D visibili.'),
+ 'forgeCad2026_feature_preview': ('features', 'FeaturePreviewBuilder: chiave dei parametri e anteprime modificate da snapshot; in modifica invariata condivide i risultati esistenti e prepara soltanto le mesh mancanti o di qualita diversa, comprese curve e ripetizioni multirisultato; nessuna ricostruzione geometrica o estrazione patch/U-V al riuso.'),
+ 'forgeCad2026_sketch_curvature': ('sketch', 'SketchCurvatureCache: possiede e invalida i pettini di curvatura al cambio di curva o scala.'),
+ 'forgeCad2026_camera': ('render', 'Stato e trasformazioni della camera 3D.'),
+ 'forgeCad2026_scene_renderer': ('render', 'Passate grafiche della scena, FBO/MSAA e disegno di corpi, riferimenti e overlay; filtro topologico con cache per le sole cuciture G1 B-spline dei filetti, conserva bordi originali e spigoli vivi.'),
+ 'forgeCad2026_gpu_picker': ('render', 'Picking tramite identificatori GPU e gestione dei buffer necessari.'),
+ 'forgeCad2026_glass_compositor': ('render', 'Composizione della trasparenza dei corpi e risorse OpenGL associate.'),
+ 'forgeCad2026_storyboard': ('dialogs', 'Albero della storia e cursore; selezione sorgenti delle ripetizioni, integrata con il ponte dei picker di pannello senza modifiche a storia o visibilita.'),
+ 'forgeCad2026_dialogs_solids.cpp': ('dialogs', 'Dialoghi solidi: catalogo ISO metrico M1–M68 con passi fini; ripetizioni con un solo blocco della finestra, storyboard selezionabile nel pannello incorporato e tre passaggi visibili (sorgente, riferimento, parametri); funzioni storiche con bersaglio successivo e sformo a piano neutro. Estrusione priva del riferimento di limite cancella il worker e invalida subito anteprima e chiave. Ripetizioni, estrusione, trasformazioni e filettatura inizializzano preview e picker nel runner comune; Filettatura distingue selezione faccia e calcolo attivo. Smusso aggiorna chiave, worker e geometria anche al termine editing delle distanze e angoli con Tab/focusout.'),
+ 'forgeCad2026_dialogs_surfaces.cpp': ('dialogs', 'Pannelli delle superfici: selezione punti nella vista/storyboard, G1 al piano per primo/ultimo profilo; loft a larghezza ridotta con etichette locali e frecce di riordino laterali; scelta appoggi G1 con indicazione del limite storico contro dipendenze circolari; Estendi si apre prima della selezione e aggiorna bordi, contorni completi e anteprima dalla vista; Cuci superfici offre selezione e deselezione completa sotto il picker della vista. Riempimento con coefficienti adimensionali in tutte le unita; loft incompleta invalida anteprima e mostra attesa delle sezioni. Offset/Shell, rigata, Boundary, Fill e planare condividono il runner protetto fra documenti; Shell invalida il messaggio a spessore zero ed elimina gli errori precedenti al recupero.'),
+ 'forgeCad2026_dialogs_sketch.cpp': ('dialogs', 'Dialoghi di schizzi e piani: rimozione/riselezione indipendente dei riferimenti in modifica, anteprima e normale invertibile. Piano di costruzione con picker differito e runner comune protetto fra documenti.'),
+ 'forgeCad2026_dialogs_analysis.cpp': ('dialogs', 'Dialoghi per analisi e verifica geometrica. Misura usa il runner comune e installa il picker dopo la guardia fra documenti. Proprieta di massa: testo usa la palette e ruoli Normal/Error del pannello, senza formati HTML a colore fisso; il cambio tema conserva documento, selezione, scroll e cache dei calcoli.'),
+ 'fk_blend_paths': ('kernel', 'Percorsi tangenti dei bordi selezionati, ordinamento e verso, lunghezza totale e stazioni equidistanti per leggi di raggio indipendenti.'),
+ 'cad_fillet_paths': ('features', 'Associa riferimenti persistenti ai percorsi tangenti, completa esplicitamente i contorni delle cavita estruse e prepara i manipolatori del raggio variabile.'),
+ 'forgeCad2026_fillet_handles': ('viewport', 'Marker dei raggi variabili nella vista: hit test, trascinamento lungo la direzione del raggio, quote e sincronizzazione col pannello, incluso lo zero agli estremi aperti.'),
+ 'forgeCad2026_dialogs_fillet': ('dialogs', 'Raccordi 3D: quattro schede Costante/Conico/Variabile/Tra facce, illustrazioni originali, selezione nella vista e completamento esplicito del contorno degli incavi, percorsi tangenti con tabelle indipendenti, manipolatori dei raggi e zero agli estremi dei percorsi aperti, anteprima cancellabile, conferma anticipata con pannello nascosto durante il calcolo e parametri persistenti.'),
+ 'forgeCad2026_dialogs_common': ('dialogs', 'Pannelli nel viewport proprietario e blocco limitato al workspace, anche con piu documenti in schede; sotto il ribbon con aggancio/altezza piena e dimensioni preferite e larghezza iniziale per comando senza sovrascrivere il resize manuale; controlli G1/G2 con verso indipendente per profilo. Presentazione Raggio condivisa: titolo, schede con icone, illustrazioni volumetriche, form compatti e footer accessibile; intestazione compatta, aggancio laterale persistente e altezza piena, temi chiaro/scuro, checkbox nativi con palette distinta per testo/spunta ed elenchi con fondo dei campi, vetro e dimensioni persistenti. Conferma opzionale con pannello nascosto e attesa di finished anche nel runner modale; errori reali riaprono i controlli. Un comando modeless fra workspace per evitare cleanup sospesi; selezioni multiple e riga corrente conservate per identita, picker fermati al cambio ruolo G0/G1/piano. Ruoli semantici dei messaggi con contrasto nei temi chiaro e scuro. Tutti gli undici runner storici usano il gestore comune: setup differito dopo guardia fra documenti, overload a tre argomenti preservato, finished sincrono senza attesa irrisolvibile. Messaggio anteprima nel footer fisso anche se creato dopo show, senza duplicazioni.'),
+ 'forgeCad2026_operation_illustration': ('dialogs', 'Illustrazioni vettoriali e icone dei comandi: volumi azzurri, materiali sfumati e annotazioni; stessa proiezione e resa della prima anteprima Raggio.'),
+ 'forgeCad2026_dialogs.h': ('dialogs', 'Contratti dei dialoghi di comando per solidi, superfici, sketch e analisi. Runner modeless con overload compatibile e callback di inizializzazione dopo la guardia comune.'),
+ 'toolbar_editor.h': ('startup', 'Editor della disposizione e dei comandi delle toolbar.'),
+}
+
+DESCRIPTIONS.update({
+ 'kernel/fk_topology.cpp': ('kernel', 'Operazioni topologiche ed Euler; reverseEdge prepara curve e pcurve prima della mutazione e supporta bordi con una sola fin delle lamine.'),
+ 'kernel/tests/test_topology.cpp': ('tests', 'Topologia e primitive Euler; reverseEdge su solidi e lamine preserva cammino delle fin, pcurve, orientamento e reversibilita.'),
+ 'kernel/tests/test_loft_surfaces.cpp': ('tests', 'Superfici loft e chiusura delle sezioni 2D/3D: invarianza per traslazione e scala, soglie sotto/sopra la tolleranza del documento, area e checker indipendenti.'),
+
+ 'cad_drawing_curve_recognition.h': ('drawing', 'Riconosce cerchi spline con certificato Bezier e proiezioni rettilinee con estremi razionali; conserva i proprietari delle cache durante le letture concorrenti; cache locale limitata con proprietari deboli, senza alterare gli agganci.'),
+ 'tests/test_drawing_dimension_controls.h': ('tests', 'Quote trasparenti verificate a pixel, frecce H/B indipendenti, richiami obliqui con mouse/Esc/Undo, ordinate in lotti e R profilo su sezioni non circolari; codec e oracoli analitici.'),
+
+ 'tests/test_drawing_preparation.cpp': ('tests', 'Preparazione seriale/parallela delle viste: identita di geometria, tracciati, quote e cache, barriere di raffinamento, cancellazione, errori e richieste concorrenti.'),
+ 'tests/test_drawing_scale.cpp': ('tests', 'Scale del foglio e delle viste contro dimensioni analitiche: catene di ereditarieta, personalizzazioni, quote, codec legacy/schema23 e badge, Undo, sola lettura e dialoghi reali con anteprime.'),
+ 'kernel/tests/test_curve_algo.cpp': ('tests', 'Proiezioni contro OCCT e oracoli analitici: candidati limitati, soglie, nodi e intervalli puntuali su spline lunghe.'),
+ 'tests/test_pattern_placements.h': ('tests', 'Ripetizioni nuove e aggregati legacy con derivati salvati dal Mac: volume, un solo evento, esclusioni, rollback e persistenza.'),
+
+ 'kernel/fk_curve_surface.cpp': ('kernel', 'Intersezioni curva/superficie: ricerca Bezier, certificato di unicita delle rette e verifiche di appartenenza con testimoni di distanza e stime UV locali; casi incerti al proiettore globale; estremi dei tratti e agganci confermati interni dopo la bisezione.'),
+ 'kernel/tests/test_curve_surface.cpp': ('tests', 'Intersezioni confrontate con OCCT e conservazione della geometria nelle suddivisioni Bezier: razionali, micro domini, gradi alti e divisioni ripetute.'),
+ 'kernel/tests/test_boolean.cpp': ('tests', 'Booleane contro OCCT, contatti e sweep elicoidali; volumi analitici delle lamelle spline sottili fino a 1e-4 mm, topologia e concordanza parallela.'),
+ 'tools/benchmark_surface_distance.py': ('build', 'Benchmark riproducibile del predicato di distanza: sonda C++ CPU generata con CMake, casi vicini/misti/esterni, controllo dei risultati e processi alternati; distinto dal CAD completo.'),
+ 'fk_surface_distance': ('kernel', 'Controlli di distanza con certificato positivo: punto valido entro meta tolleranza o proiezione globale originale; hint locale, cancellazione e nessuna cache persistente.'),
+ 'kernel/fk_exchange.cpp': ('kernel', 'Importazione B-rep: campioni consecutivi con certificato entro lo scarto gia ignorato; distanza esatta oltre soglia e metadati geometrici invariati. Cucitura Plane nel parametro del bordo rappresentativo: pcurve cubiche certificate in mm, cap legacy invariato e ricontrollo postassembly via mappe faccia/edge e identita condivise delle sole fin migrate.'),
+ 'kernel/tests/test_face_parameter_classify.cpp': ('tests', 'Classificazione UV ai bordi NURBS entro il budget fisico: domini parametrizzati a scale diverse, fori, punti esterni, parametri non finiti e avvolgimenti periodici; senza OCCT.'),
+ 'kernel/tests/test_boolean_seams.cpp': ('tests', 'Loft NURBS chiuso con cucitura e cilindro: volumi delle tre booleane, entrambi gli ordini, UV, genealogia, mesh, STEP e parallelismo.'),
+ 'kernel/fk_unify.cpp': ('kernel', 'Unisce facce sullo stesso dominio e bordi compatibili, preservando le cuciture UV necessarie alle superfici chiuse non periodiche.'),
+ 'kernel/fk_solid_trim.h': ('kernel', 'Taglio volumetrico mediante faccia orientata e intervallo fra due superfici finite, con tutti i solidi risultanti e genealogia esplicita.'),
+ 'kernel/fk_solid_trim.cpp': ('kernel', 'Scelta dei lati verso l altro limite e composizione di due tagli esatti, inversioni indipendenti, errori senza volumi e genealogia a tre operandi.'),
+ 'cad_solid_trim.h': ('features', 'Costruzione associativa del taglio volumetrico fra due riferimenti a facce.'),
+ 'cad_solid_trim.cpp': ('features', 'Risoluzione delle due facce, estrazione con provenienza, mantenimento dei solidi tra i limiti e registrazione della genealogia delle chiusure.'),
+ 'forgeCad2026_viewport_body_box.cpp': ('viewport', 'Selezione a rettangolo dei corpi nei picker: finestra e attraversamento sulle sole geometrie di display, facce senza bordi, filtro degli operandi disponibili e callback cumulativo per le booleane.'),
+ 'kernel/tests/test_cone_rays.cpp': ('tests', 'Regressione coni quasi piani: radici su entrambe le falde, tangenze, classificazione preparata e unioni indipendenti da ordine e thread.'),
+ 'tests/test_boolean_box.h': ('tests', 'Rettangoli nella finestra reale senza preselezionare A: selezione cumulativa, clic singoli, finestra/attraversamento, operandi storici, esclusione A, Esc/Annulla, conferma e Undo/Redo.'),
+ 'forgeCad2026_dialogs_trim.cpp': ('dialogs', 'Pannello unico Taglia superficie: strumento corpo/piano/schizzo e regioni reciproche, oppure due facce limite per tutti i solidi; cambio modalita, picking vista/storyboard, evidenze, anteprima e modifica compatibile.'),
+ 'kernel/tests/test_solid_trim.cpp': ('tests', 'Volumi analitici e B-rep di tagli tra piani/cilindri, componenti disconnesse, cavita, contatti, strumenti insufficienti, genealogia e determinismo.'),
+ 'fk_surface_poles_conversion': ('kernel', 'Conversione analitica esatta in NURBS: finestre finite comprendenti poli isolati, estensione periodica per trim che attraversano la cucitura, piani 4x4, SP-curve e topologia conservate, controllo di chiusure e lati degeneri.'),
+ 'kernel/tests/test_surface_poles_conversion.cpp': ('tests', 'Conversione analitica dei poli: primitive, fori e giunti misti, trim elicoidali attraverso la cucitura, calotte a latitudine costante, jet periodici, istanze e persistenza B-rep v2/v3 con pool distinto per periodicita.'),
+ 'tests/test_surface_poles_analytic.h': ('tests', 'Workflow del piano analitico: conversione automatica 4x4, spinner, G0/G1, deformazione e anteprima, Undo/Redo, codec14, riapertura e rigenerazione senza cache.'),
+ 'fk_surface_poles_influence': ('kernel', 'Campo locale sulla topologia della griglia NURBS: decadimento compatto C2, comandi rigidi, massimo nelle sovrapposizioni, periodicita e limite4096, indipendente dalla continuita tra facce.'),
+ 'kernel/tests/test_surface_poles_influence.cpp': ('tests', 'Influenza locale dei poli: supporto e decadimento U/V, selezioni sovrapposte senza accumulo, comandi rigidi, disattivazione, periodicita, indici e budget.'),
+ 'tests/test_surface_poles_soft.h': ('tests', 'Regressione8x108 su faccia isolata: trascinamento dei vicini verdi, G1 separata, Esc/rilascio e anteprima, conservazione forma quando cambiano opzione/raggi, codec15, Undo/Redo, riapertura e rigenerazione.'),
+ 'fk_surface_poles_constraints': ('kernel', 'Vincoli G0/G1/G2 sui giunti B-rep e jet razionali interni: spostamenti relativi conservano lo stato neutro tollerante, righe razionali compatibili e compensativi, protezione locale mediante supporti Bezier sui trim incompatibili senza congelare tutta la faccia, cuciture e poli degeneri.'),
+ 'fk_surface_poles_jets': ('kernel', 'Jet razionali unilaterali esatti ai nodi interni e alle cuciture: derivate dei pesi, riparametrizzazione G1/G2 costante, fasce affini ai poli degeneri, residui relativi e nessuna ricerca per prossimita.'),
+ 'kernel/tests/test_surface_poles_constraints.cpp': ('tests', 'Continuita dei poli: G0/G1 razionale, parametri invertiti, spigoli, refit, conflitti, fascia locale su trim interni e poli interni liberi, stato neutro e giunti tolleranti conservati.'),
+ 'tests/test_surface_poles_continuity.h': ('tests', 'Pannello G0/G1: inclusione delle facce, poli automatici verdi distinti dai comandi, Esc ripetuto, conflitti, anteprima, codec13, Undo/Redo, riapertura e rigenerazione senza cache.'),
+ 'kernel/fk_surface_refit.cpp': ('kernel', 'Ricostruzione bicubica con conteggi U/V espliciti: proiezione separabile ai minimi quadrati, angoli e dominio UV conservati, nodi adattati alle sezioni, fino a 256 poli per direzione e ricerca U/V entro lo scarto campionato vincolante.'),
+ 'cad_surface_poles_model': ('dialogs', 'Tabella virtuale multifaccia dei poli: comandi e compensativi distinti, traslazione locale atomica con influenza decrescente, sovrapposizioni senza somme, evidenza verde e snapshot per Esc.'),
+ 'cad_surface_poles_visibility': ('render', 'Filtro GPU dei poli e dei segmenti della gabbia campionata: profondita delle mesh correnti, anteprima, istanze e calotte di sezione, clipping in pixel e bias numerico; cache della scena e proiezioni, niente scansione dei milioni di poli o modifica del B-rep.'),
+ 'forgeCad2026_viewport_pole_visibility': ('viewport', 'Collega la visibilita dei poli ai corpi e alla preview effettivamente disegnati, rispetta picking storico, sezioni e istanze; condivide il filtro tra rendering, clic e riquadro, con opzione esplicita per mostrare i nascosti.'),
+ 'cad_surface_poles_interaction': ('dialogs', 'Gesti dei poli: trascinamento morbido opzionale con raggi U/V, fotografia completa e conversione pixel/mondo congelate all inizio del gesto, vicini automatici verdi, Esc e rilascio robusto, riquadro Alt e normale rotazione; clic e riquadro acquisiscono soltanto i poli esposti, oppure tutti con Mostra poli nascosti.'),
+ 'cad_surface_poles_session': ('dialogs', 'Stato delle griglie e cache analitica/refit: continuita G0/G1/G2, passaggi interni e influenza nella stessa griglia, stato risolto completo anche senza giunti, compatibilita legacy e ricerca asincrona entro scarto.'),
+ 'kernel/fk_surface_poles.cpp': ('kernel', 'Modifica poli NURBS con topologia e trim conservati: fit continuo dei bordi isoparametrici affini supportati e verifica delle cubiche effettive su ogni faccia adiacente; fallback campionato esplicito per le altre composizioni.'),
+ 'tests/test_surface_poles_multi.h': ('tests', 'Poli multifaccia: checklist e clic reali sulle facce, mesh ombreggiata durante scelta in creazione/modifica anche su stadi consumati, Esc/Termina e ripristino anteprima; gabbie, gruppo, spinner/scarto, Undo/Redo, codec e rigenerazione senza cache; regressione OpenGL della profondita, selezione dei poli esposti/X-ray, preview, rotazione, calotte di sezione e segmenti occultati.'),
+ 'cad_surface_tools.cpp': ('features', 'Funzioni superficie: conversione analitica e poli multifaccia, refit e vincoli G0/G1/G2 interni e fra facce, stato risolto del trascinamento morbido con raggi U/V e codec16, nessuna riapplicazione dell influenza durante la rigenerazione.'),
+ 'kernel/fk_boolean.cpp': ('kernel', 'Booleane B-rep: dispatch esatto delle sezioni meridiane di rivoluzione; filtri conservativi sui ritagli e sugli spigoli; classificazione UV sui carrier identici, tagli, ritaglio prima della validazione degli archi e riuso dei soli agganci necessari; riclassificazione di ogni sottoarco nei ritagli, scelta della curva condivisa compatibile con tutte le facce, indice UV dei vertici per i fori e diagnostica delle facce; taglio di solidi su un lato di una faccia finita e chiusure orientate. Contatti Line/trim ellittico: eventi e catena sorgente espliciti, limiti continui e UV affine certificata, mapping dal montaggio e ricontrollo dopo unify; retry transazionale conservativo.'),
+ 'kernel/tests/test_surface_algo.cpp': ('tests', 'Proiezioni OCCT e certificati di distanza: piano analitico, confini della tolleranza, curve libere, hint, degenerazioni, concorrenza e cancellazione.'),
+ 'kernel/fk_intersect.cpp': ('kernel', 'Sezioni meridiane esatte delle rivoluzioni NURBS, con riconoscimento del piano dai poli e rotazione parametrica; raggi sui coni con quadratica centrata e sin/cos, senza perdere le falde quasi coincidenti; intersezioni esatte: gerarchie Bezier2D e scarto conservativo dei candidati; box B-spline limitati esattamente al tratto richiesto. Newton, budget e tolleranze invariati.'),
+ 'kernel/tests/test_invert_point_validation.cpp': ('tests', 'Inversione UV indipendente da OCCT: residuo finale di cilindro/cono/sfera/toro con grandi fasi U/V, stime moderate vicine al ramo, Plane e seam BSpline chiusi non periodici, rifiuto di stime periodiche non finite.'),
+ 'kernel/fk_curve.cpp': ('kernel', 'Curve esatte Line/Circle/Ellipse, trim e trasformazioni: quadrantBreakpoints condiviso con le superfici conserva formula e tolleranza legacy, richiede intervalli finiti ordinati, rifiuta indici double senza avanzamento e verifica la cancellazione a ogni iterazione. Nessun cap arbitrario o normalizzazione di fase; range puntuali conservati.'),
+ 'kernel/tests/test_quadrant_breakpoints_validation.cpp': ('tests', 'Quadranti su 14 consumatori reali: golden bit-identici su range ordinari e puntuali, intervalli NaN/Inf/invertiti rifiutati, indice non rappresentabile a fase1e20 e cancellazione preattiva. Baseline patologica soltanto con watchdog esterno.'),
+ 'kernel/fk_pcurve.cpp': ('kernel', 'Costruzione e verifica SP-curve esatte/Hermite e ripiego lineare legacy: pcurveDeviation campionato rifiuta misure senza campioni o non finite con +Inf, breakpoints originali e cancellazione; accettazioni esigono measured finito anche con tolleranza infinita. Soglie e ripiego50x invariati, nessun certificato continuo; nearPole resta ricontrollato dal fit finale.'),
+ 'kernel/tests/test_pcurve_deviation_validation.cpp': ('tests', 'Metrica SP-curve: gap finiti e picchi ai nodi originali, conteggi/range invalidi, overflow nativo UV/curve/superficie/norma, NURBS fuori dominio con denominatore nullo e controlli nel dominio, accettazioni e deviazione pubblicata solo al successo, cancellazione.'),
+ 'kernel/fk_surface_algo.cpp': ('kernel', 'Proiezioni globali NURBS: ricerca Bezier del minimo prima dei bordi del dominio; inviluppi conservativi delle isoparametriche escludono solo minimi impossibili. Bordi, nodi C0 e finestre limitate restano candidati. invertPoint ricontrolla UV e residuo fisico finiti dopo riporto periodico e scelta del seam, conserva ramo e cap e rifiuta fasi non rappresentabili entro tolleranza.'),
+ 'kernel/fk_cycle_point_index.h': ('kernel', 'Indice spaziale UV dei vertici dei cicli: minimo discreto identico al confronto completo, esclusione del ciclo corrente, traslazioni periodiche e box conservativi. Nessuna approssimazione delle curve.'),
+ 'kernel/fk_classify.cpp': ('kernel', 'Classificazione B-rep e UV; contatti sul bordo verificati in distanza fisica prima di scartare parametri fuori dominio, box delle facce sul ritaglio parametrico mediante gerarchie e suddivisione Bezier conservativa, con inviluppi esatti delle SP-curve, ritagli periodici srotolati e orientati, e conservazione del carrier per fori, fasce o UV non certificabili.'),
+ 'kernel/tests/test_intersect.cpp': ('tests', 'Intersezioni contro OCCT e casi analitici con molti tratti: pesi, assi scambiati, range parziali, contatti sui nodi, concorrenza e cancellazione.'),
+ 'kernel/fk_curve_algo.cpp': ('kernel', 'Proiezioni esatte: limita i tratti Bezier al range con bounds inclusivi, conservando ordine/candidati e filtri conservativi entro distanza; lunghezze e quadratura invariate.'),
+ 'fk_offset_support': ('kernel', 'Continuazione NURBS omogenea C2 fuori dal dominio naturale; regolarita delle pareti a distanza e verifica delle pieghe sul trim parametrico conservato.'),
+ 'fk_open_offset': ('kernel', 'Offset e spessore di lamine a spigoli vivi con aperture planari; chiusure temporanee, trim dei supporti necessari, collasso esatto delle gole cilindriche a larghezza nulla, pareti anulari e genealogia dichiarata.'),
+ 'kernel/tests/test_open_offset.cpp': ('tests', 'Gola analitica prima/al collasso/oltre il limite; Shower Head2,5mm interno/esterno, superfici esterne originali conservate, validita e classificazione del solido, scarto offset, continuazione C2 e genealogia.'),
+ 'fk_precision': ('kernel', 'Default storici distinti per risoluzione, connessione e fit; profilo numerico per documento tramite scope thread-local validato, senza riscalare coordinate, UV o arrotondamento double.'),
+ 'fk_parallel': ('kernel', 'Distribuzione di lavori indipendenti con propagazione di cancellazione e precisione del documento, eccezioni al chiamante e limite ai parallelismi annidati.'),
+ 'fk_body_io': ('kernel', 'Persistenza B-rep binaria v1/v2 e v3 per NURBS con estensione periodica; body precedenti ancora scritti v2, istanze condivise, pool locale thread-safe con confronto bit per bit comprensivo di periodicita, topologia distinta.'),
+ 'fk_transform': ('kernel', 'Trasformazioni esatte, specchi e scala uniforme: topologia e genealogia distinte, griglie NURBS condivise tramite istanze e trasformazioni successive composte, trim singolari conservati nelle pose senza cambio del parametro.'),
+ 'fk_step': ('kernel', 'STEP proprio: geometria B-rep in double, repliche NURBS per moti diretti, poli mondo per specchi/scale per interoperabilita; lettura repliche standard con cicli e operatori validati.'),
+ 'fk_loft_guide_constraints': ('kernel', 'Condizioni trasversali alle guide di bordo: normale invertibile al piano del profilo o G1 a facce adiacenti; lift cubico di Hermite indipendente dal grado U, collocazione con raffinamento verificato, sezioni e jet G1/G2 conservati, incompatibilita esplicite.'),
+ 'kernel/tests/test_loft_complexity.cpp': ('tests', 'Griglie loft: sezione quintica con velocita disuguali e conica razionale, guide G1/G2, sezioni e intere guide entro precisione, nodi C2 e veri angoli delle guide conservati senza raffinamenti superflui.'),
+ 'kernel/tests/test_surface_instances.cpp': ('tests', 'Istanze NURBS esatte: jet ordine4, isoparametriche, normali, doppio specchio, condivisione delle pezze e box/proiezione; roundtrip binario v1/v2 e STEP con cicli e scale/specchi standard.'),
+ 'kernel/tests/test_loft_guide_constraints.cpp': ('tests', 'Loft con condizioni trasversali alle guide: normale al piano, inversione e faccia tangente curva; invarianza rispetto al grado 3/34, sezioni intermedie e jet conservati, controlli negativi e incompatibilita diagnosticate.'),
+ 'kernel/fk_bspline_surface.cpp': ('kernel', 'Superfici NURBS con jet locali double e istanze immutabili: estensione periodica opzionale del dominio clamped, isoparametriche e breakpoints coerenti, estremi distinti per la chiusura; copie atomiche delle cache Bezier/proiezione/isoparametriche e pubblicazione unica del risultato concorrente.'),
+ 'kernel/tests/test_bspline_surface.cpp': ('tests', 'Superfici B-spline contro OCCT e Bernstein indipendente fino al grado31; limiti dei buffer, nodi ripetuti/stretti, prefissi bit identici, concorrenza e cancellazione.'),
+ 'kernel/fk_topology.h': ('kernel', 'Entita e costruzione B-rep per regioni solide/lamine; collezione disgiunta con geometria condivisa e genealogia, senza fondere le componenti.'),
+ 'kernel/fk_step.cpp': ('kernel', 'Lettura/scrittura STEP propria; distingue shell solide e lamine nelle collezioni miste, mantenendo i tipi nella rappresentazione scambiata.'),
+ 'kernel/fk_body_collection.cpp': ('kernel', 'Collezione B-rep disgiunta: preserva regioni solide e lamine, indici topologici, geometria condivisa, tolleranze e genealogia Same; nessuna fusione geometrica.'),
+ 'kernel/fk_affine_surface_fit.cpp': ('kernel', 'Riconoscimento delle SP-curve affini originali per superfici estruse: segmenti UV anche obliqui, dominio, copertura, pesi, budget e cancellazione; inoltro al certificato continuo sul generatore originale.'),
+ 'kernel/fk_affine_surface_fit.h': ('kernel', 'Contratto della composizione affine UV su estrusioni: intervalli e coefficienti originali, famiglie supportate e controllo inconclusivo distinto dal caso non supportato.'),
+ 'kernel/tests/test_mapping_diagonal_validation.cpp': ('tests', 'Regressioni del mapping obliquo su estrusioni originali: rilievi nascosti, UV affini, direzioni, pesi, pose, scale, topologia, persistenza e pubblicazione atomica; query avverse sul certificato continuo.'),
+ 'kernel/fk_mapping_carrier.cpp': ('kernel', 'Mapping di lamine piane su carrier originale NURBS/estrusione: trasferimento affine UV, bordi certificati sui coefficienti originali, budget di arrotondamento e quota, conservazione topologia e pubblicazione atomica; famiglie non supportate distinte.'),
+ 'kernel/fk_mapping_carrier.h': ('kernel', 'Contratto interno della conservazione del carrier nel mapping: risultato opzionale per famiglie supportate, rifiuto esplicito del controllo inconclusivo.'),
+ 'kernel/tests/test_mapping_fit_validation.cpp': ('tests', 'Contratto del fit Hermite: controllo finito cubico/quintico, NaN/Inf nelle sonde interne con e senza jet analitico, corner/stencil e tutti i vettori del jet; griglie/tolleranze invalide prima delle callback, accumulatori pubblicati solo al successo, eccezioni e cancellazione.'),
+ 'kernel/tests/test_mapping_nonplane_validation.cpp': ('tests', 'Regressioni mapping nonPlane: picco del carrier invisibile ai campioni rifiutato, fin finali dei box e carrier razionale effettivo certificate, cap prefit, genealogia anche senza history, input/target immutati, fallimenti atomici e cancellazione.'),
+ 'kernel/tests/test_mapping_pcurve_validation.cpp': ('tests', 'Trasferimenti UV su Plane con coordinate grandi e offset: parametri originali, fin finali certificate al budget pubblicato, pesi e wrapper, pose e scale, codec e fallimenti atomici; certificato distinto dal fit 3D campionato.'),
+ 'kernel/tests/test_mapping_carrier_validation.cpp': ('tests', 'Regressioni mapping con rilievi del carrier nascosti, bordi e parametri, pesi, scale, pose, fori, genealogia, codec e fallimenti atomici; confronto con il percorso precedente e sanitizer mirati.'),
+ 'kernel/fk_mapping_fit.cpp': ('kernel', 'Fit Hermite cubico/quintico adattivo condiviso dalle mappature: celle NURBS con derivate comuni, stencil locali espliciti, controlli dello scarto e budget geometrici prefissati; griglie/tolleranze valide, callback/jet/poli/residui finiti prima dei massimi e deviazione pubblicata solo dopo costruzione riuscita. Fit campionato, nessuna prova globale o mesh di calcolo.'),
+ 'kernel/fk_mapping_fit.h': ('kernel', 'Contratti interni del fit parametrico e della trasformazione B-rep tramite corrispondenza analitica; immagine di faccia a carrier conservato e trasferimento UV esplicito, con ricostruzione Plane sul bordo effettivo e metrica fisica.'),
+ 'cad_sketch_offset.cpp': ('sketch', 'Offset dello schizzo: fit NURBS certificato da coefficienti originali nei giunti e nelle copie finali, ricertificazione dei poli effettivi dopo rifilo con domini sorgente conservati, vincoli associativi e fallimenti atomici; altri tipi mantengono il fit campionato.'),
+ 'cad_sketch_offset.h': ('sketch', 'Contratto offset schizzo: catene e lati, copie associative, limite continuo per NURBS supportate anche dopo il rifilo e limiti campionati delle altre famiglie.'),
+ 'tests/test_sketch_offset_validation.cpp': ('tests', 'Regressioni offset schizzo con dettagli NURBS nascosti, versi e segni, giunti concavi, nodi angolosi, rifilo e rigenerazione associativa; input invalidi e pubblicazione atomica.'),
+ 'kernel/fk_thicken.cpp': ('kernel', 'Spessore lungo normale o direzione: su bordi di facce Plane le pareti conservano curve e parametri originali con traslazione ed estrusione; caps offset e genealogia conservati, superfici curve ancora con fit campionato e controlli locali.'),
+ 'kernel/fk_thicken.h': ('kernel', 'Contratto dello spessore di lamine: lato, normale o direzione, budget offset e conservazione dei bordi nelle pareti di facce Plane; limiti dei percorsi curvi.'),
+ 'kernel/tests/test_planar_thicken_validation.cpp': ('tests', 'Regressioni pareti di Spessore su Plane: dettagli NURBS nascosti, pesi e parametri originali, pose e lati, trim, fori, rappresentazioni finali, genealogia e codec.'),
+ 'kernel/fk_planar_flatten.cpp': ('kernel', 'Trasformazione affine dei contorni UV originali per appiattimento di una faccia Plane: coefficienti e parametro conservati, limiti continui di arrotondamento, risorse e cancellazione.'),
+ 'kernel/fk_planar_flatten.h': ('kernel', 'Contratto del percorso affine per appiattimento piano: mappa condivisa, curve originali supportate e errore continuo dichiarato.'),
+ 'kernel/tests/test_planar_flatten_validation.cpp': ('tests', 'Regressioni appiattimento piano con dettagli NURBS nascosti tra campioni: pesi, pose, scale, trim, fori, inversione della mappa, codec, genealogia e atomicita degli output.'),
+ 'kernel/fk_quilt_mapping.cpp': ('kernel', 'Appiattimento B-rep con bordo topologico comune; una faccia Plane conserva i coefficienti dei contorni tramite mappa affine e limite di arrotondamento, altri casi usano fit;  Jacobiani e deformazione campionata; origine suggerita e genealogia esplicita. Mappa comune e reversibile piano/quilt tramite coordinate di lunghezza d arco sulle isocurve esatte; una faccia o due facce tangenti con giunzione U, trim e piegatura solida lungo le normali. Monotonia dai poli, origine/metrica esatte sulla giunzione, cache per piegatura e nodi espliciti del fit; offset Plane analitico senza fit di contorni UV superfluo, fin Plane delegate al controllo continuo. Nessuna proiezione per raggi o isometria generale promessa.'),
+ 'kernel/fk_quilt_mapping.h': ('kernel', 'Contratti di appiattimento della lamina, misure della deformazione e corrispondenza condivisa flatten/fold per la piegatura B-rep; destinazioni immutabili con genealogia esplicita.'),
+ 'kernel/fk_surface_mapping.cpp': ('kernel', 'Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: conserva i carrier supportati; fin Plane e NURBS2/3 native o istanziate certificate nel continuo al cap prefit. Candidata UV prima della prova, Failed terminale; genealogia, E/S/Q, parametri, versi e budget delle fin dopo assemblaggio anche senza history utente. Bordi3D, carrier rispetto alla mappa e altre famiglie restano campionati; nessuna mesh di calcolo.'),
+ 'kernel/fk_classify_uv.h': ('kernel', 'Classificatore preparato di coordinate UV gia note: trim esatto e budget fisico senza nuova proiezione globale sul carrier; corpo immutabile.'),
+ 'kernel/fk_surface_mapping.h': ('kernel', 'Contratti di sviluppo esatto, deformazione o posa rigida per sorgente; appoggio UV o centrato sulla giunzione topologica comune, piano sorgente e budget di fit.'),
+ 'kernel/tests/test_surface_mapping.cpp': ('tests', 'Appiattimento NURBS multifaccia, bordo comune, metriche e piano inclinato; sviluppo: aree e lunghezze analitiche piano/cilindro/cono; deformazione volumetrica cilindrica, genealogia, negativi, mesh, binario e STEP.'),
+ 'kernel/tests/test_trimmed_face_bounds.cpp': ('tests', 'Box di facce NURBS polinomiali e razionali: ritagli dentro una singola pezza, punti interni, picchi UV fra campioni, curve UV generiche o mancanti, 48 estremi entro soglia e 840 ricerche UV identiche al confronto completo.'),
+ 'cad_fill_pattern.cpp': ('features', 'Quattro disposizioni automatiche da corpi o strumenti di feature; contorno associativo da schizzo o unione di facce complanari, cucitura e fusione dei bordi interni, contenimento conservativo, fori e limiti cancellabili.'),
+ 'cad_fill_pattern.h': ('features', 'Collocazioni del riempimento rettangolare, sfalsato, esagonale e concentrico con sorgente esplicita e contorno associativo.'),
+ 'cad_surface_mapping.cpp': ('features', 'Sviluppo esatto oppure appiattimento con deformazione misurata, mappa comune piano/superfici e posa rigida secondo normali locali, con sorgenti e destinazioni multiple associative: appoggio unico su facce rifilate, isole piane separate, collezioni solide/lamine, diagnostica per faccia e genealogia esplicita; inversa associativa dell appiattimento con ordine delle facce, piano, rotazione e traslazione originali.'),
+ 'cad_surface_mapping.h': ('features', 'Contratti di sviluppo/deformazione e risoluzione associativa della mappa di appiattimento: riconoscimento dal contorno delle ripetizioni e inversa completa piano/superfici.'),
+ 'forgeCad2026_dialogs_mapping.cpp': ('dialogs', 'Pannelli riempimento con4icone, sviluppo esatto/appiattimento e deformazione, testi italiani e misure nell esito: selezione delle copie di una ripetizione, centratura e allineamento dal piano sorgente, contorni multifaccia e liste di sorgenti/destinazioni multiple, mappa sorgente associativa senza ricentratura, scelta deformazione/posa rigida, appoggio sulla giunzione comune con ricerca di piccola traslazione valida, evidenze corpi/piano, aggiunta/rimozione continua e confronto delle identita topologiche anche con nomi genealogici condivisi. Cleanup idempotente dei picker collegato a finished per mapping e riempimento pattern. Il passaggio alla mappa collegata termina il picker destinazione divenuto inapplicabile e conserva quello sorgente. Durante selezione continua invalida worker e anteprima solo al cambiamento dei valori; ripresa al termine e risultato obsoleto eliminato.'),
+ 'tests/test_surface_mapping.h': ('tests', 'Riempimenti4pattern, fori e budget; storia/Undo/Redo/codec; sviluppo/appiattimento associativi, schema8 per inversa associativa, contorno multifaccia, anteprima con piano indiretto e downgrade atomico, rigenerazione e metodi GUI in italiano.'),
+ 'kernel/fk_marching.cpp': ('kernel', 'Intersezioni superficie/superficie: riuso delle pezze Bezier e dei parametri noti, gerarchie e testimoni di distanza NURBS; genera tagli solo per coincidenze di area; distingue nodi C1, spigoli e bordi del dominio e rifiuta passi arretrati. Fit e tolleranze invariati.'),
+ 'kernel/fk_surface_distance.cpp': ('kernel', 'Filtri conservativi di distanza: certificato entro soglia e rigetto tramite BVH dei box Bezier con margine numerico; proiezione globale nei casi incerti.'),
+ 'kernel/fk_surface_distance.h': ('kernel', 'Contratti dei filtri di distanza: candidato entro tolleranza o rigetto conservativo, senza usare il filtro come accettazione geometrica.'),
+ 'kernel/tests/test_marching_seed_grid.cpp': ('tests', 'Griglie NURBS: cerchio analitico completo; piani razionali separati a densita diverse e taglio trasversale con SP-curve nei due ordini.'),
+ 'kernel/tests/test_marching.cpp': ('tests', 'Intersezioni contro OCCT e geometrie analitiche: tangenze, poli e sella con solo termine misto, diagonali quasi nulle e ordine delle superfici invertito.'),
+ 'tests/test_pattern_placements.h': ('tests', 'Ripetizioni: limiti e trasformazioni, corpi separati/esclusioni; sweep in unione/sottrazione attorno a Y con volumi analitici, pannello, persistenza e Undo/Redo.'),
+})
+
+# Catalogo dei moduli applicativi: descrizioni specifiche condivise da header e sorgente.
+DESCRIPTIONS.update({
+ 'kernel/fk_bspline_basis.cpp': ('kernel', 'Basi e derivate B-spline: specializzazioni dei gradi1..5 e ordini0..2 con algoritmo e ordine aritmetico invariati, fallback generale e cancellazione per chiamata.'),
+ 'kernel/tests/test_bspline.cpp': ('tests', 'Valutazioni B-spline contro OCCT e formule Bernstein, prefissi derivati bit identici, gradi fino31, nodi ripetuti/limiti, buffer, concorrenza e cancellazione.'),
+})
+
+DESCRIPTIONS.update({
+ 'fk_loft_sections': ('kernel', 'Sezioni proiettate/estratte implicite: rappresentazione NURBS della sola costruzione loft nel budget 1e-9 mm, jet e parametri conservati, verifica indipendente; input associativi immutati e sezioni razionali senza fit.'),
+ 'kernel/tests/test_loft_projected_sections.cpp': ('tests', 'Loft con sezioni implicite, trim/trasformazioni, due/tre sezioni, G1/G2, guide, limiti di errore e BodyIO; sorgenti immutate.'),
+ 'tests/test_loft_projected_sections.h': ('tests', 'Sezioni da proiezioni/estrazioni associative: creazione, forma entro budget, dipendenze, Undo/Redo, salvataggio cache/no-cache e rigenerazione.'),
+ 'cad_storyboard_selection': ('dialogs', 'Ponte di sola selezione tra storyboard e campo attivo dei pannelli: entita esatte espandibili, schizzi nascosti, guardia di visibilita/storia e compatibilita delle ripetizioni.'),
+ 'forgeCad2026_viewport_storyboard.cpp': ('viewport', 'Candidati filtrati per ruolo e punto della storia; consegna gli stessi riferimenti genealogici a picker di curve, corpi e bordi dalla storyboard.'),
+ 'cad_loft_diagnostics': ('features', 'Identita di guida e sezione negli errori del kernel, nomi secondo ordine effettivo e percorsi esatti per la diagnostica visuale.'),
+ 'forgeCad2026_viewport_loft_diagnostics.cpp': ('viewport', 'Overlay temporanei di errore loft: guida rossa, sezione arancione, etichette e frecce ancorate ai percorsi esatti; reset ad aggiornamento e chiusura.'),
+ 'tests/test_storyboard_panel_selection.h': ('tests', 'Storyboard nei picker: schizzi nascosti, punti, bordi esatti, filtri di storia, guardie e ripetizioni; errore loft reale con guide riordinate e due overlay distinti.'),
+ 'tools/open_architecture.py' : ('build', 'Avvio locale della mappa: aggiorna i dati a ogni apertura e li mostra nel browser con avanzamento ed errori.'), 'CMakeLists.txt': ('build',
+                    'Definisce eseguibile e suite; libreria interna condivisa dai runner delle tavole e impronta geometrica limitata alla chiusura delle dipendenze del calcolo.'),
+ 'cmake/geometry_sources.cmake': ('build', 'Raccoglie include locali transitivi e implementazioni per l’impronta geometrica; esclude moduli visuali indipendenti e conserva il kernel completo.'),
+ 'tests/test_geometry_sources.cmake': ('tests', 'Verifica invalidazione per dipendenze geometriche, stabilita dopo modifiche visuali e manifesto reale della build.'),
+ 'tests/test_drawing_multisheet.h': ('tests', 'Contenitore multifoglio: identita geometrica indipendente dalla visibilita, verifica delle impronte storiche, migrazione selettiva cache16 con nomi e B-rep invariati; aggiornamento, annullamento, presentazioni e storia.'),
+ 'tests/test_document_units.h': ('tests', 'Isolamento delle unita fra due finestre, quote, misure, campi numerici, anteprime e ripristino; valori interni invariati.'),
+ 'tests/test_history_suppression.h': ('tests', 'Soppressione con appoggio/Pierce invalidi, continuita della catena e rifiuto alla riattivazione.'),
+ 'tests/test_function_panels.h': ('tests', 'Pannelli: tema e contrasto delle spunte native nei checkbox e negli elenchi, messaggi copiabili e dimensioni; modifica dei tre punti con rollback/storia e verso G1/G2 persistente, compatibilita delle firme tavola60. Regressioni unita dei coefficienti, contrasto messaggi, cleanup picker e runner fra schede, selezione multipla e stati anteprima estrusione/loft/mapping. Regressioni del picker con anteprima pronta, creazione/modifica/rollback, curve 3D e cambio Mapping verso mappa collegata.'),
+ 'fk_surface_algo': ('kernel', 'Algoritmi sulle superfici: coincidenza delle estrusioni certificata e identita stretta della parametrizzazione UV da dati esatti, per riutilizzare SP-curve senza riproiezione.'),
+ 'fk_loft': ('kernel', 'Corrispondenze manuali tra sezioni, cucitura e verso per profilo; ascisse esatte e diagnostica di collegamenti incrociati. Loft con contatti G1/G2 e sezioni 3D razionali o implicite: adatta soltanto le copie di costruzione delle proiezioni tramite fk_loft_sections; basi/derivate locali e unione dei nodi con molteplicita minime sufficienti, senza duplicare i poli C2.'),
+ 'kernel/tests/test_surface_algo.cpp': ('tests', 'Algoritmi di superficie e certificato coincidenza delle estrusioni: onde, NURBS, verso inverso e suddivisione dei nodi.'),
+ 'kernel/fk_loft_merge.cpp': ('kernel', 'Unione opzionale delle pezze della loft: certificazione polinomiale G1 ai bordi, concatenazione NURBS senza fit, compattazione topologica e conservazione degli alias. Cucitura parametrica conservata sulle superfici chiuse non periodiche.'),
+ 'kernel/fk_loft_merge.h': ('kernel', 'Contratto interno per unire le facce tangenti della loft preservando contorni e genealogia.'),
+ 'kernel/fk_loft.cpp': ('kernel', 'Sezioni puntuali terminali esatte e topologia della punta, G1 a piani di riferimento con verifica del limite; preparazione condivisa dei controlli interattivi e della costruzione; punti manuali e guide reali impongono una mappa comune senza inventare traiettorie. Versi locali dalle tangenti delle guide; campo guida unico fra guide reali, con restrizione esatta alle pezze intermedie e diagnostica dei contatti G1 incompatibili. Loft con campi Hermite e guide curvilinee, algebra esatta dei profili razionali e adattamento delle sezioni implicite tramite fk_loft_sections. Guide implicite su sezioni piane; nodi comuni con molteplicita minima sufficiente, conservando C2, sezioni e jet senza cambiare sorgenti o budget di fit NURBS. Inversione della lunghezza stabile ai nodi; armonizzazione delle guide tramite fk_loft_knots entro arrotondamento, con sezioni esatte e dettagli distinti preservati. Chiusura delle sezioni basata sulla tolleranza di connessione del documento, indipendente dalla distanza dall origine.'),
+ 'fk_loft_profiles': ('kernel', 'Algebra esatta dei profili del loft: raccordi dei parametri, composizione e prodotti Bernstein per un denominatore razionale comune e correzioni cubiche delle guide ristrette al dominio globale, con derivata nulla sulle guide reali.'),
+ 'kernel/tests/test_loft_points.cpp': ('tests', 'Loft puntuali: volume analitico, B-rep, mesh, superfici aperte/chiuse, guide, corrispondenze e limite G1 al piano; casi incompatibili rifiutati.'),
+ 'tests/test_loft_points.h': ('tests', 'Loft punti/piani: risoluzione, dipendenze, rigenerazione, Undo/Redo, codec66/65, picker e storyboard.'),
+ 'kernel/tests/test_loft_shape.cpp': ('tests', 'Regressioni della forma del loft: inserimento di nodi senza cambiare geometria, raccordi G1 nonuniformi, pesi razionali, guide interne, vincoli perpendicolari alla corda, corner originali e incontri tolleranti guida/sezione con verifica separata di connessione e fit.'),
+ 'tests/test_document_read.h': ('tests', 'Lettura nativa robusta e migrazione cache15: loft pre-fix rigenerati atomicamente, check-in immutabili e loft soppressi conservati, definizioni e altre cache portabili.'),
+ 'kernel/fk_sketch_projection.cpp': ('kernel', 'Doppia proiezione esatta degli schizzi: rami razionali e impliciti, immagini associative, radici curva/piano con budget del contributo quasi parallelo e verifica del residuo 3D.'),
+ 'kernel/tests/test_loft_projected_guides.cpp': ('tests', 'Guide implicite nei loft: sezioni piane da bordi, rotazione/traslazione e versi, rango uno, incroci mancanti/multipli, rifiuto nonplanare, fedelta geometrica e codec.'),
+ 'kernel/tests/test_loft.cpp': ('tests', 'Loft, contatto e degenerazioni; campate di un ulp con profili razionali/polinomiali in entrambi i versi.'),
+ 'cad_constraints': ('sketch', 'Vincoli geometrici con Jacobiano sparso e rango per componenti; contatti tangenti riconosciuti tramite catene esplicite di coincidenze, senza riaggancio per vicinanza; cache associative costanti escluse dalle incognite libere senza vincoli Fix. Numeri della definizione validati con guardia condivisa dal codec, residui e passi non finiti rifiutati e commit atomico; riduzione angolare in gradi in tempo costante anche ai limiti double. Ellisse per estremi: tre equazioni intrinseche e centro derivato per concentricita, quattro punti reali senza vincolo implicito al centro.'),
+ 'fk_bspline_isoline': ('kernel', 'Jet NURBS a u fisso per quadrature: contrazione delle basi U una sola volta, coordinate locali per colonna, pesi razionali e istanze esatte; dati immutabili e fallback fuori finestra.'),
+ 'kernel/fk_bspline.cpp': ('kernel', 'Curve B-spline/NURBS: basi e derivate, valutazione polinomiale in coordinate locali, inserimento nodi, pezze Bezier e coniche esatte; copie atomiche delle cache e pubblicazione unica del risultato concorrente.'),
+ 'kernel/tests/test_bspline_cache.cpp': ('tests', 'Cache NURBS senza OCCT/Qt: copie, assegnazioni e move di curve/superfici, istanze e periodicita, durata dei risultati e riconoscimento cerchi concorrente; stress utilizzabile con ASan/TSan.'),
+ 'kernel/tests/test_bspline_derivatives.cpp': ('tests', 'Derivate polinomiali traslate contro differenze dei poli Bernstein, limiti ai nodi e lunghezze di spline fitte con conteggio limitato delle valutazioni; senza OCCT.'),
+ 'kernel/tests/test_bspline_isoline.cpp': ('tests', 'Jet su nodi stretti e gradi3/34, pesi razionali, coordinate lontane, istanze e concorrenza; massa del box con piani NURBS densi, tensore e somme seriali/parallele.'),
+ 'kernel/fk_bernstein.cpp': ('kernel', 'Polinomi Bernstein, radici e prodotti con coefficienti combinatori invarianti precalcolati; stessa ricorrenza e ordine delle somme.'),
+ 'kernel/fk_sweep_atlas.cpp': ('kernel', 'Adattatore sweep: parametrizzazioni razionali di traslazione/rotazione, nesting delle regioni e controllo delle teste con genealogia dei lati.'),
+ 'kernel/fk_sweep_atlas.h': ('kernel', 'Contratti interni per atlante dello sweep e associazione esplicita fra teste e famiglie laterali.'),
+ 'kernel/fk_sweep_surface_validation.cpp': ('kernel', 'Validazione globale delle superfici sweep: estrazione Bernstein outward, BVH, separazione e iniettivita locale con cuciture entro risoluzione fisica; budget e cancellazione.'),
+ 'kernel/fk_sweep_surface_validation.h': ('kernel', 'Atlante dei carrier sweep, domini e periodi genealogici, errori dei coefficienti, limiti e risultati della validazione conservativa.'),
+ 'kernel/fk_sweep_caps.cpp': ('kernel', 'Domini piani delle teste con trim razionali e fori: winding conservativo, disgiunzione testa/testa e testa/lato, budget condivisi e cancellazione.'),
+ 'kernel/fk_sweep_caps.h': ('kernel', 'Indice immutabile dei trim delle teste e contratti per disgiunzione fra superfici laterali e facce piane.'),
+ 'kernel/fk_sweep_analytic_bridge.cpp': ('kernel', 'Bounds outward dei coefficienti che collegano i chart razionali ai carrier analitici scelti; seno/coseno Taylor con resto esplicito, fallback dichiarato per input non supportati.'),
+ 'kernel/fk_sweep_analytic_bridge.h': ('kernel', 'Errore sui poli/pesi per una parametrizzazione razionale del carrier analitico effettivo dello sweep.'),
+ 'kernel/tests/test_sweep_global.cpp': ('tests', 'Sweep globali senza OCCT: spire e regioni sovrapposte, intersezione sulla stessa faccia o con testa, cuciture, lamina curva, tubi intercalati, nesting e atomicita degli alias.'),
+ 'kernel/fk_curve_projection.cpp': ('kernel', 'Proiezione affine esatta di NURBS e rette nel piano: parametri, nodi e pesi conservati, wrapper trim e trasformazioni, nessuna normalizzazione della direzione; tipi non supportati espliciti.'),
+ 'kernel/fk_curve_projection.h': ('kernel', 'Contratto della proiezione nel piano con parametro originale per rette e NURBS; intervallo finito, proiezioni degeneri ammesse e fallback esplicito per coniche/procedurali.'),
+ 'kernel/tests/test_curve_projection.cpp': ('tests', 'Regressioni della proiezione affine senza fit: parametri, NURBS razionali, trasformazioni, trim e integrazione del riempimento; runner senza Qt/OCCT.'),
+ 'kernel/tests/test_sheet_join_validation.cpp': ('tests', 'Giunti ISO NURBS: prove continue, cap fisso e negativi per picchi/gap; ancore e genealogia, codec e cancellazione. Offset loft con pcurve nonISO quasi tangenti: quattro varianti pubbliche, pose/scale, doppia estensione e taglio reciproco, sorgente immutabile.'),
+ 'kernel/tests/test_sheet_fit_validation.cpp': ('tests', 'Regressioni degli offset NURBS nell’estensione di lamine piane: faccia singola e multifaccia, orientamento e limite continuo del fit; runner senza Qt/OCCT.'),
+ 'kernel/fk_fill.cpp': ('kernel', 'Riempimenti con guide e contatti G0/G1/G2; bordi NURBS e rette proiettati esattamente nel piano dei parametri, fit campionato per tipi restanti; controlli di superficie e continuita.'),
+ 'kernel/fk_blend_model.h': ('kernel', 'Modello modificabile delle liste Body::build per raccordi ed estensioni; build espone la mappa esplicita degli edge compattati per le verifiche finali dei giunti, senza associazioni per prossimita.'),
+ 'kernel/fk_surface_curve_bounds.h': ('kernel', 'Contratti della candidata UV e del residuo continuo: E cubica e Q Line/BSpline1/3 anche razionali positive con trim originali; E anche trasformata affine, S NURBS native o istanze condivise con coefficienti e placement originali; budget fisico prefissato e unsupported/certificato/fallito distinti.'),
+ 'kernel/fk_surface_curve_bounds.cpp': ('kernel', 'Costruzione UV preproof e residuo continuo E(t)-S(Q(t)): E cubica e Q1/3 razionali positive su carrier NURBS2/3 nativi o istanziati a pesi positivi. Composizione Cox omogenea con denominatore Q anche per S polinomiale, immagini UV nel dominio e numeratori/denominatori originali; budget prefissato. Snapshot dei poli base e matrici IEEE originali in intervalli outward; wrapper Trim E/Q e Transformed E, range esatti per ogni trim e catene di massimo32 link cancellabili prima degli accessori ricorsivi; nessun flatten dei poli arrotondati, cap invariati e Failed terminale.'),
+ 'kernel/fk_sheet_join_validation.h': ('kernel', 'Contratto interno delle fin Newton pianificate ed emesse, con curva/range e budget originali e mappa esplicita dei bordi modello.'),
+ 'kernel/fk_sheet_join_validation.cpp': ('kernel', 'Usa la costruzione UV condivisa per le sole fin Newton pianificate; mantiene E/S/parametro e cap prefit, certifica prima di assegnare Q e ricontrolla i discendenti dopo unify anche senza history utente. Niente epsilon UV o recupero campionato dopo Failed; Unsupported conserva la via legacy.'),
+ 'kernel/tests/test_sheet_join_ledger.cpp': ('tests', 'Contratti delle fin Newton e costruzione UV prima della prova: mappa modello-edge, intervalli e cap originali, overshoot e halfULP, pcurve condivise preservate, gap reali rifiutati, modifiche dopo unify; nessun recupero campionato.'),
+ 'kernel/tests/test_surface_curve_instances.cpp': ('tests', 'Residuo continuo su istanze NURBS: originali base e matrici, pose composte/simmetrie/scale, picchi nascosti e perdita da flatten arrotondato, Quilt razionale pubblico con history nulla/codec, scope E/Q e cancellazione.'),
+ 'kernel/tests/test_surface_curve_wrappers.cpp': ('tests', 'Wrapper Trim E/Q e Transformed E: intervalli correlati, catene affini originali anche singolari, scarto nascosto da arrotondamento, picchi Q e fin prima di assegnare, range di ogni trim senza epsilon, limite32/33, famiglie non supportate e cancellazione.'),
+ 'kernel/tests/test_surface_curve_rational_pcurves.cpp': ('tests', 'Pcurve razionali lineari/cubiche: parametro originale, denominatore tensoriale su S polinomiale e razionale, pose/gauge, celle/trim/versi, picchi fra campioni, singola fin prima di assegnare e cancellazione.'),
+ 'kernel/tests/test_surface_curve_rational_edges.cpp': ('tests', 'Bordi cubici razionali sul carrier originale: pesi positivi, dominio/trim e verso correlato, pose e scale dei pesi, scarti nascosti e registro delle fin; gap parametrici, wrapper e cancellazione.'),
+ 'kernel/tests/test_surface_curve_rational.cpp': ('tests', 'Carrier razionali quadratici/bicubici e misti: positivi a pesi e scale diversi, tutte le celle attive anche con denominatore estrapolato negativo, picchi nascosti, dominio, limiti risorse e cancellazione.'),
+ 'kernel/tests/test_surface_curve_bounds.cpp': ('tests', 'Residuo continuo su superfici bicubiche: positivi e negativi fra campioni, dominio e celle nodali, trim, budget e cancellazione; contratti delle fin Newton prima e dopo unificazione.'),
+ 'kernel/fk_sheet.cpp': ('kernel', 'Taglio, rifilo ed estensione di lamine; offset NURBS planari certificati. Famiglia ISO scelta dalle pcurve sorgenti originali con limite fisico continuo e ancore per incidenza; giunti ISO verificati sui due supporti a cap fisso e fin ricontrollate dopo build/unify. Newton resta una costruzione campionata; fin Newton su supporti nativi quadratici/bicubici anche razionali positivi sono verificate continuamente con budget prefit e candidate UV nel dominio, dopo build/unify tramite mappa edge esplicita, con fallimenti riconosciuti terminali e famiglie unsupported legacy.'),
+ 'kernel/fk_boundary.cpp': ('kernel', 'Superficie tra curve Coons: nodi interni rimappati nei lati, fit continuo delle sorgenti supportate e verifica dei bordi effettivi dopo compatibilizzazione/assemblaggio; rifiuto dei disallineamenti oltre budget.'),
+ 'kernel/tests/test_boundary_fit_validation.cpp': ('tests', 'Regressioni BoundarySheet contro variazioni NURBS nascoste fra nodi, sorgenti razionali di grado elevato, versi/ritagli e disallineamenti agli angoli; runner indipendente da Qt/OCCT.'),
+ 'kernel/tests/test_surface_curve_fit_validation.cpp': ('tests', 'Regressioni della composizione superficie/SP-curve: variazioni NURBS nascoste dopo modifica poli, facce adiacenti coerenti/incoerenti, versi, trim, pesi, istanze e bound diretto; runner senza Qt/OCCT.'),
+ 'kernel/fk_curve_fit_bounds.cpp': ('kernel', 'Limiti continui Bernstein outward per posizione, offset NURBS e composizione isoparametrica NURBS e affine anche obliqua su estrusione con SP-curve originale; limiti delle derivate del supporto per il trasferimento UV, coefficienti originali, pesi, istanze, budget e cancellazione. Proiezione affine su Plane dagli originali IEEE, normale da assi del piano e direzione originale, con residuo omogeneo outward. Offset bordi: posizione edge e normale del generatore indipendenti, SP-curve affine originale e controllo continuo dei poli dopo assemblaggio. Doppio certificato Plane/SP-curve: proiezione fisica per il fit e residuo completo della fin, coefficienti originali posseduti e metriche in mm.'),
+ 'kernel/fk_curve_fit_bounds.h': ('kernel', 'Contratti del fit continuo, provider di posizione/offset/composizione superficie-SP-curve e limiti delle derivate U/V del supporto; distingue famiglie supportate, intervalli affini espliciti e rifiuto quando il controllo non conclude. Include il provider della proiezione originale su Plane con dati copiati e durate indipendenti dai chiamanti. Contratto offset edge di estrusione con dati originali posseduti e normale nel parametro del generatore. Contratto duale Plane/SP-curve e distinzione fra dati non supportati, factory invalida e query inconclusiva. API interne mirate fitPCurveOnPlane/requirePCurveOnPlane: costruzione e ricontrollo del residuo fisico con pubblicazione transazionale.'),
+ 'kernel/tests/test_curve_fit_validation.cpp': ('tests', 'Regressioni del fit con limite continuo: spline27 avversa, NURBS, pose e scale, offset di estrusione/rivoluzione, fallimenti atomici e cancellazione; runner indipendente da Qt/OCCT.'),
+ 'kernel/tests/test_offset_validation.cpp': ('tests', 'Offset: variazioni locali delle spline, domini toroidali completi/rifilati/periodici, costruzioni circolari ruotate e scalate, ripiego per estrusione obliqua e cancellazione prima, durante e alla fine del fit; eseguibile senza Qt o OCCT.'),
+ 'kernel/tests/test_sweep_validation.cpp': ('tests', 'Atlante sweep: superfici regolari e piegate, periodicita reale, collisioni e duplicazioni, underflow/overflow, budget, cancellazione e coefficienti incerti.'),
+ 'kernel/tests/test_sweep_caps.cpp': ('tests', 'Teste sweep: fori e isole, trim razionali con nodi interni, pose, contatti fra teste e lati, genealogia, budget e cancellazione.'),
+ 'kernel/tests/test_sweep_analytic_bridge.cpp': ('tests', 'Ponte dei carrier sweep: limiti dei coefficienti, cilindri/coni/tori, conservazione dei tipi analitici, massa e fallback espliciti.'),
+ 'kernel/fk_sweep.cpp': ('kernel', 'Sweep con frame Bishop, supporti analitici o tensoriali, cuciture UV esplicite e controllo locale Bernstein. Prima di pubblicare il risultato valida globalmente lati, teste e nesting tramite atlante razionale conservativo; errori o budget esauriti non pubblicano il risultato.'),
+ 'kernel/tests/test_sweep.cpp': ('tests', 'Sweep analitici e spaziali: eliche 15/16/17 giri senza aliasing, area/volume, cuciture UV su spline chiusa intera o divisa e fallback massa da SP-curve approssimate.'),
+ 'kernel/fk_mass.cpp': ('kernel', 'Proprieta di massa: conserva il ramo UV delle SP-curve approssimate come seed del fallback di inversione; nelle collezioni miste solo le regioni solide contribuiscono al volume/inertia; completa i contorni UV sui lati NURBS collassati certificati dai poli; riuso dei jet NURBS a u fisso con fk_bspline_isoline nelle quadrature V; facce indipendenti in parallelo, somme seriali, errori ordinati e cancellazione; proprieta complete e tolleranze conservate.'),
+ 'kernel/tests/test_mass.cpp': ('tests', 'Massa e area contro formule/OCCT; risultati seriali/paralleli bit identici, input immutato, richieste concorrenti, primo errore e cancellazione.'),
+ 'tests/test_pattern_history_repair.h': ('tests', 'Una sola feature per specchi e ripetizioni con corpi distinti: GUI, cursore atomico, modifica, riordino, inserimento, Undo/Redo e codec; compatibilita storica e riparazione riferimenti dal pannello.'),
+ 'forgeCad2026_viewport_selection.cpp': ('viewport', 'Selezione e riferimenti: policy comune della costruzione per picking, punti, bordi e selezione rettangolare; priorita alla geometria visibile sulle cache associative nascoste; in creazione e modifica mantiene visibili risultati precedenti e stadi esplicitamente selezionati, anche dopo anteprima fallita o Azzera; Esc ripristina la scena finale.'),
+ 'kernel/tests/test_curve_algo.cpp': ('tests', 'Proiezioni contro OCCT, filtro esaustivo e linea analitica4096tratti: range inclusivi/ristretti, estremi e concorrenza; quadratura e cache delle lunghezze.'),
+ 'kernel/fk_exchange.cpp': ('kernel', 'Scambio STEP/IGES: restrizione esatta delle spline conservando nodi e pesi; scelta coerente della chiusura durante la ricostruzione dei bordi, cucitura che conserva le SP-curve piu complesse e proiezioni certificate, eliminazione dei soli bordi collassati entro arrotondamento prima della fusione; numeri indipendenti dal locale con fallback libc++ Apple. Cucitura Plane nel parametro del bordo rappresentativo: pcurve cubiche certificate in mm, cap legacy invariato e ricontrollo postassembly via mappe faccia/edge e identita condivise delle sole fin migrate.'),
+ 'kernel/fk_shell.cpp': ('kernel', 'Svuotamento: offset interno, giunzioni tolleranti, gusci annidati con aperture planari e chiusura tramite piano di appoggio; controlli geometrici e genealogia.'),
+ 'kernel/tests/test_bspline_plane_jets.cpp': ('tests', 'Coordinate costanti e normali di un piano NURBS a quota 200000 mm: gradi 3/34, pesi razionali, ordini 0..3 e domini UV stretti.'),
+ 'kernel/tests/test_offset_split_creases.cpp': ('tests', 'Offset con vere pieghe C0 e inserimento esatto di nodi lisci molto vicini: numero facce, distanza, genealogia e immutabilita nelle quattro varianti di segno/cucitura.'),
+ 'kernel/fk_offset.cpp': ('kernel', 'Superfici e bordi a distanza; divisione esatta delle sole pieghe C0, nodi lisci conservati, solve uniforme regolarizzato sui bordi quasi tangenti, intersezioni stabilizzate per bordo con pesi distinti per precisione e arresto sul residuo 3D verificato, budget locali, domini derivati dalle SP-curve esatte senza celle terminali artificiali, sezioni circolari analitiche e vertici di cucitura conservati nei supporti sostitutivi dello sformo, rifilatura e provenienza. Costruzioni analitiche autorizzate dai supporti e da bounds geometrici uniformi, regolarita toroidale sul dominio periodico e raffinamento curve con cancellazione cooperativa e fallimenti atomici; offset di estrusioni/rivoluzioni NURBS con limite continuo, callback generiche ancora campionate. Offset di singola faccia estrusa e SP-curve affine certificato dagli originali separati; provenienza esplicita e ricontrollo delle cubiche realmente emesse. Ricostruzioni UV Plane con metrica certificata in mm, ricontrollo delle fin effettive da AssemblyMap e budget/conteggi invariati. Helper interni Plane per costruzione e verifica delle pcurve con metrica fisica, budget transazionali e ricontrollo dei coefficienti effettivi. Proiezione locale con ricerca lineare sulla distanza 3D fino a mancato miglioramento o passo esattamente nullo, senza arresto relativo alla grandezza UV; limiti e budget del fit invariati.'),
+ 'kernel/tests/test_shell_pose.cpp': ('tests', 'Svuotamento della fixture libera cucita dopo scala e rotazione: tre casi pubblici, topologia, origine esplicita delle facce, misure puntuali dello spessore, codec e input immutato; regressioni senza Qt/OCCT, non certificati globali.'),
+ 'kernel/tests/test_shell.cpp': ('tests', 'Svuotamento analitico e da superfici cucite quasi tangenti: aperto/chiuso a due spessori, misura esatta delle pareti, topologia, mesh, volumi, storia e input immutato.'),
+ 'kernel/tests/test_offset.cpp': ('tests', 'Offset e cuciture: parametrizzazioni/versi diversi, curve chiuse, confine della tolleranza, pcurve dense conservate in entrambi gli ordini e orientamento dei solidi; input immutato.'),
+ 'kernel/fk_constraint_linear.h': ('kernel', 'Algebra del solver: componenti, riordino BFS delle righe, Cholesky a banda stretta o densa con regolarizzazione globale, rango per componenti.'),
+ 'kernel/fk_box_batch.h': ('kernel', 'Acceleratore esterno opzionale per box: maschera conservativa condivisa dalle booleane con ripiego BVH CPU.'),
+ 'cad_gpu_broad_phase': ('analysis', 'Adatta box double a intervalli float espansi verso esterno per il filtro GPU Metal/CUDA delle coppie di facce; budget e contatori.'),
+ 'gpu_box_support.mm': ('analysis', 'Backend Metal dei box: griglia 2D sui lotti grandi, kernel lineare per piccoli/monodimensionali; pool con budget attivi/inattivi e lease concorrenti, confronto conservativo ed errori senza risultati parziali.'),
+ 'metal_box_pool.h': ('analysis', 'Diagnostica e limiti del solo pool Metal: memoria attiva e inattiva, riuso e svuotamento senza invalidare i comandi in volo.'),
+ 'tests/test_cuda_pool.cpp': ('tests', 'Pool CUDA: piano analitico, rifiuto prima delle allocazioni, recupero, confine 128 MiB, riuso e richieste/trim concorrenti; contratto stub CPU.'),
+ 'tests/test_metal_box_pool.cpp': ('tests', 'Pool e griglia Metal reali: maschere contro CPU anche irregolari/monodimensionali, riuso, budget, concorrenza e trim durante i lavori; SKIP senza dispositivo.'),
+ 'tools/benchmark_metal_boxes.cpp': ('tests', 'Benchmark manuale Metal in uno/quattro thread; modalità estesa con forme irregolari e dati sparsi/densi/casuali, stessa sorgente prima/dopo e maschere verificate fuori timer; senza AST CMake.'),
+ 'gpu_box_support.cu': ('analysis', 'Backend compute CUDA dei box: stream per richiesta e risorse liberate a fine lavoro.'),
+ 'gpu_box_support.h': ('analysis', 'Contratto del filtro GPU conservativo dei box comune a Metal, CUDA e fallback CPU.'),
+ 'gpu_box_support_cpu.cpp': ('analysis', 'Backend senza GPU: rifiuta i batch e conserva il BVH CPU delle booleane.'),
+ 'tests/test_gpu_broad_phase.cpp': ('tests', 'Prove GPU reali: contatti double, arrotondamento float, subnormali, overflow e booleana CPU/GPU; benchmark opzionale alternato con B-rep verificati fuori timer.'),
+ 'tools/compare_document_mesh_backends.py': ('tests', 'Snapshot numerici CPU/CUDA su documenti ricostruiti: valori e bit, normali, triangoli, topologia, spigoli/etichette/istanze; processi isolati e verifica degli originali.'),
+ 'tests/test_compare_document_mesh_backends.py': ('tests', 'Regressioni del comparatore mesh: zeri con segno, soglie, normali, winding, topologia, metadati e snapshot troncati.'),
+ 'tools/benchmark_connected_solver.py': ('tests', 'Processi prima/dopo alternati sul solver connesso: fixture identica, geometria analitica, hash, banda/denso e verifica opzionale mouse2 in sola lettura.'),
+ 'tools/benchmark_document_solver.py': ('tests', 'Confronto riproducibile su schizzi reali: processi isolati, trascinamenti ammissibili denso/partizionato, hash, timer e integrità del documento.'),
+ 'tests/test_mesh_export_backends.cpp': ('tests', 'Export STL/OBJ di patch B-spline polinomiali e NURBS con foro: parser indipendenti, scrittura/rilettura, vertici distinti per poligono, orientamento, confronto geometrico CPU/CUDA e contatori runtime.'),
+ 'tests/test_constraint_linear.cpp': ('tests', 'Algebra senza Qt/GPU: Gauss indipendente, soluzioni di norma minima note, catene ordinate/disordinate, fill-in, ridondanza, scale e benchmark banda/denso alternato.'),
+ 'tests/test_tangent_contacts.h': ('tests', 'Tangenze con coincidenze dirette e transitive: direzioni geometriche su scale e pose diverse, solver denso/partizionato, conflitto atomico, assenza di riagganci per vicinanza, persistenza e Undo/Redo.'),
+ 'tests/test_solver_partition.h': ('tests', 'Confronti solver/DOF denso-partizionato, selezione limitata di trascinamenti reali ammissibili fuori timer, vincoli e geometria verificati, conflitti atomici, catene connesse con trascinamento valido e benchmark alternati. Matrice NaN/infinito e overflow da ingressi finiti, angoli enormi in denso/sparso, codec malformato e rifiuto atomico.'),
+ 'tools/benchmark_document_mesh.py': ('tools', 'Confronti isolati di modalità o binari su documenti reali: ordine ruotato, firme geometriche, lettura/load, RSS e integrità originale.'),
+ 'tests/test_display_mesh.h': ('tests', 'Mesh float della scena e anteprime: degenerazioni dopo quantizzazione, facce sottili, cache precedenti immutabili, ID topologici e picking esatto.'),
+ 'tests/test_edit_preview_reuse.h': ('tests', 'Riaperture immediate senza timer o worker per solidi, superfici, curve e ripetizioni; buffer condivisi, assenza di sovrapposizione base/risultato anche nel pannello raccordo con picker attivo; piani invariati, cancellazione di lavori superati, esclusioni e pannello reale con framebuffer opzionale.'),
+ 'tests/test_history_preview_mesh.h': ('tests', 'Anteprima di stadi nascosti: fixture cucitura e mouse2 reale, tre riaperture, B-rep invariati e prima immagine uguale alla cache GL ricreata.'),
+ 'tests/test_lazy_mesh.h': ('tests', 'Mesh su richiesta e sonde documenti reali: worker concorrenti, rollback, qualità, firme B-rep, statistiche del pool CUDA e snapshot numerici visibili per confronto CPU/CUDA; basi instanziate annidate rifiutate dalla sonda.'),
+ 'cad_cuda_tessellation': ('analysis', 'Adattatore di valutazione B-spline/NURBS per display: CUDA/Linux e Metal/macOS, cache delle superfici, soglia Metal predefinita di 8192 campioni e fallback CPU.'),
+ 'cuda_support_metal.mm': ('analysis', 'Backend Metal delle superfici: coordinate/nodi normalizzati e coppie hi/lo float; buffer condivisi con pool concorrente limitato, budget superfici, controlli numerici e output atomico prima del fallback CPU.'),
+ 'metal_surface_kernel.h': ('analysis', 'Shader Metal incorporato per basi B-spline, derivate e quoziente NURBS in precisione hi/lo float; produce punti e normali del display, senza modificare il B-rep.'),
+ 'tests/test_metal_tessellation.cpp': ('tests', 'Confronti Metal reale/CPU su B-spline e NURBS, gradi 1–15, nodi multipli/estremi, condizionamento, concorrenza, budget e benchmark alternati.'),
+ 'tests/test_tessellation_availability.cpp': ('tests', 'Backend simulato senza GPU: disponibilità dinamica dopo inizializzazione/errore e ritorno CPU coerente con l’interruttore utente.'),
+ 'tests/test_projected_curve_references.h': ('tests', 'Regressioni riferimenti esatti alla curva proiettata: input, quote, PointOnCurve, Pierce, persistenza, ramo mancante e riordino.'),
+ 'tests/test_next_body_union_cache.h': ('tests', 'Rigenerazione delle vecchie estrusioni extent4 Unione auto con destinatari vuoti, senza invalidare le altre cache.'),
+ 'tests/test_history_graph_next_body.h': ('tests', 'Grafo extent4, genealogia, consumo del solo destinatario, UndoRedo e persistenza.'),
+ 'kernel/tests/test_surface_parameterization.cpp': ('tests', 'Identita UV stretta dei carrier: copie e codec, dati diversi e ri-parametrizzazioni rifiutati.'),
+ 'kernel/tests/test_disjoint_union.cpp': ('tests', 'Unione B-rep con interni disgiunti: contatti parziali e B-spline, cavita, ordini, genealogia e booleana generale.'),
+ 'tests/test_next_body_union.h': ('tests', 'Estrusione extent4 con fusione automatica e manuale: prove di disgiunzione dai limiti e compatibilita del merge generale.'),
+ 'tests/test_expression.cpp': ('tests', 'Parser delle espressioni dei campi numerici: prodotto implicito solo davanti a nomi o parentesi, numeri malformati rifiutati, annidamento limitato senza stack overflow.'),
+ 'tests/test_document_compression.cpp': ('tests', 'Codec zlib/Zstandard senza perdita: checksum, limiti di espansione e lunghezze false, troncamenti/code/frame extra e destinazione atomica.'),
+ 'cad_curve_extract': ('features',
+                       'Estrae curve 3D associative dalla geometria sorgente e dai riferimenti della '
+                       'feature.'),
+ 'cad_curve_solver': ('sketch',
+                      'Costruisce e ricalcola curve esatte dello sketch, comprese immagini affini associative di rami impliciti e derivate per il solver. Riusa le NURBS convertite immutabili per thread con invalidazione copy-on-write e cache limitata. Le ellissi dai quattro estremi conservano una curva analitica con centro derivato.'),
+ 'cad_datum': ('features', 'Risoluzione di piani, assi, facce e curve; appoggi nominati degli schizzi risolti per genealogia univoca, senza ripiego silenzioso per indice o prossimita.'),
+ 'cad_display_cache': ('render', 'Cache CPU/VBO dei display: riuso nel frame e rilascio delle risorse non usate a fine frame, statistiche di storage referenziato; facce, spigoli e istanze.'),
+ 'cad_memory': ('render', 'Stima della memoria disponibile Linux/macOS (limite cgroup v2 su Linux) per il budget di apertura; rilascio best effort delle pagine libere glibc dopo riduzioni delle mesh, senza modificare oggetti vivi o Undo.'),
+ 'forgeCad2026_viewport_document_lifetime': ('viewport', 'Sostituzione del documento: scarta snapshot transitori, cache dei riferimenti e delle mesh anche a viewport nascosto; cancella il lavoro di selezione precedente e restituisce le pagine heap libere senza modificare Undo/Redo.'),
+ 'tests/test_document_lifetime.h': ('tests', 'Durata dei dati fra due documenti: trascinamento reale, anteprime/maniglie, riferimenti deboli, viewport nascosto, Undo/Redo e secondo documento aperto.'),
+ 'tests/test_mesh_memory.h': ('tests', 'Sonda RAM bassa/massima/bassa su documenti: RSS, arene, storage mesh e cache GL, frame reali e trim solo diagnostico; nessun salvataggio CAD.'),
+ 'tests/test_thread_edges.h': ('tests', 'Regressioni bordi dopo filettatura: base rettangolare, cuciture G1, spigoli B-spline, riapertura e invalidazione cache; framebuffer corpo/anteprima e wireframe opzionali.'),
+ 'tests/test_display_cache_memory.cpp': ('tests', 'Durata cache CPU/VBO: rilascio nel primo frame sostitutivo o vuoto, riuso senza crescita, risorse condivise e variante nativa OpenGL.'),
+ 'cad_document_io': ('documents', 'Budget interattivo di cache proporzionato alla RAM e alla preferenza utente; Codec nativo70 con ellissi definite da quattro estremi, identita dei contorni apparenti, nomi sorgenti associative e precisione persistenti; pool di lettura di superfici identiche fra snapshot. Zstandard/legacy, leggi di raggio con zero terminale; cache16 migra selettivamente la genealogia delle ripetizioni di funzione e i derivati delle vecchie copie di lavoro (15: loft guidati); pose e cuciture singolari, check-in immutabili, altre cache portabili, genealogia e definizioni associative preservati. Lettura e scrittura rifiutano atomicamente definizioni di schizzo con numeri non finiti tramite finiteSketchNumbers.'),
+ 'cad_document_precision': ('documents', 'Dialogo del profilo numerico del documento: accuratezza persistente, ricalcolo esplicito, Undo/Redo, separazione dalla mesh e dalle tolleranze importate.'),
+ 'cad_document_read': ('documents', 'Compressione Zstandard con checksum e finestra limitata; decompressione streaming zlib/Zstd con budget/output atomico e decodifica mesh/indici a blocchi con endian e precisione Qt preservati.'),
+ 'cad_document_recovery': ('documents',
+                           'Checkpoint di recupero e ripristino dei documenti dopo interruzioni.'),
+ 'cad_document_version.h': ('documents',
+                            'Identità e informazioni di versione dei documenti e dei check-in.'),
+ 'cad_drawing': ('drawing',
+                 'Tipi e codec documento14 con sezioni locali e testimoni degli estremi, calcolo geometrico delle viste, incluse sezioni rimosse a gradini multipli e allineate a due piani angolari con contorni esatti e provenienza sui piani originali.'),
+ 'cad_drawing_annotations.h': ('drawing',
+                               'Note, datum e cartigli geometrici con riferimenti associativi e propagazione degli orfani.'),
+ 'cad_drawing_numbering.h': ('drawing', 'Badge persistenti per UUID, blocchi contigui per vista e rotazione locale dalla prima quota; ordine delle viste e percorso spaziale interno in otto versi, filtri, riserve ordinarie, riassegnazione dal numero iniziale con liberazione delle riserve, scambio e confronto; glifi vettoriali.'),
+ 'tests/test_drawing_dimension_numbering.h': ('tests', 'Regressioni badge: viste contigue su coordinate reali di Controllo numero quote, prima interna/altre viste, sovrapposizioni, GUI con blocchi8+3, flacone, otto versi, filtri, riserve, riapertura CT0578 con vecchi numeri eliminati, ripartenza1/10, anteprima/Annulla/Undo/Redo e codec, PDF.'),
+ 'tests/test_drawing_technical_annotations.h': ('tests', 'Regressioni datum/cartigli e rugosità: Ra/Rz, asportazione, micrometri, codec28 e legacy, input invalidi, GUI e snap, orfani, Undo/Redo e PDF vettoriali.'),
+ 'cad_drawing_technical.h': ('drawing', 'Validazione e disegno vettoriale di datum, cartigli geometrici e rugosità Ra/Rz in micrometri; riferimenti per UUID e testo derivato.'),
+ 'cad_drawing_axes.h': ('drawing', 'Convenzioni degli assi e conversioni delle coordinate delle viste 2D.'),
+ 'cad_drawing_browser': ('drawing', 'Navigazione e scelta di documenti/modelli per le tavole.'),
+ 'cad_drawing_center_selection.h': ('drawing', 'Centri e assi applicati soltanto ai bordi scelti, con agganci genealogici alle coniche e risoluzione senza ricerca per vicinanza; deduplicazione dei centri concentrici.'),
+ 'cad_drawing_local_section.h': ('drawing', 'Definizione e validazione della sezione locale: contorno semplice, piano iniziale e profondita; piano B-rep esatto e fusione delle curve con provenienza esplicita.'),
+ 'cad_drawing_local_section_display': ('drawing', 'Compone proiezione esterna e sezione esatta dentro il contorno locale; tratteggio, occlusione, ombreggiatura e linea di strappo solo grafica, con riferimenti alle curve originali.'),
+ 'cad_drawing_local_section_tool': ('drawing', 'Strumento interattivo della sezione locale: contorno poligonale, piano iniziale/profondita con guida ortogonale collegata e selezione dello zero/taglio, anteprima temporanea, Applica/Invio/annullamento atomico.'),
+ 'cad_drawing_local_section_snap.h': ('drawing', 'Cache dei punti notevoli e dei bordi esatti della guida di profondita: estremi, medi, centri, quadranti validi nell’arco e punto piu vicino; filtro dei bordi mostrati e raggio in pixel, senza utilizzare il campionamento grafico per fissare il piano.'),
+ 'cad_drawing_local_section_depth': ('drawing', 'Guida temporanea della profondita locale: piani zero/taglio e distanza nella vista ortogonale dello stesso corpo, scelta della vista, anteprima B-rep/contorni analitici di appoggio se assente, snap esatti su estremi/medi/centri/quadranti/bordi, indicatore, Tab/Alt, picking sul foglio/anteprima, trasformazioni esatte fra frame e scale, riuso dei profili senza ricalcolo delle sezioni.'),
+ 'tests/test_drawing_local_section_depth.cpp': ('tests', 'Profondita locale: frame ruotati e invertiti e scale diverse, viste compatibili/stesse sorgenti, esclusione dettagli/interruzioni, anteprima di appoggio, guide zero/taglio, snap geometrici su segmenti obliqui/cerchi/archi e scala/zoom, indicatori su tavola/anteprima/appoggio, Tab/Alt e pulizia, scelta con mouse su tavola e pannello, rifiuto taglio esterno, nessuna modifica prima di Applica, quote e Undo, Esc e pulizia guide.'),
+ 'tests/test_drawing_local_tools.cpp': ('tests', 'Centri su singoli bordi preselezionati o scelti con mouse, raggio mobile prima della conferma, sezione locale su foro cieco a diverse profondita, modifiche di tagli quotati e di altre viste, quote legacy/agganci/assi/richiami, rimozione protetta e diagnostica oltre il foro, codec misto assi/note/centri/quote con taglio nella stessa o altra vista, schema14 e rifiuto atomico dei dati invalidi, Undo/Redo, riapertura e PDF.'),
+ 'cad_drawing_centers.h': ('drawing',
+                           'Calcolo e riconoscimento dei centri geometrici utilizzati nelle tavole.'),
+ 'cad_drawing_compute.h': ('drawing',
+                           'Calcolo delle viste su worker con avanzamento, annullamento e blocco '
+                           'temporaneo dell’editor.'),
+ 'cad_drawing_derived': ('drawing', 'Propagazione delle scale foglio/personalizzata/madre e costruzione/allineamento delle viste ortogonali, ausiliarie e in sezione; composizione del tratteggio delle sezioni a gradini multipli e angolari, recupero del materiale con classificatori esatti preparati e riutilizzati per faccia.'),
+ 'cad_drawing_break.h': ('drawing', 'Valida e ritaglia le viste interrotte, escludendo i percorsi fuori taglio senza discretizzarli; mappa la presentazione senza alterare curve e misure.'),
+ 'cad_drawing_detail.h': ('drawing', 'Contorni circolari o poligonali dei dettagli, collegamento ai bordi della madre e della vista ingrandita, ritaglio grafico senza nuovi riferimenti di quota e maschere delle immagini ombreggiate.'),
+ 'tests/test_drawing_dimension_repair.cpp': ('tests', 'Regressioni ricollegamento quote: riferimenti mancanti/singoli, snap e vista vincolata, anteprima e conferma, annullamento/Undo/Redo, persistenza e genealogia, tolleranze/badge, quote radiali/angolari/ordinate e legacy, sola lettura.'),
+ 'cad_drawing_dimension_repair.h': ('drawing', 'Transazione di ricollegamento quote: selezione esplicita dei riferimenti mancanti o singoli, conservazione degli agganci validi e dei metadati, anteprima annullabile e compatibilita con quote legacy su curva.'),
+ 'cad_drawing_dimension': ('drawing', 'Geometria delle quote 2D, generatrici coniche/cilindriche con estremi associativi, diametri, R profilo dalle isoparametriche circolari dei raccordi, catene e ordinate con segno; testimone esatto per estremi legacy e generatrici coniche/cilindriche con nomi condivisi, senza ricerca del punto piu vicino.'),
+ 'tests/test_drawing_dimensions_gui.cpp': ('tests', 'Regressioni GUI quote: snap durante la definizione e primo clic identico all’anteprima, Alt/Esc e pulizia; coincidenza delle punte angolare/lineare, settori, richiami obliqui e snap raggiungibili; agganci e proprietà, allineamento direzionale orizzontale/verticale al testo più vicino, inversione, zoom, lampeggio, testo ruotato, Alt/Esc, perdita presa, PDF e Undo/Redo.'),
+ 'cad_drawing_editor': ('drawing',
+                        'Editor della tavola: aggiornamento transazionale del modello tramite API coordinata dal contenitore; centri/assi su bordi selezionati e sezione locale con contorno/profondita, modificabile con quote e richiami associati senza bloccare le altre viste; raggio libero dal primo clic e leader corto per centro esterno; ricollegamento quote con snap, anteprima e conferma atomica; allineatori durante il primo posizionamento e il trascinamento, stato temporaneo riusato fra anteprime e conferma senza salto; snap fra punte coincidenti delle quote lineari/angolari con calcolo geometrico condiviso, priorità e indicatore lampeggiante; guide lampeggianti e aggancio direzionale dei testi di quota al vicino nel verso del movimento, annullamento e Undo al rilascio; quote trasparenti, frecce H/B, richiami obliqui e serie ordinate continue; scala comune del foglio e sorgente della scala per ogni vista, aggiornamento atomico di anteprime e dipendenze; selezione, posizionamento e comandi; inserimento atomico e anteprime di catene e ordinate, proprietà e anteprime dei datum/cartigli geometrici e delle rugosità Ra/Rz e dei badge persistenti con scelta della prima quota e frecce nella viewport, incluse anteprime delle viste interrotte e sezioni rimosse a gradini multipli e allineate a due piani angolari; disegno e ridefinizione del taglio con mouse, centro e rami o percorso ortogonale, snap geometrici e anteprima annullabile.'),
+ 'cad_drawing_preparation': ('drawing', 'Riuso thread-safe delle curve esatte per piani e sorgenti identici; ritaglio conservativo dei dettagli prima del calcolo di visibilita. Prepara anche sezioni locali composte con contorno e profondita; viste su worker con cache locali e mesh immutabili condivise; barriere di raffinamento conservano l’ordine geometrico seriale, budget limitato, progressi e annullamento; risultati trasferibili all’editor per aggiornamento atomico multifoglio senza ricalcoli.'),
+ 'cad_geometry_refs.h': ('features', 'Visitatori const/mutabili dei riferimenti per famiglie, inclusi collegamenti associativi degli schizzi con copie immutabili per Undo; condivisi da storia, dipendenze e topologia.'),
+ 'tests/test_geometry_refs.cpp': ('tests', 'Copertura di tutte le famiglie dei riferimenti, support/Pierce e snapshot Undo; rimappatura dei risultati di ripetizione e ancoraggio degli schizzi dopo il gruppo.'),
+ 'cad_drawing_file': ('drawing', 'Contenitore .drw mono/multifoglio, impronta geometrica indipendente dalla visibilita con compatibilita esatta delle vecchie firme, identita e riferimenti delle copie; preparazione da documento valutato senza costruire feature mancanti; genealogia coerente fra cache e rigenerazione, migrazione dei nomi legacy sullo snapshot verificato con identita di curva e punto; consumo dei derivati di aggregati legacy e compatibilita delle impronte53.'),
+ 'cad_drawing_focus.h': ('drawing',
+                         'Ripristina il focus alla finestra della tavola dopo i dialoghi nativi solo se il documento resta visibile, anche nel contenitore a schede.'),
+ 'cad_drawing_frame': ('drawing', 'Cartiglio personalizzato vettoriale con testi fissi e campi dinamici, linee, riquadri e loghi PNG incorporati; coordinate in millimetri ancorate alla cornice, validazione e resa condivisa fra editor e PDF.'),
+ 'cad_drawing_template': ('drawing', 'Template .drwt senza riferimenti al modello, salvataggio atomico e predefiniti locali separati per dimensioni e orientamento; formato preferito delle nuove tavole.'),
+ 'cad_drawing_template_editor': ('drawing', 'Ambiente grafico dei template: anteprima zoomabile, elementi trascinabili e proprieta in millimetri, cartiglio/logo/campi e stile quote, importazione/salvataggio, default per formato e applicazione atomica con Undo.'),
+ 'tests/test_drawing_templates.cpp': ('tests', 'Roundtrip template/cartigli/logo, separazione dei default per orientamento, dati invalidi e downgrade, editor reale, Undo/readonly, PDF e icone distinte.'),
+ 'tests/test_drawing_crop.cpp': ('tests', 'Confronta visibilita completa e ritaglio anticipato su dettagli, occludenti attraversanti, cerchi/sezioni e scale diverse, mantenendo gli indici dei riferimenti.'),
+ 'cad_drawing_page': ('drawing', 'Impaginazione e PDF con cartigli standard o template personalizzati incorporati; formati, scala del foglio, numerazione e revisioni collocate sopra il cartiglio effettivo.'),
+ 'cad_drawing_release': ('drawing', 'Ponte CAD dei rilasci coordinati: verifica payload nativi, identita, modello preciso e impronta delle tavole prima di pubblicare o leggere un manifesto.'),
+ 'cad_drawing_release_ui.cpp': ('drawing', 'Scelta delle revisioni compatibili, verifica/pubblicazione dei rilasci e consultazione con apertura storica del modello3D e delle tavole multipagina.'),
+ 'tests/test_drawing_release.h': ('tests', 'Rilasci nativi: modelli e tavole multipagina storiche, payload incoerenti, GUI di creazione/consultazione/apertura3D-2D, readonly e PDF.'),
+ 'tests/test_revision_releases.cpp': ('tests', 'Manifesti immutabili: versioni/hash, dipendenze, atomica/idempotenza, due processi concorrenti, corruzione e spostamento archivio.'),
+ 'cad_drawing_restore.cpp': ('drawing', 'Ripristino atomico dei fogli e del modello archiviato nella copia di lavoro, base e token correnti conservati e Undo/Redo con sorgente verificata.'),
+ 'tests/test_drawing_revision_restore.h': ('tests', 'Ripristino A dopo B: fogli e modelli diversi, numeri, base/token, annullamento atomico, Undo/Redo, GUI/PDF e nuovo discendente C.'),
+ 'cad_drawing_revision_ui.cpp': ('drawing', 'Comandi delle revisioni, selezione e ripristino nella copia di lavoro, confronto dei badge per UUID prima del check-in e con gli storici, pannello e riapertura con percorsi canonici.'),
+ 'cad_drawing_revisions': ('drawing', 'Integra le tavole con il protocollo di revisioni dei documenti.'),
+ 'cad_drawing_sheet': ('drawing',
+                       'Stato e codec del foglio fino allo schema30 con cartigli personalizzati e loghi incorporati (29: centri selettivi e sezione locale), compatibilita schema14 degli agganci di assi/note nelle viste locali, con rugosità strutturate in micrometri e testimoni esatti degli estremi legacy, dettagli collegati con compatibilita storica, base frecce e richiami obliqui, raggio del profilo, contorni liberi dei dettagli e posizione della lettera, scala del foglio e scale delle viste con ereditarieta e compatibilita storica, assegnazioni persistenti dei numeri e compatibilita legacy, posizione e interruzione grafica delle viste, relazioni madri/derivate.'),
+ 'fk_sheet': ('kernel', 'Taglio e rifilo di lamine; selezione del pezzo piu vicino condivisa con estensione, senza ripetere le intersezioni.'),
+ 'fk_intersect': ('kernel', 'Intersezioni esatte curve/superfici, inclusi meridiani di rivoluzione riconosciuti dai poli Bezier; proiezione planare di curve trasformate con conservazione dei parametri; radici Bernstein con riuso dei coefficienti e filtro conservativo prima delle allocazioni per le pezze lontane.'),
+ 'kernel/tests/test_intersect.cpp': ('tests', 'Intersezioni curve/superfici e radici Bernstein; immagini planari di spline razionali, coniche e rette trasformate, trim annidati e parametro delle rette scalate.'),
+ 'fk_classify': ('kernel', 'Classificazione esatta faccia/solido; FaceClassifier e FaceParameterClassifier preparano limiti parametrici, poli e box conservativi dei bordi per interrogazioni ripetute senza cambiare tolleranze.'),
+ 'tests/test_drawing_performance.h': ('tests', 'Benchmark esplicito in sola lettura di tavole reali: tempi modello, curve, contorni, campiture, visibilita e apertura editor; impronte SHA256 dei tracciati.'),
+ 'cad_drawing_silhouette': ('drawing',
+                            'Calcola i contorni apparenti delle superfici; cache mesh per valore con verifica conservativa del riuso nei gruppi di viste parallele.'),
+ 'cad_drawing_style.h': ('drawing', 'Stili grafici delle tavole: altezza e base frecce indipendenti con compatibilita delle proporzioni storiche.'),
+ 'cad_drawing_text_layout.h': ('drawing', 'Disposizione del testo trasparente, ritaglio dei soli tratti della quota e geometria dei richiami obliqui sul foglio.'),
+ 'cad_drawing_tolerances.h': ('drawing', 'Presentazione delle quote: tolleranze, prefissi/suffissi, frecce, inclinazione dei richiami e flag di esclusione individuale del badge.'),
+ 'cad_drawing_toolbars.h': ('drawing', 'Costruzione e configurazione delle toolbar della suite 2D.'),
+ 'cad_drawing_visibility': ('drawing',
+                            'Classifica la visibilità con indice spaziale XY degli occludenti analitici (sfere, cilindri, coni, tori), mesh per auto-occlusione e rifilature, tagli parametrici delle coniche anche NURBS certificate e consolidamento dei bordi proiettati rettilinei.'),
+ 'cad_drawing_sheets_ui.cpp': ('drawing', 'Schede e gestore dei fogli, identita persistenti, storia globale con ripristino della sorgente quando cambia modello e preparazione su tutti i fogli.'),
+ 'cad_drawing_window': ('drawing',
+                        'Workspace della suite 2D incorporabile nelle schede: chiusura/salvataggi coordinati, ricostruzione menu dopo cambio foglio con unico sottomenu Tema persistente; nuova tavola dallo snapshot valutato del modello salvato, verificato con impronta del file e identita; preparazione cancellabile senza rigenerare la storia; documento multifoglio, salvataggio e PDF multipagina. Il comando Aggiorna dal .prt salvato verifica identita e impronta della sorgente nel contenitore.'),
+ 'cad_element_names': ('features',
+                       'Registra genealogia delle feature e nomi topologici persistenti per risolvere i '
+                       'riferimenti; ricostruisce i nomi legacy delle tavole sul medesimo B-rep per la migrazione.'),
+ 'cad_export': ('io', 'Esporta B-rep e mesh STL/OBJ; qualita automatica dai B-rep dei singoli corpi in double, scarto fino a 0,01 mm e angolo 2 gradi, recupero densita senza degradare la precisione e controllo campionato delle faccette curve; saldatura vertici, orientamento e convessita sui punti effettivamente esportati, anteprima condivisa.'),
+ 'cad_expression': ('model',
+                    'Espressioni e conversioni per documento: contesto unita ereditato dai widget e passato ai formatter, senza stato globale condiviso fra finestre; '
+                    'prodotto implicito solo davanti a nomi o parentesi e profondita di annidamento limitata; campi numerici con precisione double separata dalle cifre visibili, conservata anche con focus/Invio senza modifiche.'),
+ 'cad_extrude': ('features',
+                 'Estrusione a distanza, a riferimento e fino ai primi corpi precedenti: trim B-rep esatto, '
+                 'copertura e primo incontro certificati sulle facce rifilate, cavita controllate; prova fresca di disgiunzione per unire gli stessi limiti, genealogia di limite e destinatario distinta.'),
+ 'cad_feature_build': ('features',
+                       'Costruisce feature dagli operandi con genealogia e piano della definizione sincronizzato con lo schizzo anche da cache; unione multistrumento bilanciata tramite cad_pattern con ripiego sequenziale; geometria e mesh opzionale, risultati delle ripetizioni separati per corpo, aggregati legacy e derivati gia presenti conservati, ripetizione dello strumento sweep e varianti parametriche prima della fusione/sottrazione, mesh specifiche per le copie variabili, errori specifici conservati.'),
+ 'cad_feature_faces': ('features', 'Proprieta delle facce per picking ed evidenziazione storyboard; box e tolleranze B-rep preparati una sola volta per ricerca e riusati su tutte le facce, senza cambiare i confronti geometrici.'),
+ 'cad_feature_dependencies': ('features', 'Dipendenze e consumo dei risultati, compresi aggregati legacy; candidati dinamici dei limiti di estrusione distinti dagli strumenti di fusione e dalla visibilita manuale.'),
+ 'cad_features': ('features', 'Tipi e regole comuni delle operazioni parametriche del modello.'),
+ 'cad_forge': ('features',
+               'Adatta sketch e parametri al kernel; booleane con genealogia ricondotta agli operandi e recupero dell’unione commutativa nell’ordine inverso dopo un errore geometrico; conversione mesh float con filtro comune dei triangoli degeneri per scena e anteprime, ID topologici coerenti.'),
+ 'cad_history': ('features', 'Ricostruzione e gestione degli stadi della storia delle feature.'),
+ 'cad_history_graph': ('features', 'Grafo delle dipendenze della storia: ruoli separati per limite prossimo corpo e destinatario fusione, anche quando coincidono.'),
+ 'cad_icons': ('startup', 'Icone vettoriali adattate al tema; sezioni normale/a gradini/allineata/locale, riparazione/numerazione quote e annotazioni tecniche distinte. Incluse estensione fino a riferimento, rete di curve e manipolazione dei poli NURBS distinte da loft/spline.'),
+ 'cad_import': ('io', 'Importa geometria da formati di scambio nel modello applicativo.'),
+ 'cad_kernel': ('sketch',
+                'Sistemi di riferimento degli sketch, trasformazioni e regole comuni di modellazione.'),
+ 'cad_macos_menu': ('startup', 'Integrazione dei menu con il comportamento nativo di macOS.'),
+ 'cad_mass': ('analysis', 'Calcola proprietà di massa, area, volume e momenti dei corpi.'),
+ 'cad_measure': ('analysis', 'Misura distanze e relazioni tra entità sulla geometria esatta, con formattazione nel contesto delle unita del documento.'),
+ 'forgeCad2026_menu.cpp': ('startup', 'Menu con Fusion esplicito, fondale sfocato dal viewport del documento proprietario, ombra e diagnostica; integrazione viewport nell’app e variante autonoma condivisa dai runner delle tavole.'),
+ 'forgeCad2026_ui_glass': ('startup', 'Aspetto condiviso di vetro UI: impostazioni, palette, sfocatura CPU e ombre arrotondate memorizzate.'),
+ 'cad_menu.h': ('startup', 'Popup comuni: palette della finestra, angoli antialias e padding dal raggio dei pannelli, spunte separate dalle icone.'),
+ 'cad_history_chain': ('features', 'Basi implicite delle fusioni e sottrazioni di profilo: ricongiungimento allo stadio precedente del corpo, conservazione di bersagli secondari e riferimenti espliciti, invalidazione delle cache dipendenti anche attraverso appoggi e riferimenti degli schizzi.'),
+ 'cad_model_history': ('features',
+                       'Corpi logici e storia di schizzi/lavorazioni: identita distinte di copie e componenti, basi riallineate dopo modifiche/riordini, preferenza visibile conservata attraverso consumo e recupero del tip, rimappature e cursore.'),
+ 'cad_native_revisions': ('documents', 'Persistenza delle revisioni native; snapshot tavole con registrazione ordinata di tutti gli operandi; confronto delle definizioni normalizzato al codec corrente anche per check-in pendenti in formato53.'),
+ 'cad_numeric_input.h': ('startup', 'Gestione comune dell’input numerico nei controlli dell’interfaccia.'),
+ 'cad_overlay_renderer': ('render', 'Disegno OpenGL degli overlay e delle loro istanze.'),
+ 'tests/test_loft_correspondence.h': ('tests', 'Regressioni UI dei collegamenti loft: riordino, modifica del verso e dei punti, trascinamento esatto con Esc, salvataggio64 e compatibilita63, Undo/Redo e Annulla.'),
+ 'kernel/tests/test_loft_correspondence.cpp': ('tests', 'Corrispondenze interne su sezioni curve, cucitura chiusa con guide reali, inversione e ascisse esatte; incompatibilita esplicite e B-rep validato. Include la stabilita dei punti di sezione vicini ai nodi NURBS.'),
+ 'cad_loft_correspondence': ('features', 'Risoluzione esatta di curve e punti associativi (anche schizzi con un solo punto), conversione delle ascisse curvilinee persistite in punti del kernel; costruzione e interfaccia usano gli stessi profili, esclusa la geometria di costruzione.'),
+ 'cad_loft_correspondence_editor': ('dialogs', 'Corrispondenze della loft: sezioni puntuali fisse, punti trascinabili vincolati ai profili esatti, collegamenti colorati, inversione per sezione, riordino, ripristino automatico e stato temporaneo del pannello.'),
+ 'cad_pattern_variation': ('features', 'Catalogo limitato alla funzione scelta e ai suoi schizzi diretti, variazioni vietate per corpi interi; parametri numerici e quote con identita persistente; rigenerazione isolata per occorrenza delle dipendenze modificate, appoggi e vincoli, incrementi costanti, esclusioni e booleane degli strumenti.'),
+ 'cad_pattern_variation_editor': ('dialogs', 'Tabella delle variazioni nelle ripetizioni lineari e circolari: scelta quote nella viewport e breve elenco dei parametri funzione, incrementi, unita del documento e valori iniziale/finale; riferimenti mancanti espliciti.'),
+ 'cad_circular_pattern_fit': ('features', 'Calcolo esplicito delle istanze circolari di una lamina dai bordi liberi; candidati 360/N e prova conservativa della coincidenza sui Bezier razionali, senza arrotondare passi incompatibili o modificare geometria.'),
+ 'cad_pattern': ('features', 'Ripetizioni con esclusioni persistenti e corpi distinti; criterio condiviso UI/costruttore per strumenti di booleane, estrusioni, rivoluzioni e sweep solidi associati; cavita e genealogia conservate.'),
+ 'cad_revision_client': ('documents',
+                         'Protocollo client per copie di lavoro, sessioni e operazioni sulle revisioni.'),
+ 'cad_revision_client_internal.h': ('documents',
+                                    'Helper privati del protocollo revisioni: identità, percorsi, lock e '
+                                    'file di sessione.'),
+ 'cad_revision_store': ('documents', 'Archivio check-in/rilasci e checkpoint: pubblicazione transazionale, letture ottimistiche validate tra due head senza acquisire il lock del writer, pubblicazione in corso distinta dalla corruzione; verifica di catene/payload e recupero esplicito senza perdita delle prenotazioni.'),
+ 'cad_revision_recovery_ui': ('documents', 'Dialogo condiviso 3D/2D per verificare archivio/checkpoint, attivare la protezione legacy e recuperare l ultimo catalogo registrato conservando il file danneggiato.'),
+ 'tests/test_catalog_recovery.cpp': ('tests', 'Checkpoint/proiezione, interruzioni, recupero atomico/idempotente, concorrenza, token, rilasci, conflitti, corruzione e migrazione legacy.'),
+ 'tests/test_catalog_recovery_gui.h': ('tests', 'Recupero nativo dai menu3D/2D: annulla, catalogo corrotto/assente, legacy, sessioni/pendenti conservati e consegna storica multipagina.'),
+ 'cad_shape_analysis': ('analysis', 'Campiona e visualizza analisi di curvatura e qualità delle forme.'),
+ 'cad_sketch_edit': ('sketch', 'Operazioni di modifica della geometria dello sketch.'),
+ 'cad_sketch_offset': ('sketch', 'Costruzione degli offset delle entità dello sketch.'),
+ 'cad_sketch_apparent': ('sketch', 'Identita del contorno apparente associativo: faccia persistente e ramo analitico, distinta dalla sezione col piano; semantica protetta dal formato69.'),
+ 'fk_apparent_contour': ('kernel', 'Contorni apparenti esatti delle facce cilindriche/coniche/sferiche e meridiani toroidali laterali: normale ortogonale alla proiezione, ritaglio sui loop B-rep, rami indipendenti dal verso della normale; nessuna mesh.'),
+ 'tests/test_sketch_apparent.h': ('tests', 'Contorni apparenti delle parti raggiate: geometria esatta e trim, trasformazioni, Polilinea/Quota, sorgente nominata, aggancio unico, piano esterno al corpo, raggio variato, PRT69/legacy, riferimento rotto e Undo/Redo; badge OpenGL opzionale.'),
+ 'cad_sketch_refs': ('sketch', 'Proiezioni, contatti e Pierce esatti associativi degli schizzi, inclusi contorni apparenti di facce analitiche proiettati lungo la normale anche su piani esterni al corpo: immagini affini delle curve implicite, sorgenti persistenti per chiavi genealogiche, cache automatiche proiettate direttamente dallo snapshot B-rep senza risolvere i nomi appena creati, refresh e conversioni esplicite visibili senza duplicati; identita leggibili persistenti e diagnostica di tutte le sorgenti rotte con i vincoli interessati. Helix con Transformed usa un fit diretto2D con controllo continuo dopo recalculateCurve e pubblicazione atomica. Helix nuda o solo rifilata conserva il percorso quinticoC2 legacy; altri Other restano fallback campionati. Traversal dei wrapper limitato e cancellabile.'),
+ 'tests/test_sketch_intersections.h': ('tests', 'Intersezioni esatte locali/esterne, solver associativo, persistenza, pulizia e Undo/Redo; aggancio del viewport e trascinamento.'),
+ 'cad_snap': ('sketch', 'Scelta univoca del riferimento di un punto condivisa fra badge e conferma, origine prioritaria, materializzazione della sola sorgente scelta; intersezioni esatte e conferma atomica delle due curve con PointOnCurve.'),
+ 'tests/test_sketch_tools_refs.h': ('tests', 'Cerchio3 analitico, arco3 senza raggio, Polilinea, origine su faccia circolare, agganci sovrapposti univoci, nomi sorgenti e vincoli rotti dopo eliminazione, codec68 e Undo/Redo.'),
+ 'cad_snapshot_chunks': ('documents',
+                         'Suddivide e ricompone snapshot per la conservazione dei dati documentali.'),
+ 'cad_spatial_sketch': ('sketch', 'Gestisce entità e riferimenti degli sketch spaziali.'),
+ 'cad_toolbar.h': ('startup', 'Densita e blocco uniformi delle barre; migrazione dei comandi Linea a Polilinea nelle toolbar, nei gruppi e nella ribbon personalizzati senza perdere le disposizioni salvate.'),
+ 'cad_topology_ref': ('features',
+                      'Crea e risolve riferimenti a facce, spigoli e vertici, anche dopo la '
+                      'rigenerazione; riferimenti dei vertici in una scansione degli spigoli.'),
+ 'cad_types.h': ('model',
+                 'Tipi applicativi condivisi: sketch, entità, feature, display, riferimenti e stato del '
+                 'documento; EllipseExtremes aggiunto in coda ai valori persistenti, quattro estremi referenziabili.'),
+ 'cad_workspace': ('documents',
+                   'Individua e inizializza il workspace del documento e le cartelle delle revisioni.'),
+ 'cuda_support.cu': ('analysis', 'Backend CUDA double B-spline/NURBS, kernel generico e specializzati, upload sincronizzati e pool con prenotazioni attive 128 MiB/4 richieste, cache 64 MiB e fallback temporaneo sotto pressione.'),
+ 'cuda_support.h': ('analysis', 'Contratto CUDA/CPU per superfici e valutazioni, budget dei buffer attivi/inattivi, statistiche delle prenotazioni e svuotamento cache.'),
+ 'cuda_support_cpu.cpp': ('analysis',
+                          'Implementazione CPU del contratto di accelerazione quando CUDA non è '
+                          'disponibile.'),
+ 'forgeCad2026_glass_compositor': ('render',
+                                   'Compositore dei fondali sfocati dei pannelli, con maschera arrotondata '
+                                   'analitica e antialias per pixel, shader e framebuffer propri.'),
+ 'kernel/CMakeLists.txt': ('build', 'Definisce libreria geometrica, test, rilevamento from_chars decimale e arrotondamento coerente senza contrazione FMA implicita nei chiamanti CPU C++/Objective-C++.')})
+
+# Ellisse per estremi: responsabilita dei chiamanti aggiornate.
+DESCRIPTIONS.update({'forgeCad2026_gui.cpp': ('startup',
+                          'PdfWindow: sette fasi di inizializzazione di scena, menu, comandi, opzioni e '
+                          'toolbar, preferenze persistenti per normali al mouse e costruzione degli schizzi '
+                          'fuori modifica; workspace 3D incorporabile con apertura instradata alle schede e '
+                          'chiusura asincrona del recupero; modelli archiviati in sola lettura; storyboard '
+                          'con trascinamento dei creatori di corpi autonomi a uno stadio. Aggiunge Ellisse '
+                          'per estremi a menu e toolbar e ne espone azione e icona alla ribbon. Consuma il '
+                          'tema globale aggiornando le toolbar su entrambi gli eventi palette; nessun QSS globale locale. Informazioni Sezione legate a QPalette::Link; dialogo ampliato solo in altezza quando richiesto dal layout, anche dopo testo cambiato da nascosto e riapertura.'),
+ 'forgeCad2026_viewport_sketch.cpp': ('viewport',
+                                      'Comandi schizzo, quote, snap e inferenze associative; scarta alla '
+                                      'chiusura solo nuovi schizzi vuoti senza utilizzatori, conserva punti '
+                                      'e costruzione; selezione esterna transitoria senza falso Undo/dirty, '
+                                      'pulizia conservativa delle cache non usate alla '
+                                      'modifica/deselezione/uscita e rimappatura delle selezioni. Ellisse '
+                                      'per estremi: preview e conferma da tre clic condividono la '
+                                      'definizione, quattro punti effettivi per quote, snap e trascinamento '
+                                      'con centro derivato.'),
+ 'forgeCad2026_viewport_interaction.cpp': ('viewport',
+                                           'Eventi Qt di mouse, tastiera, ruota e menu contestuali; proposte '
+                                           'associative soltanto nei comandi attivi, Quota e snap di '
+                                           'disegno; nessuna proposta al passaggio in Selezione; una sola '
+                                           'richiesta snap per movimento di disegno, clic esterno esplicito '
+                                           'separato dalla creazione dei vincoli. Gestisce i tre clic della '
+                                           'nuova ellisse, retry dei casi degeneri e trascinamento di tutti '
+                                           'i quattro estremi.'),
+ 'forgeCad2026_viewport_selection.cpp': ('viewport',
+                                         'Selezione e riferimenti: policy comune della costruzione per '
+                                         'picking, punti, bordi e selezione rettangolare; priorita alla '
+                                         'geometria visibile sulle cache associative nascoste; in creazione '
+                                         'e modifica mantiene visibili risultati precedenti e stadi '
+                                         'esplicitamente selezionati, anche dopo anteprima fallita o Azzera; '
+                                         'Esc ripristina la scena finale. Rende tutti i quattro estremi '
+                                         'della nuova ellisse selezionabili e candidati snap. Estendi e coordinato dal pannello con callback changed/key e anteprima differita.'),
+ 'forgeCad2026_viewport_render.cpp': ('viewport',
+                                      'Nasconde sempre le cache automatiche e mostra la costruzione '
+                                      'esplicita in modifica oppure tramite opzione Visualizza, con '
+                                      'highlight coerenti; prepara le mesh prima delle passate GL, protegge '
+                                      'il paint rientrante e ripristina il contesto del widget; risultato '
+                                      'completo senza ridisegnare la base disponibile al picker dei bordi; '
+                                      'frame e overlay con normali uscenti dei piani nelle anteprime e, se '
+                                      'abilitate nel menu Visualizza, al passaggio del mouse anche nella '
+                                      'scelta dei riferimenti, gabbia NURBS, poli selezionati e gizmo '
+                                      'colorato globale/locale; visibilita storica in schizzo, anteprime '
+                                      'feature anche nello schizzo con vista sbloccata e prepass di '
+                                      'profondita per trasparenza a singolo strato; sospende la superficie '
+                                      'in anteprima nella scelta delle facce storiche. Mostra assi e quattro '
+                                      'estremi della nuova ellisse durante la costruzione.'),
+ 'cad_icons.cpp': ('startup',
+                   'Icone vettoriali adattate al tema; sezioni normale/a gradini/allineata/locale, '
+                   'riparazione/numerazione quote e annotazioni tecniche distinte. Incluse estensione fino a '
+                   'riferimento, rete di curve e manipolazione dei poli NURBS distinte da loft/spline. Icona '
+                   'distinta per Ellisse per estremi.'),
+ 'cad_sketch_edit.cpp': ('sketch',
+                         'Operazioni di modifica della geometria dello sketch. Taglio e divisione '
+                         'riconoscono anche le ellissi definite dai quattro estremi conservando il supporto '
+                         'analitico.')})
+
+DESCRIPTIONS.update({'cad_drawing_file.cpp': ('drawing', 'Contenitore .drw mono/multifoglio, impronta geometrica indipendente dalla visibilita con compatibilita esatta delle vecchie firme, identita e riferimenti delle copie; preparazione da documento valutato senza costruire feature mancanti; genealogia coerente fra cache e rigenerazione, migrazione dei nomi legacy sullo snapshot verificato con identita di curva e punto; consumo dei derivati di aggregati legacy e compatibilita delle impronte53. Confronta le impronte complete dei formati70/69 anche con precisione personalizzata e visibilita canonica; esclude EllipseExtremes dai confronti con formati non rappresentabili senza riagganci geometrici.')})
+
+TOKEN_DESCRIPTIONS = {
+ 'viewport':'Vista e interazione', 'constraint':'Vincoli geometrici', 'solver':'Risoluzione numerica',
+ 'sketch':'Sketch', 'curve':'Curve', 'surface':'Superfici', 'brep':'Rappresentazione B-rep',
+ 'boolean':'Operazioni booleane', 'tessellat':'Tessellazione', 'triang':'Triangolazione',
+ 'topology':'Topologia', 'feature':'Feature parametriche', 'dependenc':'Dipendenze',
+ 'rebuild':'Ricostruzione', 'history':'Storia delle operazioni', 'document':'Documento',
+ 'revision':'Revisioni', 'recovery':'Recupero', 'drawing':'Tavole 2D', 'section':'Sezioni',
+ 'dimension':'Quotatura', 'export':'Esportazione', 'import':'Importazione', 'step':'Formato STEP',
+ 'stl':'Formato STL', 'iges':'Formato IGES', 'mesh':'Mesh', 'display':'Dati di visualizzazione',
+ 'render':'Rendering', 'selection':'Selezione', 'pick':'Picking', 'snap':'Snap', 'thread':'Filettature',
+ 'sweep':'Sweep', 'loft':'Loft', 'extrusion':'Estrusione', 'fillet':'Raccordi', 'chamfer':'Smussi',
+ 'analysis':'Analisi geometrica', 'shape':'Forme geometriche', 'datum':'Riferimenti geometrici',
+ 'transform':'Trasformazioni', 'pattern':'Ripetizioni', 'offset':'Offset', 'trim':'Taglio geometrico',
+ 'sew':'Cucitura', 'thicken':'Ispessimento', 'draft':'Sformo', 'primitive':'Primitive',
+ 'font':'Font', 'text':'Testo', 'gpu':'Accelerazione GPU', 'cuda':'Calcolo CUDA',
+ 'nurbs':'NURBS', 'intersect':'Intersezioni', 'bounding':'Limiti geometrici', 'projection':'Proiezioni'}
+
+
+def inventory():
+    names = subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'], cwd=ROOT).decode().split('\0')
+    suffixes = {'.cpp','.h','.hpp','.c','.cu','.cuh','.mm','.py','.sh','.cmake','.qrc','.vert','.frag'}
+    return sorted({n for n in names if n and (Path(n).suffix in suffixes or Path(n).name=='CMakeLists.txt' or n=='.github/workflows/ci.yml')
+                   and not n.startswith(('docs/architecture/', 'build', 'forgecad-release/'))
+                   and (ROOT/n).is_file()})
+
+
+def digest(path):
+    return hashlib.sha256((ROOT/path).read_bytes()).hexdigest()
+
+
+def classify(path):
+    p=Path(path);stem=p.stem;low=path.lower()
+    if path in DESCRIPTIONS:return DESCRIPTIONS[path]
+    if stem in DESCRIPTIONS:return DESCRIPTIONS[stem]
+    if path.startswith(('tests/','kernel/tests/')) or stem.startswith('test_'):group='tests'
+    elif path.startswith('kernel/'):group='kernel'
+    elif path.startswith(('tools/','packaging/')) or p.suffix in {'.py','.sh','.cmake','.qrc'} or p.name=='CMakeLists.txt':group='build'
+    elif any(w in low for w in ('drawing','dimension','section_view')):group='drawing'
+    elif any(w in low for w in ('document','revision','recovery','metadata','access','snapshot','persistence')):group='documents'
+    elif any(w in low for w in ('import','export','step_','stl_','iges','pdf','dxf')):group='io'
+    elif any(w in low for w in ('display','render','shader','camera','opengl','gpu_pick')):group='render'
+    elif any(w in low for w in ('sketch','constraint','solver','snap','curve_edit')):group='sketch'
+    elif any(w in low for w in ('mesh','analysis','analyz','cuda')):group='analysis'
+    elif any(w in low for w in ('feature','rebuild','history','extrusion','sweep','loft','boolean','chamfer','fillet','pattern','datum','primitive','offset','thicken','draft','trim')):group='features'
+    else:group='model'
+    if group=='kernel':
+        header=p if p.suffix in {'.h','.hpp'} else p.with_suffix('.h')
+        if (ROOT/header).is_file():
+            comments=[];started=False
+            for line in (ROOT/header).read_text(errors='replace').splitlines():
+                text=line.strip()
+                if text.startswith('//'):
+                    comments.append(text[2:].strip());started=True
+                elif started:break
+            if comments:
+                paragraph=' '.join(comments)
+                first=re.split(r'(?<=[.!?])\s',paragraph,maxsplit=1)[0]
+                return group, first if len(first)<=290 else first[:287]+'…'
+    themes=list(dict.fromkeys(v for k,v in TOKEN_DESCRIPTIONS.items() if k in low))
+    role='Verifica' if group=='tests' else ('Contratti e tipi' if p.suffix in {'.h','.hpp','.cuh'} else 'Implementazione')
+    # Nome preciso sempre presente: evita descrizioni generiche indistinguibili.
+    description=f'{role}: '+(' / '.join(themes[:3]) if themes else stem.replace('_',' '))+'.'
+    return group, description
+
+
+def local_includes(files):
+    known=set(files);by_name={}
+    for f in files:by_name.setdefault(Path(f).name,[]).append(f)
+    edges=[]
+    for f in files:
+        for line,text in enumerate((ROOT/f).read_text(errors='replace').splitlines(),1):
+            m=re.match(r'\s*#\s*include\s*["<]([^">]+)[">]',text)
+            if not m:continue
+            name=m[1];candidates=[posixpath.normpath((Path(f).parent/name).as_posix()),name,'kernel/'+name]
+            target=next((c for c in candidates if c in known),None)
+            if not target and len(by_name.get(name,[]))==1:target=by_name[name][0]
+            if target:edges.append((f,target,'include',line,name,''))
+    return edges
+
+
+def parse_unit(job):
+    # Worker indipendente: nessun oggetto libclang condiviso fra processi.
+    import clang.cindex as c
+    filename,args,root,known=job;root=Path(root);known=set(known)
+    idx=c.Index.create();tu=idx.parse(filename,args=args)
+    errors=[str(d).replace(str(root)+'/', '') for d in tu.diagnostics if d.severity>=3]
+    def relative(loc):
+        if not loc.file:return None
+        try:p=Path(loc.file.name).resolve().relative_to(root).as_posix()
+        except ValueError:return None
+        return p if p in known else None
+    def qualified(cur):
+        parts=[cur.spelling];p=cur.semantic_parent
+        while p and p.kind!=c.CursorKind.TRANSLATION_UNIT:
+            if p.spelling:parts.append(p.spelling)
+            p=p.semantic_parent
+        return '::'.join(reversed(parts))
+    functions={c.CursorKind.FUNCTION_DECL,c.CursorKind.CXX_METHOD,c.CursorKind.CONSTRUCTOR,c.CursorKind.DESTRUCTOR,c.CursorKind.CONVERSION_FUNCTION,c.CursorKind.FUNCTION_TEMPLATE}
+    definitions={};calls=[];symbols={}
+    def visit(cur,owner=''):
+        file=relative(cur.location)
+        if not file:
+            if cur.kind==c.CursorKind.TRANSLATION_UNIT:
+                for child in cur.get_children():visit(child)
+            return
+        if cur.kind in functions and cur.is_definition():
+            owner=qualified(cur);usr=cur.get_usr()
+            if usr:definitions[usr]=(file,owner,cur.location.line)
+            symbols.setdefault(file,set()).add(owner)
+        if cur.kind==c.CursorKind.CALL_EXPR:
+            ref=cur.referenced
+            if ref and ref.kind in functions and relative(ref.location):
+                calls.append((file,ref.get_usr(),relative(ref.location),'call',cur.location.line,qualified(ref),owner))
+        elif cur.kind==c.CursorKind.UNARY_OPERATOR:
+            tokens=cur.get_tokens();first=next(tokens,None)
+            if first and first.spelling=='&':
+                for child in cur.get_children():
+                    ref=child.referenced
+                    if ref and ref.kind in functions and relative(ref.location):
+                        calls.append((file,ref.get_usr(),relative(ref.location),'reference',cur.location.line,qualified(ref),owner))
+        for child in cur.get_children():visit(child,owner)
+    visit(tu.cursor)
+    return {'file':str(Path(filename).relative_to(root)), 'errors':errors, 'definitions':definitions, 'calls':calls,
+            'symbols':{k:sorted(v) for k,v in symbols.items()}}
+
+
+def compilation_jobs(db,files,resource):
+    records=json.loads(db.read_text());known=set(files);selected={}
+    # libclang non eredita i percorsi impliciti del driver Apple c++ usato
+    # dalla build. libc++ deve precedere gli header C/builtin (stddef.h).
+    sdk=None
+    if sys.platform=='darwin':
+        sdk=Path(subprocess.check_output(['xcrun','--show-sdk-path'],text=True).strip())
+    for record in records:
+        path=Path(record['file']).resolve()
+        try:rel=path.relative_to(ROOT).as_posix()
+        except ValueError:continue
+        if rel not in known or path.suffix not in {'.cpp','.c','.mm'} or rel in selected:continue
+        args=record.get('arguments') or shlex.split(record['command']);args=args[1:];clean=[];i=0
+        while i<len(args):
+            a=args[i]
+            if a in {'-o','-MF','-MT','-MQ'}:i+=2;continue
+            if a in {'-c','-MD','-MMD','-MP'} or a==str(path) or a=='-mno-direct-extern-access':i+=1;continue
+            if a in {'-I','-isystem','-iquote','-include'} and i+1<len(args):
+                v=args[i+1];v=str((Path(record['directory'])/v).resolve()) if not os.path.isabs(v) else v
+                clean.extend([a,v]);i+=2;continue
+            if a.startswith('-I') and len(a)>2 and not os.path.isabs(a[2:]):a='-I'+str((Path(record['directory'])/a[2:]).resolve())
+            clean.append(a);i+=1
+        if sdk:
+            if '-isysroot' not in clean and not any(a.startswith('--sysroot=') for a in clean):
+                clean+=['-isysroot',str(sdk)]
+            cxx=sdk/'usr/include/c++/v1'
+            if cxx.is_dir():clean+=['-isystem',str(cxx)]
+        if resource:clean+=['-isystem',resource]
+        clean+=['-I'+str(ROOT),'-Wno-unknown-attributes']
+        selected[rel]=(str(path),clean,str(ROOT),files)
+    return list(selected.values())
+
+
+def aggregate(records):
+    result={}
+    for source,target,kind,line,symbol,owner in records:
+        key=(source,target,kind)
+        edge=result.setdefault(key,{'source':source,'target':target,'kind':kind,'count':0,'sites':[]})
+        site={'line':line,'symbol':symbol,'owner':owner}
+        # Duplicati AST di template/header in TUs diverse non gonfiano i conteggi.
+        ident=(line,symbol,owner)
+        edge.setdefault('_seen',set()).add(ident)
+    for edge in result.values():
+        sites=sorted(edge.pop('_seen'));edge['count']=len(sites)
+        edge['sites']=[{'line':l,'symbol':s,'owner':o} for l,s,o in sites]
+    return sorted(result.values(),key=lambda e:(e['source'],e['target'],e['kind']))
+
+
+def resolve_calls(results):
+    # Uno stesso simbolo esterno può avere backend diversi in target diversi
+    # (Metal nell'app, stub CPU nel runner). Non scegliere l'ultimo analizzato:
+    # preferire la definizione della TU, poi una definizione globale univoca,
+    # altrimenti mantenere il collegamento alla dichiarazione dell'API.
+    candidates={}
+    for result in results:
+        for usr,definition in result['definitions'].items():
+            candidates.setdefault(usr,set()).add(tuple(definition))
+    unique={usr:next(iter(values)) for usr,values in candidates.items() if len(values)==1}
+    records=[]
+    for result in results:
+        for source,usr,decl,kind,line,symbol,owner in result['calls']:
+            definition=result['definitions'].get(usr) or unique.get(usr)
+            records.append((source,definition[0] if definition else decl,kind,line,symbol,owner))
+    return records
+
+
+def render(graph):
+    data=json.dumps(graph,ensure_ascii=False,separators=(',',':')).replace('<','\\u003c')
+    return (OUT/'template.html').read_text().replace('/*__GRAPH__*/',data)
+
+
+def check(quiet=False):
+    graph=json.loads((OUT/'graph.json').read_text());files=inventory();expected=graph['hashes']
+    actual={f:digest(f) for f in files};actual['docs/architecture/template.html']=digest('docs/architecture/template.html')
+    changed=sorted(f for f in set(actual)|set(expected) if actual.get(f)!=expected.get(f))
+    assert not changed,'Vista obsoleta; rigenerare. File: '+', '.join(changed[:30])
+    known={n['id'] for n in graph['nodes']}
+    assert known==set(files),'Catalogo incompleto'
+    assert all(e['source'] in known and e['target'] in known for e in graph['edges']),'Collegamenti non validi'
+    assert (OUT/'index.html').read_text()==render(graph),'HTML diverso dal grafo o template'
+    assert not graph['analysis']['errors'],'Analisi C++ incompleta; risolvere diagnostica prima di dichiararla verificata'
+    if not quiet:print(f"PASS: {len(files)} file, {len(graph['edges'])} relazioni; contenuti e vista aggiornati.")
+
+
+@contextmanager
+def generation_lock():
+    # Stesso lock per checkout, anche se due build diverse aggiornano la vista.
+    # Linux/macOS: lock del processo, rilasciato dal sistema anche dopo un crash.
+    import fcntl
+    name='forgecad-architecture-'+hashlib.sha256(str(ROOT).encode()).hexdigest()[:20]+'.lock'
+    with (Path(tempfile.gettempdir())/name).open('a') as handle:
+        fcntl.flock(handle,fcntl.LOCK_EX)
+        try:yield
+        finally:fcntl.flock(handle,fcntl.LOCK_UN)
+
+
+def write_changed(path,content):
+    if path.exists() and path.read_text()==content:return
+    temporary=None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w',encoding='utf-8',dir=path.parent,
+                                         prefix='.'+path.name+'.',delete=False) as handle:
+            temporary=Path(handle.name);handle.write(content)
+        temporary.replace(path)
+    finally:
+        if temporary and temporary.exists():temporary.unlink()
+
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--build-dir',type=Path);p.add_argument('--check',action='store_true');p.add_argument('--update',action='store_true',help='Aggiorna solo se sorgenti, vista o configurazione sono cambiati');p.add_argument('--jobs',type=int,default=2);p.add_argument('--clang-resource-dir',help='Directory include builtin di clang, se non rilevata automaticamente')
+    args=p.parse_args()
+    if args.check:check();return
+    if not args.build_dir:p.error('Specificare --build-dir con compile_commands.json')
+    db=args.build_dir.resolve()/'compile_commands.json'
+    if not db.exists():p.error('Manca compile_commands.json: configurare CMake con -DCMAKE_EXPORT_COMPILE_COMMANDS=ON')
+    write_changed(ROOT/'.forgecad-architecture.json',json.dumps({'buildDir':str(args.build_dir.resolve())},indent=2)+'\n')
+    configuration_digest=hashlib.sha256(db.read_bytes()).hexdigest()
+    if args.update:
+        try:
+            check(quiet=True)
+            previous=json.loads((OUT/'graph.json').read_text())
+            if previous['analysis'].get('configurationDigest')==configuration_digest:
+                print('Architettura già aggiornata.');return
+        except (AssertionError,OSError,ValueError,KeyError):pass
+        print('Aggiornamento automatico della mappa architetturale…',flush=True)
+    try:import clang.cindex  # noqa: F401
+    except ImportError:p.error('Installare i binding Python clang compatibili con libclang (per esempio python3-clang su Linux)')
+    resource=args.clang_resource_dir
+    if not resource:
+        try:resource=str(Path(subprocess.check_output(['clang','-print-resource-dir'],text=True).strip())/'include')
+        except (OSError,subprocess.CalledProcessError):
+            roots=sorted(Path('/usr/lib/clang').glob('*/include'),key=lambda x:[int(n) for n in re.findall(r'\d+',str(x))]);resource=str(roots[-1]) if roots else None
+    files=inventory();nodes=[{'id':f,'group':classify(f)[0],'description':classify(f)[1],'lines':len((ROOT/f).read_bytes().splitlines())} for f in files]
+    records=local_includes(files);jobs=compilation_jobs(db,files,resource);results=[]
+    cache_dir=args.build_dir.resolve()/'architecture-cache';cache_dir.mkdir(exist_ok=True)
+    headers=hashlib.sha256(''.join(digest(f) for f in files if Path(f).suffix in {'.h','.hpp','.cuh'}).encode()).hexdigest()
+    pending=[]
+    for job in jobs:
+        key=hashlib.sha256((str(VERSION)+headers+Path(job[0]).read_text(errors='replace')+json.dumps(job[:2])).encode()).hexdigest()
+        cache=cache_dir/(key+'.json')
+        if cache.exists() and not json.loads(cache.read_text()).get('errors'):
+            results.append(json.loads(cache.read_text()))
+        else:pending.append((job,cache))
+    print(f'{len(results)} unità da cache, {len(pending)} da analizzare.',flush=True)
+    with concurrent.futures.ProcessPoolExecutor(max_workers=max(1,args.jobs)) as pool:
+        for (_,cache),result in zip(pending,pool.map(parse_unit,[j for j,c in pending],chunksize=1)):
+            if not result['errors']:write_changed(cache,json.dumps(result))
+            results.append(result);print(f"[{len(results)}/{len(jobs)}] {result['file']}"+(' ERRORI' if result['errors'] else ''),flush=True)
+    symbols={}
+    for r in results:
+        for f,syms in r['symbols'].items():symbols.setdefault(f,set()).update(syms)
+    records.extend(resolve_calls(results))
+    for node in nodes:node['symbols']=sorted(symbols.get(node['id'],[]))
+    errors={r['file']:r['errors'] for r in results if r['errors']}
+    hashes={f:digest(f) for f in files};hashes['docs/architecture/template.html']=digest('docs/architecture/template.html')
+    graph={'version':VERSION,'groups':[{'id':a,'name':b,'description':c} for a,b,c in GROUPS], 'nodes':nodes,'edges':aggregate(records),'hashes':hashes,
+           'analysis':{'configurationDigest':configuration_digest,'engine':'libclang: AST della configurazione CMake indicata', 'units':sorted(r['file'] for r in results),'errors':errors,
+           'limits':'Chiamate statiche risolte e indirizzi di funzione nel codice C++ compilato. Definizioni alternative dello stesso simbolo in target diversi: preferita quella della TU; altrimenti collegamento alla dichiarazione API, senza attribuire un backend ambiguo. Include locali rilevati testualmente, anche nei rami condizionali. Dispatch virtuale, segnali/slot dinamici, std::function, plugin e rami esclusi dalla configurazione possono aggiungere chiamate a runtime. CUDA e shader Metal incorporati non analizzati via AST; relazioni include disponibili. Le frecce fra file della stessa classe possono rappresentare chiamate a metodi del medesimo oggetto.'}}
+    if errors:
+        for filename,diagnostics in errors.items():
+            for diagnostic in diagnostics:print(filename+': '+diagnostic,file=sys.stderr)
+        print('Analisi incompleta: conservata la vista precedente.',file=sys.stderr)
+        sys.exit(1)
+    write_changed(OUT/'graph.json',json.dumps(graph,ensure_ascii=False,indent=2)+'\n')
+    write_changed(OUT/'index.html',render(graph))
+    print(f"Generati {len(nodes)} file, {len(graph['edges'])} relazioni, {len(errors)} TUs con diagnostica.")
+    if errors:sys.exit(1)
+
+if __name__=='__main__':
+    try:
+        with generation_lock():main()
+    except (AssertionError,FileNotFoundError) as error:print(str(error),file=sys.stderr);sys.exit(1)

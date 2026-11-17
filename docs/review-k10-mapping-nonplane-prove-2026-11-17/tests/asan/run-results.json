@@ -1,0 +1,28 @@
+{
+  "runs": [
+    {
+      "label": "calibration",
+      "command": [
+        "/tmp/k10-mapping-nonplane-review/tests/leak-calibration"
+      ],
+      "exit": 23,
+      "seconds": 0.021829391000210308,
+      "binarySha256": "45e6841769cd6d7b0c1cadb22d5a4038a79ae58c5b636521a216fb5b241e63cd"
+    },
+    {
+      "label": "tests",
+      "command": [
+        "/tmp/k10-mapping-nonplane-review/tests/asan/mapping-tests"
+      ],
+      "exit": 0,
+      "seconds": 3.941607507993467,
+      "binarySha256": "55b637e2fb89a612c09fad56d7dbe40f5c49951b4670db66117323c3e136044f"
+    }
+  ],
+  "env": {
+    "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1",
+    "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1",
+    "LSAN_OPTIONS": "exitcode=23"
+  },
+  "scope": "Three changed production TUs and four test TUs plus fk_test_main are instrumented. Remaining kernel archive is frozen Release ea1825. Executed outside ptrace; calibration verifies leak detection."
+}

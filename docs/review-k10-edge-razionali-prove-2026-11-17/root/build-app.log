@@ -1,0 +1,19 @@
+-- Configuring done (0.7s)
+-- Generating done (0.5s)
+-- Build files have been written to: /home/myungit/Linux_CAD_forFree/forgecad-release
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_curve_bounds.cpp.o
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sheet_join_validation.cpp.o
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_mapping.cpp.o
+[  0%] Linking CXX static library libforgekernel.a
+[ 39%] Built target forgekernel
+[ 39%] Built target forgecad_compute_autogen_timestamp_deps
+[ 39%] Automatic MOC and UIC for target forgecad_compute
+[ 39%] Built target forgecad_compute_autogen
+[ 43%] Built target forgecad_compute
+[ 43%] Impronta dei sorgenti della geometria
+[ 43%] Built target forgecad_autogen_timestamp_deps
+[ 43%] Automatic MOC and UIC for target forgecad
+[ 43%] Built target forgecad_autogen
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_document_io.cpp.o
+[ 43%] Linking CXX executable forgecad
+[100%] Built target forgecad

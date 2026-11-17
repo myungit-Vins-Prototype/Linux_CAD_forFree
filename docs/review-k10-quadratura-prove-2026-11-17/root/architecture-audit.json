@@ -1,0 +1,114 @@
+{
+  "nodes": 802,
+  "edges": 11741,
+  "units": 408,
+  "errors": [],
+  "hashes_config_HTML_verified": true,
+  "focus": {
+    "cad_mass.cpp": {
+      "description": "Calcola propriet\u00e0 di massa, area, volume e momenti dei corpi.",
+      "relations": {
+        "incoming": {
+          "call": 3,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 9,
+          "include": 5,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_curve_algo.cpp": {
+      "description": "Proiezioni esatte con tratti Bezier limitati al range e filtri conservativi. arcLength2/3 controlla cancellazione e valori finiti; sqrt(dot) ordinario conservato e hypot solo per quadrato subnormal/zero/overflow, con quadratura GK condivisa, partizioni, somme esterne e tolleranza legacy conservate.",
+      "relations": {
+        "incoming": {
+          "call": 1,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 7,
+          "include": 6,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_curve_length_cache.h": {
+      "description": "Cache locale delle lunghezze per loft, curve immutabili prese in prestito: stessi controlli finiti/cancellazione e norma stabile di arcLength, quadratura condivisa e somma esterna invariata. Cache bounded con hit/eviction originali, nessun valore non finito pubblicato; prefissi validi possono restare dopo un errore.",
+      "relations": {
+        "incoming": {
+          "call": 6,
+          "include": 5,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 6,
+          "include": 3,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_mass.cpp": {
+      "description": "Proprieta di massa: conserva il ramo UV delle SP-curve approssimate come seed del fallback di inversione; nelle collezioni miste solo le regioni solide contribuiscono al volume/inertia; completa i contorni UV sui lati NURBS collassati certificati dai poli; riuso dei jet NURBS a u fisso con fk_bspline_isoline nelle quadrature V; facce indipendenti in parallelo, somme seriali, errori ordinati e cancellazione; proprieta complete e tolleranze conservate. I tre contatori di avvolgimento sono componenti passive esplicite della quadratura, senza sentinelle infinite.",
+      "relations": {
+        "incoming": {
+          "call": 76,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 14,
+          "include": 7,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_profile.cpp": {
+      "description": "Profili piani (gli schizzi): tratti di curva 2D concatenati in loop chiusi e raggruppati in regioni con fori, pronti per estrusione e simili.",
+      "relations": {
+        "incoming": {
+          "call": 50,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 6,
+          "include": 3,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_quadrature.h": {
+      "description": "Quadratura adattiva GK7-15 scalare e vettoriale: conserva aritmetica ordinaria, memorizza15campioni e recupera overflow degli accumuli con riscalamento e prodotti frexp/scalbn. Centro e semiampiezza stabili; rifiuta valori non finiti, somme non rappresentabili e bisezioni senza avanzamento prima delle decisioni adattive. Prefisso delle componenti che guidano il raffinamento esplicito, tutte restano finite. Stime numeriche, non certificati continui; tolleranze e profondita legacy conservate.",
+      "relations": {
+        "incoming": {
+          "call": 9,
+          "include": 9,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 1,
+          "include": 0,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/tests/test_quadrature_validation.cpp": {
+      "description": "Sei gruppi GK scalare/vettoriale: golden ordinari e tol0/-1, integrandi2^1023 su range2^-1023, magnitudini indipendenti, callback15 senza replay e propagazione ricorsiva dei contatori passivi, lunghezza B-spline nativa e cache, rifiuti NaN/Inf anche depth30, midpoint grandi, semiampiezza nulla e integrali non rappresentabili.",
+      "relations": {
+        "incoming": {
+          "call": 1,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 9,
+          "include": 5,
+          "reference": 0
+        }
+      }
+    }
+  }
+}

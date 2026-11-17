@@ -1,0 +1,26 @@
+{
+  "command": [
+    "git",
+    "grep",
+    "-n",
+    "-w",
+    "-e",
+    "forgeIntersectRay",
+    "-e",
+    "nearestBodyEdge",
+    "-e",
+    "appendFixedReferenceLine",
+    "HEAD",
+    "--",
+    "*.cpp",
+    "*.h",
+    "*.c",
+    "*.cc",
+    "*.cxx",
+    "*.hpp",
+    "*.mm",
+    "*.inl"
+  ],
+  "exitCode": 0,
+  "head": "47c7c19c4faf490995e8ff64f10d83d8a6abb077"
+}

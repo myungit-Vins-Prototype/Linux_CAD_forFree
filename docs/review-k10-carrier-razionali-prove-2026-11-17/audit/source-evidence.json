@@ -1,0 +1,57 @@
+{
+  "kernel/fk_surface_curve_bounds.cpp": {
+    "sha256": "01e69c5c5bea9aa78cbad607750cc58aa3b3fd562ab86cccb889d02519a9cf7a",
+    "bytes": 22081,
+    "snapshot": "kernel__fk_surface_curve_bounds.cpp.txt"
+  },
+  "kernel/fk_surface_curve_bounds.h": {
+    "sha256": "b44a33f8842ce44be82674594c48e1a6480ea76d66fb695010dd2885d8f4cfa6",
+    "bytes": 1741,
+    "snapshot": "kernel__fk_surface_curve_bounds.h.txt"
+  },
+  "kernel/fk_sheet_join_validation.cpp": {
+    "sha256": "802e63f376ef95861337fc83a8cdf4d0472931b770fc46cc6922105f4a1b1cf9",
+    "bytes": 8195,
+    "snapshot": "kernel__fk_sheet_join_validation.cpp.txt"
+  },
+  "kernel/fk_sheet_join_validation.h": {
+    "sha256": "4a17f508bc4db044869f7076e50f45484b79df204fb557d911acad44c965cb30",
+    "bytes": 1430,
+    "snapshot": "kernel__fk_sheet_join_validation.h.txt"
+  },
+  "kernel/fk_sheet.cpp": {
+    "sha256": "32dc9c3b46c89b049104897706270b080fecc8b419c4535242fd95092a408a9a",
+    "bytes": 60281,
+    "snapshot": "kernel__fk_sheet.cpp.txt"
+  },
+  "kernel/fk_blend_model.h": {
+    "sha256": "79ae3a57aa175799632503b9ec81993fd6174880a2773cd709059c5a3ab9661f",
+    "bytes": 19786,
+    "snapshot": "kernel__fk_blend_model.h.txt"
+  },
+  "kernel/tests/test_sheet_join_validation.cpp": {
+    "sha256": "451b30b1488b94f3e817449a27779bef85ad0d28abf2896cabd4e22e4b5ab763",
+    "bytes": 28440,
+    "snapshot": "kernel__tests__test_sheet_join_validation.cpp.txt"
+  },
+  "kernel/tests/fk_test_main.cpp": {
+    "sha256": "d4e8174aa18faf0d899dd5731be71f6029fa9113a8eab6385f7151a44f57e70c",
+    "bytes": 1613,
+    "snapshot": "kernel__tests__fk_test_main.cpp.txt"
+  },
+  "AGENTS.md": {
+    "sha256": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+    "bytes": 3985,
+    "snapshot": null
+  },
+  "CLAUDE.md": {
+    "sha256": "1d29ac406455b39616c2b5718c0006162a1dc476444bafb7ddc585c27433444c",
+    "bytes": 16321,
+    "snapshot": null
+  },
+  "docs/tolerance-policy.md": {
+    "sha256": "2cf51f1ef37206a596ececffd3ed2365197ea9531e78e723d45e3426dd4b678c",
+    "bytes": 8764,
+    "snapshot": null
+  }
+}

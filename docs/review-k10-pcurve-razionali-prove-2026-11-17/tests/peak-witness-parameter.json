@@ -1,0 +1,7 @@
+{
+  "label": "Q-peak",
+  "witness": "0x1.e45106b6b3b93p-15",
+  "parameterExpression": "1 / std::sqrt(3e8)",
+  "budget": "0x1.5798ee2308c3ap-24",
+  "attribution": "Original coefficients in candidate-originals.jsonl. Point witness and legacy sample grid are regressions, not a continuous bound."
+}

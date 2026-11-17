@@ -1,0 +1,11 @@
+{
+  "command": [
+    "timeout",
+    "--signal=KILL",
+    "0.3",
+    "/tmp/k10-quadrant-review/root/baseline-probe",
+    "stalled"
+  ],
+  "exit": 137,
+  "seconds": 0.31416972300212365
+}

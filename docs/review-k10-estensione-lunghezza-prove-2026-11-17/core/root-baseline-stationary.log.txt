@@ -1,0 +1,4 @@
+CASE lo=-1 epsilon=0 inputIssues=0 selected=1 sourceSpeed=3
+REFERENCE initialEnd=2 speedAt2=0 arc1to2=0.99999999999999989 requested=3
+SUCCESS faces=1 edges=6 issues=0 maxX=0 deltaX=1 historyOperands=1
+EMITTED face=0 uLo=-1 uHi=2 emittedArc=1.0000000000000013

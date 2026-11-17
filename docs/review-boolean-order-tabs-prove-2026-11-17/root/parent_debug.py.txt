@@ -1,0 +1,19 @@
+from pathlib import Path
+import subprocess,os,signal,tempfile,time,json
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/boolean-order-review/root')
+with tempfile.TemporaryDirectory(prefix='forgecad-theme-parent-debug-') as d:
+ env=os.environ.copy();env.update(QT_QPA_PLATFORM='wayland',QT_QPA_PLATFORMTHEME='',QT_STYLE_OVERRIDE='Fusion',XDG_CONFIG_HOME=d,FORGECAD_RECOVERY_DIR=d+'/recovery')
+ args=['gdb','-q','-batch','-ex','set pagination off','-ex','set confirm off','-ex','run','-ex','thread apply all bt 18','-ex','quit','--args',str(R/'forgecad-release/forgecad_view_tests'),'--theme-tabs-only-2d']
+ with (T/'theme-parent-debug.log').open('w') as log:
+  p=subprocess.Popen(args,cwd=R,env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+  interrupted=False
+  try:code=p.wait(timeout=25)
+  except subprocess.TimeoutExpired:
+   interrupted=True;p.send_signal(signal.SIGINT)
+   try:code=p.wait(timeout=10)
+   except subprocess.TimeoutExpired:
+    os.killpg(p.pid,signal.SIGTERM)
+    try:code=p.wait(timeout=3)
+    except subprocess.TimeoutExpired:os.killpg(p.pid,signal.SIGKILL);code=p.wait()
+ (T/'theme-parent-debug-result.json').write_text(json.dumps({'command':args,'exit':code,'interrupted':interrupted,'only_own_process_group':True},indent=2)+'\n')
+ print('debug exit',code, 'interrupted',interrupted)

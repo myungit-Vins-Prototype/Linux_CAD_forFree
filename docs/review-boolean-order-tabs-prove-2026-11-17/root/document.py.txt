@@ -1,0 +1,95 @@
+from pathlib import Path
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/boolean-order-review/root')
+p=R/'CLAUDE.md';s=p.read_text()
+old='**17/11 — Booleane/ordine operandi in diagnosi, nessun commit/push.**\nTre Sol: Flacone3 RAW inverso,app ha retry validato; riproduzione e causa da verificare.\n[Memoria precedente](docs/history/claude-prima-boolean-order-2026-11-17.md).'
+new='''**17/11 — Ricontrollo booleane e schede; nessun commit/push.**
+Flacone3, stessi record storici: RAW2/2 PASS; inverso tolE/V1,475e-7 per connessione,
+vecchio gap supporto non riprodotto nei testimoni. Nessun nuovo fix software;33bug invariati.
+Wayland: schede PASS,tema misto1569/solo2D898 PASS; primi timeout35s conservati,causa non provata.
+Sorgenti/binari invariati;K10 e macOS restano aperti. [Rapporto](docs/review-boolean-order-tabs-2026-11-17.md).
+[Memoria precedente](docs/history/claude-prima-boolean-order-2026-11-17.md).'''
+assert old in s;s=s.replace(old,new)
+old='''- Unione `Flacone3`, Corpo 1/4: l'app gestisce entrambi gli ordini con un tentativo inverso validato dopo errore. La chiamata
+  kernel grezza nell'ordine inverso può ancora fallire su un contatto tollerante.'''
+new='''- Unione `Flacone3`, Corpo1/4: RAW attuale PASS nei due ordini sugli stessi record storici; inverso con connessione
+  tollerante1,475e-7. Recupero app conservato; nessuna garanzia globale. [Prove](docs/review-boolean-order-tabs-2026-11-17.md).'''
+assert old in s;s=s.replace(old,new)
+s=s.replace('- Test pertinenti, inclusi persistenza/Undo/storia se coinvolti; Qt offscreen non certifica OpenGL: usare la sessione grafica.', '- **17/11, richiesta utente:** test mirati all’area modificata; ripetere UI solo per modifiche UI, dipendenze coinvolte\n  o regressioni concrete, non sistematicamente durante il lavoro kernel. Qt offscreen non certifica OpenGL.')
+old='''15/11 — Altri14rilievi corretti con agenti Sol.
+K4/K5/K6,S1/S2,UI1–6,PRE1–3: sweep/loft/lamine,input,picker eanteprime.
+App/74testkernel(75esecuzioni)/34CTest,mappa724/10429/353TU PASS;fixture
+confrontodouble baseline corretto,nessun nuovoGL. [Prove/limiti](docs/review-fix-next-2026-11-15.md).'''
+assert old in s;s=s.replace(old,'''15/11: K4/K5/K6,S1/S2,UI1–6,PRE1–3 corretti; app/74kernel/34CTest/mappa PASS.
+[Dettagli e limiti conservati](docs/review-fix-next-2026-11-15.md).''')
+old='''15/11 — Sweep K1/K3 corretti con due agenti GPT-6.1 Sol.
+Frame ortonormale e cuciture UV: app/runner,42 test kernel e16CTest PASS; mappa724/10414 PASS.
+K4 e K2 poi corretti; riferimenti sopra. [Rapporto e prove](docs/sweep-review-fix-2026-11-15.md).'''
+assert old in s;s=s.replace(old,'''K1/K3 corretti: app/42kernel/16CTest/mappa PASS. [Prove](docs/sweep-review-fix-2026-11-15.md).''')
+old='''Review iniziale con quattro agenti (15/11): 19difetti e22candidate orfane;
+45test mirati,16Sweep,mappa723/10397 PASS; nessunleak permanente certificato.
+Stato eprove storiche nel [rapporto](docs/code-review-2026-11-15.md) e nella
+[memoria conservata](docs/history/claude-prima-preview-unification-2026-11-16.md).'''
+assert old in s;s=s.replace(old,'''Review iniziale15/11:19difetti/22candidate orfane; nessun leak permanente certificato.
+[Prove e stato](docs/code-review-2026-11-15.md); [memoria](docs/history/claude-prima-preview-unification-2026-11-16.md).''')
+s=s.replace('UI8 tema/schede: app/21CTest/Wayland PASS; carta/colori invariati,LSan escluso.\n[Prove](docs/review-theme-tabs-2026-11-16.md).','UI8: [prove storiche e limiti](docs/review-theme-tabs-2026-11-16.md).')
+s=s.replace('Schede14/11: [prove/limiti](docs/schede-documenti-2026-11-14.md), [memoria](docs/history/claude-prima-ellisse-estremi-2026-11-16.md).','Schede14/11: [prove/limiti](docs/schede-documenti-2026-11-14.md).')
+assert len(s.encode())<=16384,(len(s.encode()),len(s.splitlines()))
+p.write_text(s)
+report='''# Ricontrollo booleane e schede — 17 novembre 2026
+
+Il fallimento storico di Flacone3 nell’ordine inverso **non si riproduce sul kernel corrente usando gli stessi record B-rep originali**. Le verifiche native Wayland delle schede e del tema passano. Questo intervento aggiorna diagnosi e registro: **nessuna modifica software, nessun nuovo bug corretto**, totale33 invariato. Sorgenti e binari preesistenti conservati; nessun commit o push.
+
+Su richiesta dell’utente, da questo momento i test riguardano l’area modificata: quelli UI saranno ripetuti solo per modifiche UI, dipendenze coinvolte o regressioni concrete. Le ripetizioni generali UI durante il lavoro kernel erano eccessive. Le esecuzioni già effettuate qui sono conservate come prove, senza proporne altre.
+
+## Flacone3: provenienza e riproduzione
+
+Il vecchio log del1novembre riportava `EdgeOffFace` per E1/Face2, scarto1,46000966898e-7mm, nell’unione inversa Corpo4/Corpo1. L’app dispone già del tentativo inverso validato per l’unione dopo errore; tale recupero non è usato dal riproduttore corrente.
+
+Il contenitore attuale `Flacone3.prt`, SHA256 `0f53ce38bd5261ec79f21eab776ce47721892accb35c2cc6d8b996ecf35c2b92`, differisce dal documento storico. I record salvati13/14 sono però **identici byte per byte** a quelli storici:
+
+- Raccordo14/Corpo1: `a033476fb8c411a1f9bf38c50e187b13dac04daaf2441d3f4152ff13b078da68`.
+- Estrusione15/Corpo4: `514106beb1d5888bde272e641e08ae1b5b1fccc6e54e4edb9966481422ad9e93`.
+
+Il caricatore normale scarta cache vecchie Loft/Sew presenti nel documento. L’estrazione diagnostica usa una copia privata del decoder in `/tmp`, con la sola invalidazione per obsolescenza disabilitata e il dump dei record originali prima della decodifica. Diff, comandi e hash sono nelle prove. **Non** è una modifica al caricatore di produzione né una prova della rigenerazione completa della storia. La riserializzazione normalizza alcuni assi negli ultimi bit e cambia gli hash canonici: per il confronto storico e le due chiamate finali sono stati usati i record grezzi esatti.
+
+Due chiamate dirette `booleanOperation(Unite)`, senza retry applicativo, sulla libreria corrente congelata `ea1825d26334bd83b1169859a425fa1efb451ceab9136ea8c4e388542857960b`: entrambe PASS,13facce/1shell, zero problemi `checkBody` con controllo incroci loop,2operandi nella history e13origini faccia dichiarate/valide. Input immutati. Nessuna pretesa di genealogia esplicita completa per tutti gli edge/vertici generici.
+
+| Ordine | Volume numerico mm³ | Max tolleranza edge mm | Max tolleranza vertice mm |
+| --- | ---: | ---: | ---: |
+| Corpo1→Corpo4 | 197625,29725646166 | 9,302144405615402e-8 | 0 |
+| Corpo4→Corpo1 | 197625,29714050054 | 1,4746097656701118e-7 | 1,4746097656701118e-7 |
+
+Opzioni preesistenti mantenute: connessione1e-6mm, risoluzione1e-7mm, unificazione attiva. Non è corretto presentare l’inverso come output interamente entro1e-7mm. Il lettore indipendente conferma sul primo estremo E1 un gap dal vertice di1,4600096689803086e-7mm: la tolleranza edge è precisamente1,01volte quel gap, secondo `tolerantEnds` già presente.
+
+La maggiore tolleranza non dimostra però che sia soltanto nascosto il vecchio difetto sul supporto. Su E1/Face2, nei9parametri del controllo geometrico, lo scarto numerico dal supporto arriva a3,55e-15mm e il residuo pcurve a7,16e-15mm. Sui72testimoni degli edge con tolleranza maggiore della risoluzione, massimo scarto proiettato1,59e-14mm. Lo scarto osservato attuale è quindi di connessione al vertice; il vecchio `EdgeOffFace` non ricompare in questa griglia.
+
+Sono regressioni numeriche finite: **non** un certificato continuo o una prova di esatta equivalenza dei due risultati. Anche la differenza di volume≈1,16e-4mm³ non prova da sola un bug o la precisione assoluta. `fitsSurface` e il checker restano campionati. La scelta del rappresentante condiviso presente dal successivo commit3188714 è una spiegazione plausibile del cambiamento rispetto al1novembre; nessun bisect dimostra l’attribuzione causale. Non è giustificata una nuova patch per questo riproduttore.
+
+## Schede e tema: verifiche già eseguite
+
+Runner corrente `52c77cc2435c2024aa37cc853ecd035facc0e0c37958c369882c52e9b572440f`, Wayland/Fusion, profili e recupero temporanei; soltanto finestre e processi propri:
+
+- `--document-tabs`: PASS,7,10s; riuso3D/2D, stato/Undo, scorciatoie, posizione, fogli, pannelli liberi, annullamento e chiusura asincrona.
+- `--theme-tabs`: PASS,1.569controlli,17,33s.
+- `--theme-tabs-only-2d`: PASS,898controlli,7,04s.
+
+I due primi tentativi del tema avevano timeout35s, log vuoti e nessuna diagnosi dello stack: l’attach del debugger separato era vietato da ptrace. Un lancio con debugger genitore è poi terminato normalmente con898controlli. Le due ripetizioni finali hanno usato il budget90s previsto dalla suite. Timeout iniziali e risultati finali rimangono distinti; il budget inferiore era improprio, ma non è dimostrato che fosse la sola causa, né che la sessione fosse bloccata. `loginctl` non identifica la sessione del chiamante. Nessuna modifica software è stata necessaria. I raster interni del test non costituiscono verifica visiva completa dell’app o certificazione macOS.
+
+## Perimetro e lavoro aperto
+
+Tre agenti GPT-6.1Sol avviati: riproduttore e audit indipendente completati; il ramo di lettura del kernel si è arrestato per capacità del modello, senza patch. Root ha ricontrollato sorgenti/risultati e condotto i test UI sopra. Descrizioni e relazioni call/include/reference consultate in entrambi i versi; mappa786nodi/11.488archi/396TU, hash/configurazione/HTML verificati. Nessuna modifica strutturale e nessuna rigenerazione superflua.
+
+Nessuna nuova build completa, suite483, sanitizer o CI: il software non è cambiato. I test della consegna offset precedente restano attribuiti al relativo rapporto; i nuovi PASS non ne sostituiscono le prove. Originale CAD, altre modifiche locali e26pacchetti sigillati precedenti preservati. HEAD/origin `47c7c19` e indice vuoto invariati.
+
+Resta aperto K10 generale: E/Q a pesi variabili, wrapper/istanze e altre famiglie, Newton/trim/topologia e confronto globale del carrier con l’intento della costruzione. Mapping nonPlane è soltanto un prossimo candidato statico: famiglia effettiva, cap prefissato e validazione delle fin finali ancora da verificare prima di modificare il codice. Resta la verifica visiva nativa macOS. Flacone3 passa da “failure attuale aperto” a “failure storico non riprodotto al contratto corrente, limiti di connessione espliciti”; nessuna garanzia universale delle booleane.
+
+[Prove testuali, comandi e hash](review-boolean-order-tabs-prove-2026-11-17/README.txt). Nessun CAD/B-rep, binario o libreria nel pacchetto; le sorgenti diagnostiche sono archiviate come testo inerte.
+'''
+(R/'docs/review-boolean-order-tabs-2026-11-17.md').write_text(report)
+p=R/'docs/code-review-2026-11-15.md';s=p.read_text();title='# Review generale ForgeCAD — 15 novembre 2026\n\n';assert s.startswith(title)
+intro='''**Ricontrollo17/11, nessuna modifica software:** stessi record storici Flacone3, RAW2/2PASS sul kernel corrente; inverso con connessione tollerante1,475e-7, vecchio gap supporto non riprodotto nei testimoni. Wayland schede PASS,tema misto1.569/solo2D898PASS; timeout iniziali conservati e causa non provata. Nessun nuovo bug corretto,33invariati. Test futuri mirati all’area modificata: UI solo per modifiche UI, dipendenze coinvolte o regressioni concrete, come richiesto. [Rapporto e limiti](review-boolean-order-tabs-2026-11-17.md).\n\n'''
+s=title+intro+s[len(title):]
+s=s.replace("Limite geometrico preesistente aperto: unione grezza Flacone3 nell'ordine inverso (l'app ha già un recupero validato).", "Flacone3 inverso: failure storico non riprodotto sugli stessi record; connessione tollerante e controlli campionati espliciti, nessuna garanzia generale.")
+s=s.replace('Verifiche mancanti: ripetizione completa Wayland con sessione sbloccata e verifica visiva nativa macOS.', 'Verifica visiva nativa macOS ancora mancante; schede e tema Wayland ricontrollati con esito PASS17/11, senza prova dello stato di blocco della sessione.')
+p.write_text(s)
+print('CLAUDE',len((R/'CLAUDE.md').read_bytes()), 'bytes;',len((R/'CLAUDE.md').read_text().splitlines()),'lines')

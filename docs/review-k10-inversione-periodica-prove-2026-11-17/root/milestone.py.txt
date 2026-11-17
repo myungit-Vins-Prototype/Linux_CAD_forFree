@@ -1,0 +1,7 @@
+from pathlib import Path
+R=Path('/home/myungit/Linux_CAD_forFree');p=R/'CLAUDE.md';s=p.read_text();a=R/'docs/history/claude-prima-k10-inversione-periodica-2026-11-17.md';assert not a.exists();a.write_bytes(p.read_bytes());i=s.index('**17/11 — RAM e K10 fit verificati;');j=s.index('\nQ/E razionali17/11:',i)
+s=s[:i]+'''**17/11 — K10 inversione periodica in revisione; nessun commit/push.**
+Riprodotto TRUE oltre cap dopo unwrap UV; controllo finale in staging, test Sol in preparazione.
+RAM/fit:14GiB liberati; app/2CTest/6nuovi+SAN/mappa PASS. [Prove](docs/review-k10-mapping-fit-finiti-2026-11-17.md).
+Wrapper: app/6CTest/67mirati+SAN/Fraction/mappa PASS. [Prove](docs/review-k10-wrapper-curve-2026-11-17.md).
+'''+s[j:];assert len(s.encode())<=16384,len(s.encode());p.write_text(s);print(len(s.encode()))

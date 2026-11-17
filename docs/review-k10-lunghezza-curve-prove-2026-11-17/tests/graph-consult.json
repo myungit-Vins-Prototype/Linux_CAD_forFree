@@ -1,0 +1,267 @@
+{
+  "graphSHA256": "f2bd6e0f6515b53fc41f319fe8e58375efb339c0d83d4378194ff083b6219255",
+  "nodes": [
+    {
+      "id": "kernel/fk_cancel.h",
+      "description": "Distinct from geometry errors: cancellation must bypass their recovery paths."
+    },
+    {
+      "id": "kernel/fk_curve_algo.cpp",
+      "description": "Proiezioni esatte: limita i tratti Bezier al range con bounds inclusivi, conservando ordine/candidati e filtri conservativi entro distanza; lunghezze e quadratura invariate."
+    },
+    {
+      "id": "kernel/fk_curve_algo.h",
+      "description": "Interrogazioni sulle curve: proiezione di un punto, lunghezza d'arco."
+    },
+    {
+      "id": "kernel/fk_quadrature.h",
+      "description": "Quadratura adattiva di Gauss-Kronrod 7-15 (nodi e pesi di QUADPACK), per integrali lungo le curve (lunghezze, aree, numeri di avvolgimento) e, annidata, sulle facce (proprieta' di massa)."
+    },
+    {
+      "id": "kernel/tests/test_curve_algo.cpp",
+      "description": "Proiezioni contro OCCT, filtro esaustivo e linea analitica4096tratti: range inclusivi/ristretti, estremi e concorrenza; quadratura e cache delle lunghezze."
+    }
+  ],
+  "incoming": {
+    "total": 437,
+    "byKind": {
+      "call": 228,
+      "include": 209
+    },
+    "representativeEdges": [
+      {
+        "source": "cad_constraints.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "cad_curve_extract.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "call",
+        "count": 1
+      },
+      {
+        "source": "cad_datum.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "cad_drawing.cpp",
+        "target": "kernel/fk_cancel.h",
+        "kind": "call",
+        "count": 7
+      },
+      {
+        "source": "cad_drawing.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "call",
+        "count": 4
+      },
+      {
+        "source": "cad_constraints.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "cad_curve_extract.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "cad_datum.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "cad_drawing.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "cad_drawing_axes.h",
+        "target": "kernel/fk_cancel.h",
+        "kind": "include",
+        "count": 1
+      }
+    ]
+  },
+  "outgoing": {
+    "total": 29,
+    "byKind": {
+      "call": 19,
+      "include": 10
+    },
+    "representativeEdges": [
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_bernstein.cpp",
+        "kind": "call",
+        "count": 11
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_bernstein.h",
+        "kind": "call",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_cancel.h",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_curve.h",
+        "kind": "call",
+        "count": 4
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_curve_algo.cpp",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_bernstein.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_bspline.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_cancel.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "target": "kernel/fk_precision.h",
+        "kind": "include",
+        "count": 1
+      }
+    ]
+  },
+  "cacheSupplement": {
+    "nodes": [
+      {
+        "id": "kernel/fk_curve_length_cache.h",
+        "description": "Riuso interno e locale degli integrali di lunghezza, senza approssimare la parametrizzazione."
+      },
+      {
+        "id": "kernel/fk_loft.cpp",
+        "description": "Sezioni puntuali terminali esatte e topologia della punta, G1 a piani di riferimento con verifica del limite; preparazione condivisa dei controlli interattivi e della costruzione; punti manuali e guide reali impongono una mappa comune senza inventare traiettorie. Versi locali dalle tangenti delle guide; campo guida unico fra guide reali, con restrizione esatta alle pezze intermedie e diagnostica dei contatti G1 incompatibili. Loft con campi Hermite e guide curvilinee, algebra esatta dei profili razionali e adattamento delle sezioni implicite tramite fk_loft_sections. Guide implicite su sezioni piane; nodi comuni con molteplicita minima sufficiente, conservando C2, sezioni e jet senza cambiare sorgenti o budget di fit NURBS. Inversione della lunghezza stabile ai nodi; armonizzazione delle guide tramite fk_loft_knots entro arrotondamento, con sezioni esatte e dettagli distinti preservati. Chiusura delle sezioni basata sulla tolleranza di connessione del documento, indipendente dalla distanza dall origine."
+      }
+    ],
+    "edges": [
+      {
+        "source": "kernel/fk_curve_length_cache.h",
+        "target": "kernel/fk_cancel.h",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "kernel/fk_curve_length_cache.h",
+        "target": "kernel/fk_curve.h",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "kernel/fk_curve_length_cache.h",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve_length_cache.h",
+        "target": "kernel/fk_curve_length_cache.h",
+        "kind": "call",
+        "count": 5
+      },
+      {
+        "source": "kernel/fk_curve_length_cache.h",
+        "target": "kernel/fk_math.h",
+        "kind": "call",
+        "count": 3
+      },
+      {
+        "source": "kernel/fk_curve_length_cache.h",
+        "target": "kernel/fk_quadrature.h",
+        "kind": "call",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve_length_cache.h",
+        "target": "kernel/fk_quadrature.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve_length_cache.h",
+        "target": "kernel/fk_timing.h",
+        "kind": "call",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve_length_cache.h",
+        "target": "kernel/fk_timing.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_loft.cpp",
+        "target": "kernel/fk_curve_length_cache.h",
+        "kind": "call",
+        "count": 17
+      },
+      {
+        "source": "kernel/fk_loft.cpp",
+        "target": "kernel/fk_curve_length_cache.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/tests/test_bspline_derivatives.cpp",
+        "target": "kernel/fk_curve_length_cache.h",
+        "kind": "call",
+        "count": 3
+      },
+      {
+        "source": "kernel/tests/test_bspline_derivatives.cpp",
+        "target": "kernel/fk_curve_length_cache.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/tests/test_curve_algo.cpp",
+        "target": "kernel/fk_curve_length_cache.h",
+        "kind": "call",
+        "count": 21
+      },
+      {
+        "source": "kernel/tests/test_curve_algo.cpp",
+        "target": "kernel/fk_curve_length_cache.h",
+        "kind": "include",
+        "count": 1
+      }
+    ]
+  }
+}

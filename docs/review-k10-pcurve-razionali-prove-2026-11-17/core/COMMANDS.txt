@@ -1,0 +1,12 @@
+# All software commands use staging and the one readonly frozen archive.
+c++ -O3 -DNDEBUG -std=c++17 -ffp-contract=off -Wall -Wextra -Wpedantic -I/home/myungit/Linux_CAD_forFree/kernel -c /tmp/k10-rational-pcurve-review/core/kernel/fk_surface_curve_bounds.cpp -o /tmp/k10-rational-pcurve-review/core/provider.o
+# Compile probe.cpp.txt with -x c++, then -x none for objects/archive.
+c++ -O3 -DNDEBUG -std=c++17 -ffp-contract=off -I/home/myungit/Linux_CAD_forFree/kernel -x c++ /tmp/k10-rational-pcurve-review/core/probe.cpp.txt -x none /tmp/k10-rational-pcurve-review/core/provider.o /tmp/k10-rational-pcurve-review/root/libforgekernel-baseline.a -pthread -o /tmp/k10-rational-pcurve-review/core/probe
+/tmp/k10-rational-pcurve-review/core/probe > /tmp/k10-rational-pcurve-review/core/probe.log
+# Same flags compile polynomial-probe.cpp.txt and rational-edge-probe.cpp.txt twice:
+# baseline: no provider.o; candidate: provider.o precedes archive.
+# polynomial-probe receives output.jsonl as argv[1]; stdout goes to log.
+cmp /tmp/k10-rational-pcurve-review/core/poly-baseline.jsonl /tmp/k10-rational-pcurve-review/core/poly-candidate.jsonl
+cmp /tmp/k10-rational-pcurve-review/core/poly-baseline.log /tmp/k10-rational-pcurve-review/core/poly-candidate.log
+cmp /tmp/k10-rational-pcurve-review/core/edge-baseline.log /tmp/k10-rational-pcurve-review/core/edge-candidate.log
+# Compile/probe/cmp all exit0. No full app or UI tests by this agent.

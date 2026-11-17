@@ -1,0 +1,13 @@
+{
+  "command": [
+    "python3",
+    "tools/generate_architecture.py",
+    "--build-dir",
+    "forgecad-release",
+    "--jobs",
+    "1"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "exit": 0,
+  "seconds": 22.727740037007607
+}

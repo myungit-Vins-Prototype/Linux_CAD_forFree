@@ -1,0 +1,6 @@
+{
+  "source": "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+  "sha256": "500d4c72b5adba86e4d5758f71b2fdebfed8eb1f8f95bf7d521ef24cf4f47d3b",
+  "bytes": 180980982,
+  "override": "candidate provider.o before archive; unchanged sheet+ledger come from frozen archive"
+}

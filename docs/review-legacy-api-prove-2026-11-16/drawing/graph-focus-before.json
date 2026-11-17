@@ -1,0 +1,942 @@
+{
+  "graphSHA256": "5efd0872f307e6659c1fad13683c8f8cbb9d42d929c8e4df714e2874a3989798",
+  "nodes": 778,
+  "edges": 11373,
+  "focusNodes": [
+    {
+      "id": "cad_drawing_editor.cpp",
+      "group": "drawing",
+      "description": "Editor della tavola: centri/assi su bordi selezionati e sezione locale con contorno/profondita, modificabile con quote e richiami associati senza bloccare le altre viste; raggio libero dal primo clic e leader corto per centro esterno; ricollegamento quote con snap, anteprima e conferma atomica; allineatori durante il primo posizionamento e il trascinamento, stato temporaneo riusato fra anteprime e conferma senza salto; snap fra punte coincidenti delle quote lineari/angolari con calcolo geometrico condiviso, priorità e indicatore lampeggiante; guide lampeggianti e aggancio direzionale dei testi di quota al vicino nel verso del movimento, annullamento e Undo al rilascio; quote trasparenti, frecce H/B, richiami obliqui e serie ordinate continue; scala comune del foglio e sorgente della scala per ogni vista, aggiornamento atomico di anteprime e dipendenze; selezione, posizionamento e comandi; inserimento atomico e anteprime di catene e ordinate, proprietà e anteprime dei datum/cartigli geometrici e delle rugosità Ra/Rz e dei badge persistenti con scelta della prima quota e frecce nella viewport, incluse anteprime delle viste interrotte e sezioni rimosse a gradini multipli e allineate a due piani angolari; disegno e ridefinizione del taglio con mouse, centro e rami o percorso ortogonale, snap geometrici e anteprima annullabile."
+    },
+    {
+      "id": "cad_drawing_editor.h",
+      "group": "drawing",
+      "description": "Editor della tavola: centri/assi su bordi selezionati e sezione locale con contorno/profondita, modificabile con quote e richiami associati senza bloccare le altre viste; raggio libero dal primo clic e leader corto per centro esterno; ricollegamento quote con snap, anteprima e conferma atomica; allineatori durante il primo posizionamento e il trascinamento, stato temporaneo riusato fra anteprime e conferma senza salto; snap fra punte coincidenti delle quote lineari/angolari con calcolo geometrico condiviso, priorità e indicatore lampeggiante; guide lampeggianti e aggancio direzionale dei testi di quota al vicino nel verso del movimento, annullamento e Undo al rilascio; quote trasparenti, frecce H/B, richiami obliqui e serie ordinate continue; scala comune del foglio e sorgente della scala per ogni vista, aggiornamento atomico di anteprime e dipendenze; selezione, posizionamento e comandi; inserimento atomico e anteprime di catene e ordinate, proprietà e anteprime dei datum/cartigli geometrici e delle rugosità Ra/Rz e dei badge persistenti con scelta della prima quota e frecce nella viewport, incluse anteprime delle viste interrotte e sezioni rimosse a gradini multipli e allineate a due piani angolari; disegno e ridefinizione del taglio con mouse, centro e rami o percorso ortogonale, snap geometrici e anteprima annullabile."
+    },
+    {
+      "id": "cad_drawing_window.cpp",
+      "group": "drawing",
+      "description": "Workspace della suite 2D incorporabile nelle schede: chiusura/salvataggi coordinati, ricostruzione menu dopo cambio foglio con unico sottomenu Tema persistente; nuova tavola dallo snapshot valutato del modello salvato, verificato con impronta del file e identita; preparazione cancellabile senza rigenerare la storia; documento multifoglio, salvataggio e PDF multipagina."
+    }
+  ],
+  "selectedCallAndReferenceSitesBothDirections": [
+    {
+      "source": "cad_drawing_browser.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 57,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "ForgeCad::chooseLinkedDrawing"
+        }
+      ]
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 2947,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "ForgeCad::DrawingSheetEditor::DrawingSheetEditor"
+        },
+        {
+          "line": 3053,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "ForgeCad::DrawingSheetEditor::DrawingSheetEditor"
+        },
+        {
+          "line": 3542,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "ForgeCad::DrawingSheetEditor::loadSheet"
+        },
+        {
+          "line": 3545,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "ForgeCad::DrawingSheetEditor::loadSheet"
+        }
+      ]
+    },
+    {
+      "source": "cad_drawing_sheets_ui.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 161,
+          "symbol": "ForgeCad::DrawingSheetEditor::installPreparedModel",
+          "owner": "ForgeCad::DrawingWindow::updateSheetsModel"
+        }
+      ]
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 83,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "ForgeCad::DrawingWindow::refreshEditAccess"
+        },
+        {
+          "line": 148,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "ForgeCad::DrawingWindow::installEditor"
+        },
+        {
+          "line": 403,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "ForgeCad::DrawingWindow::exportPdfPath"
+        },
+        {
+          "line": 403,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "ForgeCad::DrawingWindow::exportPdfPath::RestoreAccess::~RestoreAccess"
+        }
+      ]
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 56,
+          "symbol": "ForgeCad::DrawingWindow::updateFromSource",
+          "owner": "ForgeCad::DrawingWindow::DrawingWindow"
+        },
+        {
+          "line": 60,
+          "symbol": "ForgeCad::DrawingWindow::updateFromSource",
+          "owner": "ForgeCad::DrawingWindow::DrawingWindow"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_angular_center.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 42,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "drawingAngularCenterTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_annotations.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 22,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "annotationTests"
+        },
+        {
+          "line": 26,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "annotationTests"
+        },
+        {
+          "line": 27,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "annotationTests"
+        },
+        {
+          "line": 42,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "annotationTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_apparent_radii.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 18,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "drawingApparentRadiusTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_auxiliary.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 94,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "editorTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_axes.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 61,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "main"
+        },
+        {
+          "line": 64,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "main"
+        },
+        {
+          "line": 65,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "main"
+        },
+        {
+          "line": 66,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_axis_dimensions.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 44,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "axisDimensionTests"
+        },
+        {
+          "line": 46,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "axisDimensionTests"
+        },
+        {
+          "line": 63,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "axisDimensionTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_break.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 103,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "editorTests"
+        },
+        {
+          "line": 118,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "editorTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_centers.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 72,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "main"
+        },
+        {
+          "line": 87,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        },
+        {
+          "line": 88,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_complete_sections.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 93,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_cut_snaps.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 14,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "sectionSnapTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_cut_view_selection.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 12,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "sectionViewSelectionTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_derived.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 84,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "sectionOrientationRegression"
+        },
+        {
+          "line": 118,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "steppedSectionRegression"
+        },
+        {
+          "line": 125,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "steppedSectionRegression"
+        },
+        {
+          "line": 167,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "multipleStepsRegression"
+        },
+        {
+          "line": 206,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "alignedSectionRegression"
+        },
+        {
+          "line": 219,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "alignedSectionRegression"
+        },
+        {
+          "line": 247,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "compoundSectionMouseTests"
+        },
+        {
+          "line": 285,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_detail.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 61,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "editorTests"
+        },
+        {
+          "line": 67,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "editorTests"
+        },
+        {
+          "line": 68,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "editorTests"
+        },
+        {
+          "line": 151,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "linkedDetails"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_dimension_controls.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 13,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "drawingProfileRadiusControlTests"
+        },
+        {
+          "line": 36,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "drawingDimensionControlsTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_dimension_numbering.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 29,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "drawingDimensionNumberingExclusionTests"
+        },
+        {
+          "line": 234,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "drawingDimensionNumberingTests"
+        },
+        {
+          "line": 235,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "drawingDimensionNumberingTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_dimension_repair.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 105,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "singleReference"
+        },
+        {
+          "line": 120,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "twoReferencesAndCancel"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_dimension_series.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 32,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "drawingDimensionSeriesTests"
+        },
+        {
+          "line": 33,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "drawingDimensionSeriesTests"
+        },
+        {
+          "line": 39,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "drawingDimensionSeriesTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_dimensions_gui.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 127,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "drawingDimensionAlignmentTests"
+        },
+        {
+          "line": 181,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "drawingDimensionArrowAlignmentTests"
+        },
+        {
+          "line": 238,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "drawingDimensionPlacementAlignmentTests"
+        },
+        {
+          "line": 319,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "main"
+        },
+        {
+          "line": 320,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_editor.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 59,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        },
+        {
+          "line": 61,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "main"
+        },
+        {
+          "line": 62,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        },
+        {
+          "line": 66,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "main"
+        },
+        {
+          "line": 67,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "main"
+        },
+        {
+          "line": 69,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_hidden_lines.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 48,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        },
+        {
+          "line": 63,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_layout_history.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 92,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        },
+        {
+          "line": 99,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "main"
+        },
+        {
+          "line": 109,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_local_tools.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 612,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_model_update.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 39,
+          "symbol": "ForgeCad::DrawingWindow::updateFromSource",
+          "owner": "drawingModelUpdateTests"
+        },
+        {
+          "line": 40,
+          "symbol": "ForgeCad::DrawingWindow::updateFromSource",
+          "owner": "drawingModelUpdateTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_multisheet.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 132,
+          "symbol": "ForgeCad::DrawingWindow::updateFromSource",
+          "owner": "multisheetPreparationReview"
+        },
+        {
+          "line": 137,
+          "symbol": "ForgeCad::DrawingWindow::updateFromSource",
+          "owner": "multisheetPreparationReview"
+        },
+        {
+          "line": 202,
+          "symbol": "ForgeCad::DrawingWindow::updateFromSource",
+          "owner": "multisheetTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_navigation_contours.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 14,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "drawingNavigationContourTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_options.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 39,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "drawingOptionsTests"
+        },
+        {
+          "line": 40,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "drawingOptionsTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_page.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 46,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_pan.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 32,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "drawingPanTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_presentation.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 40,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_revisions.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 128,
+          "symbol": "ForgeCad::DrawingWindow::updateFromSource",
+          "owner": "drawingRevisionUiTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_scale.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 76,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_section_edit.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 44,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "sectionEditTests"
+        },
+        {
+          "line": 45,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "sectionEditTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_technical_annotations.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 24,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "technicalAnnotationTests"
+        },
+        {
+          "line": 25,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "technicalAnnotationTests"
+        },
+        {
+          "line": 34,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "technicalAnnotationTests"
+        },
+        {
+          "line": 78,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "surfaceTextureTests"
+        },
+        {
+          "line": 79,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "surfaceTextureTests"
+        },
+        {
+          "line": 81,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "surfaceTextureTests"
+        },
+        {
+          "line": 96,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "surfaceTextureTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_templates.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 137,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "checks"
+        },
+        {
+          "line": 139,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "checks"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_text_layout.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 50,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "drawingTextLayoutTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_tolerances.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 22,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "toleranceTests"
+        },
+        {
+          "line": 33,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "toleranceTests"
+        },
+        {
+          "line": 36,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "toleranceTests"
+        },
+        {
+          "line": 37,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "toleranceTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_ui_controls.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 88,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "drawing"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_view_edit.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 88,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_view_placement.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 37,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "main"
+        },
+        {
+          "line": 42,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        },
+        {
+          "line": 43,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_view_preview.h",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 40,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "viewDialogPreviewTests"
+        },
+        {
+          "line": 47,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "viewDialogPreviewTests"
+        },
+        {
+          "line": 47,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "viewDialogPreviewTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_workflow.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 61,
+          "symbol": "ForgeCad::DrawingWindow::updateFromSource",
+          "owner": "drawingWorkflowTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_linked_drawing.h",
+      "target": "cad_drawing_window.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 49,
+          "symbol": "ForgeCad::DrawingWindow::updateFromSource",
+          "owner": "linkedDrawingTests"
+        },
+        {
+          "line": 50,
+          "symbol": "ForgeCad::DrawingWindow::updateFromSource",
+          "owner": "linkedDrawingTests"
+        },
+        {
+          "line": 57,
+          "symbol": "ForgeCad::DrawingWindow::updateFromSource",
+          "owner": "linkedDrawingTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_projected_drawing.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "sites": [
+        {
+          "line": 113,
+          "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+          "owner": "main"
+        },
+        {
+          "line": 127,
+          "symbol": "ForgeCad::DrawingSheetEditor::setReadOnly",
+          "owner": "main"
+        }
+      ]
+    }
+  ],
+  "setterIncomingSites": [],
+  "afterGraph": "Not regenerated in staging. Coordinator must regenerate/check graph after integration; setter definition and obsolete internal callback updateModel edge should disappear."
+}

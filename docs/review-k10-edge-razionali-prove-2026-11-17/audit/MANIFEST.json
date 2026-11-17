@@ -1,0 +1,217 @@
+{
+  "scope": "Independent rational E continuous residual audit; actual final ledger4 (2rational/2polynomial), direct positive5 and negative1 distinguished",
+  "fileCount": 42,
+  "payloadBytes": 1215093,
+  "files": [
+    {
+      "path": "README.txt",
+      "bytes": 5507,
+      "sha256": "aeda69160fcf6c2605fdf763f2d3917e9af37fcb5959126ef71e23fd16ed7d5e"
+    },
+    {
+      "path": "baseline-actual-ledger.json",
+      "bytes": 7478,
+      "sha256": "dd0756e5d7a209392b31a33fe7f9327b310f44eb15116442c4340e282262b093"
+    },
+    {
+      "path": "baseline-final-coefficients.json",
+      "bytes": 2073,
+      "sha256": "bac5cd3aacc1cffe869aea5ec7a04ac2ba2ef68d5de5582a224f94b02a6d7c4b"
+    },
+    {
+      "path": "baseline-fraction-result.json",
+      "bytes": 2702,
+      "sha256": "563f208b3c0761d3c1f1e67864779707098c5154bce7bd29d08362b38442510e"
+    },
+    {
+      "path": "baseline-library-freeze.json",
+      "bytes": 179,
+      "sha256": "bea76d53ecd968062e05394250632a5f1dadd89243a512f553c02c377afbd95f"
+    },
+    {
+      "path": "baseline-link.json",
+      "bytes": 520,
+      "sha256": "96b923ddd956d9e939f8cf82249d92f2602d1cc211d2102ad3d29c39e4e8d525"
+    },
+    {
+      "path": "baseline-link.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "baseline-run.json",
+      "bytes": 437,
+      "sha256": "74b910cd374ec53131156026090ab96832a15cf4deceba651af6ce206b897821"
+    },
+    {
+      "path": "baseline-run.log",
+      "bytes": 122,
+      "sha256": "4e6fa58d3c023b8c8fcf800b7f7bc8d997f3848c46bc27eb006cb3cdd74d4a07"
+    },
+    {
+      "path": "candidate.patch.txt",
+      "bytes": 8200,
+      "sha256": "0e9b873cc975515a1584f8320536176eea8429bc12489fc1ced1c5a98420b153"
+    },
+    {
+      "path": "compile.json",
+      "bytes": 618,
+      "sha256": "5198732028c1e91d752b722e19919aa3824a6b0518e9bee4c43fc87945c737d2"
+    },
+    {
+      "path": "compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "core-polynomial-regression-hashes.json",
+      "bytes": 505,
+      "sha256": "1da57938fb71e5a4707607046fe19aeaf7366399eaebc0bc1369a46fab5b93ec"
+    },
+    {
+      "path": "direct-fixture-originals.jsonl",
+      "bytes": 9038,
+      "sha256": "96422414784214f2f13a750f75aee4f22d3ab99af6fc3aa9fecf0a1b55e99d40"
+    },
+    {
+      "path": "direct-positive-fraction-command.json",
+      "bytes": 420,
+      "sha256": "262f618a29e11b595417085ff9d1edca4da7ca4833e204767c49d100cc6007c1"
+    },
+    {
+      "path": "direct-positive-fraction-result.json",
+      "bytes": 2146,
+      "sha256": "acaa48553db91907cab21557c72b940a54f78b3673a8f6a377a55f4ab77418d9"
+    },
+    {
+      "path": "direct-positive-fraction.log",
+      "bytes": 1508,
+      "sha256": "f540b0583baa9b72888e637330e877f10634c5b0e761d92b25d229f7a98718b0"
+    },
+    {
+      "path": "export_actual_ledger.cpp.txt",
+      "bytes": 9267,
+      "sha256": "9d6a3bb7921ce41eedaf45f8542222a2c8878c0ff21831ff5441b6c7abde8978"
+    },
+    {
+      "path": "final-actual-ledger.json",
+      "bytes": 7697,
+      "sha256": "beb724c4743b4255688745185e49989f3884a93b659f12fdac127c58710dda9e"
+    },
+    {
+      "path": "final-fraction-command.json",
+      "bytes": 536,
+      "sha256": "50dc8f2c65294671790aad1c82d8650a76870382db69c56881fdaf7fa4a4e8ae"
+    },
+    {
+      "path": "final-fraction-result.json",
+      "bytes": 2734,
+      "sha256": "0595f83ea3f264301cbf5f8b8d8c9008714e13868b5d28a74e6ebee77d0398ed"
+    },
+    {
+      "path": "final-fraction.log",
+      "bytes": 61,
+      "sha256": "0affca5019ea6837c5bb4456644e86ee39604c1dcb65b03f0469041471c1f505"
+    },
+    {
+      "path": "final-library-freeze.json",
+      "bytes": 568,
+      "sha256": "2b52880df1b294288f026ab11da11f29af3dad833ab8e210a7f97ca0c1f335c7"
+    },
+    {
+      "path": "final-link-command.json",
+      "bytes": 558,
+      "sha256": "2fb25f7ca340d10b580b115da7b311eeec7b2b75241d196380fc3abb1f829049"
+    },
+    {
+      "path": "final-link.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "final-run-command.json",
+      "bytes": 457,
+      "sha256": "7382c2b495839c0d15661ad7ebddd7949a4a65a139abd36b25434655147427be"
+    },
+    {
+      "path": "final-run.log",
+      "bytes": 122,
+      "sha256": "2be2bbe9d00f3320ba913b11d9ae16ab73cdba2923240c9fcee43734e8a31d1c"
+    },
+    {
+      "path": "fk_surface_curve_bounds.cpp.candidate.txt",
+      "bytes": 30987,
+      "sha256": "32b161a97903c5ca746a87b3bde59fb3c79566316d0f274a189127cc396f62e6"
+    },
+    {
+      "path": "fk_surface_curve_bounds.h.candidate.txt",
+      "bytes": 2820,
+      "sha256": "b6ccad5f246b08c9e69523e485f978600b51ae46104d64d12b18c53dbd487d00"
+    },
+    {
+      "path": "fraction_common.py.txt",
+      "bytes": 4133,
+      "sha256": "6c201bca580c820cbedb5ba4e2b5b397af7958046266fe96528bb9de3aafe2cb"
+    },
+    {
+      "path": "graph-consult-before.json",
+      "bytes": 1086325,
+      "sha256": "91f1cddd49cc4089398890a14393876533797e9672ef2291d67006487510fdd4"
+    },
+    {
+      "path": "negative-fraction-command.json",
+      "bytes": 395,
+      "sha256": "59fb11676a47aec3658d341b2e6c756a3f0335a363cded896353d21ce2359978"
+    },
+    {
+      "path": "peak-witness-parameter.json",
+      "bytes": 302,
+      "sha256": "f2800ab34dbaeafa67bb5494283094a226e4f95495a6277e2d02af5f43c14012"
+    },
+    {
+      "path": "rational-peak-witness-result.json",
+      "bytes": 2043,
+      "sha256": "0d40097c121752ed1b62068991eca3341e3224892abcc964a929313d909d386d"
+    },
+    {
+      "path": "rational-peak-witness.log",
+      "bytes": 2043,
+      "sha256": "0d40097c121752ed1b62068991eca3341e3224892abcc964a929313d909d386d"
+    },
+    {
+      "path": "run_final_ledger.py.txt",
+      "bytes": 2399,
+      "sha256": "4289d7451c386d74c79de2d96b48e37e96059a3cea3eb74ad8a70095367a28e6"
+    },
+    {
+      "path": "source-baseline.json",
+      "bytes": 2112,
+      "sha256": "775a5eb91fceb62fef6ce86bfd303b34c152c540f84d65965136ab93d84e61ed"
+    },
+    {
+      "path": "static-audit.json",
+      "bytes": 2185,
+      "sha256": "3e6ff689feb3bc490431d927f1546d0fcc943cde26b70e15ef366e7326dc9e36"
+    },
+    {
+      "path": "verify_actual_ledger.py.txt",
+      "bytes": 3033,
+      "sha256": "61419cf8ad3ae07a4e0d7db537b8615648f02f28c21f04d385cc13da1d4fef8a"
+    },
+    {
+      "path": "verify_public_fins.py.txt",
+      "bytes": 3164,
+      "sha256": "63ce360dc67ce190b57421f3def6bcdf3c5873cb7430f4786bb7724914b1874b"
+    },
+    {
+      "path": "verify_rational_peak_witness.py.txt",
+      "bytes": 3751,
+      "sha256": "04c9a6b1407dfcccd5f416485dc5b57017b4c37b0c71d586ec29675a78e57ad1"
+    },
+    {
+      "path": "verify_tensor_fraction.py.txt",
+      "bytes": 5948,
+      "sha256": "b8d1010264f72af6f73850ae7a0d0b9c765c7fc8d5404e19f04bccd2094a38f6"
+    }
+  ]
+}

@@ -101,7 +101,6 @@ public:
     QString addSelectedDimension(DrawingMeasure measure);
     QString updateModel(DrawingEditorModel model);
     void setChangedCallback(std::function<void(const DrawingSheet &)> callback);
-    void setModelProvider(std::function<DrawingEditorModel()> provider);
     void fitSheet();
     void setReadOnly(bool readOnly);
     bool isReadOnly() const;

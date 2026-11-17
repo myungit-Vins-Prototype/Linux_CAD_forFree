@@ -1,0 +1,26 @@
+{
+  "argv": [
+    "/usr/bin/c++",
+    "-O3",
+    "-DNDEBUG",
+    "-std=gnu++17",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-ffp-contract=off",
+    "-DFORGEKERNEL_TEST_DATA_DIR=\"/home/myungit/Linux_CAD_forFree/kernel/tests/data\"",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-x",
+    "c++",
+    "/tmp/k10-noniso-review/audit/test_actual_newton_fin_exports.cpp.txt",
+    "/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+    "-x",
+    "none",
+    "/tmp/k10-noniso-review/audit/libforgekernel-frozen.a",
+    "-o",
+    "/tmp/k10-noniso-review/audit/actual-fin-driver"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "returncode": 0,
+  "elapsed_seconds": 4.3607400030014105
+}

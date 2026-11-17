@@ -1,0 +1,17 @@
+{
+  "authorization": "Root explicit 2026-11-17 after candidate59Release and coefficientexports; only these three private current-scope duplicate ELF. Sources/logs/JSON/sharedlibrary untouched.",
+  "files": {
+    "/tmp/k10-rational-pcurve-review/tests/baseline-new-tests": {
+      "sha256": "524328c3129d8f514cf244aec475aa968d33f64f02373e33e27d0f4e91234830",
+      "bytes": 56577360
+    },
+    "/tmp/k10-rational-pcurve-review/tests/candidate-new-tests": {
+      "sha256": "8e52400748338f3d65620e0b95e3f55e07bf78a3629daded0a7fc4980d60b626",
+      "bytes": 55865624
+    },
+    "/tmp/k10-rational-pcurve-review/tests/export-originals": {
+      "sha256": "fffa2c03eda6ebead34bee482796caa4c54d89b761a149025983506b38d23084",
+      "bytes": 53343608
+    }
+  }
+}

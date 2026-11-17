@@ -1,0 +1,23 @@
+[
+  "c++",
+  "-std=c++17",
+  "-O2",
+  "-g",
+  "-ffp-contract=off",
+  "-fno-fast-math",
+  "-I/tmp/k10-next-review/core/kernel",
+  "-I/home/myungit/Linux_CAD_forFree/kernel",
+  "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+  "-DFORGEKERNEL_TEST_DATA_DIR=\"/home/myungit/Linux_CAD_forFree/kernel/tests/data\"",
+  "/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+  "/tmp/k10-next-review/tests/rational-tests.o",
+  "/tmp/k10-next-review/tests/provider-tests.o",
+  "/tmp/k10-next-review/tests/existing33.o",
+  "/tmp/k10-next-review/tests/ledger-tests.o",
+  "/tmp/k10-next-review/core/ledger.o",
+  "/tmp/k10-next-review/core/provider.o",
+  "/tmp/k10-next-review/tests/libforgekernel-baseline.a",
+  "-pthread",
+  "-o",
+  "/tmp/k10-next-review/tests/candidate-tests"
+]

@@ -1,0 +1,77 @@
+{
+  "repository": "/home/myungit/Linux_CAD_forFree",
+  "head": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "compiler": "c++ (GCC) 16.2.1 20260810",
+  "sources": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac"
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "62fb3dfdb2ba62a9837467fefb09b1d69012139bc8dd82e0dafa25227584d234"
+    },
+    {
+      "path": "cad_document_io.cpp",
+      "sha256": "93981e91e658821e232f10ea8acbdd49670e22d31f6c897874e5144b86ec02d6"
+    },
+    {
+      "path": "cad_document_io.h",
+      "sha256": "1f70431d037c0cdbdc6801651aabc48c363bcc231dfaaefb229386cdf2e3dc58"
+    },
+    {
+      "path": "cad_document_read.cpp",
+      "sha256": "d3fddf625b30cb9480e5d047e810c8eae680f4db173d39b5dd47313ff9f6cfcc"
+    },
+    {
+      "path": "cad_snapshot_chunks.cpp",
+      "sha256": "c791d65d6d63181f3fc2bdb9246f89c8b327773eeb184773c1dae2ff32b68203"
+    },
+    {
+      "path": "cad_types.h",
+      "sha256": "7adc598b05ef34a89d216066192112dcb13241047b14115d1aeddce69be6353c"
+    },
+    {
+      "path": "kernel/fk_boolean.cpp",
+      "sha256": "3b8e21c9133627c99cf51df712d8b638cc466f7d2d6442f2c43c1ba47f1feda2"
+    },
+    {
+      "path": "kernel/fk_body_check.cpp",
+      "sha256": "afd587fa9c3a7314aac4d85b58257a1864602f66fab6b03873378c2a6dd7747f"
+    },
+    {
+      "path": "kernel/fk_body_io.cpp",
+      "sha256": "8e4244045884eafe2af1f623cdb3164ba6d0294977b33635258a43d5e72331e3"
+    },
+    {
+      "path": "kernel/fk_intersect.cpp",
+      "sha256": "8699c8d9cc844aa5cc46dd2801d2c9ce3fc6b3755f84381b3c8febbb830f7d02"
+    },
+    {
+      "path": "kernel/tests/test_boolean.cpp",
+      "sha256": "b70b33ab6e960b10d7d431379c7dbdd1933d448df3fafb93fbc9f158806bc642"
+    }
+  ],
+  "library": {
+    "source": "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+    "sha256": "ea1825d26334bd83b1169859a425fa1efb451ceab9136ea8c4e388542857960b",
+    "size": 181403942
+  },
+  "driverSha256": "0725d2cbbfbc70e3dc1f1f399a616f354fc49db596c791fe9819c0446e5dae14",
+  "driverBinarySha256": "aaf015c30d7907a9df544f18e6e78e389adb927c30e5eb838e8e79f21140ae83",
+  "snapshotDecoderSha256": "8c61cd451595d7b7eba9d23ed8ce1983d0f9ff9c67d2672a1c7035c0d31aad0b",
+  "documentSha256": "0f53ce38bd5261ec79f21eab776ce47721892accb35c2cc6d8b996ecf35c2b92",
+  "rawOperands": [
+    {
+      "featureIndex": 13,
+      "sha256": "a033476fb8c411a1f9bf38c50e187b13dac04daaf2441d3f4152ff13b078da68",
+      "bytes": 4792509
+    },
+    {
+      "featureIndex": 14,
+      "sha256": "514106beb1d5888bde272e641e08ae1b5b1fccc6e54e4edb9966481422ad9e93",
+      "bytes": 1237
+    }
+  ],
+  "originalDocumentSha256After": "0f53ce38bd5261ec79f21eab776ce47721892accb35c2cc6d8b996ecf35c2b92"
+}

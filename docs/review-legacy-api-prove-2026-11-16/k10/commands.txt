@@ -1,0 +1,8 @@
+# Read-only, /bin/bash login=false. Nessun eseguibile app/test o build avviato.
+# Letti CLAUDE/policy e docs/ci-sheet-join; descrizioni/archi grafo prima sorgenti.
+git rev-parse HEAD
+rg -n 'surfaceCompositionErrorBound|compositionFactory|curvePositionErrorBound|surfaceParameterBounds' kernel/fk_curve_fit_bounds.cpp kernel/fk_curve_fit_bounds.h
+rg -n 'fitCurve|computePCurves|certificates.push_back|64' kernel/fk_sheet.cpp
+# Letture mirate dei provider/header, pcurve e BlendModel::build.
+# Letti (NON eseguiti) verifier/result Fraction e metadata JSON degli export storici.
+# Hash dei sorgenti confrontati con graph.hashes e ricontrollati prima del freeze.

@@ -1,0 +1,204 @@
+{
+  "description": "Scoped summary after reading descriptions and both directions; detailed graph not duplicated.",
+  "nodes": [
+    {
+      "id": "kernel/fk_cancel.h",
+      "description": "Distinct from geometry errors: cancellation must bypass their recovery paths."
+    },
+    {
+      "id": "kernel/fk_curve.cpp",
+      "description": "Curve parametriche esatte, nel piano (N = 2, le future SP-curve e lo schizzo) e nello spazio (N = 3)."
+    },
+    {
+      "id": "kernel/fk_curve.h",
+      "description": "Curve parametriche esatte, nel piano (N = 2, le future SP-curve e lo schizzo) e nello spazio (N = 3)."
+    },
+    {
+      "id": "kernel/fk_pcurve.cpp",
+      "description": "Costruzione e verifica SP-curve esatte/Hermite e ripiego lineare legacy: pcurveDeviation campionato rifiuta misure senza campioni o non finite con +Inf, breakpoints originali e cancellazione; accettazioni esigono measured finito anche con tolleranza infinita. Soglie e ripiego50x invariati, nessun certificato continuo; nearPole resta ricontrollato dal fit finale."
+    },
+    {
+      "id": "kernel/fk_surface.cpp",
+      "description": "Superfici parametriche esatte S(u, v)."
+    },
+    {
+      "id": "kernel/fk_surface.h",
+      "description": "Superfici parametriche esatte S(u, v)."
+    }
+  ],
+  "incoming": {
+    "total": 920,
+    "byKind": {
+      "call": 769,
+      "include": 149,
+      "reference": 2
+    },
+    "representativeEdges": [
+      {
+        "source": "cad_circular_pattern_fit.cpp",
+        "target": "kernel/fk_curve.h",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "cad_constraints.cpp",
+        "target": "kernel/fk_curve.h",
+        "kind": "call",
+        "count": 6
+      },
+      {
+        "source": "cad_curve_extract.cpp",
+        "target": "kernel/fk_curve.h",
+        "kind": "call",
+        "count": 12
+      },
+      {
+        "source": "cad_curve_solver.cpp",
+        "target": "kernel/fk_curve.h",
+        "kind": "call",
+        "count": 11
+      },
+      {
+        "source": "cad_datum.cpp",
+        "target": "kernel/fk_curve.h",
+        "kind": "call",
+        "count": 13
+      },
+      {
+        "source": "cad_datum.cpp",
+        "target": "kernel/fk_surface.h",
+        "kind": "call",
+        "count": 6
+      },
+      {
+        "source": "cad_curve_extract.cpp",
+        "target": "kernel/fk_curve.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "cad_curve_solver.cpp",
+        "target": "kernel/fk_curve.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "cad_drawing_axes.h",
+        "target": "kernel/fk_cancel.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "cad_drawing_centers.h",
+        "target": "kernel/fk_cancel.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "cad_drawing_compute.h",
+        "target": "kernel/fk_cancel.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "cad_drawing_file.cpp",
+        "target": "kernel/fk_cancel.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "cad_measure.cpp",
+        "target": "kernel/fk_surface.h",
+        "kind": "reference",
+        "count": 3
+      },
+      {
+        "source": "kernel/fk_sweep_analytic_bridge.cpp",
+        "target": "kernel/fk_surface.h",
+        "kind": "reference",
+        "count": 5
+      }
+    ]
+  },
+  "outgoing": {
+    "total": 47,
+    "byKind": {
+      "call": 34,
+      "include": 13
+    },
+    "representativeEdges": [
+      {
+        "source": "kernel/fk_curve.cpp",
+        "target": "kernel/fk_curve.cpp",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "kernel/fk_curve.cpp",
+        "target": "kernel/fk_curve.h",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "kernel/fk_curve.cpp",
+        "target": "kernel/fk_math.cpp",
+        "kind": "call",
+        "count": 4
+      },
+      {
+        "source": "kernel/fk_curve.cpp",
+        "target": "kernel/fk_math.h",
+        "kind": "call",
+        "count": 6
+      },
+      {
+        "source": "kernel/fk_curve.cpp",
+        "target": "kernel/fk_precision.h",
+        "kind": "call",
+        "count": 3
+      },
+      {
+        "source": "kernel/fk_curve.h",
+        "target": "kernel/fk_cancel.h",
+        "kind": "call",
+        "count": 2
+      },
+      {
+        "source": "kernel/fk_curve.cpp",
+        "target": "kernel/fk_curve.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve.cpp",
+        "target": "kernel/fk_precision.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve.h",
+        "target": "kernel/fk_cancel.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_curve.h",
+        "target": "kernel/fk_math.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_pcurve.cpp",
+        "target": "kernel/fk_bspline.h",
+        "kind": "include",
+        "count": 1
+      },
+      {
+        "source": "kernel/fk_pcurve.cpp",
+        "target": "kernel/fk_bspline_surface.h",
+        "kind": "include",
+        "count": 1
+      }
+    ]
+  }
+}

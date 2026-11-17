@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "/tmp/k10-next-review/audit/export-actual-native-carrier",
+    "ActualNativeCarrierFinalFins"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "env": {
+    "K10_ACTUAL_FINAL_EXPORT": "/tmp/k10-next-review/audit/actual-final"
+  },
+  "returncode": 0,
+  "elapsed_seconds": 0.02804918200126849,
+  "rational_no_user_history_byte_identical": true,
+  "source_immutable": true
+}

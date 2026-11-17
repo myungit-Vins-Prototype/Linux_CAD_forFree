@@ -1,0 +1,13 @@
+from pathlib import Path
+import json,hashlib
+T=Path('/tmp/k10-rational-pcurve-review/root');roots=[Path('/tmp/k10-instance-carrier-review'),Path('/tmp/k10-rational-edge-review')];entries=[]
+for root in roots:
+ for p in root.rglob('*'):
+  if p.is_symlink() or not p.is_file() or 'final-proof' in p.parts:continue
+  with p.open('rb') as stream:magic=stream.read(4)
+  if magic==b'\x7fELF':entries.append({'path':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'bytes':p.stat().st_size})
+assert all(str(Path(e['path'])).startswith(tuple(str(r)+'/' for r in roots)) for e in entries)
+(T/'completed-binaries-cleanup-plan.json').write_text(json.dumps(entries,indent=2)+'\n')
+for e in entries:
+ p=Path(e['path']);assert hashlib.sha256(p.read_bytes()).hexdigest()==e['sha256'];p.unlink()
+j={'removed':entries,'bytes_freed':sum(e['bytes'] for e in entries),'scope':'Only own completed previous-stage ELF executables/objects; no source/log/JSON/CAD/archives/repository/sealed evidence touched'};(T/'completed-binaries-cleanup-result.json').write_text(json.dumps(j,indent=2)+'\n');print('freed',j['bytes_freed'],'bytes',len(entries),'ELF files')

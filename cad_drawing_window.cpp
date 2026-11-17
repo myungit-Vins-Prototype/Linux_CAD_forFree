@@ -147,8 +147,6 @@ void DrawingWindow::installEditor(DrawingSheetEditor *prepared){
     }
     next->setReadOnly(true);
     next->setChangedCallback([this](const DrawingSheet &sheet){sheetChanged(sheet);});
-    // Il comando del contenitore verifica percorso, identita' e impronta.
-    next->findChild<QAction *>("drawingUpdateModelAction")->setVisible(false);
     modelUpdateNotice_=new QWidget(container);modelUpdateNotice_->setObjectName("drawingModelUpdateNotice");
     auto *noticeLayout=new QHBoxLayout(modelUpdateNotice_);noticeLayout->setContentsMargins(8,5,8,5);
     modelUpdateText_=new QLabel(modelUpdateNotice_);modelUpdateText_->setTextFormat(Qt::PlainText);modelUpdateText_->setWordWrap(true);

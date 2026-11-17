@@ -1,0 +1,9 @@
+{
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "CurveLengthCachePreservesQuadratureAndIdentity"
+  ],
+  "exit": 0,
+  "seconds": 0.04149042900826316,
+  "watchdog_seconds": 600
+}

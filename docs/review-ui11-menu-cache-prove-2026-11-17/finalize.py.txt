@@ -1,0 +1,54 @@
+from pathlib import Path
+import json,hashlib,re,subprocess,difflib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/review-menu-style-2026-11-17');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+for n in ['build','run-candidate','ctest','architecture']:assert json.load(open(T/(n+'-result.json')))['exit']==0
+assert 'checks=17 failures=0 overflowGroups=3' in (T/'run-candidate.log').read_text()
+before=json.load(open(T/'binaries-before.json'));after={f:sha(R/f) for f in before};assert all(before[f]==after[f] for f in before if f!='forgecad-release/forgecad');assert before['forgecad-release/forgecad']!=after['forgecad-release/forgecad'];(T/'binaries-after.json').write_text(json.dumps(after,indent=2)+'\n')
+items=[]
+for p in T.iterdir():
+ if not p.is_file():continue
+ with p.open('rb') as f:magic=f.read(8)
+ if magic[:4]==b'\x7fELF':items.append({'path':p.name,'bytes':p.stat().st_size,'sha256':sha(p)})
+cleanup={'files':items,'bytes':sum(x['bytes'] for x in items)};assert not (T/'cleanup.json').exists();(T/'cleanup.json').write_text(json.dumps(cleanup,indent=2)+'\n')
+for x in items:(T/x['path']).unlink()
+report=R/'docs/review-ui11-menu-cache-2026-11-17.md';inventory=R/'docs/review-punti-aperti-2026-11-17.md';assert not report.exists() and not inventory.exists()
+s=(T/'open-items-draft.md').read_text();s=s.replace('Il conteggio storico rimane **33 rilievi funzionali corretti**.','Il conteggio passa a **34 rilievi funzionali corretti**:33 precedenti più UI11, riprodotto e corretto nel sottomenu cache e nell’overflow ribbon; due siti della stessa causa, un solo nuovo rilievo.');s=s.replace('MENU_STATUS','Corretto UI11 in questo intervento: sottomenu cache e overflow ribbon usano CadMenu. Resta il confronto complessivo dei pannelli e degli altri stili, senza presumere altre regressioni.');
+for a,z in [('il16novembre','il 16 novembre'),('i24siti','i 24 siti'),('significa24percorsi','significa 24 percorsi'),('grado2/3','grado 2/3'),('documentato32','documentato 32'),('SHA70e4ec5c','SHA 70e4ec5c'),('**Orfane iniziali:**22candidate','**Orfane iniziali:** 22 candidate'),(';16rimosse,6query','; 16 rimosse, 6 query'),('rimangono17API','rimangono 17 API'),('il17novembre','il 17 novembre'),('numerico1','numerico 1'),('carrier2','carrier 2')]:s=s.replace(a,z)
+inventory.write_text(s)
+report.write_text(f'''# UI11 — sottomenu cache e overflow ribbon, 17 novembre 2026
+
+Corretto il menu segnalato nello screenshot: **Opzioni → Memoria per la cache all’apertura** ora usa lo stesso componente degli altri menu. Il difetto è presente anche nei sottomenu dei gruppi nascosti della ribbon, corretti nello stesso intervento. Due chiamate con la stessa causa costituiscono un solo nuovo rilievo UI11: totale della review34, K10 ancora parziale.
+
+## Causa e correzione
+
+`QMenu::addMenu(titolo)` crea un QMenu standard. Dentro CadMenu eredita il foglio stile trasparente; il solo CadMenu disegna fondale, ombra e vetro nel proprio paintEvent. Il menu standard rimane senza quel disegno e, nel caso mostrato dall’utente, appare nero.
+
+Sostituite soltanto due costruzioni con il già esistente `addCadMenu`: cache in `forgeCad2026_gui.cpp` e gruppi overflow in `forgeCad2026_ribbon_preview.cpp`. Nessuna modifica al renderer comune, al controller globale del tema o alla logica della memoria. Le sei scelte, il gruppo esclusivo, la preferenza salvata e l’applicazione dalla prossima apertura restano identici. Aggiornate le descrizioni dei due moduli nel generatore della mappa.
+
+## Verifiche effettuate
+
+- Prova sul menu reale: baseline17controlli,13fallimenti; candidato17/17PASS. Il driver sostituisce il solo main e collega gli oggetti di produzione dell’app, senza copie di librerie né oggetti GUI modificati in privato.
+- Cache: sei scelte;512MiB salvati selezionano una sola voce; scegliendo2048MiB si aggiorna la preferenza. Configurazione e recupero sono isolati in una directory temporanea, nessun CAD aperto.
+- Chiaro → Scuro → Chiaro con menu già aperto: fondo `#f0f0f0` → `#111820` → `#f0f0f0`, alpha255 con opacità di prova100%. La baseline produce pixelalpha0 e manca delle proprietà del componente comune.
+- Ribbon: larghezza forzata380px sul widget distaccato dal viewport, tre gruppi overflow effettivamente creati; tutti usano CadMenu dopo la correzione. È una prova del percorso reale di costruzione, non della geometria completa della ribbon nel desktop.
+- Build completa app e runner del tema PASS,43,748s, seriale. Test CTest `forgecad_application_theme_tests`1/1PASS,0,109s.
+- Mappa804file/11741relazioni/408TU, zero errori;406unità da cache e2rianalizzate in22,728s. Hash sorgenti/configurazione, HTML/JSON, `--check` e chiamate a addCadMenu alle due righe modificate verificati nei due versi.
+
+Verificati visivamente i due raster del menu: [chiaro](review-ui11-menu-cache-prove-2026-11-17/candidate-images/cache-0.png), [scuro](review-ui11-menu-cache-prove-2026-11-17/candidate-images/cache-1.png). Le prove sono Qt offscreen/Fusion; non si attribuisce una nuova certificazione a Wayland, macOS o a tutti i plugin desktop. Non aggiunto un test permanente per duplicare le due chiamate al factory: il driver mirato è conservato nelle prove.
+
+Kernel, runner generale e runner viewport rimangono byte-identici alla baseline del presente intervento. Nessuna suite kernel o UI generale ripetuta. Eseguibile app aggiornato SHA256 `{after['forgecad-release/forgecad']}`; eventuali processi utente aperti non sono stati riavviati. Rimossi{cleanup['bytes']}byte ({cleanup['bytes']/1048576:.1f}MiB) di soli ELF temporanei conclusi; sorgenti, raster e log conservati.
+
+## Stato e consegna
+
+[Elenco consolidato dei punti ancora aperti](review-punti-aperti-2026-11-17.md), distinguendo K10, uniformazione residua e verifiche mancanti. [Prove con checksum](review-ui11-menu-cache-prove-2026-11-17/SHA256SUMS). [Memoria precedente](history/claude-prima-menu-cache-stato-review-2026-11-17.md).
+
+Tre agenti Sol hanno controllato in sola lettura i limiti K10, gli altri punti e i costruttori dei menu; modifica, build e runtime sono verifiche dell’agente principale. HEAD/origin47c7c19, indice vuoto; nessun commit o push, nessuna nuova CI, nessuna promessa di assenza globale di bug o leak.
+''')
+p=R/'docs/code-review-2026-11-15.md';s=p.read_text();first,rest=s.split('\n',1);intro='\n\n**UI11 corretto, 17 novembre:** sottomenu cache e gruppi overflow ribbon creati come QMenu standard sotto CadMenu trasparente; ora usano il componente comune. Baseline13/17fallimenti → candidato17/17PASS, build completa e test mirato del tema PASS; mappa aggiornata. **34 rilievi funzionali corretti** (33 precedenti + questa causa). [Rapporto](review-ui11-menu-cache-2026-11-17.md). [Elenco unico dei punti ancora aperti K10 e degli altri](review-punti-aperti-2026-11-17.md). Nessun commit/push.\n';s=first+intro+rest;pattern=r'\*\*Punti ancora aperti, stato richiesto:\*\*.*?(?=\n\n)';s,n=re.subn(pattern,'**Punti ancora aperti, quadro consolidato:** sei filoni K10 (quadratura, carrier globale, famiglie non supportate, Newton, B-rep finale e rifiuti conservativi), uniformazione residua UI/anteprime e verifiche globali di memoria/configurazioni. Le22candidate orfane iniziali sono tutte classificate. Supporto e Flacone mantengono i limiti di versione e di connessione documentati. [Stato dettagliato aggiornato](review-punti-aperti-2026-11-17.md).',s,count=1,flags=re.S);assert n==1;p.write_text(s)
+p=R/'docs/roadmap.md';s=p.read_text();needle='## Funzioni già presenti';assert s.count(needle)==1;s=s.replace(needle,'## Review del codice — stato del 17 novembre 2026\n\nL’[elenco consolidato dei punti ancora aperti](review-punti-aperti-2026-11-17.md) distingue K10, uniformazione UI/anteprime e verifiche mancanti. UI11 del menu cache/overflow è corretto; totale34rilievi confermati corretti, K10 parziale. Le priorità funzionali sotto rimangono separate dal lavoro di correzione.\n\n'+needle);p.write_text(s)
+p=R/'CLAUDE.md';s=p.read_text();start=s.index('**17/11 — menu cache/ribbon');end=s.index('\nQ/E razionali',start);s=s[:start]+'''**17/11 — UI11 menu cache/ribbon corretto; inventario review aggiornato.**
+Due factory sostituite con addCadMenu: baseline13/17FAIL→17/17PASS, app/testtema/mappa PASS.
+34rilievi corretti; K10parziale. Sei filoni K10 e altri limiti nell’indice; kernel/runner invariati.
+[Elenco aperti](docs/review-punti-aperti-2026-11-17.md), [menu](docs/review-ui11-menu-cache-2026-11-17.md),
+[quadratura](docs/review-k10-quadratura-2026-11-17.md), [memoria precedente](docs/history/claude-prima-menu-cache-stato-review-2026-11-17.md).
+''' +s[end:];assert len(s.encode())<=16384 and len(re.findall(r'^\*\*',s,re.M))<=10;p.write_text(s);print('Docs updated; memory',len(s.encode()),'cleanup',cleanup['bytes'])

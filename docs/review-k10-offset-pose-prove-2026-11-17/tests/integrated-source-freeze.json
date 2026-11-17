@@ -1,0 +1,6 @@
+{
+  "kernel/fk_offset.cpp": "07a3f6e60cfd2ed659b6f9ea74b7596c5504130cfe9a78ecd658bbfd901f8aa2",
+  "kernel/tests/test_shell_pose.cpp": "3a0c30574a95bb95cde0b5972ce34a4945da58bb80de719ab48b7a05183e14bf",
+  "kernel/CMakeLists.txt": "70d4d663b85ba6ce1b13b6e24f48997fda9f2af1fa807460f33fd57caecec893",
+  "tools/generate_architecture.py": "4b644654519e05d7dd600d2eef1794bcf1434e4dc8cc8afc06529ee1f0c61662"
+}

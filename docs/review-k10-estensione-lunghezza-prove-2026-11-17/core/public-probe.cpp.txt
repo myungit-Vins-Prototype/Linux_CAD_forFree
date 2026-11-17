@@ -1,0 +1,93 @@
+#include "fk_sheet.h"
+#include "fk_body_check.h"
+#include "fk_curve_algo.h"
+#include "fk_history.h"
+
+#include <algorithm>
+#include <cmath>
+#include <iomanip>
+#include <iostream>
+#include <string>
+
+using namespace ForgeCad::Kernel;
+
+CurvePtr<2> uvLine(Vec2 origin, Vec2 direction) {
+    return std::make_shared<Line<2>>(origin, direction);
+}
+
+Body nativeCurtain(const BSplineCurve<3> &curve) {
+    auto c = std::make_shared<BSplineCurve<3>>(curve);
+    auto highPoles = curve.poles();
+    for (Vec3 &p : highPoles) p += Vec3(0, 0, 1);
+    auto high = std::make_shared<BSplineCurve<3>>(curve.degree(), curve.knots(), highPoles);
+    const Interval d = curve.domain();
+    const Vec3 a = c->point(d.lo), b = c->point(d.hi), z(0, 0, 1);
+    std::vector<Vec3> points{a, b, b + z, a + z};
+    std::vector<Body::BuildEdge> edges{
+        {0, 1, c, d, 0},
+        {1, 2, std::make_shared<Line<3>>(b, z), {0, 1}, 0},
+        {3, 2, high, d, 0},
+        {0, 3, std::make_shared<Line<3>>(a, z), {0, 1}, 0}
+    };
+    Body::BuildFace face;
+    face.surface = std::make_shared<ExtrusionSurface>(c, z);
+    face.loops.push_back({
+        {0, true, uvLine({0, 0}, {1, 0}), 0},
+        {1, true, uvLine({d.hi, 0}, {0, 1}), 0},
+        {2, false, uvLine({0, 1}, {1, 0}), 0},
+        {3, false, uvLine({d.lo, 0}, {0, 1}), 0}
+    });
+    return Body::buildSheet(points, edges, {face});
+}
+
+void run(bool dyadic, double epsilon) {
+    const double lo = dyadic ? -1 : 0;
+    const std::vector<double> xs = dyadic ? std::vector<double>{-27, -9, -3, -1}
+                                           : std::vector<double>{-8, -4, -2, -1};
+    std::vector<Vec3> poles;
+    for (int i = 0; i != 4; ++i)
+        poles.push_back({xs[std::size_t(i)], epsilon * (lo + (1 - lo) * i / 3.0), 0});
+    const BSplineCurve<3> curve(3, {lo, lo, lo, lo, 1, 1, 1, 1}, poles);
+    const Body input = nativeCurtain(curve);
+    // buildSheet preserves BuildEdge order: edge1 is the right vertical side,
+    // chosen by construction/incidence, never by geometric proximity.
+    const EdgeId selected = input.edges().at(1);
+    const auto issues = checkBody(input);
+    std::cout << "CASE lo=" << lo << " epsilon=" << epsilon << " inputIssues=" << issues.size()
+              << " selected=" << selected.index << " sourceSpeed=" << norm(curve.derivative(1)) << std::endl;
+    for (const auto &issue : issues) std::cout << "INPUT_ISSUE " << describe(issue.code) << ' ' << issue.message << '\n';
+    const auto reach = extendBSpline(curve, lo, 3);
+    std::cout << "REFERENCE initialEnd=2 speedAt2=" << norm(reach.derivative(2))
+              << " arc1to2=" << arcLength(reach, {1, 2}, 1e-13) << " requested=3" << std::endl;
+    BodyHistory history;
+    try {
+        const Body output = extendSheet(input, {selected}, 3, false, &history);
+        double maxX = -1e300;
+        for (VertexId v : output.vertices()) maxX = std::max(maxX, output.vertex(v).point.x());
+        const auto after = checkBody(output);
+        std::cout << "SUCCESS faces=" << output.faces().size() << " edges=" << output.edges().size()
+                  << " issues=" << after.size() << " maxX=" << maxX
+                  << " deltaX=" << maxX + 1 << " historyOperands=" << history.operandCount() << std::endl;
+        for (const auto &issue : after) std::cout << "OUTPUT_ISSUE " << describe(issue.code) << ' ' << issue.message << '\n';
+        for (FaceId f : output.faces()) {
+            const auto &s = output.face(f).surface;
+            if (s->type() != SurfaceType::Extrusion) continue;
+            const auto &e = static_cast<const ExtrusionSurface &>(*s);
+            const auto d = e.curve()->domain();
+            std::cout << "EMITTED face=" << f.index << " uLo=" << d.lo << " uHi=" << d.hi;
+            if (d.hi >= 1) std::cout << " emittedArc=" << arcLength(*e.curve(), {1, d.hi}, 1e-13);
+            std::cout << std::endl;
+        }
+    } catch (const OperationCancelled &) {
+        std::cout << "CANCELLED" << std::endl;
+    } catch (const std::exception &e) {
+        std::cout << "FAIL exception=" << e.what() << " historyOperands=" << history.operandCount() << std::endl;
+    }
+}
+
+int main(int argc, char **argv) {
+    std::cout << std::setprecision(17);
+    const bool dyadic = argc < 2 || std::string(argv[1]) != "zero";
+    const double epsilon = argc > 2 ? std::stod(argv[2]) : 0;
+    run(dyadic, epsilon);
+}

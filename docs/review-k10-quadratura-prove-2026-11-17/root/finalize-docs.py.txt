@@ -1,0 +1,39 @@
+from pathlib import Path
+import json,hashlib,re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-quadrature-review/root');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+for n in ['build','ctest','architecture','staged-tests','san-tests']:assert json.loads((T/(n+'-result.json')).read_text())['exit']==0
+arch=json.loads((T/'architecture-audit.json').read_text());legacy={}
+for p in T.glob('legacy-*-result.json'):
+ assert json.loads(p.read_text())['exit']==0;log=p.with_name(p.name.replace('-result.json','.log')).read_text();m=re.search(r'(\d+)/(\d+) test superati',log);assert m and m[1]==m[2];legacy[p.stem]=int(m[1])
+assert len(legacy)==9
+cleanup=json.loads((T/'cleanup.json').read_text());app=sha(R/'forgecad-release/forgecad');build=json.loads((T/'build-result.json').read_text());analysis=json.loads((T/'architecture-result.json').read_text());proof=R/'docs/review-k10-quadratura-prove-2026-11-17';report=R/'docs/review-k10-quadratura-2026-11-17.md';assert not report.exists()
+results=f'''| Verifica | Esito |
+| --- | --- |
+| Baseline nativa, watchdog0,3s | timeout124, derivata finita |
+| Candidato nativo | lunghezza1mm |
+| Nuovi gruppi Release | 6/6 PASS |
+| ASan/UBSan con leak detection | 6/6 PASS, ambito descritto sotto |
+| Baseline SafeControls | 1/1 PASS, sorgente del gruppo identico nella TU finale |
+| Golden GK scalare/vettoriale | 26 righe hexfloat bit-identiche |
+| Golden lunghezze/cache | 8 righe hexfloat bit-identiche |
+| Golden massa pubblica | 3 corpi, volume/area/baricentro/inerzia bit-identici |
+| App completa e runner mirati, seriali | PASS, {build['seconds']:.3f}s |
+| CTest selezionati | 4/4 PASS |
+| Regressioni storiche filtrate | {sum(legacy.values())} casi PASS su9filtri |
+| Mappa seriale e --check | {arch['nodes']} nodi/{arch['edges']} relazioni/{arch['units']} TU, zero errori; {analysis['seconds']:.3f}s |
+
+I tre corpi del golden sono parallelepipedo, cilindro ed estrusione con profilo NURBS razionale. I filtri storici riguardano ArcLength, cache, stagnazione della quadratura, massa di box/estrusioni/spline verticali, determinismo/errore/cancellazione della massa parallela e loft circolari. CTest: quadratura, lunghezze, derivate B-spline ed estensione di lunghezza delle lamine. Verificati hash sorgenti/configurazione, JSON incorporato nell’HTML e archi tipizzati nei due versi.
+
+Eseguibile compilato SHA256 `{app}`. Ripuliti {len(cleanup['files'])} ELF/oggetti ricreabili dello staging, {cleanup['bytes']} byte ({cleanup['bytes']/1048576:.1f}MiB); nessuna libreria statica copiata, build e processi utente preservati.'''
+trace='''[Pacchetto delle prove](review-k10-quadratura-prove-2026-11-17/SHA256SUMS): sorgenti congelati, comandi/log/tempi, oracoli Python, consultazione della mappa, confronti ordinari, test e verifiche di preservazione. I file sorgente/script archiviati sono resi inerti; SHA256SUMS elenca i percorsi effettivi del pacchetto. Conservati e ricontrollati38pacchetti precedenti,5367artefatti. L’archivio della [memoria prima dell’intervento](history/claude-prima-k10-quadratura-2026-11-17.md) conserva integralmente lo stato iniziale.
+
+La prima candidata è stata scartata come soluzione autonoma dopo che il controllo del chiamante massa ha rivelato la sentinella infinita intenzionale. La prima build è stata interrotta dall’agente principale (SIGINT sul proprio supervisore, exit130) per integrare l’esclusione esplicita. Gli esiti di staging V1 non sono usati come certificazione della massa o dell’app finale; log e rettifica dell’audit sono conservati. La V2, con test finali anche sulla propagazione ricorsiva, è quella compilata e verificata sopra.'''
+s=(T/'report-draft.md').read_text().replace('RESULTS_PENDING',results).replace('PROOF_PENDING',trace)
+m=R/'CLAUDE.md';memory=m.read_text();start=memory.index('**17/11 — K10 quadratura');end=memory.index('\nQ/E razionali',start);memory=memory[:start]+f'''**17/11 — K10 quadratura e lunghezze verificate; nessun commit/push.**
+Retta1mm h2^-1023: timeout→1. GK scalare/vettoriale riscalato, contatori massa passivi espliciti.
+App/4CTest/6nuovi+SAN/{sum(legacy.values())}storici/golden GK-lunghezze-massa/mappa PASS; nessun UI.
+Liberati{cleanup['bytes']/1048576:.1f}MiB staging. Underflow pesato resta limite; K10parziale,33invariati.
+[Quadratura](docs/review-k10-quadratura-2026-11-17.md), [lunghezze](docs/review-k10-lunghezza-curve-2026-11-17.md), [storico K10](docs/history/claude-prima-k10-quadratura-2026-11-17.md).
+''' +memory[end:];assert len(memory.encode())<=16384 and len(re.findall(r'^\*\*',memory,re.M))<=10
+p=R/'docs/code-review-2026-11-15.md';general=p.read_text();first,rest=general.split('\n',1);intro=f'''\n\n**K10 quadratura, prosecuzione verificata:** una retta B-spline di1mm con derivata finita2^1023 bloccava la quadratura per overflow degli accumuli. Recupero scalato dei15campioni senza replay, centro/semiampiezza stabili e rifiuti finiti prima delle decisioni adattive. La massa esclude esplicitamente i tre contatori dall’adattamento, senza sentinel Inf. App/4CTest/6nuovi+sanitizer/{sum(legacy.values())}storici/golden GK-lunghezze-massa/mappa PASS; nessun UI, commit/push. K10globale parziale,33rilievi invariati; underflow dei prodotti pesati ancora limite. [Rapporto e prove](review-k10-quadratura-2026-11-17.md).'''
+report.write_text(s);p.write_text(first+intro+rest);m.write_text(memory);print('Report and memory written',len(memory.encode()),'bytes')

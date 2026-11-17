@@ -1,0 +1,15 @@
+{
+  "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+  "sha256": "2bd551b222b2c07cbfaa02635ebf999562ef90ec8f00b0ba7ba398c1b2028f1d",
+  "bytes": 181672362,
+  "productionSources": [
+    {
+      "path": "kernel/fk_surface_curve_bounds.cpp",
+      "sha256": "7dfb4c8f4b2d06ac1be0ef469d053232aa879fe2b762cf176567fabfd4059fba"
+    },
+    {
+      "path": "kernel/fk_surface_curve_bounds.h",
+      "sha256": "dd92c62ce5707241743f70a34602af9b0b0e6eca048c765a23fc7a8e634a1aca"
+    }
+  ]
+}

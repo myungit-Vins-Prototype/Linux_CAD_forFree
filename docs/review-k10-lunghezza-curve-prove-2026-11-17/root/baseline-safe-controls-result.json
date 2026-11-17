@@ -1,0 +1,9 @@
+{
+  "command": [
+    "/tmp/k10-arclength-review/root/baseline-tests",
+    "SafeControls"
+  ],
+  "exit": 0,
+  "seconds": 0.0026840450009331107,
+  "watchdog_seconds": 10
+}

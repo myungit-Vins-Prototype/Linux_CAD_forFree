@@ -1,0 +1,71 @@
+#include "/home/myungit/Linux_CAD_forFree/kernel/tests/test_sheet_join_validation.cpp"
+#include "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_curve_bounds.h"
+#include <set>
+FK_TEST(ActualNativeCarrierFinalFins) {
+    struct Case { const char *name; double scale; bool rational, sense, canonical; };
+    const Case cases[] = {{"implicit",1,false,true,false},{"rational",1,true,true,false},
+        {"small",.01,false,true,false},{"large",1000,false,true,false},
+        {"face-sense",1,false,false,false},{"canonical",1,false,true,true}};
+    const char *dir=std::getenv("K10_ACTUAL_FINAL_EXPORT");
+    FK_CHECK(dir != nullptr); if (!dir) return;
+    for (const auto &c:cases) {
+        Body source=variant(fixture(false),c.scale,false,c.rational,c.sense,c.canonical);
+        const std::string before=writeBodyBinary(source);
+        for (EdgeId e:source.edges()) FK_CHECK(source.edge(e).tolerance==0.0);
+        auto ids=source.edges(); const std::vector<EdgeId> selected{ids[2],ids[6]};
+        Box box; for(VertexId v:source.vertices())box.add(source.vertex(v).point);
+        for(FaceId f:source.faces())box.add(faceBox(source,f));
+        const double prefitCap=std::max(1e-7,1e-9*std::max(box.diagonal(),1.0));
+        BodyHistory history;
+        const Body output=extendSheet(source,selected,.25*c.scale,false,&history);
+        FK_CHECK(checkBody(output,{true,true}).empty());
+        FK_CHECK(writeBodyBinary(source)==before);
+        if(c.rational) {
+            const Body noHistory=extendSheet(source,selected,.25*c.scale,false,nullptr);
+            FK_CHECK(writeBodyBinary(noHistory)==writeBodyBinary(output));
+            FK_CHECK(writeBodyBinary(source)==before);
+        }
+        std::ofstream out(std::string(dir)+"/"+c.name+".json");
+        out << "{\"scope\":\"public-extendSheet-final-native-carrier-fins\",\"case\":\""<<c.name
+            <<"\",\"sourceEdgeTolerancesAllZero\":true,\"prefitCap\":"<<number(prefitCap)
+            <<",\"selection\":\"fixed operation cap plus declared face descendants and selected edge generators; no proximity\",\"records\":[";
+        bool first=true;int count=0;std::set<int> seen;
+        for(FaceId faceId:output.faces()) for(LoopId loop:output.face(faceId).loops) for(FinId fid:output.loopFins(loop)) {
+            const auto &fin=output.fin(fid);const auto &edge=output.edge(fin.edge);
+            if(edge.tolerance!=prefitCap)continue;
+            FK_CHECK(history.isDeclared(EntityKind::Face,faceId.index));
+            int generator=-1,parent=-1;
+            for(EdgeId sid:selected) {
+                const auto &se=source.edge(sid);const FinId sf=se.forward.valid()?se.forward:se.backward;
+                const FaceId sourceFace=source.finFace(sf);
+                bool hasFace=false,hasGenerator=false;
+                for(const auto &origin:history.origins(EntityKind::Face,faceId.index)) {
+                    hasFace=hasFace||(origin.operand==0&&origin.kind==EntityKind::Face&&origin.index==sourceFace.index);
+                    hasGenerator=hasGenerator||(origin.operand==0&&origin.kind==EntityKind::Edge&&origin.index==sid.index&&origin.relation==HistoryRelation::Generated);
+                }
+                const auto descendants=history.descendants(EntityKind::Face,0,sourceFace.index);
+                if(hasFace&&hasGenerator&&std::find(descendants.begin(),descendants.end(),faceId.index)!=descendants.end()) {
+                    FK_CHECK(generator==-1);generator=sid.index;parent=sourceFace.index;
+                }
+            }
+            FK_CHECK(generator>=0&&parent>=0);FK_CHECK(seen.insert(fid.index).second);
+            FK_CHECK(fin.pcurveTolerance==prefitCap);
+            const auto &surface=output.face(faceId).surface;
+            const auto proof=detail::surfaceCurveResidualBound(edge.curve,surface,fin.pcurve,edge.range,prefitCap);
+            FK_CHECK(proof.status==detail::SurfaceCurveBoundStatus::Certified);
+            FK_CHECK(std::isfinite(proof.upperBound)&&proof.upperBound>=0&&proof.upperBound<=prefitCap);
+            if(!first)out<<',';
+            first=false;++count;
+            out<<"{\"face\":"<<faceId.index<<",\"fin\":"<<fid.index<<",\"edge\":"<<fin.edge.index
+                <<",\"sense\":"<<(fin.sense?"true":"false")<<",\"sourceFace\":"<<parent<<",\"sourceGeneratorEdge\":"<<generator
+                <<",\"range\":["<<number(edge.range.lo)<<','<<number(edge.range.hi)<<"],\"budget\":"<<number(prefitCap)
+                <<",\"edgeTolerance\":"<<number(edge.tolerance)<<",\"pcurveTolerance\":"<<number(fin.pcurveTolerance)
+                <<",\"runtimeStatus\":\""<<(proof.status==detail::SurfaceCurveBoundStatus::Certified?"Certified":proof.status==detail::SurfaceCurveBoundStatus::Unsupported?"Unsupported":"Failed")
+                <<"\",\"runtimeUpper\":"<<number(proof.upperBound)<<",\"curve\":";
+            curveJson(out,edge.curve);out<<",\"pcurve\":";curveJson(out,fin.pcurve);out<<",\"surface\":";
+            surfaceJson(out,dynamic_cast<const BSplineSurface&>(*surface));out<<'}';
+        }
+        out<<"]}";FK_CHECK(bool(out));FK_CHECK(count==3);
+        std::cout<<"exported "<<c.name<<" fins="<<count<<" cap="<<prefitCap<<'\n';
+    }
+}

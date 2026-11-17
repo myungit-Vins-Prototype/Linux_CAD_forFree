@@ -1,0 +1,6 @@
+    /tmp/k10-offset-pose-review/tests/test_shell_pose.cpp:42: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+[ FAIL ] ShellStitchedScaledSimilarity (1 controlli falliti)
+    /tmp/k10-offset-pose-review/tests/test_shell_pose.cpp:42: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+[ FAIL ] ShellStitchedScaledAndRotatedSimilarity (1 controlli falliti)
+[  OK  ] ShellStitchedRotationControl
+1/3 test superati

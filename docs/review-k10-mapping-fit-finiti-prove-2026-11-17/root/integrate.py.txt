@@ -1,0 +1,12 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-global-audit-review');B=json.loads(Path('/tmp/review-ram-2026-11-17/baseline.json').read_text());sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();pairs={'kernel/fk_mapping_fit.cpp':T/'core/kernel/fk_mapping_fit.cpp','kernel/tests/test_mapping_fit_validation.cpp':T/'tests/test_mapping_fit_validation.cpp'}
+assert sha(pairs['kernel/fk_mapping_fit.cpp'])=='03d21ceab86aead510559aee7101ade9a4aba8b1ef516671943b0bfa823fd001';assert sha(pairs['kernel/tests/test_mapping_fit_validation.cpp'])=='821b8930879f26a03ac496178ed5ed71839a85e9bd991440f6d63f76e97f9dad'
+W=T/'root/candidate';f='kernel/CMakeLists.txt';s=(R/f).read_text();old='tests/test_mapping_nonplane_validation.cpp)';assert s.count(old)==1;s=s.replace(old,'tests/test_mapping_nonplane_validation.cpp tests/test_mapping_fit_validation.cpp)');p=W/f;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s);pairs[f]=p
+f='tools/generate_architecture.py';s=(R/f).read_text();old='controlli dello scarto e budget geometrici prefissati; nessuna mesh di calcolo.';new='controlli dello scarto e budget geometrici prefissati; griglie/tolleranze valide, callback/jet/poli/residui finiti prima dei massimi e deviazione pubblicata solo dopo costruzione riuscita. Fit campionato, nessuna prova globale o mesh di calcolo.';assert s.count(old)==1;s=s.replace(old,new)
+pos=s.index(" 'kernel/tests/test_mapping_nonplane_validation.cpp':");s=s[:pos]+" 'kernel/tests/test_mapping_fit_validation.cpp': ('tests', 'Contratto del fit Hermite: controllo finito cubico/quintico, NaN/Inf nelle sonde interne con e senza jet analitico, corner/stencil e tutti i vettori del jet; griglie/tolleranze invalide prima delle callback, accumulatori pubblicati solo al successo, eccezioni e cancellazione.'),\n"+s[pos:];p=W/f;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s);pairs[f]=p
+for f,p in pairs.items():
+ if f in B:assert sha(R/f)==B[f],f
+ else:assert not (R/f).exists(),f
+for f,p in pairs.items():(R/f).write_bytes(p.read_bytes())
+m={f:sha(p) for f,p in pairs.items()};assert all(sha(R/f)==h for f,h in m.items());(T/'root/integrated-sources.json').write_text(json.dumps(m,indent=2)+'\n');print(m)

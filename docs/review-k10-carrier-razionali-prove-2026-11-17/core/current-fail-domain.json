@@ -1,0 +1,131 @@
+[
+  {
+    "case": "SheetJoinCanonicalReversal",
+    "source_sha256": "f1e4645548563c5513c27fb3d6a23f439ddcd2122a9deca4564c21c8019f1dbc",
+    "face": 2,
+    "fin": 10,
+    "edge": 8,
+    "status": "Failed",
+    "Q": "line",
+    "violations": [
+      {
+        "axis": 0,
+        "exact_excess": "9779707066709236791384065277/89202980794122492566142873090593446023921664",
+        "approx_UV": 1.0963430795300972e-16,
+        "lower_outside": false,
+        "upper_outside": true
+      },
+      {
+        "axis": 1,
+        "exact_excess": "127/2251799813685248",
+        "approx_UV": 5.639932965095795e-14,
+        "lower_outside": false,
+        "upper_outside": true
+      }
+    ]
+  },
+  {
+    "case": "SheetJoinFaceSense",
+    "source_sha256": "1d82b1c29597d6c4a573229ef82367b61a11f84fac384dae3b39fe28fcfe4977",
+    "face": 2,
+    "fin": 11,
+    "edge": 9,
+    "status": "Failed",
+    "Q": "line",
+    "violations": [
+      {
+        "axis": 0,
+        "exact_excess": "9779707066709236791384065277/89202980794122492566142873090593446023921664",
+        "approx_UV": 1.0963430795300972e-16,
+        "lower_outside": false,
+        "upper_outside": true
+      },
+      {
+        "axis": 1,
+        "exact_excess": "127/2251799813685248",
+        "approx_UV": 5.639932965095795e-14,
+        "lower_outside": false,
+        "upper_outside": true
+      }
+    ]
+  },
+  {
+    "case": "SheetJoinImplicitPolynomial",
+    "source_sha256": "f1e4645548563c5513c27fb3d6a23f439ddcd2122a9deca4564c21c8019f1dbc",
+    "face": 2,
+    "fin": 10,
+    "edge": 8,
+    "status": "Failed",
+    "Q": "line",
+    "violations": [
+      {
+        "axis": 0,
+        "exact_excess": "9779707066709236791384065277/89202980794122492566142873090593446023921664",
+        "approx_UV": 1.0963430795300972e-16,
+        "lower_outside": false,
+        "upper_outside": true
+      },
+      {
+        "axis": 1,
+        "exact_excess": "127/2251799813685248",
+        "approx_UV": 5.639932965095795e-14,
+        "lower_outside": false,
+        "upper_outside": true
+      }
+    ]
+  },
+  {
+    "case": "SheetJoinLargeScale",
+    "source_sha256": "6ebb3675ace06f97dc9c792ee687f09cb3ccb60c634b17731a3b43fbd95eaf06",
+    "face": 2,
+    "fin": 10,
+    "edge": 8,
+    "status": "Failed",
+    "Q": "line",
+    "violations": [
+      {
+        "axis": 1,
+        "exact_excess": "127/2251799813685248",
+        "approx_UV": 5.639932965095795e-14,
+        "lower_outside": false,
+        "upper_outside": true
+      }
+    ]
+  },
+  {
+    "case": "SheetJoinRational",
+    "source_sha256": "c4b153344b0a856f3a353a03006911448585ee251210626885c39dc9966aaa95",
+    "face": 2,
+    "fin": 10,
+    "edge": 8,
+    "status": "Failed",
+    "Q": "line",
+    "violations": [
+      {
+        "axis": 1,
+        "exact_excess": "25/562949953421312",
+        "approx_UV": 4.440892098500626e-14,
+        "lower_outside": false,
+        "upper_outside": true
+      }
+    ]
+  },
+  {
+    "case": "SheetJoinSmallScale",
+    "source_sha256": "93c864dc276c9969fed7a8940b998c05826bd3b9af30c6b2954f7b0f43e32441",
+    "face": 2,
+    "fin": 10,
+    "edge": 8,
+    "status": "Failed",
+    "Q": "line",
+    "violations": [
+      {
+        "axis": 0,
+        "exact_excess": "61906623203143963310434975/44601490397061246283071436545296723011960832",
+        "approx_UV": 1.3879944964176116e-18,
+        "lower_outside": false,
+        "upper_outside": true
+      }
+    ]
+  }
+]

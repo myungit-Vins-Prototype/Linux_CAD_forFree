@@ -160,17 +160,6 @@ QString sketchReferenceLabel(const GeometryRef &source, const QVector<SketchObje
     return label;
 }
 
-bool nearestBodyEdge(const Body &body, const Vec3 &point, CurvePtr<3> &curve, Interval &range) {
-    double best = std::numeric_limits<double>::max();
-    for (EdgeId e : body.edges()) {
-        const Edge &edge = body.edge(e);
-        if (!edge.curve) continue;
-        const double d = projectPoint(*edge.curve, point, edge.range).distance;
-        if (d < best) best = d, curve = edge.curve, range = edge.range;
-    }
-    return best < std::numeric_limits<double>::max();
-}
-
 QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, const Interval &range, bool construction, bool fixed,
                              QVector<SketchEntity> *created) {
     if (!curve || !(range.hi > range.lo)) return QStringLiteral("Curva non valida.");
@@ -608,22 +597,6 @@ QString sketchAxisReference(const SketchObject &sketch, const Kernel::Vec3 &orig
         return QStringLiteral("L'asse e' normale allo schizzo: la sua proiezione e' un punto, non una retta.");
     direction /= length;
     return {};
-}
-int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength) {
-    const auto cross = [](const QPointF &a, const QPointF &b) { return a.x() * b.y() - a.y() * b.x(); };
-    for (int i : sketch.constructionSegments) {
-        if (i < 0 || i >= sketch.segments.size()) continue;
-        const auto &s = sketch.segments.at(i);
-        const QPointF d = s.second - s.first;
-        if (std::fabs(cross(d, direction)) > 1e-12 * std::max(1.0, std::hypot(d.x(), d.y()))
-            || std::fabs(cross(s.first - point, direction)) > 1e-12 * std::max({1.0, std::hypot(point.x(), point.y()), std::hypot(s.first.x(), s.first.y())})) continue;
-        for (const auto &c : sketch.geometricConstraints)
-            if (c.type == ConstraintType::Fix && c.first == ConstraintRef{0, i, -1}) return i;
-    }
-    const int index = int(sketch.segments.size());
-    appendSegment(sketch, point - halfLength * direction, point + halfLength * direction, true);
-    sketch.geometricConstraints.append(makeConstraint(sketch, ConstraintType::Fix, {{0, index, -1}}));
-    return index;
 }
 int sketchReferenceSourceIndex(const GeometryRef &ref, const QVector<SketchObject> &sketches,
                               const QVector<ExtrusionObject> &bodies) {

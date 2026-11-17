@@ -1,0 +1,5 @@
+boundary-plane status=1 upper=1.9998811938389073e-14 seconds=0.000359317
+zero-u-boundary status=1 upper=4.2305179100438421e-15 seconds=4.1767000000000002e-05
+one-ulp-knot-neighbors status=1 upper=1.0383998506471249e-14 seconds=0.00015119100000000001
+actual-fin-0 status=1 upper=2.4191279128127965e-08 seconds=0.029180464999999999
+actual-fin-1 status=1 upper=2.4466020787426731e-08 seconds=0.029645497999999999

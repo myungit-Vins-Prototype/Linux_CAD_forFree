@@ -1,0 +1,48 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-arclength-review');P=R/'docs/review-k10-lunghezza-curve-prove-2026-11-17';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();assert not P.exists()
+components=[('core',T/'core/final-proof-v2','MANIFEST.json','ceda445aed5a63075090c2c8528e59670cd79a6b3b9e41fd772563c6c94d80f0'),('audit',T/'audit/final-proof-v2','MANIFEST.json','6a7fc247910da3c9c9d8f6bf365633b9fcb46ff59e38830e160cdfcef5186784'),('tests',T/'tests','manifest.json','cde646cfaabc862201d9e77c2c32cdec031a6200d9c91d1916dd5a07f98e371c')]
+for label,d,name,h in components:
+ assert sha(d/name)==h;j=json.loads((d/name).read_text())
+ if 'files' in j:
+  files=j['files'];entries=files if isinstance(files,list) else [{'path':f,'sha256':x} for f,x in files.items()]
+  for e in entries:assert sha(d/e['path'])==e['sha256']
+ else:
+  assert label=='tests'
+  for key in ['test','candidateProduction']:assert sha(Path(j[key]['path']))==j[key]['sha256']
+
+renames={}
+def copy(d,label):
+ for p in d.rglob('*'):
+  if not p.is_file() or '__pycache__' in p.parts or p.name=='package-result.json':continue
+  p.read_text();assert p.suffix not in {'.o','.a','.prt','.step','.body'};rel=str(p.relative_to(d));dest=rel+'.txt' if p.suffix in {'.cpp','.h','.py'} else rel;q=P/label/dest;q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes())
+  if rel!=dest:renames[label+'/'+rel]=label+'/'+dest
+for label,d,_,_ in components:copy(d,label)
+copy(T/'root','root')
+files=set(json.loads((T/'root/integrated-sources.json').read_text()))|{'AGENTS.md','CLAUDE.md','docs/code-review-2026-11-15.md','docs/review-k10-lunghezza-curve-2026-11-17.md','docs/history/claude-prima-k10-lunghezza-curve-2026-11-17.md'};source={}
+for f in sorted(files):p=R/f;q=P/'workspace'/(f+'.txt');q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes());source[f]=sha(p)
+(P/'source-manifest.json').write_text(json.dumps(source,indent=2)+'\n');(P/'component-path-map.json').write_text(json.dumps(renames,indent=2)+'\n')
+a=json.loads((T/'root/architecture-audit.json').read_text());pres=json.loads((T/'root/preservation-audit.json').read_text());clean=json.loads((T/'root/cleanup-result.json').read_text())
+(P/'README.txt').write_text(f'''K10: lunghezze curve e cache loft — 17 novembre 2026
+
+V2 integrata: norma stabile locale in arcLength2/3 e cache, sqrt(dot) ordinario conservato e hypot solo quando il quadrato e zero/subnormal/overflow con derivata nonzero. Guard finiti e cancellazione, stessa quadratura/tolleranza/partizione/somme e cachepolicy. Fonti8ceb22be (cpp),d9f5a424 (cacheh). Nessun publicheader/genericquadratureheader cambiato; compiler flags numeriche protette in cpp/loft/newtest.
+
+API native reali, poli(0,0,0)..(1,0,0),BSpline grado1 dominio[0,h]. Baselineh2^600 produce lunghezza0 per normunderflow; h2^-600 produce normInf e watchdog0.3s(exit124) per alberoGKNaN potenziale depth30. V2 produce1mm in entrambi, come Fraction indipendente dimostra. Line semplice con token gia attivo: baseline1, V2 OperationCancelled. B-spline e cache avevano gia alcuni controlli di cancellazione: comportamento preesistente distinto nei test. Coordinate ordinarie, parametrizzazioni estreme, nessun documento utente dichiarato risolto.
+
+NuovaTU6/6, ASan/UBSan6/6 con leak detection; baseline nuovaTU SOLO SafeControls1/1, non tutti patologici. Strumentate TUprod+test+main e cache inline; resto kernel Release, non intera app. N2/N3, razionaliC0,trim/affine, assi/diagonali h2^+-600/535 con oracoli1/3/5, derivata nonfiniteh2^-1030 rifiutata, range e cache dopoerrore. Confronto8righe ordinaryprobe con valorihex diretti/cached byteidentici prima/dopo, incltol0/-1legacy. Cacheprefixvalidpuorimanere dopoerrore, non rollbackgenerale; nessun valore nonfinito put.
+
+Build completa app PASS;3CTest senza skip(nuovo,derivateBSpline,arcoestensione);8storici filtrati(2ArcLength,1cache,2SheetExtend,3Loft) PASS. Nessun UI/avvio, suite483, nuovaCI, commit/push o riavvio app aperta. Compilazioni/analisi seriali, nessuna copia libreria. Ripuliti{clean['removed_files']}ELF/oggetti privati,{clean['bytes']}byte, conservati sorgenti/log/hash. Nessun CAD o cartellaQA utente modificato.
+
+Architettura {a['nodes']}nodi/{a['edges']}relazioni/{a['units']}TU,zeroerrori; sorgenti/configurazione/HTML e typed2versi,--check PASS. Digestglobaleheader ha invalidato tutta la cache: analisi407TU seriale. Primo verificatore avviato troppo presto vedeva snapshotprecedente, poi attesa conclusione e verifica corretta, nessunfixsoftwareperquestaasserzione. Vecchieprove{pres['previous_packages']}pacchetti/{pres['previous_artifacts']}artefatti integre; {pres['preserved_existing']}dei{pres['baseline_files']}filebaseline preservati, sole6modifiche esistenti previste. HEAD/origin47c7c19,indexvuoto; CLAUDE{pres['CLAUDE_bytes']}byte con archivio completo precedente.
+
+Limiti: GK stimata/depth30 invariata, non prova continua/globale; callbackfinito non protegge ogni intermedio interno GK. Proposta inerente somma di velocita vicine a DBL_MAX in root/OPEN-NUMERICAL-LIMITS.txt e SOLOipotesi NONcompilata/eseguita o attribuita come altro bug corretto. Nessun norm globale modificato; derivate nonrappresentabili e midpointnonfinito rifiutati, non tutte parametrizzazioni risolte. K10globale/Newton/famiglie non coperte restano aperti,33rilievi funzionali invariati. V1inerteseparata non e versioneintegrata; core/audit/test agentiSol solo static/source, TUTTO runtime e integrazioneROOT.
+
+Payload solo UTF-8/testo/JSON/XML/sorgenti inerti con suffisso aggiuntivo.txt; nessun ELF/oggetto/archive/CAD/B-rep. Manifestcomponenti percorsi staging verificati prima copia, component-path-map.json per rinomine; SHA256SUMS verifica percorsi effettivi tutti, manifestinclusi. Script fotografie da ricreare in staging nuovo, non eseguire in questo pacchetto sigillato. workspace/ conserva rapporto e sorgenti finali; root/ comandi,log,tempi,hashbinari e limiti. CIstorica non certifica modifiche locali noncommittate.
+''')
+entries=[]
+for p in sorted(P.rglob('*')):
+ if p.is_file():p.read_text();entries.append((str(p.relative_to(P)),sha(p)))
+seal=P/'SHA256SUMS';seal.write_text(''.join(h+'  '+f+'\n' for f,h in entries))
+for f,h in entries:assert sha(P/f)==h
+for f,h in source.items():assert sha(R/f)==h
+j={'path':str(P),'files_without_seal':len(entries),'bytes_without_seal':sum((P/f).stat().st_size for f,h in entries),'seal_sha256':sha(seal)};(T/'root/package-result.json').write_text(json.dumps(j,indent=2)+'\n');print(j)

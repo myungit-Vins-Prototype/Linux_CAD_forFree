@@ -1,0 +1,64 @@
+{
+  "results": [
+    {
+      "case": "original",
+      "which": "baseline",
+      "args": [
+        1,
+        0,
+        0.5,
+        0
+      ],
+      "exit": 0,
+      "wallSeconds": 8.930870575990411,
+      "cpuUserSeconds": 66.85299,
+      "cpuSystemSeconds": 0.341076
+    },
+    {
+      "case": "original",
+      "which": "candidate",
+      "args": [
+        1,
+        0,
+        0.5,
+        0
+      ],
+      "exit": 0,
+      "wallSeconds": 13.337479204987176,
+      "cpuUserSeconds": 70.97782699999999,
+      "cpuSystemSeconds": 0.318549
+    },
+    {
+      "case": "rotation",
+      "which": "baseline",
+      "args": [
+        1,
+        1,
+        0.5,
+        0
+      ],
+      "exit": 0,
+      "wallSeconds": 9.07920309099427,
+      "cpuUserSeconds": 68.368236,
+      "cpuSystemSeconds": 0.358907
+    },
+    {
+      "case": "rotation",
+      "which": "candidate",
+      "args": [
+        1,
+        1,
+        0.5,
+        0
+      ],
+      "exit": 0,
+      "wallSeconds": 13.689345683000283,
+      "cpuUserSeconds": 72.668518,
+      "cpuSystemSeconds": 0.35521099999999994
+    }
+  ],
+  "scope": "paired identical probe on old PASS controls only; one observation each, root fullbuild concurrent; no speed ratio for fail vs success",
+  "sourceSha256": "44b78ccb10dcd483ad1af167086d782d4af6e37bae8bd4ac9a41e2bb62c948bd",
+  "baselineLibrarySha256": "afaf62c432e948555b799138f4dc2178ba9e98392b1d4bae3712f5610efebc04",
+  "candidateOffsetSha256": "07a3f6e60cfd2ed659b6f9ea74b7596c5504130cfe9a78ecd658bbfd901f8aa2"
+}

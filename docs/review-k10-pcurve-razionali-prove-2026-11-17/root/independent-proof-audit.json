@@ -1,0 +1,12 @@
+{
+  "final_librarySHA256": "6f0a76dfdde164289e0b646843120c1efdcaabcede8eb38446f5aa3459987356",
+  "actual_fins": 4,
+  "actual_genuine_rational_Q": 4,
+  "direct_positive": 8,
+  "negative_Q_peak": 8.659420760637576e-07,
+  "negative_ratio": 10.82427595079697,
+  "counterfactual_D_power_gap": 7.5,
+  "Q_whole_domain_proved": true,
+  "poly48_and_edge6_exports_byte_identical": true,
+  "E_S_Q_range_edgeTol_sense_genealogy_preserved": true
+}

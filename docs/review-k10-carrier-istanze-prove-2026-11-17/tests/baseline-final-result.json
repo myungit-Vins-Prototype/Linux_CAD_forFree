@@ -1,0 +1,16 @@
+{
+  "linkCommand": [
+    "/usr/bin/c++",
+    "/tmp/k10-instance-carrier-review/tests/release/test_surface_curve_instances.o",
+    "/tmp/k10-instance-carrier-review/tests/release/fk_test_main.o",
+    "/tmp/k10-instance-carrier-review/root/libforgekernel-baseline.a",
+    "-lpthread",
+    "-o",
+    "/tmp/k10-instance-carrier-review/tests/baseline-tests-final"
+  ],
+  "exit": 1,
+  "seconds": 0.00811715099553112,
+  "testSourceSha256": "f381c973b4a15bb323fd874f6a446db461fe6add904d3d0fa2beb68e9c27e327",
+  "librarySha256": "a0c5530e331c08d86fc5c4fa29e4477e66fa1ff4c6c646df15d959f211e9531c",
+  "scope": "Only final six new tests linked against frozen baseline provider; no staged production object"
+}

@@ -1,0 +1,21 @@
+-- Configuring done (0.6s)
+-- Generating done (0.4s)
+-- Build files have been written to: /home/myungit/Linux_CAD_forFree/forgecad-release
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_algo.cpp.o
+[  0%] Linking CXX static library libforgekernel.a
+[ 40%] Built target forgekernel
+[ 40%] Built target forgecad_compute_autogen_timestamp_deps
+[ 40%] Automatic MOC and UIC for target forgecad_compute
+[ 40%] Built target forgecad_compute_autogen
+[ 40%] Building CUDA object CMakeFiles/forgecad_compute.dir/gpu_box_support.cu.o
+[ 44%] Linking CXX static library libforgecad_compute.a
+[ 44%] Built target forgecad_compute
+[ 44%] Impronta dei sorgenti della geometria
+[ 44%] Built target forgecad_autogen_timestamp_deps
+[ 48%] Automatic MOC and UIC for target forgecad
+[ 48%] Built target forgecad_autogen
+[ 48%] Building CXX object CMakeFiles/forgecad.dir/cad_document_io.cpp.o
+[ 48%] Building CUDA object CMakeFiles/forgecad.dir/cuda_support.cu.o
+[ 48%] Linking CXX executable forgecad
+[100%] Built target forgecad
+make: *** No rule to make target 'forgekernel_invert_point_validation_tests'.  Stop.

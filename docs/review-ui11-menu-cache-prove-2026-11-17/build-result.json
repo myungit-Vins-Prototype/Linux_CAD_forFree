@@ -1,0 +1,15 @@
+{
+  "command": [
+    "cmake",
+    "--build",
+    "forgecad-release",
+    "--target",
+    "forgecad",
+    "forgecad_application_theme_tests",
+    "--parallel",
+    "1"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "exit": 0,
+  "seconds": 43.747932423997554
+}

@@ -1,0 +1,19 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-instance-carrier-review/root');D=T/'candidate';b=json.loads((T/'baseline.json').read_text());sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();m=json.loads((T/'candidate-manifest.json').read_text())
+for n,h in m.items():assert sha(D/n)==h and sha(R/n)==b[n],n
+n='kernel/tests/test_surface_curve_bounds.cpp';p=Path('/tmp/k10-instance-carrier-review/tests/test_surface_curve_bounds.cpp');assert sha(p)=='a33f5da4cf7b2544f23ce0722368d4df29e215896627d912b40bcd388a0b6899' and sha(R/n)==b[n];m[n]=sha(p)
+x='kernel/tests/test_surface_curve_instances.cpp';q=Path('/tmp/k10-instance-carrier-review/tests/test_surface_curve_instances.cpp');assert sha(q)=='f381c973b4a15bb323fd874f6a446db461fe6add904d3d0fa2beb68e9c27e327';assert not(R/x).exists();m[x]=sha(q)
+for f in ['kernel/CMakeLists.txt','tools/generate_architecture.py']:assert sha(R/f)==b[f]
+cm=(R/'kernel/CMakeLists.txt').read_text();old='    tests/test_surface_curve_rational.cpp)';assert cm.count(old)==1;cm=cm.replace(old,'    tests/test_surface_curve_rational.cpp tests/test_surface_curve_instances.cpp)')
+gen=(R/'tools/generate_architecture.py').read_text();lines=gen.splitlines(True);desc={
+'kernel/fk_surface_curve_bounds.cpp':'Costruzione UV preproof e residuo continuo E(t)-S(Q(t)) su carrier NURBS2/3 nativi o istanziati a pesi positivi. Snapshot dei poli base e matrici IEEE originali in intervalli outward, traversal finito/cancellabile prima degli accessori ricorsivi; nessun flatten dei poli arrotondati, cap invariati e Failed terminale.',
+'kernel/fk_surface_curve_bounds.h':'Contratti della candidata UV e del residuo continuo: E/Q polynomiali, S NURBS native o istanze condivise con coefficienti e placement originali; budget fisico prefissato e unsupported/certificato/fallito distinti.',
+'kernel/fk_surface_mapping.cpp':'Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: conserva i carrier supportati; fin Plane e NURBS2/3 native o istanziate certificate nel continuo al cap prefit. Candidata UV prima della prova, Failed terminale; genealogia, E/S/Q, parametri, versi e budget delle fin dopo assemblaggio anche senza history utente. Bordi3D, carrier rispetto alla mappa e altre famiglie restano campionati; nessuna mesh di calcolo.'}
+for f,d in desc.items():
+ i=[i for i,l in enumerate(lines) if l.startswith(" '"+f+"':")];assert len(i)==1;lines[i[0]]=" '"+f+"': ('kernel', "+repr(d)+"),\n"
+gen=''.join(lines);marker=" 'kernel/tests/test_surface_curve_rational.cpp':";i=gen.index(marker);gen=gen[:i]+" 'kernel/tests/test_surface_curve_instances.cpp': ('tests', 'Residuo continuo su istanze NURBS: originali base e matrici, pose composte/simmetrie/scale, picchi nascosti e perdita da flatten arrotondato, Quilt razionale pubblico con history nulla/codec, scope E/Q e cancellazione.'),\n"+gen[i:]
+for f in json.loads((T/'candidate-manifest.json').read_text()):(R/f).write_bytes((D/f).read_bytes())
+(R/n).write_bytes(p.read_bytes());(R/x).write_bytes(q.read_bytes());(R/'kernel/CMakeLists.txt').write_text(cm);(R/'tools/generate_architecture.py').write_text(gen)
+m.update({f:sha(R/f) for f in ['kernel/CMakeLists.txt','tools/generate_architecture.py']});(T/'integrated-sources.json').write_text(json.dumps(m,indent=2)+'\n')
+p=R/'CLAUDE.md';s=p.read_text();s=s.replace('Snapshot su coefficienti base e matrici originali da verificare con tre Sol; nessun test UI.','Snapshot base/matrici originali integrato;46Release PASS, sanitizer/build finali in corso; nessun test UI.');assert len(s.encode())<=16384;p.write_text(s);print(m)

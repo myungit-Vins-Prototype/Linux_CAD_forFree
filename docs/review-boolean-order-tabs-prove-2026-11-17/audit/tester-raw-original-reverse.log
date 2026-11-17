@@ -1,0 +1,7 @@
+input_faces=3,12 issues=0,0 volumes=6958.1368538492707,190667.16040259143
+metadata=A maxVertexTolerance=0 maxEdgeTolerance=0 maxPCurveTolerance=0 missingPCurves=0 Etype1=2 Stype0=2 Stype1=1 Qtype0=2 Qtype1=2
+metadata=B maxVertexTolerance=5.2297638841254722e-14 maxEdgeTolerance=5.1779840436885866e-14 maxPCurveTolerance=9.2100439659558432e-08 missingPCurves=0 Etype1=2 Etype3=20 Stype0=1 Stype7=11 Qtype0=30 Qtype1=2 Qtype3=12
+booleanTolerance=9.9999999999999995e-07 linearResolution=9.9999999999999995e-08 threads=0 unify=1
+metadata=result maxVertexTolerance=1.4746097656701118e-07 maxEdgeTolerance=1.4746097656701118e-07 maxPCurveTolerance=9.2100439659558432e-08 missingPCurves=0 Etype1=3 Etype3=20 Stype0=1 Stype1=1 Stype7=11 Qtype0=33 Qtype1=1 Qtype3=12
+success=1 faces=13 shells=1 issues=0 volume=197625.29714050054 historyOperands=2 declared=13 origins=13 badOrigins=0
+immutable=1 seconds=0.84731008100000005

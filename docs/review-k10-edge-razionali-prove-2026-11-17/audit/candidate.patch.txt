@@ -1,0 +1,140 @@
+--- a/kernel/fk_surface_curve_bounds.cpp
++++ b/kernel/fk_surface_curve_bounds.cpp
+@@ -255,7 +255,8 @@
+     std::vector<I> weights; // Empty preserves the polynomial fast path.
+     double minimumWeight = 1;
+ };
+-double residual(const Carrier &surface, int ku, int kv, const VP<2> &uv, const VP<3> &edge) {
++double residual(const Carrier &surface, int ku, int kv, const VP<2> &uv, const VP<3> &edge,
++                const P *edgeDenominator = nullptr, double edgeLower = 1) {
+     const auto u = basis(surface.u, ku, uv[0], surface.pu), v = basis(surface.v, kv, uv[1], surface.pv);
+     VP<3> composed{P{I(0)}, P{I(0)}, P{I(0)}};
+     P denominator{I(0)};
+@@ -284,7 +285,9 @@
+     double largest = 0;
+     for (int axis = 0; axis < 3; ++axis) {
+         const P projected = rational ? product(edge[std::size_t(axis)], denominator) : edge[std::size_t(axis)];
+-        const I value = hull(sum(composed[std::size_t(axis)], projected, true));
++        const I value = edgeDenominator
++            ? hull(sum(product(composed[std::size_t(axis)], *edgeDenominator), projected, true))
++            : hull(sum(composed[std::size_t(axis)], projected, true));
+         if (!finite(value)) return infinity;
+         largest = std::max({largest, std::fabs(value.lo), std::fabs(value.hi)});
+     }
+@@ -292,6 +295,11 @@
+     // max |coordinate| * sqrt(3) bounds the Euclidean norm without squaring
+     // small values into underflow. Both operations are rounded outwards.
+     const double numerator = std::nextafter(largest * std::nextafter(std::sqrt(3.0), infinity), infinity);
++    if (edgeDenominator) {
++        // Positive outward divisions avoid rounding an unsafe nominal product
++        // of denominator lower bounds. Any intermediate overflow fails closed.
++        return ((I(numerator) / I(lower)) / I(edgeLower)).hi;
++    }
+     return rational ? (I(numerator) / I(lower)).hi : numerator;
+ }
+ template<int N> bool finitePoles(const BSplineCurve<N> &curve) {
+@@ -402,7 +410,8 @@
+         || 4 * std::size_t(nu) * std::size_t(nv) + 16 * std::size_t(ne + nq) > maxScalars
+         || !range.isFinite() || !(range.lo < range.hi)
+         || !std::isfinite(range.length())) return original;
+-    if (!polynomialWeights(*e) || (q && !polynomialWeights(*q))) return original;
++    if (weights(ne, [&](int i) { return e->weight(i); }) < 0
++        || (q && !polynomialWeights(*q))) return original;
+     for (int i = 0; i < nu; ++i)
+         for (int j = 0; j < nv; ++j) {
+             cancellationPoint();
+@@ -473,14 +482,34 @@
+     const int qw = q ? weights(nq, [&](int i) { return q->weight(i); }) : 1;
+     const int sw = weights(nu * nv, [&](int i) { return base->weight(i / nv, i % nv); });
+     if (ew < 0 || qw < 0 || sw < 0) return failed;
+-    if (!ew || !qw) return unsupported;
+-    // Account for the fourth homogeneous scalar before snapshot allocation.
+-    if (!sw && 4 * std::size_t(nu) * std::size_t(nv) + 16 * std::size_t(ne + nq) > maxScalars) return failed;
++    if (!qw) return unsupported;
++    // A rational E adds Source<1>: two interval scalars and one copied knot
++    // per pole, plus four additional cubic knots and its two hull scalars.
++    // Charge all additional storage BEFORE any snapshot allocation.
++    const std::size_t edgeWeightScalars = ew ? 0 : 3 * std::size_t(ne) + 6;
++    const std::size_t carrierScalars = (sw ? 3 : 4) * std::size_t(nu) * std::size_t(nv);
++    if (carrierScalars + 16 * std::size_t(ne + nq) + edgeWeightScalars > maxScalars) return failed;
+     // Polynomial partition of unity allows one ORIGINAL translation to be
+     // subtracted from both E and S, retaining small residuals at large poses.
+     const auto anchor = e->poles().front();
+     Point<3> origin{I(anchor[0]), I(anchor[1]), I(anchor[2])};
+-    const auto edgeData = snapshot<3>(*e, origin);
++    auto edgeData = snapshot<3>(*e, origin);
++    Source<1> edgeWeightData;
++    double minimumEdgeWeight = infinity;
++    if (!ew) {
++        edgeWeightData.degree = 3;
++        edgeWeightData.knots = e->knots();
++        edgeWeightData.poles.reserve(std::size_t(ne));
++        for (int i = 0; i < ne; ++i) {
++            cancellationPoint();
++            const double weight = e->weight(i);
++            minimumEdgeWeight = std::min(minimumEdgeWeight, weight);
++            edgeWeightData.poles.push_back(Point<1>{I(weight)});
++            // Original Euclidean pole minus the SAME anchor, then its
++            // original weight. No division or rounded homogeneous conversion.
++            for (I &coordinate : edgeData.poles[std::size_t(i)]) coordinate = coordinate * I(weight);
++        }
++    }
+     const auto uvData = q ? snapshot<2>(*q, Point<2>{I(0), I(0)}) : Source<2>{};
+     Carrier carrier{base->uKnots(), base->vKnots(), nu, nv, base->uDegree(), base->vDegree(), {}, {}, infinity};
+     if (!sw) carrier.weights.reserve(std::size_t(nu) * std::size_t(nv));
+@@ -508,7 +537,8 @@
+         }
+     }
+     std::vector<double> cuts{range.lo, range.hi};
+-    for (const auto *knots : {&edgeData.knots, &uvData.knots})
++    const auto &edgeKnots = std::as_const(edgeData.knots);
++    for (const auto *knots : {&edgeKnots, &uvData.knots})
+         for (double value : *knots) if (value > range.lo && value < range.hi) cuts.push_back(value);
+     std::sort(cuts.begin(), cuts.end()); cuts.erase(std::unique(cuts.begin(), cuts.end()), cuts.end());
+     if (cuts.size() > maxVisits) return failed;
+@@ -521,6 +551,17 @@
+                 work.visit();
+                 const Node node = stack.back(); stack.pop_back();
+                 const auto actual = onRange(edgeData, node.range);
++                P edgeDenominator;
++                double edgeLower = 1;
++                if (!ew) {
++                    edgeDenominator = onRange(edgeWeightData, node.range)[0];
++                    const I bounds = hull(edgeDenominator);
++                    if (!finite(bounds)) return failed;
++                    // This entire node is inside E's original natural domain:
++                    // its positive B-spline basis gives W_E >= min(original w).
++                    edgeLower = std::max(minimumEdgeWeight, bounds.lo);
++                    if (!(edgeLower > 0) || !std::isfinite(edgeLower)) return failed;
++                }
+                 VP<2> uv;
+                 if (q) uv = onRange(uvData, node.range);
+                 else {
+@@ -548,7 +589,8 @@
+                         for (int ku : us) {
+                             for (int kv : vs) {
+                                 work.visit();
+-                                const double bound = residual(carrier, ku, kv, uv, actual);
++                                const double bound = ew ? residual(carrier, ku, kv, uv, actual)
++                                    : residual(carrier, ku, kv, uv, actual, &edgeDenominator, edgeLower);
+                                 local = std::max(local, bound);
+                                 if (!std::isfinite(bound) || bound > budget) { passed = false; break; }
+                             }
+--- a/kernel/fk_surface_curve_bounds.h
++++ b/kernel/fk_surface_curve_bounds.h
+@@ -30,10 +30,11 @@
+ // Instance bounds use native base poles and stored IEEE placements with
+ // outward intervals, never rounded transformed pole() data. Traversal is
+ // bounded/cancellable; exhaustion or inconclusive data return Failed.
+-// E/Q support empty or exactly constant positive original weights only;
+-// their unequal weights and E/Q wrappers return Unsupported.
+-// Original homogeneous carrier coefficients and a positive denominator
+-// bound certify rational S without changing the caller's physical budget.
++// E supports empty or arbitrary strictly positive finite original weights.
++// Q supports empty or exactly constant positive original weights only;
++// unequal Q weights and E/Q wrappers return Unsupported.
++// Original homogeneous E/S coefficients and positive denominator bounds
++// certify rational E/S without changing the caller's physical budget.
+ // Invalid/null data, domains not proved, exhausted fixed resources and
+ // unresolved/over-budget bounds return Failed; callers must treat this as
+ // terminal for the recognized family. Certified alone publishes a finite

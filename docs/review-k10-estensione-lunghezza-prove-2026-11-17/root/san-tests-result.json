@@ -1,0 +1,8 @@
+{
+  "command": [
+    "/tmp/k10-arc-review/root/san-tests"
+  ],
+  "exit": 0,
+  "seconds": 0.044436797994421795,
+  "watchdog_seconds": 60
+}

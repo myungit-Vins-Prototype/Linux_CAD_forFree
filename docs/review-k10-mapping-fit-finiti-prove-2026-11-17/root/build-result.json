@@ -1,0 +1,15 @@
+{
+  "command": [
+    "cmake",
+    "--build",
+    "forgecad-release",
+    "--target",
+    "forgecad",
+    "forgekernel_mapping_nonplane_validation_tests",
+    "forgekernel_surface_mapping_tests",
+    "--parallel",
+    "1"
+  ],
+  "exit": 0,
+  "seconds": 19.29736710699217
+}

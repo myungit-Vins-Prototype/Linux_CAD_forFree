@@ -1,0 +1,82 @@
+K10 arcParameter / extendSheet — test design, NOT FINAL TU
+
+Scope and status
+Read-only repository inspection; no build, runner, new archive or public
+operation executed by this agent. Native reproducer is being prepared by
+core; final expectations wait for its baseline runtime. Parent owns memory,
+repository/CMake integration and verification. No UI or fake Curve subclass.
+
+Current contract
+There is no extendSheetMode or Parametric/Linear/Natural enum in current HEAD.
+The kernel exposes extendSheet(sheet, edges, distance, bool linear=false,
+history). The application persists the boolean and labels the two choices
+'Stessa superficie (prolungata)' / 'Lineare (tangente)'.
+Distance is a physical length along the surface. For native BSpline surfaces,
+header fk_sheet.h explicitly chooses the transverse iso through the midpoint
+of the selected boundary. It does not promise the same physical length at
+both ends of a general tensor patch. Linear=true constructs the tangent strip
+where supported; false continues the support/terminal spline polynomial.
+'Natural' can describe that latter behavior, but is not a public third mode;
+'Parametric' cannot be treated as a request for a UV increment.
+
+arcParameter is reached only by native BSpline transverse-curve continuation
+and native Extrusion U continuation. Plane/Cylinder branches compute lengths
+analytically, and Extrusion V is constant speed. Existing general/planar fit
+and ISO/Newton join certificate machinery is independent: preserve its
+existing supported-family proof / Unsupported legacy policy. No fallback
+from a recognized failed proof, new cap, tolerance increase or replacement
+of physical distance with parameter size is proposed.
+
+Existing tests to reuse
+- kernel/tests/test_sheet.cpp SheetExtend: plane/cylinder same/tangent,
+  cubic spline start/end/both ends and V extension; verifies area=(L+d)*h,
+  counts and checkBody. SheetExtendBSplineKeepsCurve checks source domain
+  preservation and rational invalid-weight continuation.
+- Existing headless forgekernel_sheet_fit_validation_tests (2 groups):
+  certified planar offset/NURBS hidden features, pose and senses; no changes.
+- Existing forgekernel_sheet_join_validation_tests (33 groups), especially
+  positive polynomial/rational/lower/reverse/pose and invalid/cancel: leave
+  sources unchanged. Run only pertinent groups initially; parent decides
+  regression suite after a frozen implementation.
+- forgekernel_surface_tools_tests filters SurfaceExtendUntil*: maximum reach
+  and final trim on planar/curved/faceted/spline targets. extendSheetTo is a
+  separate caller with a maximum physical distance, not a new parametric mode.
+
+Minimal proposed new semantic checks, subject to runtime
+1. Public regression for the confirmed native spline extrusion: construct one
+   declared ProfileSegment/ExtrusionProvenance; select the end fin in that
+   declared side-face loop, not nearest geometry. Baseline must demonstrate
+   returning a physical reach different from distance, not only helper math.
+   Core's proposed cubic Cx=(u-2)^3 on [0,1], exact poles[-8,-4,-2,-1],
+   height1, outward length3 starts Newton at u=2 where speed=0. On [1,2]
+   exact traveled length is1, so an emitted reach there is insufficient.
+   Do not label it a public bug until build/unify/checkBody returns it.
+2. A regularized native continuation Cy=epsilon*u (epsilon dyadic) if it
+   reproduces exhaustion/overflow with finite endpoints: public success must
+   satisfy requested physical length; an explicit failure may be legitimate.
+   This expectation must not force unsupported/singular geometry to succeed.
+3. One regular native positive (no stall) reaching requested distance, plus
+   opposite extension direction or parameter translation/scaling if the
+   reproduction depends on these. Endpoint and range should both be checked;
+   source geometry/Body binary unchanged on success/failure. Avoid duplicating
+   the existing full SheetExtend matrix or inventing tighter tolerances.
+4. Cancellation only if modified solver adds entry/iteration cancellation;
+   use preactivated token with no timed permanent thread.
+
+Output/oracle proposed for root's private driver
+Dump the source selected face/edge, source pcurve U, exact source base poles /
+weights / knots, output extrusion base domain, emitted edge ranges and
+history face descendants/generated faces. Derive the end U from actual output
+carrier/fin, and evaluate arcLength on the actual emitted continuation from
+start to that U. For the collinear monotone cubic additionally use its exact
+polynomial endpoint difference as an independent physical-length oracle.
+checkBody and quadrature results are regression checks, not a global
+continuous certificate. Byte-compare writeBodyBinary(source) before/after;
+never write a CAD/body file. Compare history=null only when needed for the
+specific publication path, rather than adding redundant broad runs.
+
+Quadratic predecessor proposed in prior audit (unexecuted here)
+Cx=t-t^2/2 on [-2,0], poles[-4,-1,0], ExtrusionZ. Start0, length1 gives
+initial end1, zero speed, physical arc0.5. This folds after1; public build may
+already reject it. Core handles the main cubic driver, so no duplicate driver
+or final test source is generated until the baseline outcome is known.

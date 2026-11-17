@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "python3",
+    "/tmp/k10-rational-edge-review/audit/verify_rational_peak_witness.py.txt",
+    "/tmp/k10-rational-edge-review/tests/candidate-originals.jsonl",
+    "/tmp/k10-rational-edge-review/tests/peak-witness-parameter.json",
+    "/tmp/k10-rational-edge-review/audit/rational-peak-witness-result.json"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "observedExit": 0
+}

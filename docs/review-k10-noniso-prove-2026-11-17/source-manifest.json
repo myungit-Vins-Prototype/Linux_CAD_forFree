@@ -1,0 +1,15 @@
+{
+  "CLAUDE.md": "d36374f8895a33efb49152097749b5b09b1d64cdaebe700bd56ed53212b3e01b",
+  "docs/code-review-2026-11-15.md": "378591555300f83c2ec2cb57d3fed948add354317600d744335624df3c194275",
+  "docs/review-k10-noniso-2026-11-17.md": "1723768f41b2416392568029b79d4ac7a7c16c975fd7d1b3e028015b8bf39724",
+  "kernel/CMakeLists.txt": "4ba1d64838ad34f15b7445933fb13f4a7b8c92418917b8084def5b0a79b69e39",
+  "kernel/fk_blend_model.h": "79ae3a57aa175799632503b9ec81993fd6174880a2773cd709059c5a3ab9661f",
+  "kernel/fk_sheet.cpp": "32dc9c3b46c89b049104897706270b080fecc8b419c4535242fd95092a408a9a",
+  "kernel/fk_sheet_join_validation.cpp": "288a297190a477dc785af2809261007ff1efffcd2a9f06821bd1c7683ffbd55c",
+  "kernel/fk_sheet_join_validation.h": "99cd816b27d52c78b5ff0bbcf93ad5facb4d774afea172b500eae85d0f49aa98",
+  "kernel/fk_surface_curve_bounds.cpp": "4e39bfa15f2d329ff8b58e0a99625bf58609cc363f59fc479c83be07f3ee139f",
+  "kernel/fk_surface_curve_bounds.h": "24176f2037e85be67cac692a6b93c339cdab84f6b3599e03444e3f99c1752925",
+  "kernel/tests/test_sheet_join_ledger.cpp": "49dca141fcb34e5170e6f08e98fe1d3353cae29032be63caad9b367dc72dac6e",
+  "kernel/tests/test_surface_curve_bounds.cpp": "75c9b732d8ec334ddb7bbb3e99d279eba5603c4e7798b46475f5f1fd8503e200",
+  "tools/generate_architecture.py": "596a099868567eb29d1ae61715828757a9c7c328b410f53a1ad1e5c100f0924f"
+}

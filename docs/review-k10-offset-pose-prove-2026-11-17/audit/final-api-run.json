@@ -1,0 +1,9 @@
+{
+  "argv": [
+    "/tmp/k10-offset-pose-review/audit/public-pose-probe",
+    "/tmp/k10-offset-pose-review/audit/public-pose-result.json"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "returncode": 0,
+  "elapsed_seconds": 20.159100977994967
+}

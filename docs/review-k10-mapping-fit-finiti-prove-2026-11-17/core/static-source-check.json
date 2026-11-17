@@ -1,0 +1,30 @@
+{
+  "baselineSha256": "f9187aa9903c07096fe029dad8f271cf850d12d6c6a273b9ed538c2afc5a8b27",
+  "candidateSha256": "03d21ceab86aead510559aee7101ade9a4aba8b1ef516671943b0bfa823fd001",
+  "originalCallbackInvocationSites": 11,
+  "candidateCheckedValueInvocationSites": 11,
+  "candidateRawCallbackInvocationSites": 1,
+  "originalDistanceInvocationSites": 3,
+  "candidateCheckedDistanceInvocationSites": 3,
+  "candidateRawDistanceInvocationSites": 1,
+  "unchangedFunctions": [
+    {
+      "symbol": "Vec3 bezierPoint(",
+      "byteEqual": true,
+      "sha256": "ad5bf86065427a4cfede5f180f6372039fa85a8d4e1750b8b92dfb1d1d0b981d"
+    },
+    {
+      "symbol": "Vec3 cellPoint(",
+      "byteEqual": true,
+      "sha256": "064b427a8811475f2924ef7b04199a8cf9283626cd86e82fd6fecb57336c74ad"
+    },
+    {
+      "symbol": "std::array<Vec3, 6> quintic(",
+      "byteEqual": true,
+      "sha256": "d80fec4c60bd9f537046859022b841b119a4ca5ab1e4a295dc964399c8d40bd9"
+    }
+  ],
+  "cppCompileExecuted": false,
+  "cppRuntimeExecuted": false,
+  "archivesCopied": 0
+}

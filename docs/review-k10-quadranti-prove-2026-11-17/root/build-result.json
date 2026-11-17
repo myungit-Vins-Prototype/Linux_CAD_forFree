@@ -1,0 +1,18 @@
+{
+  "command": [
+    "cmake",
+    "--build",
+    "forgecad-release",
+    "--target",
+    "forgecad",
+    "forgekernel_quadrant_breakpoints_validation_tests",
+    "forgekernel_curve_projection_tests",
+    "forgekernel_pcurve_deviation_validation_tests",
+    "forgekernel_invert_point_validation_tests",
+    "forgekernel_tests",
+    "--parallel",
+    "1"
+  ],
+  "exit": 0,
+  "seconds": 18.99706655999762
+}

@@ -1,0 +1,12 @@
+{
+  "AGENTS.md": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+  "CLAUDE.md": "bbbf33f2582dd1122443010719bc4dfbfd7d4bca3c048b88c9dfe62acf5e41d2",
+  "docs/code-review-2026-11-15.md": "d2f138196539646482c7bf7d14576ae479f74925959a7bd7305bc34976e1a93d",
+  "docs/history/claude-prima-k10-lunghezza-curve-2026-11-17.md": "5353c98c64007a575e867cc4fa0facbba885fd1a6703c2c2d440139286e7168b",
+  "docs/review-k10-lunghezza-curve-2026-11-17.md": "abf2ead6879f28b9d50bbc52aa28283a73cdca489ecfe53909fc0b828806b414",
+  "kernel/CMakeLists.txt": "6c648091e80ab20c33c7f28ddd9c47309ac0c08c1424e380c30e41555e1a3b84",
+  "kernel/fk_curve_algo.cpp": "8ceb22befce610f835a9271ca88b497470a5ba2497210d94cbb8867bccfa3400",
+  "kernel/fk_curve_length_cache.h": "d9f5a424ffc931bae46b818b6bcff644ca06376dabbb9c301ba8ce423f9aa1e0",
+  "kernel/tests/test_arc_length_validation.cpp": "cc1703a3b4c927858ff9f4e409b31168d638b3075d3e962061957380322ed738",
+  "tools/generate_architecture.py": "88ae74384b00d9c01d94da6f6af6cf24b045658e92b9d87a3cc90e85d6b106ee"
+}

@@ -1,0 +1,312 @@
+{
+  "scope": "Independent K10 mapping nonPlane final52fin public APIs, exact Fraction, baseline negative and static audit; no global mapping intent claim",
+  "payloadFiles": 61,
+  "payloadBytes": 4151525,
+  "files": [
+    {
+      "file": "README.txt",
+      "bytes": 2067,
+      "sha256": "6cd8c590b42c95688b3a3cace60e877941af25e4e0c7238b785d57b46ebea34f"
+    },
+    {
+      "file": "after/fk_sheet_join_validation.cpp.txt",
+      "bytes": 4271,
+      "sha256": "15e314c0f54241ab8d682290db24065e1a033ed430c6e54474ead062b84f258a"
+    },
+    {
+      "file": "after/fk_surface_curve_bounds.cpp.txt",
+      "bytes": 26028,
+      "sha256": "24b34d948e7834caf261c8c8e733de067a24795738aae31ac6749390cc9a2c28"
+    },
+    {
+      "file": "after/fk_surface_curve_bounds.h.txt",
+      "bytes": 2543,
+      "sha256": "6f2256143a51864b01d903ab1daa08570c802a69226d33cb6c76b7842000ea41"
+    },
+    {
+      "file": "after/fk_surface_mapping.cpp.txt",
+      "bytes": 42106,
+      "sha256": "019423a02a6504b3d6e1d659ba9b3b0707397878d5b8bad3340efd52f2b45d3a"
+    },
+    {
+      "file": "baseline-cylinder-fin8-fraction.json",
+      "bytes": 803,
+      "sha256": "a5b72c5f64d8befd2e6c7c1d388d56089fbf90ac93f0cb99332daa4367a9525f"
+    },
+    {
+      "file": "baseline-cylinder-fin8-fraction.log",
+      "bytes": 224,
+      "sha256": "ca425eddf4521635efdf9dcc80ddfbe2c0d7d6f3655fce5c49acf596f0c54238"
+    },
+    {
+      "file": "baseline-cylinder-fin8.json",
+      "bytes": 37725,
+      "sha256": "00272b0c3afd8bf27fd84eb5760aa14a06f95e26320a3042ce4eb7638a130a1d"
+    },
+    {
+      "file": "baseline-domain-result.json",
+      "bytes": 2809,
+      "sha256": "2f17797f1351ca8cf27b468640cf2fe040f5064c6242c61c5121fc92743e21fe"
+    },
+    {
+      "file": "baseline-domain.log",
+      "bytes": 63,
+      "sha256": "dd4db534bc02fda9987503041fe44ee4425b1b5df6adfbfcb18aa39b099b3270"
+    },
+    {
+      "file": "baseline-fins.jsonl",
+      "bytes": 366604,
+      "sha256": "af0a274dfce1661e752e4f33a91039577dcf1661bd886b1cc8271a47cadbc615"
+    },
+    {
+      "file": "before/fk_sheet_join_validation.cpp.txt",
+      "bytes": 8195,
+      "sha256": "802e63f376ef95861337fc83a8cdf4d0472931b770fc46cc6922105f4a1b1cf9"
+    },
+    {
+      "file": "before/fk_surface_curve_bounds.cpp.txt",
+      "bytes": 22081,
+      "sha256": "01e69c5c5bea9aa78cbad607750cc58aa3b3fd562ab86cccb889d02519a9cf7a"
+    },
+    {
+      "file": "before/fk_surface_curve_bounds.h.txt",
+      "bytes": 1741,
+      "sha256": "b44a33f8842ce44be82674594c48e1a6480ea76d66fb695010dd2885d8f4cfa6"
+    },
+    {
+      "file": "before/fk_surface_mapping.cpp.txt",
+      "bytes": 39287,
+      "sha256": "c830c1c802657b50dd1cafa223af91263dba185cdf109524a16c602b6986f707"
+    },
+    {
+      "file": "before-after-coefficients.json",
+      "bytes": 868,
+      "sha256": "a9edd267f26bda7686c7e13ed2109c4073d83f6235f548d7266bb89e9eb3b662"
+    },
+    {
+      "file": "candidate-static-comparison.json",
+      "bytes": 664,
+      "sha256": "28c7bd0dd60030f8044693a26361eed64a74c79b3dc8d3daeb34fd44f592a7c5"
+    },
+    {
+      "file": "candidate.patch.txt",
+      "bytes": 23100,
+      "sha256": "d260d6c752ed49570d2d4f5dca691312239024c59aa3410c02450bdeb81cb355"
+    },
+    {
+      "file": "export_public_final.cpp.txt",
+      "bytes": 10222,
+      "sha256": "7d3f2789f98c500f296f6940a28546e92b868db772dfde58e159b6c3a0007438"
+    },
+    {
+      "file": "final-cylinder.log",
+      "bytes": 75,
+      "sha256": "f041fd13ba788e467565ecf50360df4648e2209ff6c6e64bc8e853ed2caaf132"
+    },
+    {
+      "file": "final-export-compile.json",
+      "bytes": 534,
+      "sha256": "1fbcc7ae8fe4c3d09d2f778d218606e126e53eb9d039f42b8a2b9a4f72066cc7"
+    },
+    {
+      "file": "final-export-compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "final-export-link.json",
+      "bytes": 479,
+      "sha256": "d30312e0cd0c78681624554f97d665d9d0f824aa2cbe633bfd91648b58f14e64"
+    },
+    {
+      "file": "final-export-link.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "final-exports/cylinder.json",
+      "bytes": 295288,
+      "sha256": "dcefa506919f3d5bd37a99517b34ef2b9878dd957103a5702f90c616ea1e6075"
+    },
+    {
+      "file": "final-exports/nurbs.json",
+      "bytes": 66303,
+      "sha256": "78098313e8a43ca1f478218e2163e66992bfe22f604fb00d943a019ca0b1482c"
+    },
+    {
+      "file": "final-exports/quilt-rational.json",
+      "bytes": 7336,
+      "sha256": "4ae3e8de7e268ef8d4b57b6cacc50109c35821bc6acce662bfdff11662650a1a"
+    },
+    {
+      "file": "final-fraction-batch.json",
+      "bytes": 17876,
+      "sha256": "809d287a4af91e17849b2eb28577bdb6388df81dadb5744ba369881c3bca6f23"
+    },
+    {
+      "file": "final-library.json",
+      "bytes": 270,
+      "sha256": "90781802e6ab1da93081ac2e2a8b796e7432829faa5932edccad60e028b3dc25"
+    },
+    {
+      "file": "final-nurbs.log",
+      "bytes": 72,
+      "sha256": "14e78d6836a4c672047d97c1b6fdbc593bd1ba82a1f6b927f6b1f3ebf2f612cf"
+    },
+    {
+      "file": "final-public-runs.json",
+      "bytes": 1118,
+      "sha256": "417c007548f7fe890c989d22a93f142550f806dd3ff98d8fdb55159c9efc5b8b"
+    },
+    {
+      "file": "final-quilt-rational.log",
+      "bytes": 79,
+      "sha256": "d32bba6b82f00dcb90316b84f62c8aa920fd7b8460ffade11ecdc9bf7e745891"
+    },
+    {
+      "file": "final-review.txt",
+      "bytes": 6371,
+      "sha256": "8c4854da4db430e450a22e809bc1af18cea0c31eae1ca243c105fc41efbe3c4c"
+    },
+    {
+      "file": "fraction-final-cylinder.json",
+      "bytes": 8612,
+      "sha256": "26991b5d09edcc17a8a6dd78e4ddfbf5dbed88daa9546d020a7afa27949d69b0"
+    },
+    {
+      "file": "fraction-final-cylinder.log",
+      "bytes": 5988,
+      "sha256": "3eca3fd26b506d682647e35d35e95170caa2638f683ec8faf4aa86915194dcb5"
+    },
+    {
+      "file": "fraction-final-nurbs.json",
+      "bytes": 8499,
+      "sha256": "570ecea913ccee7ece29b7a74cb08eefbb3aa5176e7b1b3e8732876745795b32"
+    },
+    {
+      "file": "fraction-final-nurbs.log",
+      "bytes": 5872,
+      "sha256": "a8b6cf41040ac3619eebc58a17022a98c222243cf8924d6ee13a78388f0f99cf"
+    },
+    {
+      "file": "fraction-final-quilt-rational.json",
+      "bytes": 1859,
+      "sha256": "c5f5fa439d710f1a71082ffba1cc83e5381e3a3318d9eaa151df8ed354176b6d"
+    },
+    {
+      "file": "fraction-final-quilt-rational.log",
+      "bytes": 1013,
+      "sha256": "d4168ef66396670d9c8adc09c87c8cf4d96c0be74971455ac05901baf78dd6c8"
+    },
+    {
+      "file": "fraction_common.py.txt",
+      "bytes": 4133,
+      "sha256": "6c201bca580c820cbedb5ba4e2b5b397af7958046266fe96528bb9de3aafe2cb"
+    },
+    {
+      "file": "graph-consult-before.json",
+      "bytes": 3079133,
+      "sha256": "7990fa6bed1ce94ec2f2478b3915e82351f49cc37cd4bb9eff09b6144fd8a356"
+    },
+    {
+      "file": "narrow-witness-result.json",
+      "bytes": 2770,
+      "sha256": "4cd95c1cd6cbfce410de030f67a757b9ce51c99fef9ed59f7255ef8a5aacaaef"
+    },
+    {
+      "file": "narrow-witness.log",
+      "bytes": 2770,
+      "sha256": "4cd95c1cd6cbfce410de030f67a757b9ce51c99fef9ed59f7255ef8a5aacaaef"
+    },
+    {
+      "file": "probe_public_rational.cpp.txt",
+      "bytes": 6360,
+      "sha256": "b78ed83d893e607d7dfbe7f65625f913d361297f73580de65d61e249c0d22104"
+    },
+    {
+      "file": "provenance.json",
+      "bytes": 1714,
+      "sha256": "79d01d3b741b1d61d1d3d8b679a553849bdc66ea4065966530c8139306eb08b2"
+    },
+    {
+      "file": "public-rational-baseline.json",
+      "bytes": 6983,
+      "sha256": "71b4a913f5c0330f6c2636596b6afb90266a0750fe04db419bb96f3e3771c974"
+    },
+    {
+      "file": "rational-baseline-build.json",
+      "bytes": 595,
+      "sha256": "04eae2c2528ee410092fd8d16c4cee04ef164ddca6772dee80a6c47a78d012e0"
+    },
+    {
+      "file": "rational-baseline-build.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "rational-baseline-fraction-result.json",
+      "bytes": 1812,
+      "sha256": "0ce68cc0e6a5657bfd2aa55fde50a8b5da01f328212fe5ce6b980c203bd6a81a"
+    },
+    {
+      "file": "rational-baseline-fraction.log",
+      "bytes": 965,
+      "sha256": "f3fb82dfa5fc18897b5591f285fc36d55d57fca51c9c5085af4e157486ae5f82"
+    },
+    {
+      "file": "rational-baseline-run.json",
+      "bytes": 220,
+      "sha256": "4d75225e69586bdd9571e87369720c570e0646de69c7dedf9b4aea668ad5e97b"
+    },
+    {
+      "file": "rational-baseline-run.log",
+      "bytes": 57,
+      "sha256": "728ba9c46a9b1d6c3881c3f7e118217bf19b5998de25c705116bf7c16f346ad8"
+    },
+    {
+      "file": "reconstruct-before.log",
+      "bytes": 190,
+      "sha256": "022b66177fb13c5573742a5f2d9cc216a94fe5b7589e13a74b11330b74dd7090"
+    },
+    {
+      "file": "reconstructed-before.json",
+      "bytes": 802,
+      "sha256": "9e615836e2380cca784637cdac3f4858d7a56aefcc5e5e33d880a84cad05dd0d"
+    },
+    {
+      "file": "run_final_public.py.txt",
+      "bytes": 3176,
+      "sha256": "da9e5dd70624ba9925bb4fcf6fd97fadc520898cc23ab414144779c76da4771e"
+    },
+    {
+      "file": "source-baseline.json",
+      "bytes": 2207,
+      "sha256": "c446d3e36197d49b7b90c7961406a4b60c7609667a860e78cbc78d9aefa35520"
+    },
+    {
+      "file": "static-review.txt",
+      "bytes": 5365,
+      "sha256": "87dbeb5f89098900de33672856d0398831cfb937344c3502bf508cdaec5fec70"
+    },
+    {
+      "file": "verify_baseline_domain.py.txt",
+      "bytes": 1638,
+      "sha256": "f9e5ef2bcf00934d075277cb771fefc8c7c9f1f6f25b9306d28fe8ecd66fffc9"
+    },
+    {
+      "file": "verify_narrow_witness.py.txt",
+      "bytes": 2954,
+      "sha256": "436404df57187cd2006bcccc3c0a93c85e116cf987ded09975f146a071455f8a"
+    },
+    {
+      "file": "verify_public_fins.py.txt",
+      "bytes": 2876,
+      "sha256": "35b6b3454577ce3cd99b800c6542c804b9a47c1c45a1ff7ebbf0ad723d6297e5"
+    },
+    {
+      "file": "verify_tensor_fraction.py.txt",
+      "bytes": 5760,
+      "sha256": "08fccbe94b071f2c478e0d268f6a8b3fb60ea663f0a7c456033d826e44b63cf3"
+    }
+  ]
+}

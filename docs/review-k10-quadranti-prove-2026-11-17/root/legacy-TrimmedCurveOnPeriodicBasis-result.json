@@ -1,0 +1,8 @@
+{
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "TrimmedCurveOnPeriodicBasis"
+  ],
+  "exit": 0,
+  "seconds": 0.0315478720003739
+}

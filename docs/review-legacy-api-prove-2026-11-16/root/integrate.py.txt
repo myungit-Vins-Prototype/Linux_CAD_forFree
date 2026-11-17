@@ -1,0 +1,15 @@
+from pathlib import Path
+import hashlib,json,subprocess
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/legacy-api-review');O=T/'root';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+base=json.loads((O/'hashes-before.json').read_text());assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip()==json.loads((O/'base.json').read_text())['head']
+packages={'extend':['forgeCad2026_viewport.h','forgeCad2026_viewport_selection.cpp'],'drawing':['cad_drawing_editor.h','cad_drawing_editor.cpp','cad_drawing_window.cpp'],'utilities':['cad_forge.h','cad_forge.cpp','cad_sketch_refs.h','cad_sketch_refs.cpp']};inputs={}
+for folder,files in packages.items():
+ for f in files:
+  before=T/folder/'before'/f;after=T/folder/'after'/f
+  assert sha(R/f)==base[f]==sha(before),(folder,f);inputs[f]=after
+for f,p in inputs.items():(R/f).write_bytes(p.read_bytes())
+p=R/'tools/generate_architecture.py';s=p.read_text();assert sha(p)==base[str(p.relative_to(R))]
+changes={"'Editor della tavola: centri/assi":"'Editor della tavola: aggiornamento transazionale del modello tramite API coordinata dal contenitore; centri/assi",'documento multifoglio, salvataggio e PDF multipagina.':'documento multifoglio, salvataggio e PDF multipagina. Il comando Aggiorna dal .prt salvato verifica identita e impronta della sorgente nel contenitore.','della nuova ellisse selezionabili e candidati snap.':'della nuova ellisse selezionabili e candidati snap. Estendi e coordinato dal pannello con callback changed/key e anteprima differita.'}
+for a,b in changes.items():assert s.count(a)==1,(a,s.count(a));s=s.replace(a,b)
+compile(s,str(p),'exec');p.write_text(s)
+source={f:sha(R/f) for f in [*inputs,'tools/generate_architecture.py']};(O/'integrated-sources.json').write_text(json.dumps(source,indent=2)+'\n');print('Integrated',len(inputs),'source files and curated descriptions; no Git mutations')

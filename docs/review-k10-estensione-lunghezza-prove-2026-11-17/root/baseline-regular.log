@@ -1,0 +1,4 @@
+CASE lo=-1 epsilon=1.4551915228366852e-11 inputIssues=0 selected=1 sourceSpeed=3
+REFERENCE initialEnd=2 speedAt2=1.4551915228366852e-11 arc1to2=0.99999999999999989 requested=3
+SUCCESS faces=1 edges=6 issues=0 maxX=177.53408777564368 deltaX=178.53408777564368 historyOperands=1
+EMITTED face=0 uLo=-1 uHi=7.6203140591838299 emittedArc=178.53408777564366

@@ -1,0 +1,42 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-pcurve-pole-review');P=R/'docs/review-k10-pcurve-residui-finiti-prove-2026-11-17';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();assert not P.exists()
+components=[('core',T/'core/final-proof','MANIFEST.json','8698a25f56fa7bf033790f131539ae07ba6e0b8044542f6a638386d11d240cb4'),('audit',T/'audit/metric-final-proof','MANIFEST.json','0bec8dc461d14e1042f11ac833a6ad83a41395c1ad610992c6f6bc977a41114c'),('tests',T/'tests','manifest.json','609704e00d31a7ad5c4144718f04192f321e6f85a5a2e77d0fb050b38e3cd8f1')]
+for label,d,name,h in components:
+ assert sha(d/name)==h;j=json.loads((d/name).read_text());files=j['files'];entries=files if isinstance(files,list) else [{'path':f,'sha256':x} for f,x in files.items()]
+ for e in entries:assert sha(d/e['path'])==e['sha256']
+renames={}
+def copy(d,label):
+ for p in d.rglob('*'):
+  if not p.is_file() or '__pycache__' in p.parts or p.name=='package-result.json':continue
+  p.read_text();assert p.suffix not in {'.o','.a','.prt','.step','.body'};rel=str(p.relative_to(d));dest=rel+'.txt' if p.suffix in {'.cpp','.h','.py'} else rel;q=P/label/dest;q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes())
+  if rel!=dest:renames[label+'/'+rel]=label+'/'+dest
+for label,d,_,_ in components:copy(d,label)
+copy(T/'root','root')
+files=set(json.loads((T/'root/integrated-sources.json').read_text()))|{'AGENTS.md','CLAUDE.md','docs/code-review-2026-11-15.md','docs/review-k10-pcurve-residui-finiti-2026-11-17.md','docs/history/claude-prima-k10-pcurve-residui-finiti-2026-11-17.md'};source={}
+for f in sorted(files):p=R/f;q=P/'workspace'/(f+'.txt');q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes());source[f]=sha(p)
+(P/'source-manifest.json').write_text(json.dumps(source,indent=2)+'\n');(P/'component-path-map.json').write_text(json.dumps(renames,indent=2)+'\n')
+a=json.loads((T/'root/architecture-audit.json').read_text());pres=json.loads((T/'root/preservation-audit.json').read_text());clean=json.loads((T/'root/cleanup-result.json').read_text())
+(P/'README.txt').write_text(f'''K10: residui pcurve non finiti — 17 novembre 2026
+
+Correzione integrata di pcurveDeviation: misura indefinita o senza campioni restituisce +infinito, mai falso zero. exactPCurve e i due percorsi finali fitPCurve accettano soltanto residui finiti entro i cap originali. Fattore storico 50 del fallback invariato. Cancellazione e eccezioni si propagano; nessun nuovo limite arbitrario ai campioni. Una TU produzione, nessun header pubblico modificato.
+
+Tre riproduzioni native eseguite dal coordinatore: retta a distanza 1 mm con campioni -1/0 (prima 0, ora +infinito; positivi 1/16 invariati); Circle con dati finiti prossimi a DBL_MAX ma punti in overflow (prima errore zero e exact accettata, ora rifiuto); NURBS cubica a poli nulli, nodi [1,1,1,1,2,2,2,2], pesi [21,29,37,45] interrogata deliberatamente fuori dominio [0,1]. Il denominatore 24t-3 si annulla in .125: prima fit accettato con errore zero, ora rifiuto e parametro di uscita intatto. Controllo positivo in dominio [1,2] passa. L'auditor ha verificato indipendentemente l'algebra razionale, runtime solo root. Non sono documenti CAD ordinari dichiarati risolti: coordinate fuori sizebox e interrogazione fuori dominio esplicitamente delimitate.
+
+Nuova TU sei gruppi: baseline 3/6, candidato 6/6 Release e 6/6 ASan/UBSan con leak detection. Una TU produzione, nuova TU test e main strumentati; restante kernel Release, non intera app. Include positivi finiti e picchi ai breakpoint originali E/Q, campioni e range invalidi, overflow di valutazioni/distanza, accettazione anche con tolleranza infinita e cancellazione. La misura resta campionata, nessuna garanzia continua globale.
+
+App completa, quattro target kernel e quattro CTest PASS senza skip; runner storico eseguito solo con filtro PCurve, 11/11 PASS. Nessun UI, intera suite 483, nuova CI, commit/push, CAD modificato o riavvio dell'app aperta. Compilazioni/analisi seriali, link alla libreria esistente senza copiarla. Dopo tutti i test eliminati soltanto {clean['removed_files']} ELF/oggetti privati ricreabili, {clean['bytes']} byte; piani e hash conservati insieme ai sorgenti e log. Non conteggiato di nuovo il recupero RAM della consegna precedente.
+
+Tre agenti GPT-6.1 Sol: patch, audit indipendente e test; nessun blocker finale. Runtime soltanto root. Indagine nearPole senza testimone pubblico, nessuna modifica speculativa. Restano K10 globale, famiglie non coperte, Newton, carrier e topologia; la prova puntuale non certifica il continuo. Totale 33 rilievi funzionali invariato.
+
+Architettura {a['nodes']} nodi / {a['edges']} relazioni / {a['units']} TU, zero errori; hash sorgenti/configurazione/HTML, call/include/reference nei due versi e --check PASS. Generati ignorati non aggiunti a Git. Preservati {pres['previous_packages']} pacchetti precedenti / {pres['previous_artifacts']} artefatti e {pres['preserved_existing']} dei {pres['baseline_files']} file baseline; sole cinque modifiche esistenti attese documentate. HEAD/origin 47c7c19 e index vuoto invariati. Memoria {pres['CLAUDE_bytes']} byte e archivio completo della versione precedente.
+
+Payload solo UTF-8/testo/JSON/XML e sorgenti inerti con suffisso aggiuntivo .txt. Nessun ELF, oggetto, archivio, CAD o B-rep. I manifest dei componenti mantengono i percorsi di staging verificati prima della copia; component-path-map.json documenta le rinomine. SHA256SUMS verifica i percorsi effettivi di tutto il pacchetto, manifest inclusi. Gli script sono fotografie della procedura e vanno ricreati in staging nuovo, non eseguiti dentro le prove sigillate. Il rapporto esterno e root/ contengono comandi, log, tempi, limiti e hash dei binari finali. La CI storica non certifica il lavoro locale non committato.
+''')
+entries=[]
+for p in sorted(P.rglob('*')):
+ if p.is_file():p.read_text();entries.append((str(p.relative_to(P)),sha(p)))
+seal=P/'SHA256SUMS';seal.write_text(''.join(h+'  '+f+'\n' for f,h in entries))
+for f,h in entries:assert sha(P/f)==h
+for f,h in source.items():assert sha(R/f)==h
+j={'path':str(P),'files_without_seal':len(entries),'bytes_without_seal':sum((P/f).stat().st_size for f,h in entries),'seal_sha256':sha(seal)};(T/'root/package-result.json').write_text(json.dumps(j,indent=2)+'\n');print(j)

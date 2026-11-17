@@ -1,0 +1,21 @@
+[ 40%] Built target forgekernel
+[ 40%] Built target forgecad_compute_autogen_timestamp_deps
+[ 40%] Built target forgecad_compute_autogen
+[ 44%] Built target forgecad_compute
+[ 44%] Built target forgecad_autogen_timestamp_deps
+[ 48%] Built target forgecad_autogen
+[100%] Built target forgecad
+[100%] Built target forgekernel
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_invert_point_validation_tests.dir/tests/fk_test_main.cpp.o
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_invert_point_validation_tests.dir/tests/test_invert_point_validation.cpp.o
+[100%] Linking CXX executable forgekernel_invert_point_validation_tests
+[100%] Built target forgekernel_invert_point_validation_tests
+[100%] Built target forgekernel
+[100%] Linking CXX executable forgekernel_mapping_nonplane_validation_tests
+[100%] Built target forgekernel_mapping_nonplane_validation_tests
+[100%] Built target forgekernel
+[100%] Linking CXX executable forgekernel_sheet_join_validation_tests
+[100%] Built target forgekernel_sheet_join_validation_tests
+[100%] Built target forgekernel
+[100%] Linking CXX executable forgekernel_surface_instances_tests
+[100%] Built target forgekernel_surface_instances_tests

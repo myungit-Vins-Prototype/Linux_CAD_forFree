@@ -1,0 +1,28 @@
+from pathlib import Path
+import json,re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-global-audit-review/root');a=json.loads((T/'architecture-audit.json').read_text());build=json.loads((T/'build-result.json').read_text());ct=json.loads((T/'ctest-result.json').read_text());s=(T/'report-draft.md').read_text().replace('BUILD_PENDING',f"PASS in {build['seconds']:.2f}s, compilazione seriale; eseguibile aggiornato, app aperta non riavviata.").replace('CTEST_PENDING',f"2/2 PASS senza skip in {ct['seconds']:.2f}s; runner nonPlane12/12, inclusi i sei nuovi gruppi.").replace('ARCH_PENDING',f"PASS: {a['nodes']} nodi, {a['edges']} relazioni, {a['units']} TU; hash sorgenti/configurazione/HTML e chiamate/include/riferimenti nei due versi verificati.32 pacchetti precedenti preservati.")
+s=s.replace('Per il seguito sono state usate compilazioni seriali, analisi architetturale con un solo worker e link diretto alla libreria esistente, senza copie dell’archivio in RAM.','Per il seguito sono state usate compilazioni seriali, analisi architetturale con un solo worker e link diretto alla libreria esistente, senza copie dell’archivio in RAM. Il massimo RSS di processo figlio misurato con GNU time è stato circa617MiB nella build e362MiB nell’analisi, non il consumo globale del sistema. A verifiche concluse sono stati rimossi anche i nuovi ELF/oggetti privati, mantenendo sorgenti, hash, comandi e risultati.');assert '_PENDING' not in s;(R/'docs/review-k10-mapping-fit-finiti-2026-11-17.md').write_text(s)
+p=R/'docs/code-review-2026-11-15.md';s=p.read_text();head='# Review generale ForgeCAD — 15 novembre 2026\n\n';assert s.startswith(head)
+if s.startswith(head+'**K10 fit e memoria,'):s=head+s[len(head):].split('\n\n',1)[1]
+s=head+'''**K10 fit e memoria, prosecuzione verificata:** corretto il NaN ignorato dalle sonde del fit con controllo di callback/jet/poli/residui finiti e preflight; output pubblicato dopo costruzione riuscita. App/2CTest/6nuovi+sanitizer/mappa PASS, fit globale ancora campionato e33rilievi invariati. Liberati14GiB di ELF/archive ricreabili da/tmp, nessun processo o CAD modificato; successive verifiche seriali e binari temporanei ripuliti. Nessun test UI, commit o push. [Rapporto e limiti](review-k10-mapping-fit-finiti-2026-11-17.md).
+
+'''+s[len(head):];p.write_text(s)
+p=R/'CLAUDE.md';s=p.read_text();start=s.index('**17/11 — RAM liberata;');end=s.index('\nQ razionali17/11:',start);s=s[:start]+'''**17/11 — RAM e K10 fit verificati; nessun commit/push.**
+Liberati14GiB di staging; nessun processo/CAD/prova toccato. FitNaN corretto:
+app/2CTest/6nuovi+SAN/mappa PASS, globale aperto. [Rapporto](docs/review-k10-mapping-fit-finiti-2026-11-17.md).
+Wrapper: app/6CTest/67mirati+SAN/Fraction/mappa PASS. [Prove](docs/review-k10-wrapper-curve-2026-11-17.md).
+'''+s[end:]
+old='''Q razionali17/11: app/6CTest/59mirati+SAN/ledger4+Fraction/mappa PASS.
+[Rapporto](docs/review-k10-pcurve-razionali-2026-11-17.md).
+
+Bordi E razionali17/11: app/6CTest/52mirati+SAN/ledger4+Fraction/mappa PASS.
+[Rapporto](docs/review-k10-edge-razionali-2026-11-17.md).'''
+new='''Q/E razionali17/11: app/6CTest/59/52mirati+SAN/ledger4+Fraction/mappa PASS.
+[Q](docs/review-k10-pcurve-razionali-2026-11-17.md), [E](docs/review-k10-edge-razionali-2026-11-17.md).''';assert old in s;s=s.replace(old,new)
+old='''Offset/Superfici17/11: stopUVrelativo rimosso,cap invariati; scala/posa e aperto aggiuntivo PASS.
+App/21CTest/483kernel/3nuovi/19sanitizer/auditAPI/Fractionpredicato/mappa PASS;più lavoro proiezione,K10 parziale.
+[Prove/costi/limiti](docs/review-k10-offset-pose-2026-11-17.md).'''
+new='''Offset/Superfici17/11: posa/scala/aperto corretti,cap invariati; app/21CTest/483kernel/19SAN/Fraction/mappa PASS.
+[Prove, costo e limiti](docs/review-k10-offset-pose-2026-11-17.md).''';assert old in s;s=s.replace(old,new)
+needle='- App Linux: `forgecad-release/forgecad`;';assert needle in s;s=s.replace(needle,'- 17/11, memoria: compilazioni/analisi seriali; ripulire solo ELF/archive ricreabili degli staging `/tmp` conclusi;\n  conservare sorgenti, CAD, log e prove.\n'+needle,1)
+assert len(s.encode())<=16384,len(s.encode());assert len(re.findall(r'^\*\*',s,re.M))<=10;p.write_text(s);print('memory',len(s.encode()),len(s.splitlines()))

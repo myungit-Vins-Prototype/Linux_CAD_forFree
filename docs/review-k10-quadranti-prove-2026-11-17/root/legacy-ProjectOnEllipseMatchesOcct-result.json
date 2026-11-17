@@ -1,0 +1,8 @@
+{
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "ProjectOnEllipseMatchesOcct"
+  ],
+  "exit": 0,
+  "seconds": 0.0317822359938873
+}

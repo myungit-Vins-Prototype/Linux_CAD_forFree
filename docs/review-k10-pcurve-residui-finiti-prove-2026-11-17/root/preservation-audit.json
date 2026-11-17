@@ -1,0 +1,23 @@
+{
+  "baseline_files": 7374,
+  "changed_existing": [
+    "CLAUDE.md",
+    "docs/code-review-2026-11-15.md",
+    "kernel/CMakeLists.txt",
+    "kernel/fk_pcurve.cpp",
+    "tools/generate_architecture.py"
+  ],
+  "preserved_existing": 7369,
+  "previous_packages": 34,
+  "previous_artifacts": 4756,
+  "HEAD_origin_main": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "index_empty": true,
+  "no_commit_push_UI_CI_general483": true,
+  "CLAUDE_bytes": 16368,
+  "ctest_passed": 4,
+  "new_groups": 6,
+  "baseline_new_groups_passed": 3,
+  "legacy_PCurve_filtered": 11,
+  "ordinary_finite_probe_unchanged": true,
+  "invalid_metric_returns_positive_infinity_and_acceptance_rejects": true
+}

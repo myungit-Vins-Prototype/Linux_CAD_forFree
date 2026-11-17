@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="22"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="215"
+	timestamp="2026-11-16T23:53:20"
+	>
+	<testcase name="forgecad_blend_history_tests" classname="forgecad_blend_history_tests" time="0.0417434" status="run">
+		<properties/>
+		<system-out></system-out>
+	</testcase>
+	<testcase name="forgecad_all_history_tests" classname="forgecad_all_history_tests" time="1.58129" status="run">
+		<properties/>
+		<system-out></system-out>
+	</testcase>
+	<testcase name="forgecad_surface_tools_tests" classname="forgecad_surface_tools_tests" time="0.799897" status="run">
+		<properties/>
+		<system-out>PASS individual fill influence, picking identity and persistence
+PASS superfici: rete/estensione/poli, dipendenze, rigenerazione, Undo/Redo, UI/mouse, formato53, errori atomici, revisioni e sola lettura
+</system-out>
+	</testcase>
+	<testcase name="forgecad_extension_panel_tests" classname="forgecad_extension_panel_tests" time="0.738067" status="run">
+		<properties/>
+		<system-out>PASS Estendi: comando reale, pannello prima dei bordi, mouse, contorni, anteprima, Invio/Esc/chiusura e Undo/Redo
+Estensione: scelta del contorno completo OK
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_open_offset_tests" classname="forgekernel_open_offset_tests" time="91.9256" status="run">
+		<properties/>
+		<system-out>[  OK  ] OpenOffsetGrooveExactCollapse
+[  OK  ] OpenOffsetShowerHeadTwoPointFive
+[  OK  ] OpenOffsetContinuationPreservesSource
+[  OK  ] OpenOffsetShowerHeadInwardPreservesExterior
+[  OK  ] OpenOffsetRejectsOnlyRetainedFold
+5/5 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_polar_blend_tests" classname="forgekernel_polar_blend_tests" time="7.95776" status="run">
+		<properties/>
+		<system-out>[  OK  ] PolarBlendPositiveRadiusAtEighteenWayPoles
+[  OK  ] PolarBlendPoseScaleAndReversedEdgeDirections
+[  OK  ] PolarBlendTwoCommonSphericalCaps
+3/3 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_surface_instances_tests" classname="forgekernel_surface_instances_tests" time="0.616989" status="run">
+		<properties/>
+		<system-out>[  OK  ] SurfaceInstanceExactJetsAndPoles
+[  OK  ] SurfaceInstanceFlattenedAndImmutable
+[  OK  ] SurfaceInstanceSharesBezierPolesAndBounds
+[  OK  ] SurfaceInstanceBinarySharingAndLegacyRead
+[  OK  ] SurfaceInstanceRejectsInvalidPlacementAndRecords
+[  OK  ] SurfaceInstanceStepReplicaRoundTrip
+[  OK  ] SurfaceInstanceStepRejectsCycles
+[  OK  ] SurfaceInstanceStepReadsStandardMirrorAndScale
+[  OK  ] SurfaceInstancePreservesSingularTrimsAndMesh
+[  OK  ] SurfaceInstanceSewPolarWedgesAndCap
+[  OK  ] SurfaceInstanceZeroRadiusAtHighValenceCusp
+[  OK  ] BodyReadPoolExactSharingAndRecordIdentity
+[  OK  ] BodyReadPoolRejectsNearDuplicatesAndSurvivesPool
+[  OK  ] BodyReadPoolConcurrentDocuments
+14/14 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_history_tests" classname="forgekernel_history_tests" time="0.369129" status="run">
+		<properties/>
+		<system-out>[  OK  ] HistoryInteriorPointOfFaces
+[  OK  ] HistorySubtractCylinderThroughBox
+[  OK  ] HistorySplitFaceKeepsAmbiguousName
+[  OK  ] HistoryUniteMergesCoplanarFaces
+[  OK  ] HistoryBlendFaceGeneratedFromEdge
+[  OK  ] HistoryComposeAcrossOperations
+[  OK  ] HistorySameIndexTransform
+[  OK  ] HistoryLabelledFacesAndLongNames
+[  OK  ] HistoryPreservesNamesAfterReload
+[  OK  ] HistoryRootWithNullOperands
+[  OK  ] HistoryDeclaredOriginsOverrideGeometry
+[  OK  ] HistoryRejectsInvalidDeclarations
+[  OK  ] HistoryDeclaredCompositionCoverage
+[  OK  ] HistoryOffsetKeepsFaceNamesAcrossSurfaceChanges
+[  OK  ] HistoryOffsetComposesRectangularAndTrimmedCreases
+[  OK  ] HistoryBooleanDeclaresCutSplitAndUnchangedFaces
+[  OK  ] HistoryBooleanAndUnifyComposeEveryMergedFace
+[  OK  ] HistoryBooleanRetainsBothCoincidentOperands
+[  OK  ] HistoryBooleanEmptyDisjointAndFailureOutputs
+[  OK  ] HistoryImprintDeclaresBeforeAndAfterUnify
+[  OK  ] HistoryBooleanDeclarationsAreThreadDeterministic
+[  OK  ] HistoryBlendDeclaresTrimmedFacesA...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_surface_tools_tests" classname="forgekernel_surface_tools_tests" time="4.62354" status="run">
+		<properties/>
+		<system-out>[  OK  ] SurfaceNetworkCrossingFamilies
+[  OK  ] SurfaceExtendUntilPlaneAndCurvedFace
+[  OK  ] SurfaceExtendUntilFacetedTarget
+[  OK  ] SurfaceExtendUntilSplineExtrusion
+[  OK  ] SurfacePolesPreserveTrimsAndTopology
+[  OK  ] SurfacePolesRefitControlCounts
+[  OK  ] SurfacePolesMultipleConnectedFaces
+[  OK  ] SurfacePolesMultipleFacesOfSolid
+[  OK  ] SurfacePolesPreserveDeclaredVertexTolerance
+[  OK  ] SurfacePolesAutomaticConnectionAndTangency
+[  OK  ] SurfacePolesContinuitySwappedReversedRationalAndSharp
+[  OK  ] SurfacePolesContinuityRefitAndProtection
+[  OK  ] SurfacePolesTrimProtectionLeavesInteriorFree
+[  OK  ] SurfacePolesNeutralTolerantConnections
+[  OK  ] SurfacePolesSphereInternalG1AndG2
+[  OK  ] SurfacePolesG2AcrossFacesAndRigidPoses
+[  OK  ] SurfacePolesExactAnalyticConversion
+[  OK  ] SurfacePolesAnalyticEditsHolesAndClosure
+[  OK  ] SurfacePolesMixedAnalyticAndNurbsTangency
+[  OK  ] SurfacePolesCurvedAnalyticTrimmedHoles
+[  OK  ] SurfacePolesPeriodicHelicalTrims
+[  OK  ] SurfacePolesSphericalCapAt...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_blend_profile_tests" classname="forgekernel_blend_profile_tests" time="0.58588" status="run">
+		<properties/>
+		<system-out>[  OK  ] BlendProfilesConicFamilies
+[  OK  ] BlendProfilesVariableArcLength
+[  OK  ] BlendProfilesValidationAndNoPropagation
+[  OK  ] BlendProfilesTangentPropagationToggle
+[  OK  ] BlendProfilesTangentPathStations
+[  OK  ] BlendProfilesIndependentPaths
+6/6 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_offset_validation_tests" classname="forgekernel_offset_validation_tests" time="0.0526546" status="run">
+		<properties/>
+		<system-out>[  OK  ] OffsetValidationHiddenSpanAndScale
+[  OK  ] OffsetValidationToroidalDomain
+[  OK  ] OffsetValidationCancellationAndReset
+[  OK  ] OffsetValidationAnalyticExtrusionAndRevolution
+[  OK  ] OffsetValidationRotatedCircularConstructions
+5/5 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_curve_fit_validation_tests" classname="forgekernel_curve_fit_validation_tests" time="17.2103" status="run">
+		<properties/>
+		<system-out>[  OK  ] CurveFitCertifiedDegree27OffsetPoseScaleRational
+[  OK  ] CurveFitCertifiedNestedTrims
+[  OK  ] CurveFitCertifiedInvalidAndAtomic
+[  OK  ] CurveFitCertifiedUnresolvedAndCancellation
+[  OK  ] CurveFitCertifiedConicParameterNotAssumedPolynomial
+[  OK  ] CurveFitCertifiedRevolutionMeridian
+[  OK  ] CurveFitLegacyInvalidInputAndAtomic
+[  OK  ] CurveFitCertifiedRescaledWeightsTrimTransform
+[  OK  ] CurveFitCertifiedMultipleSpansUnclamped
+[  OK  ] CurveFitCertifiedProviderDomainAndCancellation
+[  OK  ] CurveFitCertifiedClosedNurbsAcrossSeam
+11/11 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_blend_contact_break_tests" classname="forgekernel_blend_contact_break_tests" time="0.437455" status="run">
+		<properties/>
+		<system-out>[  OK  ] BlendContactKnotCrossingsUseContactParameters
+[  OK  ] BlendContactKnotAtFitEndpoints
+[  OK  ] BlendContactKnotAtExistingEdgeBreakUsesOneParameter
+[  OK  ] BlendContactKnotOnProbeAndRealNormalJump
+[  OK  ] BlendContactKnotKeepsRadiusAndAllowsOneMillimeterOffset
+5/5 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_blend_cavity_regression_tests" classname="forgekernel_blend_cavity_regression_tests" time="22.2454" status="run">
+		<properties/>
+		<system-out>[  OK  ] BlendCavitySmallRadiusKeepsForwardContour
+[  OK  ] BlendCavitySmallRadiusKeepsDifferentSeed
+[  OK  ] BlendCavitySmallRadiusKeepsRigidPose
+[  OK  ] BlendCavitySmallRadiusKeepsScaledGeometry
+[  OK  ] BlendCavityCancellationPreservesBodyAndClearsOutputHistory
+[  OK  ] BlendCavityConsumedSideRejectsWithoutBodyOrPartialHistory
+6/6 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_blend_mitre_validation_tests" classname="forgekernel_blend_mitre_validation_tests" time="0.0584834" status="run">
+		<properties/>
+		<system-out>[  OK  ] BlendMitreIsoHiddenKnotDoesNotPublishOffSupportFit
+[  OK  ] BlendMitreIsoPolynomialPositive
+[  OK  ] BlendMitreIsoRationalPositive
+[  OK  ] BlendMitreIsoRigidPosePositive
+[  OK  ] BlendMitreIsoScaleAndSupportOrderPositive
+[  OK  ] BlendMitreDistinctFitAndCarrierBudgets
+[  OK  ] BlendMitreOverCarrierBudgetRejects
+[  OK  ] BlendMitreInvalidFitToleranceRejectsBeforePublishing
+[  OK  ] BlendMitreCancellationDoesNotPublishCut
+[  OK  ] BlendMitreRevalidatesExactEmittedCoefficients
+[  OK  ] BlendMitreCoincidentDiagonalRetainsUncertifiedCompatibility
+[  OK  ] BlendMitreEmittedFinKeepsOriginalUVInBothSenses
+[  OK  ] BlendMitreEmissionRejectsChangedProvenanceAndBudgets
+13/13 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_blend_boundary_validation_tests" classname="forgekernel_blend_boundary_validation_tests" time="3.33757" status="run">
+		<properties/>
+		<system-out>original_parametric_deviation polynomial 5.7219584981527968e-17
+[  OK  ] BoundaryOriginalPolynomialPositive
+original_parametric_deviation rational 2.2247786310271853e-16
+[  OK  ] BoundaryOriginalRationalParameter
+original_parametric_deviation rational-pose-scale 3.820199830714189e-15
+[  OK  ] BoundaryOriginalRationalPoseScale
+original_parametric_deviation rational-negative-uv 2.2247786310271853e-16
+[  OK  ] BoundaryOriginalRationalReverse
+original_parametric_deviation rational-trim 3.3335590258932494e-16
+[  OK  ] BoundaryOriginalRationalTrim
+[  OK  ] BoundaryFailureBodyAndModelAtomicity
+[  OK  ] BoundaryCancellationBodyAndModelAtomicity
+[  OK  ] BoundaryIsoHiddenPcurveAndCurveSpan
+hidden_support_extension_rejected 1
+[  OK  ] BoundaryIsoHiddenSupportExtensionRejectsAtomically
+[  OK  ] BoundaryActualExtendedFinUsesFullCertifiedWindow
+[  OK  ] BoundaryActualEmissionRejectsChangedContracts
+[  OK  ] BoundaryIsoAffineParameterAndSupportOrder
+[  OK  ] BoundaryIsoLineMapVaryingV
+[  OK  ] BoundaryInvalidBudgetsAndRang...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_sheet_fit_validation_tests" classname="forgekernel_sheet_fit_validation_tests" time="1.30192" status="run">
+		<properties/>
+		<system-out>[  OK  ] SheetFitPlanarNurbsOrientationsAndPose
+[  OK  ] SheetFitHiddenFeatureBothBranchesAndScale
+2/2 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_sheet_join_validation_tests" classname="forgekernel_sheet_join_validation_tests" time="38.1644" status="run">
+		<properties/>
+		<system-out>[  OK  ] SheetJoinImplicitPolynomial
+[  OK  ] SheetJoinTangentPolynomial
+[  OK  ] SheetJoinRigidPose
+[  OK  ] SheetJoinSmallScale
+[  OK  ] SheetJoinLargeScale
+[  OK  ] SheetJoinRational
+[  OK  ] SheetJoinReverseSelection
+[  OK  ] SheetJoinFaceSense
+[  OK  ] SheetJoinCanonicalReversal
+[  OK  ] SheetJoinLowerBoundary
+[  OK  ] SheetJoinTangentRigidPose
+[  OK  ] SheetJoinTangentSmallScale
+[  OK  ] SheetJoinTangentLargeScale
+[  OK  ] SheetJoinTangentRational
+[  OK  ] SheetJoinTangentReverseSelection
+[  OK  ] SheetJoinTangentFaceSense
+[  OK  ] SheetJoinTangentCanonicalReversal
+[  OK  ] SheetJoinTangentLowerBoundary
+[  OK  ] SheetJoinHiddenNarrowKnots
+[  OK  ] SheetJoinTangentGapBudget
+[  OK  ] SheetJoinTangentTrimmedSupport
+[  OK  ] SheetJoinHiddenNarrowPhases
+[  OK  ] SheetJoinHiddenNarrowPose
+[  OK  ] SheetJoinHiddenNarrowSmallScale
+[  OK  ] SheetJoinHiddenNarrowLargeScale
+[  OK  ] SheetJoinHiddenNarrowReverseSelection
+[  OK  ] SheetJoinTangentGapPose
+[  OK  ] SheetJoinCancellationAtomic
+[  OK  ] SheetJoinInvalid...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_surface_curve_fit_validation_tests" classname="forgekernel_surface_curve_fit_validation_tests" time="0.585384" status="run">
+		<properties/>
+		<system-out>[  OK  ] SurfaceCurveFitPolesHiddenSupportPoseScaleAndParameters
+[  OK  ] SurfaceCurveFitSharedHiddenNeighborRejectedAndCoherentAccepted
+[  OK  ] SurfaceCurveFitDirectOracleKnotCrossingsAndUnsupportedUV
+[  OK  ] SurfaceCurveFitInstancedSurfaceAndMaterializedAffine
+[  OK  ] SurfaceCurveFitInvalidInputAndCancellation
+5/5 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_offset_pcurve_tests" classname="forgekernel_offset_pcurve_tests" time="0.40782" status="run">
+		<properties/>
+		<system-out>joined_polynomial source_residual=2.2204460492503131e-16 actual_residual=2.0559776105022461e-11 fin_budget=9.9999999999999995e-07 at=0.33295000000000002 fin=16 ratio=2.0559776105022463e-05 PASS
+joined_rational source_residual=2.2204460492503131e-16 actual_residual=8.0662809764930898e-11 fin_budget=9.9999999999999995e-07 at=0.10125000000000001 fin=10 ratio=8.0662809764930898e-05 PASS
+joined_shift_trim source_residual=2.2204460492503131e-16 actual_residual=2.0559776105022461e-11 fin_budget=9.9999999999999995e-07 at=0.33295000000000002 fin=16 ratio=2.0559776105022463e-05 PASS
+joined_reverse source_residual=3.3306690738754696e-16 actual_residual=2.0559776105022461e-11 fin_budget=9.9999999999999995e-07 at=0.33295000000000002 fin=16 ratio=2.0559776105022463e-05 PASS
+joined_pose source_residual=2.9457545650361182e-15 actual_residual=2.9169558047977757e-10 fin_budget=9.9999999999999995e-07 at=0.54225000000000001 fin=13 ratio=0.0002916955804797776 PASS
+joined_scale source_residual=2.2737367544323206e-13 actual_residua...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_sew_pcurve_tests" classname="forgekernel_sew_pcurve_tests" time="22.4197" status="run">
+		<properties/>
+		<system-out>nonaffine_polynomial source_original=0 residual=3.8395221104055299e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2364439862352513e-09 edge_tolerance=0 witness_t=0.046875 PASS
+nonaffine_reverse_inputs source_original=0 residual=3.8395221104055299e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2364439862352513e-09 edge_tolerance=0 witness_t=0.046875 PASS
+nonaffine_shift_trim source_original=0 residual=3.8393950553550216e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2364413694726504e-09 edge_tolerance=0 witness_t=-2.625 PASS
+nonaffine_reverse_target source_original=0 residual=3.839473407610261e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2364414810235015e-09 edge_tolerance=0 witness_t=0.953125 PASS
+nonaffine_scale source_original=0 residual=8.4684472767548868e-09 legacy_cap=0.0001 fin_tolerance=9.2592244982370258e-09 edge_tolerance=0 witness_t=0.1484375 PASS
+reuse_sampled_same_parameter source_original=0 residual=3.8400708168850883e-09 legacy_cap=9.9999999999999995e-08 fin_toleran...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_surface_curve_bounds_tests" classname="forgekernel_surface_curve_bounds_tests" time="0.0515815" status="run">
+		<properties/>
+		<system-out>[  OK  ] NonIsoResidualCubicUVOnOriginalTensorPlane
+[  OK  ] NonIsoResidualBilinearCarrierAndNativeLineUV
+[  OK  ] NonIsoResidualCommonPartitionAcrossEdgeUVAndCarrierKnots
+[  OK  ] NonIsoResidualNonUnitDomainSubrangeAndCorrelatedReversal
+[  OK  ] NonIsoResidualConstantOriginalWeightsRemainPolynomial
+[  OK  ] NonIsoResidualHiddenEdgePeakIsNotAContinuousProof
+[  OK  ] NonIsoResidualHiddenCarrierCellPeakIsRejected
+[  OK  ] NonIsoResidualUVLeavesDomainBetweenThreeMatchingSamples
+[  OK  ] NonIsoResidualInvalidInputsFailClosed
+[  OK  ] NonIsoResidualVariableRationalAndWrappersAreUnsupported
+[  OK  ] NonIsoResidualCancellationPropagates
+[  OK  ] NonIsoResidualFixedInputResourceLimitFailsClosed
+[  OK  ] NonIsoResidualUnclampedOriginalCubicKnots
+[  OK  ] SheetJoinLedgerActualTwoFinsAndExtraFixedCaps
+[  OK  ] SheetJoinLedgerExplicitCompactionAndUnifyHistoryPermutation
+[  OK  ] SheetJoinLedgerRecognizedGapCannotUseLargeFinDeviation
+[  OK  ] SheetJoinLedgerMissingMapCurveRangeOrIncidenceRejects
+[  OK  ] SheetJoinLedgerIn...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+</testsuite>

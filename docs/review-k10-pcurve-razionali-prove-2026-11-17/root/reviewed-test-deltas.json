@@ -1,0 +1,45 @@
+{
+  "kernel/tests/test_surface_curve_bounds.cpp": [
+    "--- \n",
+    "+++ \n",
+    "@@ -162,10 +162,10 @@\n",
+    "     for (Interval range : {Interval{0, 0}, Interval{1, 0}, Interval{nan, 1}, Interval{0, inf}, Interval{-.01, 1}, Interval{0, 1.01}})",
+    "         failed(edge, support, uv, range);",
+    " }",
+    "-FK_TEST(NonIsoResidualCurveAndCarrierGapsFailQWeightsAndWrappersUnsupported) {",
+    "+FK_TEST(NonIsoResidualCurveAndCarrierGapsFailWrappersUnsupported) {",
+    "     auto uv = cubicUV(); auto edge = planarEdge(*uv); auto support = tensor();",
+    "     failed(std::make_shared<BSplineCurve<3>>(3, edge->knots(), edge->poles(), std::vector<double>{1, .25, 1, 1}), support, uv);",
+    "-    unsupported(edge, support, std::make_shared<BSplineCurve<2>>(3, uv->knots(), uv->poles(), std::vector<double>{1, .25, 1, 1}));",
+    "+    failed(edge, support, std::make_shared<BSplineCurve<2>>(3, uv->knots(), uv->poles(), std::vector<double>{1, .25, 1, 1}));",
+    "     std::vector<double> weights(16, 1); weights[5] = .25;",
+    "     std::vector<Vec3> surfacePoles;",
+    "     for (int i = 0; i < 4; ++i) for (int j = 0; j < 4; ++j) surfacePoles.push_back(support->pole(i, j));"
+  ],
+  "kernel/tests/test_surface_curve_instances.cpp": [
+    "--- \n",
+    "+++ \n",
+    "@@ -260,7 +260,7 @@\n",
+    "         detail::SurfaceCurveBoundStatus::Failed);",
+    "     FK_CHECK(detail::surfaceCurveResidualBound(edge, surface, std::make_shared<BSplineCurve<2>>(1, uv->knots(),",
+    "         uv->poles(), std::vector<double>{1, .25}), {0, 1}, 8e-8).status ==",
+    "-        detail::SurfaceCurveBoundStatus::Unsupported);",
+    "+        detail::SurfaceCurveBoundStatus::Failed);",
+    " }",
+    " ",
+    " FK_TEST(SurfaceInstanceCancellationRemainsDistinct) {"
+  ],
+  "kernel/tests/test_surface_curve_rational_edges.cpp": [
+    "--- \n",
+    "+++ \n",
+    "@@ -145,7 +145,7 @@\n",
+    "     expect(edge(), s, outside, SurfaceCurveBoundStatus::Failed);",
+    "     const auto q = std::dynamic_pointer_cast<const BSplineCurve<2>>(uv());",
+    "     expect(edge(), s, std::make_shared<BSplineCurve<2>>(1, q->knots(), q->poles(), std::vector<double>{1, 2}),",
+    "-        SurfaceCurveBoundStatus::Unsupported);",
+    "+        SurfaceCurveBoundStatus::Failed);",
+    "     expect(std::make_shared<TrimmedCurve<3>>(edge(), 0, 1), s, uv(), SurfaceCurveBoundStatus::Unsupported);",
+    " }",
+    " "
+  ]
+}

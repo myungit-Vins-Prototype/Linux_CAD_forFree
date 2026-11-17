@@ -1,0 +1,6 @@
+narrow-instance REJECTED Deformazione: SP-curve fuori dal budget continuo.
+public-instance issues=0 immutable=1 deviation=1.28934e-10
+public-instance fin=0 instance=1 status=1 cap=8e-08 finTol=8e-08
+public-instance fin=1 instance=1 status=1 cap=8e-08 finTol=8e-08
+public-instance fin=2 instance=1 status=1 cap=8e-08 finTol=8e-08
+public-instance fin=3 instance=1 status=1 cap=8e-08 finTol=8e-08

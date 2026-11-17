@@ -1,0 +1,151 @@
+{
+  "files": [
+    {
+      "path": "san-tests",
+      "bytes": 7759224,
+      "sha256": "620127a9c26d15b1e8370f244f28ab96c8ba408c2c5e9619b3f03e5b94e6dd53"
+    },
+    {
+      "path": "san-main.o",
+      "bytes": 219072,
+      "sha256": "fff9d3dd28b85452a0bebfc9d50115f62d1576530417a1f74ff46eb1e6fa36a7"
+    },
+    {
+      "path": "san-test.o",
+      "bytes": 4458520,
+      "sha256": "93f92bfc599d47f9dbe5ab286d2457a6cb0c976ef945e80708ef687396d33057"
+    },
+    {
+      "path": "san-provider.o",
+      "bytes": 2695952,
+      "sha256": "4699b4ad69a551bc91a34d7252938e4eafb44f48da614cf67307775277f44f0a"
+    },
+    {
+      "path": "staged-tests",
+      "bytes": 3551616,
+      "sha256": "6fe50f4a2f858a8e5829e57b68e2f1f7e4ba8c46300e27bd9f4a9a9ca83e414d"
+    },
+    {
+      "path": "candidate-ordinary",
+      "bytes": 124600,
+      "sha256": "2833ddeaec1040d7ca7d047612ed8ceb40f52bbea71ddb3eeadfc5ec7aba05c0"
+    },
+    {
+      "path": "candidate-probe",
+      "bytes": 2829952,
+      "sha256": "646ee6d8ff74b38b4af718c7b417b41d006f46fee397f3db30f4c5a3d85db4da"
+    },
+    {
+      "path": "candidate.o",
+      "bytes": 1039320,
+      "sha256": "57ba9fbbaf8fde6fd4fe8cef2eeb7ca5599477e5b536e018a4319b20827c72cf"
+    },
+    {
+      "path": "candidate-length-golden",
+      "bytes": 2997208,
+      "sha256": "312666854af0b6172fa9e465fd51b1058f755201dab97ce5a152be5bf5d2fec4"
+    },
+    {
+      "path": "candidate-mass-golden",
+      "bytes": 54944312,
+      "sha256": "2bdc4a8e8c57bc7e96100cadf3ad76fb20cabe1180a8ce3accb56bfc48b6fc37"
+    },
+    {
+      "path": "baseline-mass-golden",
+      "bytes": 54936656,
+      "sha256": "736d9217b11c1313fb6c499181affe8c1f60ea72e8c822ee6de3f705f8e37338"
+    },
+    {
+      "path": "mass.o",
+      "bytes": 1695240,
+      "sha256": "a21c606bfad7fc21bdefd01929895b378d70bff2f3c6b07c4cb7548176be51df"
+    },
+    {
+      "path": "baseline-length-golden",
+      "bytes": 2943632,
+      "sha256": "8972d5a492f8d6ad9c34c7f434456200d3686a0985721e823238a5947970c158"
+    },
+    {
+      "path": "baseline-tests",
+      "bytes": 3104688,
+      "sha256": "f40c1ab0500a9833bb759d0749b5d7e82be835fa931da808efc0f9f8dd0cabb3"
+    },
+    {
+      "path": "baseline-probe",
+      "bytes": 2798368,
+      "sha256": "d0bf4f7d445276d9a625889d7f720c43032de3f94a02cc062d1db2ad10ad9890"
+    },
+    {
+      "path": "baseline-ordinary",
+      "bytes": 70304,
+      "sha256": "e501b7b904ec3a8428826824e534c498f8ff3bbca83414f4be2ff26f5dc34be1"
+    },
+    {
+      "path": "v2-initial-tests/staged-tests",
+      "bytes": 3475864,
+      "sha256": "c19b488b8bf5384a2a7b95998b05f317fffa036ddc63b43c521c5a68fea8987c"
+    },
+    {
+      "path": "v2-initial-tests/san-provider.o",
+      "bytes": 2695952,
+      "sha256": "4699b4ad69a551bc91a34d7252938e4eafb44f48da614cf67307775277f44f0a"
+    },
+    {
+      "path": "v2-initial-tests/san-test.o",
+      "bytes": 4014416,
+      "sha256": "8e1d338a12e943e95664904735d7418f8da192add5fa17a4a67d7d72b1103086"
+    },
+    {
+      "path": "v2-initial-tests/san-main.o",
+      "bytes": 219072,
+      "sha256": "fff9d3dd28b85452a0bebfc9d50115f62d1576530417a1f74ff46eb1e6fa36a7"
+    },
+    {
+      "path": "v2-initial-tests/san-tests",
+      "bytes": 7399112,
+      "sha256": "195e16f3adb8544c768df5076cd65c679fc55950c23bb9204d108f9e3f84e304"
+    },
+    {
+      "path": "v1/candidate-probe",
+      "bytes": 2829944,
+      "sha256": "422b4615b67ff62f25ae67b9287877edfcacb6a56ca2ef58a431992589cbca0b"
+    },
+    {
+      "path": "v1/candidate-ordinary",
+      "bytes": 124416,
+      "sha256": "ee05d3c16da922dc7754424ce5e84a2f3c7dae9a3a29a956395fd48424309ba7"
+    },
+    {
+      "path": "v1/staged-tests",
+      "bytes": 3397384,
+      "sha256": "510d6ddf77343b038167e98a4965a993bc00c0411c5c5f1f506cf31ce88405f8"
+    },
+    {
+      "path": "v1/san-provider.o",
+      "bytes": 2695952,
+      "sha256": "d2580b7faf4cd0b95af0c4d64b09cbdadac075874d468765ce8885b5fca90869"
+    },
+    {
+      "path": "v1/san-test.o",
+      "bytes": 3324888,
+      "sha256": "24786533a5e462d06145b145b99f9a221afcced28d19584fe7d7258566d1dc0a"
+    },
+    {
+      "path": "v1/san-main.o",
+      "bytes": 219072,
+      "sha256": "fff9d3dd28b85452a0bebfc9d50115f62d1576530417a1f74ff46eb1e6fa36a7"
+    },
+    {
+      "path": "v1/san-tests",
+      "bytes": 6851944,
+      "sha256": "a53bb04e6719b650ef47e9d25365489e1f92eb584fc1365decf0ec4111317916"
+    },
+    {
+      "path": "v1/candidate-length-golden",
+      "bytes": 2997200,
+      "sha256": "9b586e85ebb47f8e2c01aff1f69a71ae5c6de96546a11d5384e671f4141c2cfd"
+    }
+  ],
+  "bytes": 186413880,
+  "scope": "only own completed /tmp/k10-quadrature-review/root staging; production build, sources, logs and CAD preserved"
+}

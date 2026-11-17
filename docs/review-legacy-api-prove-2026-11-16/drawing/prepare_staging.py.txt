@@ -1,0 +1,76 @@
+from pathlib import Path
+import subprocess,hashlib,json,difflib,re
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path('/tmp/legacy-api-review/drawing');head=subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip();assert head=='47c7c19c4faf490995e8ff64f10d83d8a6abb077'
+names=['cad_drawing_editor.h','cad_drawing_editor.cpp','cad_drawing_window.cpp'];before={n:(root/n).read_text() for n in names}
+for n in names:assert before[n]==subprocess.check_output(['git','show',head+':'+n],cwd=root,text=True)
+after=dict(before)
+replacements={
+'cad_drawing_editor.h':[
+('    void setModelProvider(std::function<DrawingEditorModel()> provider);\n','')],
+'cad_drawing_editor.cpp':[
+('    QAction *updateAction=nullptr;\n',''),
+('    std::function<DrawingEditorModel()> provider;\n',''),
+('    impl_->updateAction=action(QStringLiteral("Aggiorna dal modello"),"drawingUpdateModelAction",[this]{if(impl_->provider){try{impl_->report(updateModel(impl_->provider()));}catch(const std::exception &error){impl_->report(QString::fromUtf8(error.what()));}}});\n',''),
+('    impl_->updateAction->setEnabled(false);action(QStringLiteral("Adatta foglio"),"drawingFitAction",[this]{fitSheet();});','    action(QStringLiteral("Adatta foglio"),"drawingFitAction",[this]{fitSheet();});'),
+('        {"drawingUpdateModelAction","drawingModelUpdate"},\n',''),
+('void DrawingSheetEditor::setModelProvider(std::function<DrawingEditorModel()> provider){impl_->provider=std::move(provider);impl_->updateAction->setEnabled(bool(impl_->provider)&&!impl_->readOnly);}\n',''),
+('    impl_->refreshHiddenAction();impl_->refreshHistoryActions();impl_->updateAction->setEnabled(!impl_->readOnly&&bool(impl_->provider));','    impl_->refreshHiddenAction();impl_->refreshHistoryActions();')],
+'cad_drawing_window.cpp':[
+('    // Il comando del contenitore verifica percorso, identita\' e impronta.\n    next->findChild<QAction *>("drawingUpdateModelAction")->setVisible(false);\n','')]
+}
+for n,rs in replacements.items():
+ for old,new in rs:
+  assert after[n].count(old)==1,(n,old)
+  after[n]=after[n].replace(old,new)
+for kind,data in [('before',before),('after',after)]:
+ (out/kind).mkdir(exist_ok=True)
+ for n,s in data.items():(out/kind/n).write_text(s)
+patch=''.join(''.join(difflib.unified_diff(before[n].splitlines(keepends=True),after[n].splitlines(keepends=True),fromfile='a/'+n,tofile='b/'+n)) for n in names);(out/'drawing-provider-removal.patch').write_text(patch)
+# Read-only virtual overlay search, covering tracked active source and UI/build inputs.
+tracked=subprocess.check_output(['git','ls-files','-z'],cwd=root).decode().split('\0');ext={'.cpp','.cc','.c','.h','.hpp','.hh','.mm','.qml','.ui','.qrc','.py','.cmake','.inc','.in'};files=[n for n in tracked if n and ((Path(n).suffix in ext) or Path(n).name=='CMakeLists.txt') and not n.startswith('docs/') and (root/n).is_file()]
+patterns={'deadPublicSetter':re.compile(r'\bsetModelProvider\b'),'deadActionObjectName':re.compile(r'drawingUpdateModelAction')};occ={}
+for phase in ['before','after']:
+ occ[phase]={k:[] for k in patterns}
+ for n in files:
+  text=after[n] if phase=='after' and n in after else (root/n).read_text(errors='replace')
+  for i,line in enumerate(text.splitlines(),1):
+   for k,pat in patterns.items():
+    if pat.search(line):occ[phase][k].append({'file':str(root/n),'line':i,'text':line})
+assert all(not v for v in occ['after'].values())
+assert 'impl_->provider' not in after['cad_drawing_editor.cpp'] and 'impl_->updateAction' not in after['cad_drawing_editor.cpp']
+assert 'QAction *updateAction=nullptr;' not in after['cad_drawing_editor.cpp']
+assert 'std::function<DrawingEditorModel()> provider;' not in after['cad_drawing_editor.cpp']
+(out/'occurrences.json').write_text(json.dumps({'scope':'Tracked source/UI/build inputs; docs excluded; after is virtual overlay with3stagedfiles, repository untouched','filesScanned':len(files),'matches':occ},ensure_ascii=False,indent=2)+'\n')
+# C++ token scan skips strings/chars/comments for balanced function braces.
+tokens=re.compile(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|[{}]',re.S)
+def function(s,signature):
+ start=s.index(signature);depth=0;opened=False
+ for m in tokens.finditer(s,start):
+  t=m.group()
+  if t=='{':depth+=1;opened=True
+  elif t=='}':
+   depth-=1
+   if opened and depth==0:return s[start:m.end()]
+ raise AssertionError(signature)
+preserved=[]
+for n,signature in [('cad_drawing_editor.cpp','QString DrawingSheetEditor::updateModel('),('cad_drawing_editor.cpp','void DrawingSheetEditor::installPreparedModel('),('cad_drawing_window.cpp','QString DrawingWindow::updateFromSource('),('cad_drawing_window.cpp','void DrawingWindow::refreshEditAccess(')]:
+ a=function(before[n],signature);b=function(after[n],signature);assert a==b;preserved.append({'file':n,'signature':signature,'sha256':hashlib.sha256(a.encode()).hexdigest(),'byteIdentical':True})
+readonly='void DrawingSheetEditor::setReadOnly(';a=function(before['cad_drawing_editor.cpp'],readonly);b=function(after['cad_drawing_editor.cpp'],readonly);dead='impl_->updateAction->setEnabled(!impl_->readOnly&&bool(impl_->provider));';assert a.replace(dead,'')==b
+for symbol in ['drawingReloadSourceAction','updateAction_']:
+ a=[x for x in before['cad_drawing_window.cpp'].splitlines() if symbol in x];b=[x for x in after['cad_drawing_window.cpp'].splitlines() if symbol in x];assert a==b
+# Check that no table/cycle keeps a dereference of removed action.
+iconblock=after['cad_drawing_editor.cpp'][after['cad_drawing_editor.cpp'].index('const std::pair<const char*,const char*> icons'): ] if 'const std::pair<const char*,const char*> icons' in after['cad_drawing_editor.cpp'] else after['cad_drawing_editor.cpp'][after['cad_drawing_editor.cpp'].index('drawingFitAction'):]
+assert 'drawingUpdateModelAction' not in iconblock and 'drawingUpdateModelAction' not in after['cad_drawing_window.cpp']
+(out/'preservation.json').write_text(json.dumps({'exactPreservedFunctions':preserved,'setReadOnly':'Byte-identical after removal only of dead action enable expression; all actual read-only guards/cancellation/action lists preserved','reloadSourceAndWindowUpdateAction':'All lines containing drawingReloadSourceAction or updateAction_ byte-identical','removedActionDereferences':'Absent from icons and container findChild; no null-check workaround or other action changed','includes':'No include cleanup; std::function remains used'},ensure_ascii=False,indent=2)+'\n')
+G=json.loads((root/'docs/architecture/graph.json').read_text());focus=set(names);syms={'ForgeCad::DrawingSheetEditor::setModelProvider','ForgeCad::DrawingSheetEditor::updateModel','ForgeCad::DrawingSheetEditor::installPreparedModel','ForgeCad::DrawingWindow::updateFromSource','ForgeCad::DrawingSheetEditor::setReadOnly'};edges=[];setter=[]
+for e in G['edges']:
+ sites=[s for s in e.get('sites',[]) if s.get('symbol') in syms]
+ if sites:edges.append({'source':e['source'],'target':e['target'],'kind':e['kind'],'sites':sites})
+ for s in sites:
+  if s['symbol']=='ForgeCad::DrawingSheetEditor::setModelProvider':setter.append(s)
+assert not setter
+(out/'graph-focus-before.json').write_text(json.dumps({'graphSHA256':hashlib.sha256((root/'docs/architecture/graph.json').read_bytes()).hexdigest(),'nodes':len(G['nodes']),'edges':len(G['edges']),'focusNodes':[{k:n[k] for k in ['id','group','description'] if k in n} for n in G['nodes'] if n['id'] in focus],'selectedCallAndReferenceSitesBothDirections':edges,'setterIncomingSites':setter,'afterGraph':'Not regenerated in staging. Coordinator must regenerate/check graph after integration; setter definition and obsolete internal callback updateModel edge should disappear.'},ensure_ascii=False,indent=2)+'\n')
+manifest={'baselineHead':head,'repoRealPath':str(root.resolve()),'stageOnly':True,'files':{n:{'beforeSHA256':hashlib.sha256(before[n].encode()).hexdigest(),'afterSHA256':hashlib.sha256(after[n].encode()).hexdigest(),'beforeLines':len(before[n].splitlines()),'afterLines':len(after[n].splitlines())} for n in names},'patchSHA256':hashlib.sha256(patch.encode()).hexdigest(),'retained':'updateFromSource,drawingReloadSourceAction,updateModel,installPreparedModel,identities,read-only and saved sources','validation':'Static searches, overlay check and exact preserved bodies; no compilation or runtime/test execution','rootVerificationRecommended':['app full build','forgecad_drawing_editor_tests','forgecad_drawing_layout_history_tests','forgecad_linked_drawing_tests','forgecad_drawing_multisheet_tests','architecture regeneration and check'],'limits':'Closed-world repository analysis; no claim that external consumers cannot exist. Public application API removal authorized; headers are not installed as SDK. No new mirror tests. No binary rebuilt by auditor.'};(out/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
+# Fail if a concurrent edit changed any source during preparation.
+for n in names:assert (root/n).read_text()==before[n]
+print('STAGING READY',out,'patchSHA256',manifest['patchSHA256'],'filesScanned',len(files),'preservedFunctions',len(preserved))

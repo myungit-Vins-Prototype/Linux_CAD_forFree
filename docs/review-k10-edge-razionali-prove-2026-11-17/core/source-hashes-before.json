@@ -1,0 +1,6 @@
+{
+  "kernel/fk_surface_curve_bounds.cpp": "2d52c696b141891a6f620b9ef4b7dcfae8a82fdf3a5f6280a07abe7ff2e64aa7",
+  "kernel/fk_surface_curve_bounds.h": "94f64598883d8a7a81a2047b3339a83434e99f51da22a2a73c1f2fb4f6e8764a",
+  "kernel/fk_surface_mapping.cpp": "019423a02a6504b3d6e1d659ba9b3b0707397878d5b8bad3340efd52f2b45d3a",
+  "kernel/fk_sheet_join_validation.cpp": "15e314c0f54241ab8d682290db24065e1a033ed430c6e54474ead062b84f258a"
+}

@@ -1,0 +1,26 @@
+{
+  "kernel/fk_shell.cpp": {
+    "sha256": "197a1a8dd7f2be000da51cde611a817a7b2e2311fbff3e5eba0bbd04a6804a8e",
+    "unchangedSinceBaseline": true
+  },
+  "kernel/fk_curve_fit_bounds.h": {
+    "sha256": "62dcaa3a96ad3a0aad4dc144ca138b3c03e78f44b98da18656b100d916b930a9",
+    "unchangedSinceBaseline": true
+  },
+  "kernel/tests/test_shell.cpp": {
+    "sha256": "4c5732b6e33d582fe5e67cb181605f1b64f73e60a3530df7de3e0d3aad41b124",
+    "unchangedSinceBaseline": true
+  },
+  "kernel/tests/test_curve_fit_validation.cpp": {
+    "sha256": "30067d47f5d885f43b8d8e8160c719c9146b8967a91f337a70808ceaee1fad27",
+    "unchangedSinceBaseline": true
+  },
+  "kernel/tests/test_offset_validation.cpp": {
+    "sha256": "7d70490b069ca9fb23f14089181baa809367611bd6a20d36282ee668b9bc8f30",
+    "unchangedSinceBaseline": true
+  },
+  "kernel/tests/data/shell_stitched_tangent.body": {
+    "sha256": "f266d6fd50ebb5c69b97038dcf05c787fa2ff763426946930d4093b4425af7f9",
+    "unchangedSinceBaseline": true
+  }
+}

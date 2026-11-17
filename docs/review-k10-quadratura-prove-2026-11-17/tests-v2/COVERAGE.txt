@@ -1,0 +1,37 @@
+K10 quadrature controlled components — V2 supplement
+
+TU test_quadrature_validation.cpp
+SHA256 451cb83e153566f4dcc280ba304f6766ad27fcb5dce8ce0c04a22265b1ee38a5
+Production candidate V2:
+fk_quadrature.h f1ec31f8673d753192d7d9646448f30a78f16fb9ec0bac514f74680dc663d3d6
+fk_mass.cpp 8248392ee0b7be25dd2b4217bc0ad29eeaf04c939e4e4940a12d328be45c66aa
+
+V1 tests/ remains unchanged (TU88f9718d...); this is a new text-only directory.
+Six registered groups remain. Same baseline restriction: ONLY SafeControls;
+old extreme-value inputs can hang. Root owns compilation/runtime/watchdog/SAN.
+No test/build/operation/repository edit was performed by this agent.
+
+The sole semantic addition is inside VectorExtreme. A three-component callback
+returns active constant2 and two finite oscillating passive values; passive
+magnitudes0. controlled1 must use exactly15 samples and return exactly the
+same IEEE values/magnitudes as the raw GK panel. This does NOT claim the true
+oscillating passive integrals were resolved. It verifies preserving their
+single-panel rule while excluding them from the error-control decision.
+
+All values and magnitudes remain subject to finite validation. Tests require
+passive NaN value and passive NaN magnitude rejection even with controlled1.
+controlled4 for N3 must throw domain_error. Default controlledN remains used
+by all unchanged ordinary/vector tests. No permanent timed thread and no new
+tolerance/cap are introduced. Existing depth30/direct recovery tests persist.
+
+The mass caller had deliberately used HUGE_VAL magnitudes for winding-only
+components11..13. V2 replaces that sentinel with zero and explicitly controls
+only kFaceValues components. Source review confirmed forwarding of controlled
+to child adaptive panels and both acceptance/noise loops, plus all-component
+finite checks. The test is a helper-level regression for this distinction;
+it is not by itself a public mass-properties result or whole-CAD certificate.
+Parent owns public mass regression and CMake/docs/architecture/memory updates.
+
+Graph and rules consultation from the current task is recorded in
+../tests/graph-consult.json; fk_mass.cpp winding caller510..528 and final V2
+header controlled API were also read. No old proof package was rewritten.

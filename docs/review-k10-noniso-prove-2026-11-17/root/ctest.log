@@ -1,0 +1,491 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 54
+      Start  54: forgecad_blend_history_tests
+
+54: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--blend-history"
+54: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+54: Environment variables: 
+54:  QT_QPA_PLATFORM=offscreen
+54:  QT_QPA_OFFSCREEN_NO_GLX=1
+54:  QT_QPA_PLATFORMTHEME=
+54:  QT_STYLE_OVERRIDE=Fusion
+54:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+54: Test timeout computed to be: 60
+ 1/22 Test  #54: forgecad_blend_history_tests .....................   Passed    0.04 sec
+test 55
+      Start  55: forgecad_all_history_tests
+
+55: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--all-history"
+55: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+55: Environment variables: 
+55:  QT_QPA_PLATFORM=offscreen
+55:  QT_QPA_OFFSCREEN_NO_GLX=1
+55:  QT_QPA_PLATFORMTHEME=
+55:  QT_STYLE_OVERRIDE=Fusion
+55:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+55: Test timeout computed to be: 120
+ 2/22 Test  #55: forgecad_all_history_tests .......................   Passed    1.58 sec
+test 66
+      Start  66: forgecad_surface_tools_tests
+
+66: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--surface-tools"
+66: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+66: Environment variables: 
+66:  QT_QPA_PLATFORM=offscreen
+66:  QT_QPA_OFFSCREEN_NO_GLX=1
+66:  QT_QPA_PLATFORMTHEME=
+66:  QT_STYLE_OVERRIDE=Fusion
+66:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+66: Test timeout computed to be: 180
+66: PASS individual fill influence, picking identity and persistence
+66: PASS superfici: rete/estensione/poli, dipendenze, rigenerazione, Undo/Redo, UI/mouse, formato53, errori atomici, revisioni e sola lettura
+ 3/22 Test  #66: forgecad_surface_tools_tests .....................   Passed    0.80 sec
+test 85
+      Start  85: forgecad_extension_panel_tests
+
+85: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--extend-contour-pick"
+85: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+85: Environment variables: 
+85:  QT_QPA_PLATFORM=offscreen
+85:  QT_QPA_OFFSCREEN_NO_GLX=1
+85:  QT_QPA_PLATFORMTHEME=
+85:  QT_STYLE_OVERRIDE=Fusion
+85:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+85: Test timeout computed to be: 60
+85: PASS Estendi: comando reale, pannello prima dei bordi, mouse, contorni, anteprima, Invio/Esc/chiusura e Undo/Redo
+85: Estensione: scelta del contorno completo OK
+ 4/22 Test  #85: forgecad_extension_panel_tests ...................   Passed    0.74 sec
+test 193
+      Start 193: forgekernel_open_offset_tests
+
+193: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_open_offset_tests
+193: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+193: Test timeout computed to be: 900
+193: [  OK  ] OpenOffsetGrooveExactCollapse
+193: [  OK  ] OpenOffsetShowerHeadTwoPointFive
+193: [  OK  ] OpenOffsetContinuationPreservesSource
+193: [  OK  ] OpenOffsetShowerHeadInwardPreservesExterior
+193: [  OK  ] OpenOffsetRejectsOnlyRetainedFold
+193: 5/5 test superati
+ 5/22 Test #193: forgekernel_open_offset_tests ....................   Passed   91.93 sec
+test 195
+      Start 195: forgekernel_polar_blend_tests
+
+195: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_polar_blend_tests
+195: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+195: Test timeout computed to be: 10000000
+195: [  OK  ] PolarBlendPositiveRadiusAtEighteenWayPoles
+195: [  OK  ] PolarBlendPoseScaleAndReversedEdgeDirections
+195: [  OK  ] PolarBlendTwoCommonSphericalCaps
+195: 3/3 test superati
+ 6/22 Test #195: forgekernel_polar_blend_tests ....................   Passed    7.96 sec
+test 196
+      Start 196: forgekernel_surface_instances_tests
+
+196: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_instances_tests
+196: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+196: Test timeout computed to be: 10000000
+196: [  OK  ] SurfaceInstanceExactJetsAndPoles
+196: [  OK  ] SurfaceInstanceFlattenedAndImmutable
+196: [  OK  ] SurfaceInstanceSharesBezierPolesAndBounds
+196: [  OK  ] SurfaceInstanceBinarySharingAndLegacyRead
+196: [  OK  ] SurfaceInstanceRejectsInvalidPlacementAndRecords
+196: [  OK  ] SurfaceInstanceStepReplicaRoundTrip
+196: [  OK  ] SurfaceInstanceStepRejectsCycles
+196: [  OK  ] SurfaceInstanceStepReadsStandardMirrorAndScale
+196: [  OK  ] SurfaceInstancePreservesSingularTrimsAndMesh
+196: [  OK  ] SurfaceInstanceSewPolarWedgesAndCap
+196: [  OK  ] SurfaceInstanceZeroRadiusAtHighValenceCusp
+196: [  OK  ] BodyReadPoolExactSharingAndRecordIdentity
+196: [  OK  ] BodyReadPoolRejectsNearDuplicatesAndSurvivesPool
+196: [  OK  ] BodyReadPoolConcurrentDocuments
+196: 14/14 test superati
+ 7/22 Test #196: forgekernel_surface_instances_tests ..............   Passed    0.62 sec
+test 198
+      Start 198: forgekernel_history_tests
+
+198: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_history_tests
+198: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+198: Test timeout computed to be: 10000000
+198: [  OK  ] HistoryInteriorPointOfFaces
+198: [  OK  ] HistorySubtractCylinderThroughBox
+198: [  OK  ] HistorySplitFaceKeepsAmbiguousName
+198: [  OK  ] HistoryUniteMergesCoplanarFaces
+198: [  OK  ] HistoryBlendFaceGeneratedFromEdge
+198: [  OK  ] HistoryComposeAcrossOperations
+198: [  OK  ] HistorySameIndexTransform
+198: [  OK  ] HistoryLabelledFacesAndLongNames
+198: [  OK  ] HistoryPreservesNamesAfterReload
+198: [  OK  ] HistoryRootWithNullOperands
+198: [  OK  ] HistoryDeclaredOriginsOverrideGeometry
+198: [  OK  ] HistoryRejectsInvalidDeclarations
+198: [  OK  ] HistoryDeclaredCompositionCoverage
+198: [  OK  ] HistoryOffsetKeepsFaceNamesAcrossSurfaceChanges
+198: [  OK  ] HistoryOffsetComposesRectangularAndTrimmedCreases
+198: [  OK  ] HistoryBooleanDeclaresCutSplitAndUnchangedFaces
+198: [  OK  ] HistoryBooleanAndUnifyComposeEveryMergedFace
+198: [  OK  ] HistoryBooleanRetainsBothCoincidentOperands
+198: [  OK  ] HistoryBooleanEmptyDisjointAndFailureOutputs
+198: [  OK  ] HistoryImprintDeclaresBeforeAndAfterUnify
+198: [  OK  ] HistoryBooleanDeclarationsAreThreadDeterministic
+198: [  OK  ] HistoryBlendDeclaresTrimmedFacesAndGeneratedEdge
+198: [  OK  ] HistoryBlendCornerComesFromOriginalVertex
+198: [  OK  ] HistoryBlendClosedPlanarEdgeKeepsOriginalSource
+198: [  OK  ] HistoryBlendGeneralChainsAndOpenSheet
+198: [  OK  ] HistoryAsymmetricChamferAndRejectedOutputs
+198: [  OK  ] HistoryExtrusionSourcesSurviveLoopOrderingAndReversal
+198: [  OK  ] HistoryExtrusionClosedCurvesAndOpenChains
+198: [  OK  ] HistoryDeclaredFaceAliasesOverrideGeometricLabels
+198: [  OK  ] HistoryExtractAndSewFacesPreserveDeclaredSources
+198: [  OK  ] HistoryRevolutionLoopSourcesAndAxis
+198: [  OK  ] HistoryRevolutionSignedAngularCaps
+198: [  OK  ] HistoryRevolutionCurvesSheetsAndRejectedOutputs
+198: [  OK  ] HistorySweepAndLoftKeepSectionSources
+198: [  OK  ] HistoryPrimitivesAndSurfaceRootsEmitLabels
+198: [  OK  ] HistoryTransformsDraftAndExtractedEdgesAreExplicit
+198: [  OK  ] HistoryTrimExtendShellAndProjectionComposeOrigins
+198: [  OK  ] HistoryTransportDoesNotInventMissingBranches
+198: 38/38 test superati
+ 8/22 Test #198: forgekernel_history_tests ........................   Passed    0.37 sec
+test 201
+      Start 201: forgekernel_surface_tools_tests
+
+201: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_tools_tests
+201: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+201: Test timeout computed to be: 180
+201: [  OK  ] SurfaceNetworkCrossingFamilies
+201: [  OK  ] SurfaceExtendUntilPlaneAndCurvedFace
+201: [  OK  ] SurfaceExtendUntilFacetedTarget
+201: [  OK  ] SurfaceExtendUntilSplineExtrusion
+201: [  OK  ] SurfacePolesPreserveTrimsAndTopology
+201: [  OK  ] SurfacePolesRefitControlCounts
+201: [  OK  ] SurfacePolesMultipleConnectedFaces
+201: [  OK  ] SurfacePolesMultipleFacesOfSolid
+201: [  OK  ] SurfacePolesPreserveDeclaredVertexTolerance
+201: [  OK  ] SurfacePolesAutomaticConnectionAndTangency
+201: [  OK  ] SurfacePolesContinuitySwappedReversedRationalAndSharp
+201: [  OK  ] SurfacePolesContinuityRefitAndProtection
+201: [  OK  ] SurfacePolesTrimProtectionLeavesInteriorFree
+201: [  OK  ] SurfacePolesNeutralTolerantConnections
+201: [  OK  ] SurfacePolesSphereInternalG1AndG2
+201: [  OK  ] SurfacePolesG2AcrossFacesAndRigidPoses
+201: [  OK  ] SurfacePolesExactAnalyticConversion
+201: [  OK  ] SurfacePolesAnalyticEditsHolesAndClosure
+201: [  OK  ] SurfacePolesMixedAnalyticAndNurbsTangency
+201: [  OK  ] SurfacePolesCurvedAnalyticTrimmedHoles
+201: [  OK  ] SurfacePolesPeriodicHelicalTrims
+201: [  OK  ] SurfacePolesSphericalCapAtConstantLatitude
+201: [  OK  ] SurfacePolesSoftInfluenceLocalAndOverlap
+201: [  OK  ] SurfacePolesSoftInfluencePeriodAndBudget
+201: [  OK  ] FillPlanarSquare
+201: [  OK  ] FillSphericalCapThroughGuides
+201: [  OK  ] FillTangentToCylinder
+201: cono: celle 64, contorno 2.13e-07, guide 2.32e-07, tangenza 0.000912 gradi
+201: cono senza guide: celle 32, contorno 1.77e-07, tangenza 0.000319 gradi
+201: [  OK  ] FillConeWithConflictingGuides
+201: sfera G2: celle 32, contorno 1.98e-07, guide 1.81e-07, tangenza 0.00149 gradi, curvatura 0.003, dalla sfera 0.00668
+201: [  OK  ] FillCapContinuesSphereInCurvature
+201: [  OK  ] FillObliqueContactsPreserveInterior
+201: [  OK  ] FillInfluencePreservesProjectionAndTangency
+201: sfera G1 naturale: scarto curvatura 0.00897 1/mm
+201: [  OK  ] FillNaturalG1FollowsSupportCurvature
+201: [  OK  ] FillRejectsInvalidShapeParameters
+201: [  OK  ] FillIndependentContactInfluences
+201: [  OK  ] FillIgnoredGuidesPreserveLocalInfluence
+201: [  OK  ] FillDirectionalProfilePreservesContacts
+201: [  OK  ] FillDirectionalProfileRejectsInvalidSelection
+201: [  OK  ] FillUnequalCompoundBoundarySpans
+201: [  OK  ] FillReportsBoundaryContactConflictAtCorner
+201: [  OK  ] FillPerFaceContinuityOverrides
+201: 40/40 test superati
+ 9/22 Test #201: forgekernel_surface_tools_tests ..................   Passed    4.62 sec
+test 202
+      Start 202: forgekernel_blend_profile_tests
+
+202: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_blend_profile_tests
+202: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+202: Test timeout computed to be: 60
+202: [  OK  ] BlendProfilesConicFamilies
+202: [  OK  ] BlendProfilesVariableArcLength
+202: [  OK  ] BlendProfilesValidationAndNoPropagation
+202: [  OK  ] BlendProfilesTangentPropagationToggle
+202: [  OK  ] BlendProfilesTangentPathStations
+202: [  OK  ] BlendProfilesIndependentPaths
+202: 6/6 test superati
+10/22 Test #202: forgekernel_blend_profile_tests ..................   Passed    0.59 sec
+test 213
+      Start 213: forgekernel_offset_validation_tests
+
+213: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_offset_validation_tests
+213: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+213: Test timeout computed to be: 60
+213: [  OK  ] OffsetValidationHiddenSpanAndScale
+213: [  OK  ] OffsetValidationToroidalDomain
+213: [  OK  ] OffsetValidationCancellationAndReset
+213: [  OK  ] OffsetValidationAnalyticExtrusionAndRevolution
+213: [  OK  ] OffsetValidationRotatedCircularConstructions
+213: 5/5 test superati
+11/22 Test #213: forgekernel_offset_validation_tests ..............   Passed    0.05 sec
+test 214
+      Start 214: forgekernel_curve_fit_validation_tests
+
+214: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_curve_fit_validation_tests
+214: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+214: Test timeout computed to be: 120
+214: [  OK  ] CurveFitCertifiedDegree27OffsetPoseScaleRational
+214: [  OK  ] CurveFitCertifiedNestedTrims
+214: [  OK  ] CurveFitCertifiedInvalidAndAtomic
+214: [  OK  ] CurveFitCertifiedUnresolvedAndCancellation
+214: [  OK  ] CurveFitCertifiedConicParameterNotAssumedPolynomial
+214: [  OK  ] CurveFitCertifiedRevolutionMeridian
+214: [  OK  ] CurveFitLegacyInvalidInputAndAtomic
+214: [  OK  ] CurveFitCertifiedRescaledWeightsTrimTransform
+214: [  OK  ] CurveFitCertifiedMultipleSpansUnclamped
+214: [  OK  ] CurveFitCertifiedProviderDomainAndCancellation
+214: [  OK  ] CurveFitCertifiedClosedNurbsAcrossSeam
+214: 11/11 test superati
+12/22 Test #214: forgekernel_curve_fit_validation_tests ...........   Passed   17.21 sec
+test 216
+      Start 216: forgekernel_blend_contact_break_tests
+
+216: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_blend_contact_break_tests
+216: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+216: Test timeout computed to be: 60
+216: [  OK  ] BlendContactKnotCrossingsUseContactParameters
+216: [  OK  ] BlendContactKnotAtFitEndpoints
+216: [  OK  ] BlendContactKnotAtExistingEdgeBreakUsesOneParameter
+216: [  OK  ] BlendContactKnotOnProbeAndRealNormalJump
+216: [  OK  ] BlendContactKnotKeepsRadiusAndAllowsOneMillimeterOffset
+216: 5/5 test superati
+13/22 Test #216: forgekernel_blend_contact_break_tests ............   Passed    0.44 sec
+test 231
+      Start 231: forgekernel_blend_cavity_regression_tests
+
+231: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_blend_cavity_regression_tests
+231: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+231: Test timeout computed to be: 90
+231: [  OK  ] BlendCavitySmallRadiusKeepsForwardContour
+231: [  OK  ] BlendCavitySmallRadiusKeepsDifferentSeed
+231: [  OK  ] BlendCavitySmallRadiusKeepsRigidPose
+231: [  OK  ] BlendCavitySmallRadiusKeepsScaledGeometry
+231: [  OK  ] BlendCavityCancellationPreservesBodyAndClearsOutputHistory
+231: [  OK  ] BlendCavityConsumedSideRejectsWithoutBodyOrPartialHistory
+231: 6/6 test superati
+14/22 Test #231: forgekernel_blend_cavity_regression_tests ........   Passed   22.25 sec
+test 232
+      Start 232: forgekernel_blend_mitre_validation_tests
+
+232: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_blend_mitre_validation_tests
+232: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+232: Test timeout computed to be: 180
+232: [  OK  ] BlendMitreIsoHiddenKnotDoesNotPublishOffSupportFit
+232: [  OK  ] BlendMitreIsoPolynomialPositive
+232: [  OK  ] BlendMitreIsoRationalPositive
+232: [  OK  ] BlendMitreIsoRigidPosePositive
+232: [  OK  ] BlendMitreIsoScaleAndSupportOrderPositive
+232: [  OK  ] BlendMitreDistinctFitAndCarrierBudgets
+232: [  OK  ] BlendMitreOverCarrierBudgetRejects
+232: [  OK  ] BlendMitreInvalidFitToleranceRejectsBeforePublishing
+232: [  OK  ] BlendMitreCancellationDoesNotPublishCut
+232: [  OK  ] BlendMitreRevalidatesExactEmittedCoefficients
+232: [  OK  ] BlendMitreCoincidentDiagonalRetainsUncertifiedCompatibility
+232: [  OK  ] BlendMitreEmittedFinKeepsOriginalUVInBothSenses
+232: [  OK  ] BlendMitreEmissionRejectsChangedProvenanceAndBudgets
+232: 13/13 test superati
+15/22 Test #232: forgekernel_blend_mitre_validation_tests .........   Passed    0.06 sec
+test 233
+      Start 233: forgekernel_blend_boundary_validation_tests
+
+233: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_blend_boundary_validation_tests
+233: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+233: Test timeout computed to be: 180
+233: original_parametric_deviation polynomial 5.7219584981527968e-17
+233: [  OK  ] BoundaryOriginalPolynomialPositive
+233: original_parametric_deviation rational 2.2247786310271853e-16
+233: [  OK  ] BoundaryOriginalRationalParameter
+233: original_parametric_deviation rational-pose-scale 3.820199830714189e-15
+233: [  OK  ] BoundaryOriginalRationalPoseScale
+233: original_parametric_deviation rational-negative-uv 2.2247786310271853e-16
+233: [  OK  ] BoundaryOriginalRationalReverse
+233: original_parametric_deviation rational-trim 3.3335590258932494e-16
+233: [  OK  ] BoundaryOriginalRationalTrim
+233: [  OK  ] BoundaryFailureBodyAndModelAtomicity
+233: [  OK  ] BoundaryCancellationBodyAndModelAtomicity
+233: [  OK  ] BoundaryIsoHiddenPcurveAndCurveSpan
+233: hidden_support_extension_rejected 1
+233: [  OK  ] BoundaryIsoHiddenSupportExtensionRejectsAtomically
+233: [  OK  ] BoundaryActualExtendedFinUsesFullCertifiedWindow
+233: [  OK  ] BoundaryActualEmissionRejectsChangedContracts
+233: [  OK  ] BoundaryIsoAffineParameterAndSupportOrder
+233: [  OK  ] BoundaryIsoLineMapVaryingV
+233: [  OK  ] BoundaryInvalidBudgetsAndRangeRejectBeforeMutation
+233: [  OK  ] BoundaryActualEmissionKeepsDistinctFacesOnSharedCarrier
+233: 15/15 test superati
+16/22 Test #233: forgekernel_blend_boundary_validation_tests ......   Passed    3.34 sec
+test 236
+      Start 236: forgekernel_sheet_fit_validation_tests
+
+236: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_sheet_fit_validation_tests
+236: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+236: Test timeout computed to be: 180
+236: [  OK  ] SheetFitPlanarNurbsOrientationsAndPose
+236: [  OK  ] SheetFitHiddenFeatureBothBranchesAndScale
+236: 2/2 test superati
+17/22 Test #236: forgekernel_sheet_fit_validation_tests ...........   Passed    1.30 sec
+test 237
+      Start 237: forgekernel_sheet_join_validation_tests
+
+237: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_sheet_join_validation_tests
+237: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+237: Test timeout computed to be: 180
+237: [  OK  ] SheetJoinImplicitPolynomial
+237: [  OK  ] SheetJoinTangentPolynomial
+237: [  OK  ] SheetJoinRigidPose
+237: [  OK  ] SheetJoinSmallScale
+237: [  OK  ] SheetJoinLargeScale
+237: [  OK  ] SheetJoinRational
+237: [  OK  ] SheetJoinReverseSelection
+237: [  OK  ] SheetJoinFaceSense
+237: [  OK  ] SheetJoinCanonicalReversal
+237: [  OK  ] SheetJoinLowerBoundary
+237: [  OK  ] SheetJoinTangentRigidPose
+237: [  OK  ] SheetJoinTangentSmallScale
+237: [  OK  ] SheetJoinTangentLargeScale
+237: [  OK  ] SheetJoinTangentRational
+237: [  OK  ] SheetJoinTangentReverseSelection
+237: [  OK  ] SheetJoinTangentFaceSense
+237: [  OK  ] SheetJoinTangentCanonicalReversal
+237: [  OK  ] SheetJoinTangentLowerBoundary
+237: [  OK  ] SheetJoinHiddenNarrowKnots
+237: [  OK  ] SheetJoinTangentGapBudget
+237: [  OK  ] SheetJoinTangentTrimmedSupport
+237: [  OK  ] SheetJoinHiddenNarrowPhases
+237: [  OK  ] SheetJoinHiddenNarrowPose
+237: [  OK  ] SheetJoinHiddenNarrowSmallScale
+237: [  OK  ] SheetJoinHiddenNarrowLargeScale
+237: [  OK  ] SheetJoinHiddenNarrowReverseSelection
+237: [  OK  ] SheetJoinTangentGapPose
+237: [  OK  ] SheetJoinCancellationAtomic
+237: [  OK  ] SheetJoinInvalidLengthAtomic
+237: [  OK  ] SheetJoinNonIsoOffsetLoftOriginal
+237: [  OK  ] SheetJoinNonIsoOffsetLoftRigidPose
+237: [  OK  ] SheetJoinNonIsoOffsetLoftSmallScale
+237: [  OK  ] SheetJoinNonIsoOffsetLoftLargeScalePose
+237: 33/33 test superati
+18/22 Test #237: forgekernel_sheet_join_validation_tests ..........   Passed   38.16 sec
+test 240
+      Start 240: forgekernel_surface_curve_fit_validation_tests
+
+240: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_curve_fit_validation_tests
+240: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+240: Test timeout computed to be: 180
+240: [  OK  ] SurfaceCurveFitPolesHiddenSupportPoseScaleAndParameters
+240: [  OK  ] SurfaceCurveFitSharedHiddenNeighborRejectedAndCoherentAccepted
+240: [  OK  ] SurfaceCurveFitDirectOracleKnotCrossingsAndUnsupportedUV
+240: [  OK  ] SurfaceCurveFitInstancedSurfaceAndMaterializedAffine
+240: [  OK  ] SurfaceCurveFitInvalidInputAndCancellation
+240: 5/5 test superati
+19/22 Test #240: forgekernel_surface_curve_fit_validation_tests ...   Passed    0.59 sec
+test 249
+      Start 249: forgekernel_offset_pcurve_tests
+
+249: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_offset_pcurve_tests
+249: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+249: Test timeout computed to be: 120
+249: joined_polynomial source_residual=2.2204460492503131e-16 actual_residual=2.0559776105022461e-11 fin_budget=9.9999999999999995e-07 at=0.33295000000000002 fin=16 ratio=2.0559776105022463e-05 PASS
+249: joined_rational source_residual=2.2204460492503131e-16 actual_residual=8.0662809764930898e-11 fin_budget=9.9999999999999995e-07 at=0.10125000000000001 fin=10 ratio=8.0662809764930898e-05 PASS
+249: joined_shift_trim source_residual=2.2204460492503131e-16 actual_residual=2.0559776105022461e-11 fin_budget=9.9999999999999995e-07 at=0.33295000000000002 fin=16 ratio=2.0559776105022463e-05 PASS
+249: joined_reverse source_residual=3.3306690738754696e-16 actual_residual=2.0559776105022461e-11 fin_budget=9.9999999999999995e-07 at=0.33295000000000002 fin=16 ratio=2.0559776105022463e-05 PASS
+249: joined_pose source_residual=2.9457545650361182e-15 actual_residual=2.9169558047977757e-10 fin_budget=9.9999999999999995e-07 at=0.54225000000000001 fin=13 ratio=0.0002916955804797776 PASS
+249: joined_scale source_residual=2.2737367544323206e-13 actual_residual=1.7974514321394963e-08 fin_budget=0.001 at=0.40050000000000002 fin=10 ratio=1.7974514321394963e-05 PASS
+249: faces_trim_polynomial source_residual=2.2204460492503131e-16 actual_residual=1.3948072545286034e-10 fin_budget=9.9999999999999995e-07 at=0.51870000000000005 fin=2 ratio=0.00013948072545286034 PASS
+249: faces_trim_rational source_residual=2.2204460492503131e-16 actual_residual=1.3948072545286034e-10 fin_budget=9.9999999999999995e-07 at=0.51870000000000005 fin=2 ratio=0.00013948072545286034 PASS
+249: public_atomic_invalid_cancel PASS
+249: provider_original_plane_residual_lifetime_rejection_cancel PASS
+249: 10 passed 0 failed
+20/22 Test #249: forgekernel_offset_pcurve_tests ..................   Passed    0.41 sec
+test 250
+      Start 250: forgekernel_sew_pcurve_tests
+
+250: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_sew_pcurve_tests
+250: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+250: Test timeout computed to be: 180
+250: nonaffine_polynomial source_original=0 residual=3.8395221104055299e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2364439862352513e-09 edge_tolerance=0 witness_t=0.046875 PASS
+250: nonaffine_reverse_inputs source_original=0 residual=3.8395221104055299e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2364439862352513e-09 edge_tolerance=0 witness_t=0.046875 PASS
+250: nonaffine_shift_trim source_original=0 residual=3.8393950553550216e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2364413694726504e-09 edge_tolerance=0 witness_t=-2.625 PASS
+250: nonaffine_reverse_target source_original=0 residual=3.839473407610261e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2364414810235015e-09 edge_tolerance=0 witness_t=0.953125 PASS
+250: nonaffine_scale source_original=0 residual=8.4684472767548868e-09 legacy_cap=0.0001 fin_tolerance=9.2592244982370258e-09 edge_tolerance=0 witness_t=0.1484375 PASS
+250: reuse_sampled_same_parameter source_original=0 residual=3.8400708168850883e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2365245703918136e-09 edge_tolerance=0 witness_t=0.046875 PASS
+250: reuse_affine_range source_original=0 residual=3.8385393821838143e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2361982975289197e-09 edge_tolerance=0 witness_t=-2.625 PASS
+250: rational_original_weights source_original=0 residual=2.8167877181130632e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=3.8750959678070412e-09 edge_tolerance=0 witness_t=0.015625 PASS
+250: public_cancellation_atomic PASS
+250: plane_fit_original_normal_and_atomic_budget PASS
+250: plane_actual_controls_invalid_budget_and_cancellation PASS
+250: plane_fit_physical_metric_original_wrappers physical=3.7140148734344411e-09 uv_coordinate_error=3714.0132751464844 PASS
+250: 12 passed 0 failed
+21/22 Test #250: forgekernel_sew_pcurve_tests .....................   Passed   22.42 sec
+test 251
+      Start 251: forgekernel_surface_curve_bounds_tests
+
+251: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_curve_bounds_tests
+251: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+251: Test timeout computed to be: 180
+251: [  OK  ] NonIsoResidualCubicUVOnOriginalTensorPlane
+251: [  OK  ] NonIsoResidualBilinearCarrierAndNativeLineUV
+251: [  OK  ] NonIsoResidualCommonPartitionAcrossEdgeUVAndCarrierKnots
+251: [  OK  ] NonIsoResidualNonUnitDomainSubrangeAndCorrelatedReversal
+251: [  OK  ] NonIsoResidualConstantOriginalWeightsRemainPolynomial
+251: [  OK  ] NonIsoResidualHiddenEdgePeakIsNotAContinuousProof
+251: [  OK  ] NonIsoResidualHiddenCarrierCellPeakIsRejected
+251: [  OK  ] NonIsoResidualUVLeavesDomainBetweenThreeMatchingSamples
+251: [  OK  ] NonIsoResidualInvalidInputsFailClosed
+251: [  OK  ] NonIsoResidualVariableRationalAndWrappersAreUnsupported
+251: [  OK  ] NonIsoResidualCancellationPropagates
+251: [  OK  ] NonIsoResidualFixedInputResourceLimitFailsClosed
+251: [  OK  ] NonIsoResidualUnclampedOriginalCubicKnots
+251: [  OK  ] SheetJoinLedgerActualTwoFinsAndExtraFixedCaps
+251: [  OK  ] SheetJoinLedgerExplicitCompactionAndUnifyHistoryPermutation
+251: [  OK  ] SheetJoinLedgerRecognizedGapCannotUseLargeFinDeviation
+251: [  OK  ] SheetJoinLedgerMissingMapCurveRangeOrIncidenceRejects
+251: [  OK  ] SheetJoinLedgerInvalidBudgetAndEdgeMetadataRejects
+251: [  OK  ] SheetJoinLedgerUnsupportedFamilyRetainsLegacyWithoutCertificate
+251: [  OK  ] SheetJoinLedgerUnifiedDriftAndMissingDescendantsReject
+251: [  OK  ] SheetJoinLedgerCancellationPropagates
+251: [  OK  ] SheetJoinLedgerMissingCarrierOrOriginalCurveRejects
+251: 22/22 test superati
+22/22 Test #251: forgekernel_surface_curve_bounds_tests ...........   Passed    0.05 sec
+
+The following tests passed:
+	forgecad_blend_history_tests
+	forgecad_all_history_tests
+	forgecad_surface_tools_tests
+	forgecad_extension_panel_tests
+	forgekernel_open_offset_tests
+	forgekernel_polar_blend_tests
+	forgekernel_surface_instances_tests
+	forgekernel_history_tests
+	forgekernel_surface_tools_tests
+	forgekernel_blend_profile_tests
+	forgekernel_offset_validation_tests
+	forgekernel_curve_fit_validation_tests
+	forgekernel_blend_contact_break_tests
+	forgekernel_blend_cavity_regression_tests
+	forgekernel_blend_mitre_validation_tests
+	forgekernel_blend_boundary_validation_tests
+	forgekernel_sheet_fit_validation_tests
+	forgekernel_sheet_join_validation_tests
+	forgekernel_surface_curve_fit_validation_tests
+	forgekernel_offset_pcurve_tests
+	forgekernel_sew_pcurve_tests
+	forgekernel_surface_curve_bounds_tests
+
+100% tests passed out of 22
+
+Total Test time (real) = 215.63 sec

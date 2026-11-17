@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+"""Exact final-fin residual certificates from exported original IEEE coefficients.
+No production extractor/bounder or sampled acceptance is called.
+"""
+from pathlib import Path
+import sys,types,json,hashlib,time,math
+root=Path(__file__).parent
+for name in ['fraction_common','verify_tensor_fraction']:
+ m=types.ModuleType(name);m.__file__=str(root/(name+'.py.txt'));sys.modules[name]=m
+ exec(compile(Path(m.__file__).read_text(),m.__file__,'exec'),m.__dict__)
+from verify_tensor_fraction import verify
+inp=Path(sys.argv[1]);out=[];begin=time.monotonic()
+if inp.suffix=='.jsonl':records=[json.loads(x) for x in inp.read_text().splitlines()]
+else:
+ document=json.loads(inp.read_text());records=document['records']
+ if document.get('scope') in ('public-mapping-final-fins','public-instance-final-fins'):
+  cap=float.fromhex(document['prefitCap']);assert document['sourceImmutable'] and document['targetImmutable']
+  if document.get('historyNullCompared') or document['scope']=='public-instance-final-fins':assert document['historyNullByteIdentical']
+  for r in records:
+   assert r['runtimeStatus']=='Certified' and 0<=float.fromhex(r['runtimeUpper'])<=cap
+   assert float.fromhex(r['budget'])==float.fromhex(r['pcurveTolerance'])==cap
+   assert float.fromhex(r['edgeTolerance'])==0
+   assert r['sourceFace']>=0 and r['sourceEdge']>=0 and r['sourceFin']>=0
+   if document.get('label')=='quilt-rational':assert len(set(r['surface']['weights']))>1
+   if document['scope']=='public-instance-final-fins':assert r['surface'].get('basis') and document['originalTargetImmutable']
+
+if len(sys.argv)>3:records=[r for r in records if r.get('label') in sys.argv[3].split(',')]
+for record in records:
+ cap=float.fromhex(record['budget']);assert cap>0 and math.isfinite(cap)
+ for key in ['curve','pcurve']:
+  c=record[key]
+  if c['type']=='line':assert key=='pcurve';continue
+  assert c['type']=='bspline';p=c['degree'];U=list(map(float.fromhex,c['knots']));W=list(map(float.fromhex,c.get('weights',[])))
+  assert p==3 if key=='curve' else p in [1,3]
+  assert U[:p+1]==[U[p]]*(p+1) and U[-p-1:]==[U[-p-1]]*(p+1),'source_spans needs clamped E/Q'
+  assert not W or min(W)>0 and (key=='curve' or len(set(W))==1)
+ s=record['surface'];depth=0
+ while s.get('basis'):
+  depth+=1;assert depth<=32;s=s['basis']
+ assert s['uDegree'] in [2,3] and s['vDegree'] in [2,3] ;assert min(map(float.fromhex,s['weights']))>0
+ result=verify(record);result.update(label=record.get('label'),runtimeStatus=record.get('runtimeStatus',record.get('status')),runtimeUpper=record.get('runtimeUpper',record.get('upperBound')))
+ out.append(result);print(result,flush=True)
+result={'pass':all(x['pass'] for x in out),'input_sha256':hashlib.sha256(inp.read_bytes()).hexdigest(),'method':'Exact Fraction homogeneous original IEEE Cox/de Boor composition and Bernstein whole-interval hull; complete E/Q knot partition and all closed intersected S cells','records':out,'elapsed':time.monotonic()-begin,'not_claimed':['Full mapping intent or carrier fit','Newton/branch correctness','Global trim/topology','Unsupported families']}
+Path(sys.argv[2]).write_text(json.dumps(result,indent=2)+'\n')

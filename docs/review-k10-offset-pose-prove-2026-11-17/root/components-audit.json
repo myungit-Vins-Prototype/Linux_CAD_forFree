@@ -1,0 +1,17 @@
+{
+  "core": {
+    "manifest": "MANIFEST.json",
+    "sha256": "f71a5b2087d0e02cb4fbfc62f30202119179a8b4d358cd58cf440a3f734d7afc",
+    "artifacts_verified": 21
+  },
+  "tests": {
+    "manifest": "manifest.json",
+    "sha256": "64e697cfcf27722036bd59960e763ffc8d0a9f05e662d1f658c605293b9419ca",
+    "artifacts_verified": 40
+  },
+  "audit": {
+    "manifest": "MANIFEST.json",
+    "sha256": "d8efcdf2821b594835183dfff81abf2a82c4f4933414bddd4d5b71c2aa637e75",
+    "artifacts_verified": 23
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "auditCppRuntime": false,
+  "cases": {
+    "stationary": {
+      "attribution": "ROOT compiled/executed the native public extendSheet fixture; this audit read the text log only.",
+      "stdout": "CASE lo=-1 epsilon=0 inputIssues=0 selected=1 sourceSpeed=3\nREFERENCE initialEnd=2 speedAt2=0 arc1to2=0.99999999999999989 requested=3\nSUCCESS faces=1 edges=6 issues=0 maxX=0 deltaX=1 historyOperands=1\nEMITTED face=0 uLo=-1 uHi=2 emittedArc=1.0000000000000013\n",
+      "metadata": {
+        "command": [
+          "/tmp/k10-arc-review/root/baseline-probe",
+          "dyadic",
+          "0"
+        ],
+        "exit": 0,
+        "seconds": 0.003216097000404261,
+        "watchdog_seconds": 20
+      }
+    },
+    "regular": {
+      "attribution": "ROOT compiled/executed the native public extendSheet fixture; this audit read the text log only.",
+      "stdout": "CASE lo=-1 epsilon=1.4551915228366852e-11 inputIssues=0 selected=1 sourceSpeed=3\nREFERENCE initialEnd=2 speedAt2=1.4551915228366852e-11 arc1to2=0.99999999999999989 requested=3\nSUCCESS faces=1 edges=6 issues=0 maxX=177.53408777564368 deltaX=178.53408777564368 historyOperands=1\nEMITTED face=0 uLo=-1 uHi=7.6203140591838299 emittedArc=178.53408777564366\n",
+      "metadata": {
+        "command": [
+          "/tmp/k10-arc-review/root/baseline-probe",
+          "dyadic",
+          "1.4551915228366852e-11"
+        ],
+        "exit": 0,
+        "seconds": 0.003086106007685885,
+        "watchdog_seconds": 20
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "sourceSha256": {
+    "kernel/fk_curve.cpp": "a56cbc9bd3f06f60f7b1ef6bd2c94cf660dc2099da81466993decd43b831f3bc",
+    "kernel/fk_curve.h": "4344d65f2fda1c373471e89d763907bafe9f7d6b88a3196ceaac1dadb3cf8214",
+    "kernel/fk_surface.h": "0f43043bb786c3761c19161bd3952a69f82554c1accead030f0d30a5141daee0",
+    "kernel/fk_pcurve.cpp": "7d7574589225ba9e35899aab76285d824ee7f0bbbe3be48139d212775e1df85b",
+    "AGENTS.md": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+    "CLAUDE.md": "a24f3fd974263b7fbb906a3352a3011bad4eae0aab45bbcc65e7e598110492c2"
+  },
+  "publicCallers": {
+    "curves": "Circle2/3::breakpoints and Ellipse2/3::breakpoints; Trimmed/Transformed forward to basis on their effective requested range.",
+    "surfaces": "Cylinder/Cone/Sphere/Torus/Revolution uBreakpoints; Sphere/Torus vBreakpoints; Revolution vBreakpoints can reach it through conic meridian.",
+    "contract": "Curve::breakpoints returns ordered parameters inside supplied range, endpoints included. Periodic curves permit arbitrary-phase requested intervals, not only canonical0..2pi. Zero width returns two identical endpoints in old implementation and candidate."
+  },
+  "exceptionBehavior": "New invalid_argument for nonfinite/reversed interval, domain_error for nonprogressive next index. Propagate unless caller explicitly recovers; pcurveDeviation does not convert breakpoint-generation exceptions to+Inf. computePCurves captures job failures and rethrows all before assigning any generated fin. OperationCancelled is a distinct non-std exception and bypasses std::exception geometry recovery.",
+  "scope": "No proof of global partition precision at huge phase, no geometry tolerance or period normalization changed; enormous but progressive ranges remain uncapped yet cancellable. No ordinary CAD failure demonstrated.",
+  "runtimeByAudit": false
+}

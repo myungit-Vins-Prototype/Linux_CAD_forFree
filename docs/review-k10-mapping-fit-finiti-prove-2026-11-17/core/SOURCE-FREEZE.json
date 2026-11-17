@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "kernel/fk_mapping_fit.cpp",
+      "sha256": "03d21ceab86aead510559aee7101ade9a4aba8b1ef516671943b0bfa823fd001",
+      "bytes": 14743
+    },
+    {
+      "path": "candidate.patch",
+      "sha256": "9fcb03f53b5b455ec62f9c4bb77b2fa9a356d34b5d8a5469d6301d81f472a463",
+      "bytes": 7048
+    },
+    {
+      "path": "fk_mapping_fit.baseline.cpp.txt",
+      "sha256": "f9187aa9903c07096fe029dad8f271cf850d12d6c6a273b9ed538c2afc5a8b27",
+      "bytes": 13356
+    }
+  ],
+  "status": "staging only; not compiled or executed by core agent"
+}

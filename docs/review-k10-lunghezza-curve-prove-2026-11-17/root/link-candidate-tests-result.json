@@ -1,0 +1,26 @@
+{
+  "command": [
+    "/usr/bin/c++",
+    "-I/tmp/k10-arclength-review/core/kernel",
+    "-std=c++17",
+    "-O2",
+    "-g",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "/tmp/k10-arclength-review/root/main.o",
+    "/tmp/k10-arclength-review/root/test.o",
+    "/tmp/k10-arclength-review/root/candidate.o",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+    "-pthread",
+    "-o",
+    "/tmp/k10-arclength-review/root/candidate-tests"
+  ],
+  "exit": 0,
+  "seconds": 0.06126276499708183,
+  "watchdog_seconds": 600
+}

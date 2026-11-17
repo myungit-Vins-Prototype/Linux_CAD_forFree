@@ -1,0 +1,48 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-quadrant-review');P=R/'docs/review-k10-quadranti-prove-2026-11-17';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();assert not P.exists()
+components=[('core',T/'core/final-proof','MANIFEST.json','1327785bdb2406342930b2a98664d0ac43db12b094e32f5dab402339e3573a60'),('audit',T/'audit/final-proof','MANIFEST.json','c89a8100ae5da5b56ae22fc9c54b6d094a59b7c74500d4ac572440ffd9d79ee4'),('tests',T/'tests','manifest.json','63f6396e46452f9cec4ead0ddc1e43bc9b2c65eb377c02d4d1ad2ce65dfe1c16')]
+for label,d,name,h in components:
+ assert sha(d/name)==h;j=json.loads((d/name).read_text())
+ if 'files' in j:
+  files=j['files'];entries=files if isinstance(files,list) else [{'path':f,'sha256':x} for f,x in files.items()]
+  for e in entries:assert sha(d/e['path'])==e['sha256']
+ else:
+  assert label=='tests'
+  for key in ['test','candidateProduction']:assert sha(Path(j[key]['path']))==j[key]['sha256']
+
+renames={}
+def copy(d,label):
+ for p in d.rglob('*'):
+  if not p.is_file() or '__pycache__' in p.parts or p.name=='package-result.json':continue
+  p.read_text();assert p.suffix not in {'.o','.a','.prt','.step','.body'};rel=str(p.relative_to(d));dest=rel+'.txt' if p.suffix in {'.cpp','.h','.py'} else rel;q=P/label/dest;q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes())
+  if rel!=dest:renames[label+'/'+rel]=label+'/'+dest
+for label,d,_,_ in components:copy(d,label)
+copy(T/'root','root')
+files=set(json.loads((T/'root/integrated-sources.json').read_text()))|{'AGENTS.md','CLAUDE.md','docs/code-review-2026-11-15.md','docs/review-k10-quadranti-2026-11-17.md','docs/history/claude-prima-k10-quadranti-2026-11-17.md'};source={}
+for f in sorted(files):p=R/f;q=P/'workspace'/(f+'.txt');q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes());source[f]=sha(p)
+(P/'source-manifest.json').write_text(json.dumps(source,indent=2)+'\n');(P/'component-path-map.json').write_text(json.dumps(renames,indent=2)+'\n')
+a=json.loads((T/'root/architecture-audit.json').read_text());pres=json.loads((T/'root/preservation-audit.json').read_text());clean=json.loads((T/'root/cleanup-result.json').read_text())
+(P/'README.txt').write_text(f'''K10: quadranti delle coniche, progresso e cancellazione — 17 novembre 2026
+
+Correzione integrata di detail::quadrantBreakpoints in fk_curve.cpp, SHA7f47f426: intervalli non finiti/invertiti rifiutati con invalid_argument; next=k+1 deve avanzare, altrimenti domain_error; cancellationPoint all'ingresso e in ogni iterazione. Formula/ceil/tolleranza legacy e ordine aritmetico conservati, anche risultato puntuale con estremi duplicati e zero firmato. Nessun header pubblico cambiato, cap arbitrario o normalizzazione di fase.
+
+Driver nativo reale del coordinatore via Circle2: baseline [1e20,1e20+1e9] e [-Inf,0] fermate ciascuna dal watchdog esterno0,3s (exit137), senza crescita del vettore; candidata errori espliciti in circa3-4ms incluso avvio. Baseline ignora token preattivo, candidata propaga OperationCancelled. Driver privato durante lavoro su [0,1e12], token attivato dopo5ms, candidata annullata (circa8ms totale), nessuna prova temporizzata attribuita alla baseline. Intervallo ordinario identico in byte. Auditor indipendente: singolo passo IEEE/Fraction indice63661977236758134784 con ULP8192, fl(k+1)=k e condizione true invariata prova lo stato fisso. Nessun loop C++ patologico eseguito dagli agenti; runtime solo root.
+
+Quattro gruppi nuovi su14consumer, nove golden finiti espliciti bit-identici: Circle/Ellipse2/3, Cylinder/Cone/Sphere/Torus e direzioni U/V pertinenti, extrusion/revolution con curve native, helper diretto. Baseline nuova TU eseguita SOLO filtro SafeControls1/1 per evitare hang; candidata4/4 e ASan/UBSan4/4 con leak detection. Strumentate una TU produzione, nuova TUtest e main; resto kernel Release, non intera app. Driver livecancel non strumentato e separato dai test permanenti. Non attribuire un confronto baseline4/4.
+
+Build completa app e quattro target pertinente PASS; CTest4/4 senza skip (quadranti, curve projection, pcurve deviation, invert point). Storici filtrati ArcLength2/2, ProjectOnEllipseMatchesOcct1/1 e TrimmedCurveOnPeriodicBasis1/1 PASS. Nessun UI, suite completa483, nuovaCI, commit/push, CAD o cartelleQA modificati o riavvio dell'app aperta. Binario su disco aggiornato. Compilazioni/analisi seriali, nessuna copia aggiuntiva della libreria. Eliminati dopo le verifiche soltanto {clean['removed_files']} ELF/oggetti privati ricreabili, {clean['bytes']}byte; sorgenti, log, hash e piano conservati.
+
+Tre agenti GPT-6.1 Sol: patch, audit e test, staging solo; nessun blocker finale, integrazione/runtime root. Testimoni su fase enorme e range invalido, nessun CAD ordinario dichiarato risolto. La tolleranza legacy non certifica partizione completa a fasi enormi; workload enorme ma progressivo rimane senza cap di risorse e può consumare CPU/RAM se non annullato. Eccezioni dei breakpoint possono propagarsi ai chiamanti, non sono convertite automaticamente in+Inf. Nessun certificato continuo/globale o topologico aggiunto; K10 globale/Newton/famiglie non coperte restano aperti,33rilievi funzionali invariati.
+
+Architettura {a['nodes']}nodi/{a['edges']}relazioni/{a['units']}TU, zero errori; hash/configurazione/HTML e call/include/reference nei due versi, --check PASS. Generati ignorati non aggiunti a Git. Preservati {pres['previous_packages']} pacchetti/{pres['previous_artifacts']}artefatti e {pres['preserved_existing']}dei{pres['baseline_files']}file baseline; sole cinque modifiche esistenti attese. HEAD/origin47c7c19 e index vuoto invariati. Memoria{pres['CLAUDE_bytes']}byte, archivio completo della versione precedente.
+
+Payload solo UTF-8/testo/JSON/XML e sorgenti inerti con suffisso aggiuntivo .txt, nessun ELF/oggetto/archive/CAD/B-rep. I manifest dei componenti mantengono i percorsi di staging verificati prima copia; component-path-map.json documenta rinomine. SHA256SUMS verifica percorsi effettivi di tutto il pacchetto, manifest inclusi. Script fotografie da ricreare in staging nuovo, non eseguire all'interno delle prove sigillate. Rapporto esterno e root/ contengono comandi, log, tempi, hash binari e limiti; CI storica non certifica il lavoro locale non committato.
+''')
+entries=[]
+for p in sorted(P.rglob('*')):
+ if p.is_file():p.read_text();entries.append((str(p.relative_to(P)),sha(p)))
+seal=P/'SHA256SUMS';seal.write_text(''.join(h+'  '+f+'\n' for f,h in entries))
+for f,h in entries:assert sha(P/f)==h
+for f,h in source.items():assert sha(R/f)==h
+j={'path':str(P),'files_without_seal':len(entries),'bytes_without_seal':sum((P/f).stat().st_size for f,h in entries),'seal_sha256':sha(seal)};(T/'root/package-result.json').write_text(json.dumps(j,indent=2)+'\n');print(j)

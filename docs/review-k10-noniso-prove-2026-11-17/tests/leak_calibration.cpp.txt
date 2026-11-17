@@ -1,0 +1,9 @@
+#include <cstdlib>
+#include <thread>
+int main() {
+    std::thread worker([] {
+        volatile char *allocation = static_cast<volatile char *>(std::malloc(19));
+        *allocation = 42;
+    });
+    worker.join();
+}

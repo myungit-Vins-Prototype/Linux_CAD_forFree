@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+"""Exact counterfactual omission-of-D^p witness from original exported IEEE."""
+from pathlib import Path
+import json,types,sys,hashlib
+root=Path(__file__).parent
+for name in ['fraction_common','verify_tensor_fraction']:
+ m=types.ModuleType(name);m.__file__=str(root/(name+'.py.txt'));sys.modules[name]=m
+ exec(compile(Path(m.__file__).read_text(),m.__file__,'exec'),m.__dict__)
+from verify_tensor_fraction import *
+p=Path(sys.argv[1]);records=[json.loads(x) for x in p.read_text().splitlines()]
+r=next(x for x in records if x['label']=='Q-reciprocal-wrong-numerator');correct=next(x for x in records if x['label']=='Q-reciprocal-correct')
+assert r['runtimeStatus']==2 and correct['runtimeStatus']==1
+for key in ['surface','pcurve','range','budget']:assert r[key]==correct[key]
+lo,hi=map(exact,r['range']);E=source_spans(normalize(r['curve']),(lo,hi));Q=source_spans(normalize(r['pcurve']),(lo,hi));assert len(E)==len(Q)==1
+s=surface_data(r['surface']);pu,pv,U,V,nu,nv,_,W=s;assert pu==pv==2 and set(W)=={F(1)}
+e,q=E[0],Q[0];assert all(a==1 for a in q['h'][0]) and all(a==0 for a in q['h'][1]) and q['w']==[F(2),F(1)]
+h,ws=compose(s,q,pu,pv);d4=[F(1)]
+for unused in range(pu+pv):d4=mul(d4,q['w'])
+assert not any(add(ws,d4,-1)),'Polynomial surface denominator must be D^4'
+d3=[F(1)]
+for unused in range(3):d3=mul(d3,q['w'])
+assert not any(add(h[0],d3,-1)) and not any(h[1]) and not any(h[2])
+# With the WRONG counterfactual denominator1 the ENTIRE residual is zero.
+fake=[add(mul(h[i],e['w']),e['h'][i],-1) for i in range(3)];assert all(not any(a) for a in fake)
+actual=[add(mul(h[i],e['w']),mul(e['h'][i],ws),-1) for i in range(3)];assert any(any(a) for a in actual)
+t=lo;delta=[h[i][0]/ws[0]-e['h'][i][0]/e['w'][0] for i in range(3)];squared=sum(x*x for x in delta);budget=exact(r['budget']);assert squared>budget*budget and abs(delta[0])==F(15,2)
+assert all(U[pu]<=exact(a[0])<=U[nu] and V[pv]<=exact(a[1])<=V[nv] for a in r['pcurve']['poles'])
+out={'pass':True,'inputSHA256':hashlib.sha256(p.read_bytes()).hexdigest(),'scope':'Counterfactual algebraic guard: omitting polynomial S denominator D^4 could certify wrong E=D^3; actual production returns Failed','originalQ':'U=1,D=2-t,V=0','originalPolynomialS':'Identity degree2/2, weights1','normalizedHomogeneousS':'Hs_x=D^3, Ws=D^4','counterfactualWs1ResidualIdenticallyZero':True,'actualPointParameterFraction':str(t),'actualResidualFractions':list(map(str,delta)),'actualGapMM':float(abs(delta[0])),'budgetFraction':str(budget),'qOriginalPoleHullProvesWholeImageInDomain':True,'correctControl':verify(correct),'runtimeWrongStatus':r['runtimeStatus'],'notClaimed':['Production omitted D power','A new public mapping bug','Whole-range upper bound for the failing curve','Sampled acceptance or topology proof']}
+Path(sys.argv[2]).write_text(json.dumps(out,indent=2)+'\n');print(json.dumps(out,indent=2))

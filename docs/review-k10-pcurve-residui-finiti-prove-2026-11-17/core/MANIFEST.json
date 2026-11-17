@@ -1,0 +1,51 @@
+{
+  "files": [
+    {
+      "path": "HANDOFF.md",
+      "bytes": 2796,
+      "sha256": "9c29341e7d24eb6a37bc31f505c19d4ced6cc77d51cccb2defe65f1c1594cc8e"
+    },
+    {
+      "path": "SOURCE-FREEZE.json",
+      "bytes": 824,
+      "sha256": "d3ff0c5d004970aedb1c260c441ea1510783b74996f7f254314b998340396b3b"
+    },
+    {
+      "path": "candidate.patch.txt",
+      "bytes": 3609,
+      "sha256": "228a194c192183c2cd01a68b2a1d28583dcd617ceab35bd9ac08585058344d10"
+    },
+    {
+      "path": "fk_pcurve.baseline.cpp.txt",
+      "bytes": 27939,
+      "sha256": "ad5e5ce7082274aee5c279772f30caa56b21689b7b4b7331d27543444c58df79"
+    },
+    {
+      "path": "fk_pcurve.candidate.cpp.txt",
+      "bytes": 29124,
+      "sha256": "7d7574589225ba9e35899aab76285d824ee7f0bbbe3be48139d212775e1df85b"
+    },
+    {
+      "path": "graph-evidence.json",
+      "bytes": 923904,
+      "sha256": "75df09de372036644ba4c60c7a9efc76c50580f31a88226d5a88fd192cf39e2a"
+    },
+    {
+      "path": "nearPole-readonly-before-scope-change.md",
+      "bytes": 2591,
+      "sha256": "fb957a209896e9001ef2af582edba45884c70e7c5c0ce4f52fa3f5c15e86560d"
+    },
+    {
+      "path": "nurbs-probe.cpp.txt",
+      "bytes": 894,
+      "sha256": "6b1f7fd116dda9f3b247e5ce2a37023558885f40401391b9f2c524f1ffebc68d"
+    },
+    {
+      "path": "probe.cpp.txt",
+      "bytes": 757,
+      "sha256": "8d53de55191ceefa240f5c617f4a49cca3dea060557c56289923c72b5d15ee00"
+    }
+  ],
+  "runtime_performed_by_core": false,
+  "baseline_source_unchanged": true
+}

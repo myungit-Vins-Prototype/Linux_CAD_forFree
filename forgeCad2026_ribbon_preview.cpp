@@ -508,7 +508,7 @@ struct RibbonPreview::Impl {
             const auto &g=tab.groups[i];const auto &p=layout[i];
             if(p.more) {
                 if(!overflow)overflow=new CadMenu(groupsHost);
-                auto *menu=overflow->addMenu(g.name);for(auto *action:g.actions){if(action)menu->addAction(action);else menu->addSeparator();}
+                auto *menu=addCadMenu(overflow,g.name);for(auto *action:g.actions){if(action)menu->addAction(action);else menu->addSeparator();}
                 menu->setEnabled(tab.id!="sketch" || sketch || g.name==QStringLiteral("Crea schizzo"));
                 continue;
             }

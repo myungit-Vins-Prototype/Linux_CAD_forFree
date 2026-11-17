@@ -1,0 +1,41 @@
+{
+  "mode": "Finite scalar Python/Fraction oracle only, no quadrature/kernel loop executed",
+  "source": {
+    "degree": 1,
+    "knotsHex": [
+      "0x0.0p+0",
+      "0x0.0p+0",
+      "0x1.0000000000000p-600",
+      "0x1.0000000000000p-600"
+    ],
+    "poles": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        0
+      ]
+    ],
+    "weights": "all1",
+    "query": "full natural domain[0,h]"
+  },
+  "h": "2^-600",
+  "derivativeMathematical": "(2^600,0,0)",
+  "derivativeStoredHex": "0x1.0000000000000p+600",
+  "derivativeFinite": true,
+  "mathematicalSquaredNorm": "2^1200",
+  "binary64SquaredNorm": "Inf",
+  "binary64CurrentNorm": "Inf",
+  "exactArcLength": "1",
+  "gaussKronrodConsequence": "Every speed sample isInf. Positive finite weighted sums K/G areInf; abs((K-G)*half) isNaN. Both error<=tolerance and error<=roundoffFloor arefalse until depth30.",
+  "potentialBinaryTreeNodes": "2147483647",
+  "potentialSpeedEvaluations": "32212254705",
+  "minimumLeafHalfwidthExponent": -631,
+  "noParameterCollapseBeforeDepth30": "Halfwidth2^-631 remains normal binary64. Small rounding in sample position does not rescue overflow norm of ~2^600 derivative.",
+  "cancellationCaveat": "Native BSpline basis already has internal cancellation; baseline no-token exponential workload is distinct from Line preset-token ignore. New outer guard makes speed checking/cancellation independent of family.",
+  "scope": "Ordinary coordinates[0,1], extreme but finite native parameterization; no user CAD-body failure asserted. Safe rejection is sufficient for this scope; stable-norm/integration returning exact1 is NOT claimed."
+}

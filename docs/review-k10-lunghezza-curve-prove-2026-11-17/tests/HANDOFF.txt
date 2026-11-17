@@ -1,0 +1,55 @@
+K10 arcLength — final V2 tests, frozen 17 November 2026
+
+TU test_arc_length_validation.cpp
+SHA256 cc1703a3b4c927858ff9f4e409b31168d638b3075d3e962061957380322ed738
+Production fk_curve_algo.cpp 8ceb22befce610f835a9271ca88b497470a5ba2497210d94cbb8867bccfa3400
+Private cache header d9f5a424ffc931bae46b818b6bcff644ca06376dabbb9c301ba8ce423f9aa1e0
+
+Six FK_TEST groups. Compile separately with fk_test_main.cpp. Root owns CMake,
+baseline/candidate/sanitizer execution and all repository/memory updates.
+BASELINE MUST RUN ONLY substring SafeControls. Other groups contain native
+inputs that can force the old depth30 quadrature tree; root uses separate
+external-watchdog probes for the baseline pathology. No timing thread is in
+the permanent test. No test or problematic loop was executed by this agent.
+
+SafeControls: Line2/3, analytic circle, rational native C0 NURBS2/3 of known
+length5/7, trim crossing the C0 corner, affine transformed cubic length18,
+finite point ranges0; compatibility tolerance0/-1 on Line and cache retained.
+Independent length oracles use known collinear spans/endpoint distances;
+cache results are compared bitwise to direct API for ordinary finite inputs.
+
+ReparametrizedSpeeds: native degree1 segments at ordinary coordinates, exact
+dyadic knot width2^(-600),2^(-535),2^535,2^600. Axis and diagonal2D(3,4) /
+3D(1,2,2) physical lengths stay1,5,3; endpoint-distance oracle and cache/direct
+bit identity verify physical invariance. These are finite derivatives whose
+squared norm overflows or underflows, not a request to reject a valid unit
+segment. Parent confirmed both old normInf slowdown and norm0 false length.
+
+NonfiniteDerivative: still valid native knots2^-1030 make derivative evaluation
+itself nonfinite, at finite ordinary poles. Direct N2/N3 must throw domain_error.
+InvalidRanges: NaN/Inf/reversed ranges keep invalid_argument; finite endpoints
+whose width overflows must throw domain_error, for direct and cached paths.
+No InvalidTolerance test or new tolerance contract is introduced.
+
+CancellationPreset: direct native Line2/3 and BSpline2/3; cache hit preserves its
+already existing entry-cancellation behavior. This cache behavior is not
+attributed to the new direct API guard. No timed live-cancel assertion.
+CachedFailuresDoNotPoison: repeat the same failing derivative-overflow key,
+require domain_error both times, retain an independently finite cache entry
+and verify its subsequent hit/value. All borrowed curves outlive their cache.
+This does NOT promise rollback of valid prefix entries from other multi-span
+requests, nor transactionality of all cache statistics.
+
+No fabricated Curve subclass or hook. Invalid custom breakpoint shapes are
+not exercised because no native API producing one was established; candidate
+checks are reviewed statically only. No blanket continuous error guarantee
+for quadrature is claimed. Existing generic quadrature/norm formula outside
+these two scoped sources, limits, tolerances and finite ordinary arithmetic
+remain production-owned and are not changed by the tests.
+
+Rules, current CLAUDE, tolerance policy, graph descriptions and typed incoming /
+outgoing calls/includes/ref counts were read; graph-consult.json contains the
+scoped evidence including private cache/loft links. Prior drafts before root's
+V2 finite-speed decision were never frozen or compiled by this agent; final
+SHA above is the only final TU. No repository edit, build, archive copy, UI or
+operation run performed. Parent owns CLAUDE/architecture update as requested.

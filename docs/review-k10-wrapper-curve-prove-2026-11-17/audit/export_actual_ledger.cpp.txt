@@ -1,0 +1,177 @@
+#include "fk_surface_mapping.h"
+#include "fk_quilt_mapping.h"
+#include "fk_bspline_surface.h"
+#include "fk_body_io.h"
+#include "fk_body_check.h"
+#include "fk_primitives.h"
+#include "fk_sheet.h"
+#include "fk_transform.h"
+#include "fk_surface_curve_bounds.h"
+#include "fk_pcurve.h"
+#include "fk_sheet_join_validation.h"
+#include "fk_unify.h"
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <iostream>
+#include <stdexcept>
+#include <algorithm>
+using namespace ForgeCad::Kernel;
+void require(bool v,const char*m) {if(!v)throw std::runtime_error(m);}
+std::string number(double d) {
+    std::ostringstream o;
+    o << '"' << std::hexfloat << d << '"';
+    return o.str();
+}
+template <class T> void array(std::ostream &o, const T &v) {
+    o << '[';
+    bool sep = false;
+    for (auto x : v) {
+        if (sep)
+            o << ',';
+        sep = true;
+        o << number(x);
+    }
+    o << ']';
+}
+template <int N> void vector(std::ostream &o, const Vec<N> &v) {
+    o << '[';
+    for (int i = 0; i < N; ++i) {
+        if (i)
+            o << ',';
+        o << number(v[i]);
+    }
+    o << ']';
+}
+template <int N> void curveJson(std::ostream &o, const CurvePtr<N> &c, int depth=0) {
+    if(depth>32)throw std::runtime_error("export curve chain exceeds32links");
+    if (auto s = std::dynamic_pointer_cast<const BSplineCurve<N>>(c)) {
+        o << "{\"type\":\"bspline\",\"degree\":" << s->degree()
+          << ",\"knots\":";
+        array(o, s->knots());
+        o << ",\"poles\":[";
+        for (int i = 0; i < s->poleCount(); ++i) {
+            if (i)
+                o << ',';
+            vector(o, s->poles()[i]);
+        }
+        o << "],\"weights\":[";
+        for (int i = 0; i < s->poleCount(); ++i) {
+            if (i)
+                o << ',';
+            o << number(s->weight(i));
+        }
+        o << "]}";
+    } else if (auto l = std::dynamic_pointer_cast<const Line<N>>(c)) {
+        o << "{\"type\":\"line\",\"origin\":";
+        vector(o, l->origin());
+        o << ",\"direction\":";
+        vector(o, l->direction());
+        o << '}';
+    } else if (auto t = std::dynamic_pointer_cast<const TrimmedCurve<N>>(c)) {
+        o << "{\"type\":\"trimmed\",\"range\":[" << number(t->domain().lo) << ',' << number(t->domain().hi) << "],\"basis\":";
+        curveJson(o,t->basis(),depth+1);o << '}';
+    } else {
+        if constexpr(N==3) {
+            if(auto t=std::dynamic_pointer_cast<const TransformedCurve>(c)) {
+                o << "{\"type\":\"transformed\",\"placement\":{\"matrix\":[";
+                for(int i=0;i<3;++i){if(i)o<<',';o<<'[';for(int j=0;j<3;++j){if(j)o<<',';o<<number(t->transform().matrix(i,j));}o<<']';}
+                o << "],\"translation\":";vector(o,t->transform().translationPart());o << "},\"basis\":";
+                curveJson(o,t->basis(),depth+1);o<<'}';return;
+            }
+        }
+        throw std::runtime_error("test export: unsupported curve wrapper");
+    }
+}
+void surfaceJson(std::ostream &o, const BSplineSurface &s, int depth = 0) {
+    if (depth > 32) throw std::runtime_error("export chain exceeds bounded input");
+    if (s.basis()) {
+        o << "{\"type\":\"instance\",\"placement\":{\"matrix\":[";
+        for(int i=0;i<3;++i) {if(i)o<<',';o<<'[';for(int j=0;j<3;++j) {if(j)o<<',';o<<number(s.placement().matrix(i,j));}o<<']';}
+        o << "],\"translation\":";vector(o,s.placement().translationPart());o<<"},\"basis\":";
+        surfaceJson(o,*s.basis(),depth+1);o<<'}';return;
+    }
+    o << "{\"uDegree\":" << s.uDegree() << ",\"vDegree\":" << s.vDegree()
+      << ",\"uKnots\":";
+    array(o, s.uKnots());
+    o << ",\"vKnots\":";
+    array(o, s.vKnots());
+    o << ",\"uPoleCount\":" << s.uPoleCount()
+      << ",\"vPoleCount\":" << s.vPoleCount() << ",\"poles\":[";
+    for (int i = 0; i < s.uPoleCount(); ++i)
+        for (int j = 0; j < s.vPoleCount(); ++j) {
+            if (i || j)
+                o << ',';
+            vector(o, s.pole(i, j));
+        }
+    o << "],\"weights\":[";
+    for (int i = 0; i < s.uPoleCount(); ++i)
+        for (int j = 0; j < s.vPoleCount(); ++j) {
+            if (i || j)
+                o << ',';
+            o << number(s.weight(i, j));
+        }
+    o << "]}";
+}
+
+
+constexpr double cap=1e-7;
+Body fixture() {
+ const std::vector<double> k{0,0,0,0,1,1,1,1},sKnots{0,0,0,1,1,1},w{1,2,1,3};
+ std::vector<Vec3> poles;std::vector<double> weights;
+ for(int i=0;i<3;++i)for(int j=0;j<3;++j){poles.push_back({i/2.,j/2.,0});weights.push_back(7);}
+ auto s=std::make_shared<BSplineSurface>(2,2,sKnots,sKnots,3,3,poles,weights);
+ std::vector<CurvePtr<3>> curves;
+ for(int edge=0;edge<4;++edge){std::vector<Vec3> p;
+  for(int i=0;i<4;++i)p.push_back(edge%2?Vec3(edge==1?1:0,i/3.,0):Vec3(i/3.,edge==2?1:0,0));
+  CurvePtr<3> curve=std::make_shared<BSplineCurve<3>>(3,k,p,w);
+  double m0[3][3]{{1,.5,0},{0,1,0},{0,0,1}},m1[3][3]{{1,-.5,0},{0,1,0},{0,0,1}};
+  curve=std::make_shared<TrimmedCurve<3>>(curve,0,1);
+  curve=std::make_shared<TransformedCurve>(curve,Transform3::fromParts(m0,{.125,-.25,.5}));
+  curve=std::make_shared<TrimmedCurve<3>>(curve,0,1);
+  curve=std::make_shared<TransformedCurve>(curve,Transform3::fromParts(m1,{-.25,.25,-.5}));
+  curves.push_back(std::make_shared<TrimmedCurve<3>>(curve,0,1));
+ }
+ std::vector<Body::BuildEdge> e{{0,1,curves[0],{0,1},cap},{1,2,curves[1],{0,1},cap},{3,2,curves[2],{0,1},cap},{0,3,curves[3],{0,1},cap}};
+ auto pc=[&](Vec2 a,Vec2 d){std::vector<Vec2> poles;for(int i=0;i<4;++i)poles.push_back(a+(i/3.)*d);CurvePtr<2> curve=std::make_shared<BSplineCurve<2>>(3,k,poles,w);curve=std::make_shared<TrimmedCurve<2>>(curve,0,1);return std::make_shared<TrimmedCurve<2>>(curve,0,1);};
+ Body::BuildFace f;f.surface=s;f.loops={{{0,true,pc({0,0},{1,0}),0},{1,true,pc({1,0},{0,1}),0},{2,false,pc({0,1},{1,0}),0},{3,false,pc({0,0},{0,1}),0}}};
+ return Body::buildSheet({{0,0,0},{1,0,0},{1,1,0},{0,1,0}},e,{f});
+}
+std::vector<detail::SheetJoinPlan> plans(const Body &body) {
+ std::vector<detail::SheetJoinPlan> p;const auto edges=body.edges();
+ for(int i=0;i<int(edges.size());++i){const auto&e=body.edge(edges[i]);p.push_back({0,i,cap,e.curve,e.range});}return p;
+}
+int main(int argc,char**argv) {
+ try {
+  require(argc==3,"output.json and baseline|final required");const bool final=std::string(argv[2])=="final";
+  const Body source=fixture();const auto originalBytes=writeBodyBinary(source);
+  require(checkBody(source,{true,true}).empty(),"invalid original real body");
+  Body body=source;const auto emitted=detail::certifySheetJoins(body,plans(body),body.edges());
+  require(emitted.size()==(final?4:0),"wrong number of actual ledger contracts");
+  BodyHistory internalHistory;const Body unified=unifySameDomain(body,1e-6,&internalHistory);
+  detail::requireUnifiedSheetJoins(unified,internalHistory,emitted);
+  const Body noHistory=unifySameDomain(body,1e-6,nullptr);
+  require(writeBodyBinary(noHistory)==writeBodyBinary(unified),"unify historynull changes output");
+  require(writeBodyBinary(source)==originalBytes,"source mutation");
+  require(checkBody(unified,{true,true}).empty(),"invalid final real body");
+  std::ofstream out(argv[1]);out<<"{\"scope\":\"actual-curve-wrapper-ledger\",\"finalCandidate\":"<<(final?"true":"false")<<",\"prefitCap\":"<<number(cap)<<",\"sourceImmutable\":true,\"unifyHistoryNullByteIdentical\":true,\"emittedContracts\":"<<emitted.size()<<",\"records\":[";
+  int count=0,rationalCount=0,rationalQCount=0;
+  for(auto face:unified.faces())for(auto loop:unified.face(face).loops)for(auto id:unified.loopFins(loop)){
+   const auto&fin=unified.fin(id);const auto&e=unified.edge(fin.edge);CurvePtr<3> eBase=e.curve;int eLinks=0;
+   while(true){if(auto t=std::dynamic_pointer_cast<const TrimmedCurve<3>>(eBase)){eBase=t->basis();++eLinks;}else if(auto t=std::dynamic_pointer_cast<const TransformedCurve>(eBase)){eBase=t->basis();++eLinks;}else break;require(eLinks<=32,"Echain resource");}
+   const auto spline=std::dynamic_pointer_cast<const BSplineCurve<3>>(eBase);require(spline&&eLinks==5,"not expected mixed-wrapper cubic E");
+   const bool rational=!spline->weights().empty()&&*std::min_element(spline->weights().begin(),spline->weights().end())!=*std::max_element(spline->weights().begin(),spline->weights().end());rationalCount+=rational;CurvePtr<2> qBase=fin.pcurve;int qLinks=0;while(auto t=std::dynamic_pointer_cast<const TrimmedCurve<2>>(qBase)){qBase=t->basis();require(++qLinks<=32,"Qchain resource");}
+   const auto qSpline=std::dynamic_pointer_cast<const BSplineCurve<2>>(qBase);require(qSpline&&qSpline->degree()==3&&qLinks==2,"actual Q must retain two trim wrappers");const bool rationalQ=!qSpline->weights().empty()&&*std::min_element(qSpline->weights().begin(),qSpline->weights().end())!=*std::max_element(qSpline->weights().begin(),qSpline->weights().end());require(rationalQ,"actual Q must be variable-weight");rationalQCount+=rationalQ;
+   const auto origins=internalHistory.origins(EntityKind::Edge,fin.edge.index);require(internalHistory.isDeclared(EntityKind::Edge,fin.edge.index)&&origins.size()==1&&origins[0].operand==0&&origins[0].kind==EntityKind::Edge,"missing explicit edge provenance");
+   const auto&original=source.edge(EdgeId(origins[0].index));require(e.curve==original.curve&&e.range.lo==original.range.lo&&e.range.hi==original.range.hi&&e.tolerance==cap,"E/range/cap changed");
+   const auto faceOrigins=internalHistory.origins(EntityKind::Face,face.index);require(internalHistory.isDeclared(EntityKind::Face,face.index)&&faceOrigins.size()==1&&faceOrigins[0].operand==0&&faceOrigins[0].kind==EntityKind::Face&&unified.face(face).surface==source.face(FaceId(faceOrigins[0].index)).surface,"carrier/provenance changed");
+   int sourceFin=-1;for(auto l:source.face(FaceId(faceOrigins[0].index)).loops)for(auto f:source.loopFins(l))if(source.fin(f).edge.index==origins[0].index&&source.fin(f).sense==fin.sense){require(sourceFin<0,"ambiguous incidence");sourceFin=f.index;}require(sourceFin>=0,"sense changed");require(fin.pcurve==source.fin(FinId(sourceFin)).pcurve,"unchanged trimQ pointer was replaced");
+   const auto proof=detail::surfaceCurveResidualBound(e.curve,unified.face(face).surface,fin.pcurve,e.range,cap);
+   const auto expected=(!final&&rationalQ)?detail::SurfaceCurveBoundStatus::Unsupported:detail::SurfaceCurveBoundStatus::Certified;
+   require(proof.status==expected,"unexpected provider status");if(expected==detail::SurfaceCurveBoundStatus::Certified)require(fin.pcurveTolerance==cap&&std::isfinite(proof.upperBound)&&proof.upperBound<=cap,"bad proof metadata");
+   if(count++) out<<',';
+   out<<"{\"fin\":"<<id.index<<",\"edge\":"<<fin.edge.index<<",\"face\":"<<face.index<<",\"sense\":"<<fin.sense<<",\"sourceEdge\":"<<origins[0].index<<",\"sourceFin\":"<<sourceFin<<",\"rationalE\":"<<(rational?"true":"false")<<",\"EWrapperLinks\":"<<eLinks<<",\"QWrapperLinks\":"<<qLinks<<",\"rationalQ\":"<<(rationalQ?"true":"false")<<",\"budget\":"<<number(cap)<<",\"edgeTolerance\":"<<number(e.tolerance)<<",\"pcurveTolerance\":"<<number(fin.pcurveTolerance)<<",\"range\":["<<number(e.range.lo)<<','<<number(e.range.hi)<<"],\"runtimeStatus\":\""<<(proof.status==detail::SurfaceCurveBoundStatus::Certified?"Certified":"Unsupported")<<"\",\"runtimeUpper\":"<<number(proof.upperBound)<<",\"curve\":";curveJson(out,e.curve);out<<",\"pcurve\":";curveJson(out,fin.pcurve);out<<",\"surface\":";surfaceJson(out,*std::dynamic_pointer_cast<const BSplineSurface>(unified.face(face).surface));out<<'}';
+  }
+  out<<"]}\n";require(count==4&&rationalCount==4&&rationalQCount==4&&bool(out),"wrong actual output mixture");std::cout<<"Actual ledger integration4fins (E5mixedlinks/Q2trimlinks,4rationalQ/4rationalE), contracts="<<emitted.size()<<", source immutable, unify historynull byte-identical\n";
+ }catch(const std::exception&e){std::cerr<<e.what()<<'\n';return 1;}
+}

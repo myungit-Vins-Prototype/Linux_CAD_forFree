@@ -1,0 +1,41 @@
+// INERT SOURCE, NOT COMPILED OR EXECUTED BY THIS AUDIT.
+// Real internal API witness proposed for a later, separate global K10 step.
+#include "fk_mapping_fit.h"
+#include "fk_curve.h"
+#include "fk_surface.h"
+#include "fk_precision.h"
+#include <cmath>
+#include <iostream>
+#include <stdexcept>
+using namespace ForgeCad::Kernel;
+static double bump(double s) {
+    const double r = 1024.0 * (s - 0.0625); // c=1/16, halfwidth=1/1024
+    if (!(std::fabs(r) < 1.0)) return 0.0;
+    const double a = 1.0-r*r;
+    return (a*a)*(a*a); // globally C3 when glued to zero
+}
+int main() {
+    const std::vector<Vec3> p{{0,0,0},{1,0,0},{1,1,0},{0,1,0}};
+    const std::vector<Vec3> d{{1,0,0},{0,1,0},{-1,0,0},{0,-1,0}};
+    std::vector<Body::BuildEdge> edges;
+    std::vector<Body::BuildFin> fins;
+    for(int i=0;i<4;++i) {
+        edges.push_back({i,(i+1)%4,std::make_shared<Line<3>>(p[i],d[i]),{0,1},0});
+        fins.push_back({i,true,std::make_shared<Line<2>>(Vec2(p[i].x(),p[i].y()),Vec2(d[i].x(),d[i].y())),0});
+    }
+    Body::BuildFace face; face.surface=std::make_shared<Plane>(Frame3());
+    face.loops.push_back(fins);
+    const Body source=Body::buildSheet(p,edges,{face});
+    const auto map=[](const Vec3 &q) {
+        return q + Vec3(0,0,std::ldexp(1.0,-10)*bump(q.x())*bump(q.y()));
+    };
+    double deviation=0;
+    const Body result=detail::mapBodyByFunction(source,map,{},1e-6,nullptr,&deviation);
+    const Vec3 actual=map(Vec3(.0625,.0625,0));
+    const Vec3 emitted=result.face(result.faces().front()).surface->point(.0625,.0625);
+    const double gap=distance(actual,emitted);
+    std::cout << "reported=" << deviation << " centerGap=" << gap
+              << " fitBudget=" << .2*std::min(1e-6,linearResolution()) << '\n';
+    if (!(gap > 100 * .2*std::min(1e-6,linearResolution())))
+        throw std::runtime_error("Expected hidden finite bump was not reproduced");
+}

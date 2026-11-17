@@ -1,0 +1,15 @@
+
+=================================================================
+==1574274==ERROR: LeakSanitizer: detected memory leaks
+
+Direct leak of 19 byte(s) in 1 object(s) allocated from:
+    #0 0x7fe531160181 in malloc (/usr/lib/libasan.so.8+0x160181) (BuildId: 92e51235e832ccabaa24bc426fe5bd8daa88239e)
+    #1 0x564d8ba193d8 in operator() /tmp/k10-instance-carrier-review/tests/leak_calibration.cpp:5
+    #2 0x564d8ba193d8 in __invoke_impl<void, main()::<lambda()> > /usr/include/c++/16/bits/invoke.h:63
+    #3 0x564d8ba193d8 in __invoke<main()::<lambda()> > /usr/include/c++/16/bits/invoke.h:98
+    #4 0x564d8ba193d8 in _M_invoke<0> /usr/include/c++/16/bits/std_thread.h:303
+    #5 0x564d8ba193d8 in operator() /usr/include/c++/16/bits/std_thread.h:310
+    #6 0x564d8ba193d8 in _M_run /usr/include/c++/16/bits/std_thread.h:255
+    #7 0x7fe530d05e25  (/usr/lib/libstdc++.so.6+0x105e25) (BuildId: f8d95d6acca0f89fa5c387ad48aefcfaf4cccc0c)
+
+SUMMARY: AddressSanitizer: 19 byte(s) leaked in 1 allocation(s).

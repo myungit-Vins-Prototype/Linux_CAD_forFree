@@ -1,0 +1,1579 @@
+{
+  "graph_sha256": "525b88b6ea8576f126a4230bc7bb68d5186b521480cbdec8bb36eff40f602a39",
+  "size": {
+    "nodes": 801,
+    "edges": 11726
+  },
+  "nodes": [
+    {
+      "id": "kernel/fk_mass.cpp",
+      "group": "kernel",
+      "description": "Proprieta di massa: conserva il ramo UV delle SP-curve approssimate come seed del fallback di inversione; nelle collezioni miste solo le regioni solide contribuiscono al volume/inertia; completa i contorni UV sui lati NURBS collassati certificati dai poli; riuso dei jet NURBS a u fisso con fk_bspline_isoline nelle quadrature V; facce indipendenti in parallelo, somme seriali, errori ordinati e cancellazione; proprieta complete e tolleranze conservate.",
+      "lines": 736,
+      "symbols": [
+        "ForgeCad::Kernel::FaceIntegrator::FaceIntegrator",
+        "ForgeCad::Kernel::FaceIntegrator::band",
+        "ForgeCad::Kernel::FaceIntegrator::bigJump",
+        "ForgeCad::Kernel::FaceIntegrator::degenerateAt",
+        "ForgeCad::Kernel::FaceIntegrator::domainIntegrals",
+        "ForgeCad::Kernel::FaceIntegrator::finIntegral",
+        "ForgeCad::Kernel::FaceIntegrator::inner",
+        "ForgeCad::Kernel::FaceIntegrator::integrand",
+        "ForgeCad::Kernel::FaceIntegrator::invert",
+        "ForgeCad::Kernel::FaceIntegrator::invertAt",
+        "ForgeCad::Kernel::FaceIntegrator::refine",
+        "ForgeCad::Kernel::FaceIntegrator::unwrap",
+        "ForgeCad::Kernel::SwappedCurve::SwappedCurve",
+        "ForgeCad::Kernel::SwappedCurve::breakpoints",
+        "ForgeCad::Kernel::SwappedCurve::domain",
+        "ForgeCad::Kernel::SwappedCurve::evaluate",
+        "ForgeCad::Kernel::SwappedCurve::evaluateLeft",
+        "ForgeCad::Kernel::SwappedCurve::isPeriodic",
+        "ForgeCad::Kernel::SwappedCurve::period",
+        "ForgeCad::Kernel::SwappedCurve::type",
+        "ForgeCad::Kernel::SwappedSurface::SwappedSurface",
+        "ForgeCad::Kernel::SwappedSurface::evaluate",
+        "ForgeCad::Kernel::SwappedSurface::isUPeriodic",
+        "ForgeCad::Kernel::SwappedSurface::isVPeriodic",
+        "ForgeCad::Kernel::SwappedSurface::type",
+        "ForgeCad::Kernel::SwappedSurface::uBreakpoints",
+        "ForgeCad::Kernel::SwappedSurface::uDomain",
+        "ForgeCad::Kernel::SwappedSurface::uPeriod",
+        "ForgeCad::Kernel::SwappedSurface::vBreakpoints",
+        "ForgeCad::Kernel::SwappedSurface::vDomain",
+        "ForgeCad::Kernel::SwappedSurface::vPeriod",
+        "ForgeCad::Kernel::faceArea",
+        "ForgeCad::Kernel::massProperties",
+        "ForgeCad::Kernel::referenceFrame",
+        "ForgeCad::Kernel::wrapsOnlyInV"
+      ]
+    },
+    {
+      "id": "kernel/fk_mass.h",
+      "group": "kernel",
+      "description": "Proprieta' di massa calcolate sulla geometria esatta del B-rep (niente tassellazione).",
+      "lines": 46,
+      "symbols": []
+    }
+  ],
+  "edges": [
+    {
+      "source": "cad_extrude.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        409
+      ]
+    },
+    {
+      "source": "cad_extrude.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        19
+      ]
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        428,
+        877
+      ]
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        41
+      ]
+    },
+    {
+      "source": "cad_mass.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        19,
+        21
+      ]
+    },
+    {
+      "source": "cad_mass.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        7
+      ]
+    },
+    {
+      "source": "cad_measure.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        563
+      ]
+    },
+    {
+      "source": "cad_measure.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        12
+      ]
+    },
+    {
+      "source": "cad_pattern.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        213
+      ]
+    },
+    {
+      "source": "cad_pattern.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        18
+      ]
+    },
+    {
+      "source": "kernel/fk_draft.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        9
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "call",
+      "count": 4,
+      "sample_lines": [
+        196,
+        197,
+        198
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        8
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_bspline_isoline.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        375
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_bspline_isoline.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        9
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 29,
+      "sample_lines": [
+        74,
+        75,
+        76
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 47,
+      "sample_lines": [
+        172,
+        211,
+        235
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "call",
+      "count": 3,
+      "sample_lines": [
+        712,
+        715,
+        726
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        1
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 140,
+      "sample_lines": [
+        61,
+        80,
+        80
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_parallel.h",
+      "kind": "call",
+      "count": 3,
+      "sample_lines": [
+        694,
+        697,
+        697
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_parallel.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        11
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        198,
+        215
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        10
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "call",
+      "count": 9,
+      "sample_lines": [
+        362,
+        363,
+        379
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        12
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_surface.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        537
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 49,
+      "sample_lines": [
+        50,
+        51,
+        52
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 10,
+      "sample_lines": [
+        185,
+        228,
+        237
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_surface_algo.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        13
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 17,
+      "sample_lines": [
+        100,
+        101,
+        103
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 20,
+      "sample_lines": [
+        98,
+        100,
+        101
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.h",
+      "target": "kernel/fk_topology.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        4
+      ]
+    },
+    {
+      "source": "kernel/fk_sew.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        374,
+        377
+      ]
+    },
+    {
+      "source": "kernel/fk_sew.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        14
+      ]
+    },
+    {
+      "source": "kernel/fk_shell.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 4,
+      "sample_lines": [
+        151,
+        152,
+        154
+      ]
+    },
+    {
+      "source": "kernel/fk_shell.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        9
+      ]
+    },
+    {
+      "source": "kernel/tests/probe_code_review.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        9
+      ]
+    },
+    {
+      "source": "kernel/tests/test_blend.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 36,
+      "sample_lines": [
+        73,
+        337,
+        438
+      ]
+    },
+    {
+      "source": "kernel/tests/test_blend.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        43
+      ]
+    },
+    {
+      "source": "kernel/tests/test_blend_features.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        100
+      ]
+    },
+    {
+      "source": "kernel/tests/test_blend_features.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        8
+      ]
+    },
+    {
+      "source": "kernel/tests/test_blend_profiles.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 4,
+      "sample_lines": [
+        43,
+        48,
+        89
+      ]
+    },
+    {
+      "source": "kernel/tests/test_blend_profiles.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        8
+      ]
+    },
+    {
+      "source": "kernel/tests/test_body_io.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        50
+      ]
+    },
+    {
+      "source": "kernel/tests/test_body_io.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        9
+      ]
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 39,
+      "sample_lines": [
+        122,
+        222,
+        223
+      ]
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        32
+      ]
+    },
+    {
+      "source": "kernel/tests/test_boolean_seams.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        21
+      ]
+    },
+    {
+      "source": "kernel/tests/test_boolean_seams.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        6
+      ]
+    },
+    {
+      "source": "kernel/tests/test_boundary.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        25
+      ]
+    },
+    {
+      "source": "kernel/tests/test_boundary.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        6
+      ]
+    },
+    {
+      "source": "kernel/tests/test_bspline_isoline.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        87,
+        88
+      ]
+    },
+    {
+      "source": "kernel/tests/test_bspline_isoline.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        4
+      ]
+    },
+    {
+      "source": "kernel/tests/test_cone_rays.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        54,
+        60
+      ]
+    },
+    {
+      "source": "kernel/tests/test_cone_rays.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        4
+      ]
+    },
+    {
+      "source": "kernel/tests/test_disjoint_union.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 4,
+      "sample_lines": [
+        44,
+        127,
+        128
+      ]
+    },
+    {
+      "source": "kernel/tests/test_disjoint_union.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        8
+      ]
+    },
+    {
+      "source": "kernel/tests/test_draft.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 7,
+      "sample_lines": [
+        33,
+        49,
+        126
+      ]
+    },
+    {
+      "source": "kernel/tests/test_draft.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        7
+      ]
+    },
+    {
+      "source": "kernel/tests/test_exchange_robustness.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 3,
+      "sample_lines": [
+        238,
+        240,
+        269
+      ]
+    },
+    {
+      "source": "kernel/tests/test_exchange_robustness.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        4
+      ]
+    },
+    {
+      "source": "kernel/tests/test_extrude.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        236
+      ]
+    },
+    {
+      "source": "kernel/tests/test_extrude.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        23
+      ]
+    },
+    {
+      "source": "kernel/tests/test_fill.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        65
+      ]
+    },
+    {
+      "source": "kernel/tests/test_fill.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        10
+      ]
+    },
+    {
+      "source": "kernel/tests/test_iges.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 5,
+      "sample_lines": [
+        134,
+        143,
+        172
+      ]
+    },
+    {
+      "source": "kernel/tests/test_iges.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        38
+      ]
+    },
+    {
+      "source": "kernel/tests/test_loft.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        48,
+        391
+      ]
+    },
+    {
+      "source": "kernel/tests/test_loft.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        14
+      ]
+    },
+    {
+      "source": "kernel/tests/test_loft_correspondence.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        73,
+        257
+      ]
+    },
+    {
+      "source": "kernel/tests/test_loft_correspondence.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        5
+      ]
+    },
+    {
+      "source": "kernel/tests/test_loft_points.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        35
+      ]
+    },
+    {
+      "source": "kernel/tests/test_loft_points.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        4
+      ]
+    },
+    {
+      "source": "kernel/tests/test_loft_surfaces.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        22
+      ]
+    },
+    {
+      "source": "kernel/tests/test_loft_surfaces.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        12
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mass.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 24,
+      "sample_lines": [
+        178,
+        194,
+        214
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mass.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        501,
+        502
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mass.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        13
+      ]
+    },
+    {
+      "source": "kernel/tests/test_occt_import.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 3,
+      "sample_lines": [
+        62,
+        159,
+        169
+      ]
+    },
+    {
+      "source": "kernel/tests/test_occt_import.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        39
+      ]
+    },
+    {
+      "source": "kernel/tests/test_offset.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 8,
+      "sample_lines": [
+        38,
+        244,
+        264
+      ]
+    },
+    {
+      "source": "kernel/tests/test_offset.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        20
+      ]
+    },
+    {
+      "source": "kernel/tests/test_offset_validation.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        153
+      ]
+    },
+    {
+      "source": "kernel/tests/test_offset_validation.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        4
+      ]
+    },
+    {
+      "source": "kernel/tests/test_open_offset.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        58,
+        68
+      ]
+    },
+    {
+      "source": "kernel/tests/test_open_offset.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        6
+      ]
+    },
+    {
+      "source": "kernel/tests/test_pcurve.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        399
+      ]
+    },
+    {
+      "source": "kernel/tests/test_pcurve.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        11
+      ]
+    },
+    {
+      "source": "kernel/tests/test_planar.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        40,
+        227
+      ]
+    },
+    {
+      "source": "kernel/tests/test_planar.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        11
+      ]
+    },
+    {
+      "source": "kernel/tests/test_planar_flatten_validation.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        132,
+        155
+      ]
+    },
+    {
+      "source": "kernel/tests/test_planar_flatten_validation.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        7
+      ]
+    },
+    {
+      "source": "kernel/tests/test_planar_thicken_validation.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        155,
+        156
+      ]
+    },
+    {
+      "source": "kernel/tests/test_planar_thicken_validation.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        8
+      ]
+    },
+    {
+      "source": "kernel/tests/test_project.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        26,
+        75
+      ]
+    },
+    {
+      "source": "kernel/tests/test_project.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        4
+      ]
+    },
+    {
+      "source": "kernel/tests/test_revolve.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 7,
+      "sample_lines": [
+        46,
+        132,
+        187
+      ]
+    },
+    {
+      "source": "kernel/tests/test_revolve.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "call",
+      "count": 4,
+      "sample_lines": [
+        44,
+        46,
+        130
+      ]
+    },
+    {
+      "source": "kernel/tests/test_revolve.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        9
+      ]
+    },
+    {
+      "source": "kernel/tests/test_sheet.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        24
+      ]
+    },
+    {
+      "source": "kernel/tests/test_sheet.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        7
+      ]
+    },
+    {
+      "source": "kernel/tests/test_shell.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 8,
+      "sample_lines": [
+        57,
+        151,
+        188
+      ]
+    },
+    {
+      "source": "kernel/tests/test_shell.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        14
+      ]
+    },
+    {
+      "source": "kernel/tests/test_shell_pose.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        31,
+        82
+      ]
+    },
+    {
+      "source": "kernel/tests/test_shell_pose.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        6
+      ]
+    },
+    {
+      "source": "kernel/tests/test_solid_trim.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        16
+      ]
+    },
+    {
+      "source": "kernel/tests/test_solid_trim.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        10
+      ]
+    },
+    {
+      "source": "kernel/tests/test_step.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 19,
+      "sample_lines": [
+        113,
+        175,
+        215
+      ]
+    },
+    {
+      "source": "kernel/tests/test_step.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        22
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_instances.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 3,
+      "sample_lines": [
+        323,
+        324,
+        329
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_instances.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        10
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 10,
+      "sample_lines": [
+        23,
+        28,
+        37
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        7
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_tools.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        23
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_tools.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        7
+      ]
+    },
+    {
+      "source": "kernel/tests/test_sweep.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 5,
+      "sample_lines": [
+        45,
+        248,
+        268
+      ]
+    },
+    {
+      "source": "kernel/tests/test_sweep.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        11
+      ]
+    },
+    {
+      "source": "kernel/tests/test_sweep_analytic_bridge.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 4,
+      "sample_lines": [
+        64,
+        75,
+        88
+      ]
+    },
+    {
+      "source": "kernel/tests/test_sweep_analytic_bridge.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        2
+      ]
+    },
+    {
+      "source": "kernel/tests/test_sweep_global.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 8,
+      "sample_lines": [
+        81,
+        94,
+        109
+      ]
+    },
+    {
+      "source": "kernel/tests/test_sweep_global.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        3
+      ]
+    },
+    {
+      "source": "kernel/tests/test_sweep_surfaces.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 4,
+      "sample_lines": [
+        41,
+        125,
+        153
+      ]
+    },
+    {
+      "source": "kernel/tests/test_sweep_surfaces.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        7
+      ]
+    },
+    {
+      "source": "kernel/tests/test_tessellate.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 3,
+      "sample_lines": [
+        73,
+        378,
+        412
+      ]
+    },
+    {
+      "source": "kernel/tests/test_tessellate.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        6
+      ]
+    },
+    {
+      "source": "kernel/tests/test_thicken.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 13,
+      "sample_lines": [
+        60,
+        66,
+        71
+      ]
+    },
+    {
+      "source": "kernel/tests/test_thicken.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        8
+      ]
+    },
+    {
+      "source": "kernel/tests/test_transform.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 4,
+      "sample_lines": [
+        30,
+        61,
+        81
+      ]
+    },
+    {
+      "source": "kernel/tests/test_transform.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        9
+      ]
+    },
+    {
+      "source": "kernel/tests/test_unify.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        84
+      ]
+    },
+    {
+      "source": "kernel/tests/test_unify.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        16
+      ]
+    },
+    {
+      "source": "tests/document_regression.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        92,
+        96
+      ]
+    },
+    {
+      "source": "tests/test_advanced_fillets.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        105,
+        124
+      ]
+    },
+    {
+      "source": "tests/test_boolean_box.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        127
+      ]
+    },
+    {
+      "source": "tests/test_boolean_history.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        151
+      ]
+    },
+    {
+      "source": "tests/test_chamfer_preview_editing.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        143,
+        151
+      ]
+    },
+    {
+      "source": "tests/test_document_recovery.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        133
+      ]
+    },
+    {
+      "source": "tests/test_extrusion_next_body.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        26
+      ]
+    },
+    {
+      "source": "tests/test_fillet_refinements.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        225,
+        241
+      ]
+    },
+    {
+      "source": "tests/test_gpu_broad_phase.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 3,
+      "sample_lines": [
+        49,
+        55,
+        112
+      ]
+    },
+    {
+      "source": "tests/test_gpu_broad_phase.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        7
+      ]
+    },
+    {
+      "source": "tests/test_history_graph_next_body.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        52
+      ]
+    },
+    {
+      "source": "tests/test_lazy_mesh.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        27,
+        180
+      ]
+    },
+    {
+      "source": "tests/test_next_body_union.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 5,
+      "sample_lines": [
+        31,
+        32,
+        60
+      ]
+    },
+    {
+      "source": "tests/test_pattern_placements.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 9,
+      "sample_lines": [
+        140,
+        144,
+        195
+      ]
+    },
+    {
+      "source": "tests/test_pattern_variation.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 9,
+      "sample_lines": [
+        68,
+        71,
+        72
+      ]
+    },
+    {
+      "source": "tests/test_pattern_variation.h",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        12
+      ]
+    },
+    {
+      "source": "tests/test_revolution_history.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        71
+      ]
+    },
+    {
+      "source": "tests/test_sketch_interaction.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 3,
+      "sample_lines": [
+        97,
+        99,
+        100
+      ]
+    },
+    {
+      "source": "tests/test_sketch_slot_point.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        25
+      ]
+    },
+    {
+      "source": "tests/test_sketch_tools_refs.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        40
+      ]
+    },
+    {
+      "source": "tests/test_storyboard_merge_chain.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 1,
+      "sample_lines": [
+        77
+      ]
+    },
+    {
+      "source": "tests/test_storyboard_review.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2,
+      "sample_lines": [
+        85,
+        86
+      ]
+    },
+    {
+      "source": "tests/test_surface_mapping.h",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 5,
+      "sample_lines": [
+        43,
+        152,
+        167
+      ]
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 46,
+      "sample_lines": [
+        359,
+        373,
+        443
+      ]
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1,
+      "sample_lines": [
+        105
+      ]
+    }
+  ]
+}

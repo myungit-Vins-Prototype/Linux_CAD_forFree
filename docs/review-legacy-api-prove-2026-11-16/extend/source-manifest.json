@@ -1,0 +1,13 @@
+{
+  "head": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "authorization": "Solo staging; nessuna repoedit/git mutation/commit/push/build pesante. Nuova istruzione no commit/push prevale.",
+  "before": {
+    "forgeCad2026_viewport.h": "b9a801c6152f9723550a7e001209b8333ea2db4d4ab23709bc59c909b83e1d9d",
+    "forgeCad2026_viewport_selection.cpp": "9ef5c603294813cb10edb850ef2177ecf16833e52998fcae24381dfe3a86b02e"
+  },
+  "after": {
+    "forgeCad2026_viewport.h": "68f944cb2aa67f2769c3f9622bb93c2e7064a1e2e2ca87fcb797bfc6c1c5f2e0",
+    "forgeCad2026_viewport_selection.cpp": "fdebd58819cd46dfdc56e3a32876ff72c021944e19677e0571974f68c132d6b9"
+  },
+  "patch_sha256": "a8986609d578ccbceb41a2458f57b689653f0355c0a056f33540c7ab8a3fc308"
+}

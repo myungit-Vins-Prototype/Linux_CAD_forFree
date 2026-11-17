@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "g++",
+    "/tmp/k10-curve-wrapper-review/audit/export-actual-ledger.o",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+    "-lpthread",
+    "-o",
+    "/tmp/k10-curve-wrapper-review/audit/final-actual-ledger"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "exit": 0,
+  "elapsed": 0.43138932599686086,
+  "librarySHA256": "2bd551b222b2c07cbfaa02635ebf999562ef90ec8f00b0ba7ba398c1b2028f1d",
+  "libraryBytes": 181672362,
+  "sourceSHA256": "0d51d7b421e7ba249ec714b9edcd7a24bf17c68165439b4b968cd82e15d1b404"
+}

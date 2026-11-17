@@ -1,0 +1,9 @@
+{
+  "command": [
+    "/tmp/k10-quadrature-review/root/candidate-probe",
+    "velocity"
+  ],
+  "exit": 0,
+  "seconds": 0.002621653999085538,
+  "watchdog_seconds": 5
+}

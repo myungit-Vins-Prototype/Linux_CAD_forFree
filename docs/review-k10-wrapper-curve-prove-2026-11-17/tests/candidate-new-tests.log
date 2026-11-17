@@ -1,0 +1,9 @@
+[  OK  ] CurveWrapperCorrelatedTrimNonUnitRangeAndLineUV
+[  OK  ] CurveWrapperMixedAffineTrimAndRationalParameters
+[  OK  ] CurveWrapperOriginalAffineMustNotFlattenRoundedPoles
+[  OK  ] CurveWrapperHiddenRationalPeakRemainsRecognized
+[  OK  ] CurveWrapperLedgerSinglePlannedFinRejectsBeforeAssign
+[  OK  ] CurveWrapperEveryTrimIsExactAndCandidateCannotBypassIt
+[  OK  ] CurveWrapperNonFiniteAffineIsTerminal
+[  OK  ] CurveWrapperDepthLimitCancellationAndUnsupportedFamilies
+8/8 test superati

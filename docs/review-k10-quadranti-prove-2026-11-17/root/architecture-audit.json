@@ -1,0 +1,84 @@
+{
+  "nodes": 799,
+  "edges": 11681,
+  "units": 405,
+  "errors": [],
+  "hashes_config_HTML_verified": true,
+  "focus": {
+    "kernel/fk_cancel.h": {
+      "description": "Distinct from geometry errors: cancellation must bypass their recovery paths.",
+      "relations": {
+        "incoming": {
+          "call": 132,
+          "include": 99,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 0,
+          "include": 0,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_curve.cpp": {
+      "description": "Curve esatte Line/Circle/Ellipse, trim e trasformazioni: quadrantBreakpoints condiviso con le superfici conserva formula e tolleranza legacy, richiede intervalli finiti ordinati, rifiuta indici double senza avanzamento e verifica la cancellazione a ogni iterazione. Nessun cap arbitrario o normalizzazione di fase; range puntuali conservati.",
+      "relations": {
+        "incoming": {
+          "call": 8,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 6,
+          "include": 2,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_curve.h": {
+      "description": "Curve parametriche esatte, nel piano (N = 2, le future SP-curve e lo schizzo) e nello spazio (N = 3).",
+      "relations": {
+        "incoming": {
+          "call": 250,
+          "include": 22,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 4,
+          "include": 2,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_surface.h": {
+      "description": "Superfici parametriche esatte S(u, v).",
+      "relations": {
+        "incoming": {
+          "call": 174,
+          "include": 31,
+          "reference": 2
+        },
+        "outgoing": {
+          "call": 3,
+          "include": 1,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/tests/test_quadrant_breakpoints_validation.cpp": {
+      "description": "Quadranti su 14 consumatori reali: golden bit-identici su range ordinari e puntuali, intervalli NaN/Inf/invertiti rifiutati, indice non rappresentabile a fase1e20 e cancellazione preattiva. Baseline patologica soltanto con watchdog esterno.",
+      "relations": {
+        "incoming": {
+          "call": 1,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 10,
+          "include": 4,
+          "reference": 0
+        }
+      }
+    }
+  }
+}

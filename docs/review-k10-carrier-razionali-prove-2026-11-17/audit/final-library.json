@@ -1,0 +1,15 @@
+{
+  "library_source": "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+  "sha256": "afaf62c432e948555b799138f4dc2178ba9e98392b1d4bae3712f5610efebc04",
+  "bytes": 181399774,
+  "sources": {
+    "kernel/fk_surface_curve_bounds.cpp": "01e69c5c5bea9aa78cbad607750cc58aa3b3fd562ab86cccb889d02519a9cf7a",
+    "kernel/fk_surface_curve_bounds.h": "b44a33f8842ce44be82674594c48e1a6480ea76d66fb695010dd2885d8f4cfa6",
+    "kernel/fk_sheet_join_validation.cpp": "802e63f376ef95861337fc83a8cdf4d0472931b770fc46cc6922105f4a1b1cf9",
+    "kernel/fk_sheet_join_validation.h": "4a17f508bc4db044869f7076e50f45484b79df204fb557d911acad44c965cb30",
+    "kernel/fk_sheet.cpp": "32dc9c3b46c89b049104897706270b080fecc8b419c4535242fd95092a408a9a",
+    "kernel/fk_blend_model.h": "79ae3a57aa175799632503b9ec81993fd6174880a2773cd709059c5a3ab9661f",
+    "kernel/tests/test_sheet_join_validation.cpp": "451b30b1488b94f3e817449a27779bef85ad0d28abf2896cabd4e22e4b5ab763",
+    "kernel/tests/fk_test_main.cpp": "d4e8174aa18faf0d899dd5731be71f6029fa9113a8eab6385f7151a44f57e70c"
+  }
+}

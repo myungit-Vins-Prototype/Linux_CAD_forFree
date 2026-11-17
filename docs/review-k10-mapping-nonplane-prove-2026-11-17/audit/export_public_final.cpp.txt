@@ -1,0 +1,170 @@
+#include "fk_surface_mapping.h"
+#include "fk_quilt_mapping.h"
+#include "fk_bspline_surface.h"
+#include "fk_body_io.h"
+#include "fk_body_check.h"
+#include "fk_primitives.h"
+#include "fk_sheet.h"
+#include "fk_surface_curve_bounds.h"
+#include "fk_pcurve.h"
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <iostream>
+#include <stdexcept>
+#include <algorithm>
+using namespace ForgeCad::Kernel;
+void require(bool v,const char*m) {if(!v)throw std::runtime_error(m);}
+std::string number(double d) {
+    std::ostringstream o;
+    o << '"' << std::hexfloat << d << '"';
+    return o.str();
+}
+template <class T> void array(std::ostream &o, const T &v) {
+    o << '[';
+    bool sep = false;
+    for (auto x : v) {
+        if (sep)
+            o << ',';
+        sep = true;
+        o << number(x);
+    }
+    o << ']';
+}
+template <int N> void vector(std::ostream &o, const Vec<N> &v) {
+    o << '[';
+    for (int i = 0; i < N; ++i) {
+        if (i)
+            o << ',';
+        o << number(v[i]);
+    }
+    o << ']';
+}
+template <int N> void curveJson(std::ostream &o, const CurvePtr<N> &c) {
+    if (auto s = std::dynamic_pointer_cast<const BSplineCurve<N>>(c)) {
+        o << "{\"type\":\"bspline\",\"degree\":" << s->degree()
+          << ",\"knots\":";
+        array(o, s->knots());
+        o << ",\"poles\":[";
+        for (int i = 0; i < s->poleCount(); ++i) {
+            if (i)
+                o << ',';
+            vector(o, s->poles()[i]);
+        }
+        o << "],\"weights\":[";
+        for (int i = 0; i < s->poleCount(); ++i) {
+            if (i)
+                o << ',';
+            o << number(s->weight(i));
+        }
+        o << "]}";
+    } else if (auto l = std::dynamic_pointer_cast<const Line<N>>(c)) {
+        o << "{\"type\":\"line\",\"origin\":";
+        vector(o, l->origin());
+        o << ",\"direction\":";
+        vector(o, l->direction());
+        o << '}';
+    } else if (auto t = std::dynamic_pointer_cast<const TrimmedCurve<N>>(c)) {
+        o << "{\"type\":\"trimmed\",\"basis\":";
+        curveJson(o, t->basis());
+        o << '}';
+    } else
+        throw std::runtime_error("test export: unsupported curve wrapper");
+}
+void surfaceJson(std::ostream &o, const BSplineSurface &s) {
+    if (s.basis())
+        throw std::runtime_error(
+            "test export: instance would lose placement rounding");
+    o << "{\"uDegree\":" << s.uDegree() << ",\"vDegree\":" << s.vDegree()
+      << ",\"uKnots\":";
+    array(o, s.uKnots());
+    o << ",\"vKnots\":";
+    array(o, s.vKnots());
+    o << ",\"uPoleCount\":" << s.uPoleCount()
+      << ",\"vPoleCount\":" << s.vPoleCount() << ",\"poles\":[";
+    for (int i = 0; i < s.uPoleCount(); ++i)
+        for (int j = 0; j < s.vPoleCount(); ++j) {
+            if (i || j)
+                o << ',';
+            vector(o, s.pole(i, j));
+        }
+    o << "],\"weights\":[";
+    for (int i = 0; i < s.uPoleCount(); ++i)
+        for (int j = 0; j < s.vPoleCount(); ++j) {
+            if (i || j)
+                o << ',';
+            o << number(s.weight(i, j));
+        }
+    o << "]}";
+}
+
+Body rationalTarget() {
+ std::vector<double> knots{0,0,0,1,1,1},weights;std::vector<Vec3> poles;
+ const double x[]{0,.25,1},w[]{1,2,3};
+ for(int i=0;i<3;++i)for(int j=0;j<3;++j){poles.push_back({x[i],.5*j,0});weights.push_back(w[i]);}
+ auto s=std::make_shared<BSplineSurface>(2,2,knots,knots,3,3,poles,weights);
+ std::vector<Vec3> points{s->point(0,0),s->point(1,0),s->point(1,1),s->point(0,1)};
+ std::vector<Body::BuildEdge> edges{{0,1,s->vIso(0),{0,1},0},{1,2,s->uIso(1),{0,1},0},{3,2,s->vIso(1),{0,1},0},{0,3,s->uIso(0),{0,1},0}};
+ auto pc=[](Vec2 a,Vec2 d){return std::make_shared<Line<2>>(a,d);};
+ Body::BuildFace f;f.surface=s;f.loops={{{0,true,pc({0,0},{1,0}),0},{1,true,pc({1,0},{0,1}),0},{2,false,pc({0,1},{1,0}),0},{3,false,pc({0,0},{0,1}),0}}};
+ return Body::buildSheet(points,edges,{f});
+}
+
+int main(int argc,char**argv) {
+ try {
+  require(argc==4,"case out.json final required");const std::string label=argv[1];const bool strict=std::string(argv[3])=="final";
+  Body source,targetBody;SurfacePtr target;SurfaceWrapOptions options;
+  if(label=="cylinder") {
+   source=makeBox(Frame3(Vec3(-2,-1,0),Vec3(0,0,1),Vec3(1,0,0)),4,2,1);
+   target=std::make_shared<CylindricalSurface>(Frame3(),20);options.anchor={kHalfPi,10};
+  } else if(label=="nurbs") {
+   source=makeBox(Frame3(Vec3(-.1,-.1,0),Vec3(0,0,1),Vec3(1,0,0)),.2,.2,.02);
+   const std::vector<double> knots{0,0,0,1,1,1};const double xy[]{-5,0,5},square[]{25,-25,25};std::vector<Vec3> poles;
+   for(int i=0;i<3;++i)for(int j=0;j<3;++j)poles.push_back({xy[i],xy[j],.02*(square[i]+square[j])});
+   target=std::make_shared<BSplineSurface>(2,2,knots,knots,3,3,poles);options.anchor={.5,.5};
+  } else if(label=="quilt-rational") {
+   source=makePlaneSheet(Frame3(),.1);targetBody=rationalTarget();options.anchor={.5,.5};target=targetBody.face(targetBody.faces().front()).surface;
+  } else throw std::runtime_error("unknown case");
+  const auto targetSnapshot=[&]() {std::ostringstream stream;
+   if(auto spline=std::dynamic_pointer_cast<const BSplineSurface>(target))surfaceJson(stream,*spline);
+   else {const auto&c=dynamic_cast<const CylindricalSurface&>(*target);const auto&f=c.frame();stream<<number(c.radius());vector(stream,f.origin());vector(stream,f.xDir());vector(stream,f.yDir());vector(stream,f.zDir());}
+   return stream.str();
+  };
+  const auto before=writeBodyBinary(source),targetBefore=writeBodyBinary(targetBody),carrierBefore=targetSnapshot();
+  const auto build=[&](BodyHistory*h,double*d){
+   if(label=="quilt-rational") {SurfaceQuiltMap q({{&targetBody,targetBody.faces().front()}},options.anchor);return q.bend(source,options,h,d);}
+   return wrapBodyOnSurface(source,*target,options,h,d);
+  };
+  const double cap=.8*std::min(options.tolerance,linearResolution());
+  BodyHistory history;double deviation=-1;const Body output=build(&history,&deviation);
+  require(writeBodyBinary(source)==before&&writeBodyBinary(targetBody)==targetBefore&&targetSnapshot()==carrierBefore,"input mutation");
+  require(checkBody(output,{true,true}).empty(),"invalid output");require(history.operandCount()==1,"wrong operands");
+  bool noHistorySame=false;
+  if(label=="quilt-rational") {double d=-1;const Body other=build(nullptr,&d);noHistorySame=writeBodyBinary(other)==writeBodyBinary(output);require(noHistorySame&&d==deviation,"historynull changes output");}
+  require(writeBodyBinary(source)==before&&writeBodyBinary(targetBody)==targetBefore&&targetSnapshot()==carrierBefore,"input mutation after null-history call");
+  std::ofstream out(argv[2]);out<<"{\"scope\":\"public-mapping-final-fins\",\"label\":\""<<label<<"\",\"prefitCap\":"<<number(cap)<<",\"deviation\":"<<number(deviation)<<",\"sourceImmutable\":true,\"targetImmutable\":true,\"historyNullCompared\":"<<(label=="quilt-rational"?"true":"false")<<",\"historyNullByteIdentical\":"<<(noHistorySame?"true":"false")<<",\"records\":[";
+  bool first=true;int count=0,certified=0;
+  for(auto face:output.faces()) {
+   require(history.isDeclared(EntityKind::Face,face.index),"missing declared face");const auto&fo=history.origins(EntityKind::Face,face.index);
+   require(fo.size()==1&&fo[0].operand==0&&fo[0].kind==EntityKind::Face&&fo[0].relation==HistoryRelation::Modified,"bad face origin");
+   const FaceId parent(fo[0].index);require(source.contains(parent),"bad source face");
+   for(auto loop:output.face(face).loops)for(auto fid:output.loopFins(loop)) {
+    const auto&fin=output.fin(fid);const auto&edge=output.edge(fin.edge);const auto&s=output.face(face).surface;
+    if(label=="quilt-rational")require(s==target,"original rational carrier not preserved");
+    require(history.isDeclared(EntityKind::Edge,fin.edge.index),"missing declared edge");const auto&eo=history.origins(EntityKind::Edge,fin.edge.index);
+    require(eo.size()==1&&eo[0].operand==0&&eo[0].kind==EntityKind::Edge&&eo[0].relation==HistoryRelation::Modified,"bad edge origin");const EdgeId parentEdge(eo[0].index);require(source.contains(parentEdge),"bad source edge");
+    const auto&original=source.edge(parentEdge);require(edge.range.lo==original.range.lo&&edge.range.hi==original.range.hi,"source parameter range lost");
+    int sourceFin=-1;for(auto l:source.face(parent).loops)for(auto f:source.loopFins(l))if(source.fin(f).edge==parentEdge&&source.fin(f).sense==fin.sense){require(sourceFin<0,"ambiguous fixture fin");sourceFin=f.index;}require(sourceFin>=0,"sense/ancestry mismatch");
+    const auto r=detail::surfaceCurveResidualBound(edge.curve,s,fin.pcurve,edge.range,cap);
+    std::string status=r.status==detail::SurfaceCurveBoundStatus::Certified?"Certified":r.status==detail::SurfaceCurveBoundStatus::Unsupported?"Unsupported":"Failed";
+    if(strict) {require(r.status==detail::SurfaceCurveBoundStatus::Certified,"final runtime not Certified");require(edge.tolerance==0,"edge cap enlarged");require(std::isfinite(fin.pcurveTolerance)&&fin.pcurveTolerance>=0&&fin.pcurveTolerance<=cap&&r.upperBound<=fin.pcurveTolerance,"final fin metadata cap mismatch");}
+    if(!first)out<<",";
+    first=false;
+    ++count;
+    certified+=r.status==detail::SurfaceCurveBoundStatus::Certified;
+    out<<"{\"label\":\""<<label<<"\",\"face\":"<<face.index<<",\"fin\":"<<fid.index<<",\"edge\":"<<fin.edge.index<<",\"sense\":"<<fin.sense<<",\"sourceFace\":"<<parent.index<<",\"sourceEdge\":"<<parentEdge.index<<",\"sourceFin\":"<<sourceFin<<",\"range\":["<<number(edge.range.lo)<<","<<number(edge.range.hi)<<"],\"budget\":"<<number(cap)<<",\"edgeTolerance\":"<<number(edge.tolerance)<<",\"pcurveTolerance\":"<<number(fin.pcurveTolerance)<<",\"runtimeStatus\":\""<<status<<"\",\"runtimeUpper\":"<<number(r.upperBound)<<",\"curve\":";curveJson(out,edge.curve);out<<",\"pcurve\":";curveJson(out,fin.pcurve);out<<",\"surface\":";surfaceJson(out,dynamic_cast<const BSplineSurface&>(*s));out<<"}";
+   }
+  }
+  require(count==(label=="quilt-rational"?4:24),"unexpected final fin count");out<<"]}\n";require(bool(out),"export write failed");std::cout<<"public "<<label<<" fins="<<count<<" Certified="<<certified<<" deviation="<<deviation<<" noHistorySame="<<noHistorySame<<"\n";return 0;
+ } catch(const std::exception&e){std::cerr<<e.what()<<"\n";return 1;}
+}

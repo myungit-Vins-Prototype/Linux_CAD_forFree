@@ -1,0 +1,69 @@
+[  OK  ] RationalCarrierNativeQuadraticCubicAndMixedIdentity
+[  OK  ] RationalCarrierCellExtrapolatedDenominatorMayBeNegative
+[  OK  ] RationalCarrierWeightGaugeAndPhysicalScale
+[  OK  ] RationalCarrierNonUnitDomainTrimAndCorrelatedReverse
+[  OK  ] RationalCarrierChangedWeightIsRecognizedGap
+[  OK  ] RationalCarrierUVOutsideOriginalDomainFails
+[  OK  ] RationalCarrierCancellationPropagates
+[  OK  ] NonIsoResidualCubicUVOnOriginalTensorPlane
+[  OK  ] NonIsoResidualBilinearCarrierAndNativeLineUV
+[  OK  ] NonIsoResidualCommonPartitionAcrossEdgeUVAndCarrierKnots
+[  OK  ] NonIsoResidualNonUnitDomainSubrangeAndCorrelatedReversal
+[  OK  ] NonIsoResidualConstantOriginalWeightsRemainPolynomial
+[  OK  ] NonIsoResidualHiddenEdgePeakIsNotAContinuousProof
+[  OK  ] NonIsoResidualHiddenCarrierCellPeakIsRejected
+[  OK  ] NonIsoResidualUVLeavesDomainBetweenThreeMatchingSamples
+[  OK  ] NonIsoResidualInvalidInputsFailClosed
+[  OK  ] NonIsoResidualCurveWeightsAndWrappersUnsupportedCarrierGapFails
+[  OK  ] NonIsoResidualCancellationPropagates
+[  OK  ] NonIsoResidualFixedInputResourceLimitFailsClosed
+[  OK  ] NonIsoResidualUnclampedOriginalCubicKnots
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: extendSheet: giunzione non ISO fuori dal budget continuo
+[ FAIL ] SheetJoinImplicitPolynomial (1 controlli falliti)
+[  OK  ] SheetJoinTangentPolynomial
+[  OK  ] SheetJoinRigidPose
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: extendSheet: giunzione non ISO fuori dal budget continuo
+[ FAIL ] SheetJoinSmallScale (1 controlli falliti)
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: extendSheet: giunzione non ISO fuori dal budget continuo
+[ FAIL ] SheetJoinLargeScale (1 controlli falliti)
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: extendSheet: giunzione non ISO fuori dal budget continuo
+[ FAIL ] SheetJoinRational (1 controlli falliti)
+[  OK  ] SheetJoinReverseSelection
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: extendSheet: giunzione non ISO fuori dal budget continuo
+[ FAIL ] SheetJoinFaceSense (1 controlli falliti)
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: extendSheet: giunzione non ISO fuori dal budget continuo
+[ FAIL ] SheetJoinCanonicalReversal (1 controlli falliti)
+[  OK  ] SheetJoinLowerBoundary
+[  OK  ] SheetJoinTangentRigidPose
+[  OK  ] SheetJoinTangentSmallScale
+[  OK  ] SheetJoinTangentLargeScale
+[  OK  ] SheetJoinTangentRational
+[  OK  ] SheetJoinTangentReverseSelection
+[  OK  ] SheetJoinTangentFaceSense
+[  OK  ] SheetJoinTangentCanonicalReversal
+[  OK  ] SheetJoinTangentLowerBoundary
+[  OK  ] SheetJoinHiddenNarrowKnots
+[  OK  ] SheetJoinTangentGapBudget
+[  OK  ] SheetJoinTangentTrimmedSupport
+[  OK  ] SheetJoinHiddenNarrowPhases
+[  OK  ] SheetJoinHiddenNarrowPose
+[  OK  ] SheetJoinHiddenNarrowSmallScale
+[  OK  ] SheetJoinHiddenNarrowLargeScale
+[  OK  ] SheetJoinHiddenNarrowReverseSelection
+[  OK  ] SheetJoinTangentGapPose
+[  OK  ] SheetJoinCancellationAtomic
+[  OK  ] SheetJoinInvalidLengthAtomic
+[  OK  ] SheetJoinNonIsoOffsetLoftOriginal
+[  OK  ] SheetJoinNonIsoOffsetLoftRigidPose
+[  OK  ] SheetJoinNonIsoOffsetLoftSmallScale
+[  OK  ] SheetJoinNonIsoOffsetLoftLargeScalePose
+[  OK  ] SheetJoinLedgerActualTwoFinsAndExtraFixedCaps
+[  OK  ] SheetJoinLedgerExplicitCompactionAndUnifyHistoryPermutation
+[  OK  ] SheetJoinLedgerRecognizedGapCannotUseLargeFinDeviation
+[  OK  ] SheetJoinLedgerMissingMapCurveRangeOrIncidenceRejects
+[  OK  ] SheetJoinLedgerInvalidBudgetAndEdgeMetadataRejects
+[  OK  ] SheetJoinLedgerUnsupportedFamilyRetainsLegacyWithoutCertificate
+[  OK  ] SheetJoinLedgerUnifiedDriftAndMissingDescendantsReject
+[  OK  ] SheetJoinLedgerCancellationPropagates
+[  OK  ] SheetJoinLedgerMissingCarrierOrOriginalCurveRejects
+56/62 test superati

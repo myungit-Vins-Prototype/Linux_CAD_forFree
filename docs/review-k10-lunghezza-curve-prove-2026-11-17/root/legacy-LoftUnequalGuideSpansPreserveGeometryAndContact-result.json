@@ -1,0 +1,9 @@
+{
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "LoftUnequalGuideSpansPreserveGeometryAndContact"
+  ],
+  "exit": 0,
+  "seconds": 0.08991663499909919,
+  "watchdog_seconds": 600
+}

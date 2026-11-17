@@ -1,0 +1,98 @@
+from pathlib import Path
+import hashlib,json,difflib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-instance-carrier-review/root');D=T/'candidate';D.mkdir(exist_ok=True)
+s=(R/'kernel/fk_surface_curve_bounds.cpp').read_text();marker='}\n\nCurvePtr<2> surfaceCurvePCurveCandidate';assert marker in s
+code='''// Read placement links BEFORE any recursive knot/weight/pole accessor.
+// The public constructor already canonicalizes to one native base. This
+// bounded walk also fails closed if a future representation adds links.
+struct CarrierSource {
+    const BSplineSurface *base = nullptr;
+    std::array<const Transform3 *, 32> placements{};
+    std::size_t count = 0;
+};
+bool carrierSource(const BSplineSurface &surface, CarrierSource &source) {
+    source.base = &surface;
+    while (source.base->basis()) {
+        cancellationPoint();
+        if (source.count == source.placements.size()) return false;
+        const auto &placement = source.base->placement();
+        if (!isFinite(placement.translationPart())) return false;
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j)
+                if (!std::isfinite(placement.matrix(i, j))) return false;
+        source.placements[source.count++] = &placement;
+        source.base = source.base->basis().get();
+    }
+    return true;
+}
+bool centeredCarrierPole(const CarrierSource &source, int u, int v,
+                         const Point<3> &origin, Point<3> &point) {
+    const auto original = source.base->pole(u, v);
+    for (int axis = 0; axis < 3; ++axis) {
+        if (!std::isfinite(original[axis])) return false;
+        point[std::size_t(axis)] = I(original[axis]);
+    }
+    // Original IEEE matrices and base coefficients, NOT the rounded public
+    // pole() image. No double matrix composition or similarity-scale bound.
+    for (std::size_t level = source.count; level > 0; --level) {
+        cancellationPoint();
+        const auto &placement = *source.placements[level - 1];
+        Point<3> transformed;
+        for (int row = 0; row < 3; ++row) {
+            I value(placement.translationPart()[row]);
+            // Center the outermost affine expression before its sums. This
+            // is exactly M*P+(t-origin), with outward rounding throughout.
+            if (level == 1) value = value - origin[std::size_t(row)];
+            for (int column = 0; column < 3; ++column)
+                value = value + I(placement.matrix(row, column)) * point[std::size_t(column)];
+            if (!finite(value)) return false;
+            transformed[std::size_t(row)] = value;
+        }
+        point = transformed;
+    }
+    if (!source.count)
+        for (int axis = 0; axis < 3; ++axis)
+            point[std::size_t(axis)] = point[std::size_t(axis)] - origin[std::size_t(axis)];
+    return std::all_of(point.begin(), point.end(), [](I value) { return finite(value); });
+}
+'''
+s=s.replace(marker,code+'}\n\nCurvePtr<2> surfaceCurvePCurveCandidate',1)
+s=s.replace('|| s->basis() || s->isUPeriodic() || s->isVPeriodic()) return original;','|| s->isUPeriodic() || s->isVPeriodic()) return original;')
+needle='''    const int ne = e->poleCount(), nq = q ? q->poleCount() : 0;
+    const int nu = s->uPoleCount(), nv = s->vPoleCount();''';assert needle in s
+s=s.replace(needle,'''    CarrierSource source;
+    if (!carrierSource(*s, source)) return original;
+    const auto *base = source.base;
+    const int ne = e->poleCount(), nq = q ? q->poleCount() : 0;
+    const int nu = base->uPoleCount(), nv = base->vPoleCount();''',1)
+# Candidate accesses only native base metadata, preserving Q construction.
+a=s.index('CurvePtr<2> surfaceCurvePCurveCandidate');b=s.index('SurfaceCurveBoundResult surfaceCurveResidualBound',a);part=s[a:b]
+part=part.replace('s->weight(i, j)','base->weight(i, j)').replace('s->uDomain(), s->vDomain()','base->uDomain(), base->vDomain()');s=s[:a]+part+s[b:]
+s=s.replace('|| s->basis() || s->isUPeriodic() || s->isVPeriodic()) return unsupported;','|| s->isUPeriodic() || s->isVPeriodic()) return unsupported;')
+needle='''    const int ne = e->poleCount(), nq = q ? q->poleCount() : 0, nu = s->uPoleCount(), nv = s->vPoleCount();''';assert needle in s
+s=s.replace(needle,'''    CarrierSource source;
+    if (!carrierSource(*s, source)) return failed;
+    const auto *base = source.base;
+    const int ne = e->poleCount(), nq = q ? q->poleCount() : 0, nu = base->uPoleCount(), nv = base->vPoleCount();''',1)
+a=s.index('SurfaceCurveBoundResult surfaceCurveResidualBound');part=s[a:]
+# After recognition/unwrapping, all metadata is read from native base.
+i=part.index('    CarrierSource source;');part=part[:i]+part[i:].replace('s->uDegree()', 'base->uDegree()').replace('s->vDegree()', 'base->vDegree()').replace('s->uKnots()', 'base->uKnots()').replace('s->vKnots()', 'base->vKnots()').replace('s->weight(', 'base->weight(').replace('s->uDomain()', 'base->uDomain()').replace('s->vDomain()', 'base->vDomain()')
+old='''            const Vec3 point = s->pole(i, j);
+            Point<3> centered;
+            for (int axis = 0; axis < 3; ++axis) {
+                if (!std::isfinite(point[axis])) return failed;
+                centered[std::size_t(axis)] = I(point[axis]) - origin[std::size_t(axis)];
+            }''';assert old in part
+part=part.replace(old,'''            Point<3> centered;
+            if (!centeredCarrierPole(source, i, j, origin, centered)) return failed;''',1);s=s[:a]+part
+h=(R/'kernel/fk_surface_curve_bounds.h').read_text().replace('For the native\n// family below,','For the\n// family below,')
+h=h.replace('// S: native, nonperiodic BSplineSurface with each degree two or three and\n// strictly positive finite original weights, including unequal weights.','''// S: nonperiodic BSplineSurface with each degree two or three and strictly
+// positive finite original weights, native or a shared similarity instance.
+// Instance bounds use native base poles and stored IEEE placements with
+// outward intervals, never rounded transformed pole() data. Traversal is
+// bounded/cancellable; exhaustion or inconclusive data return Failed.''')
+h=h.replace('// their unequal weights, instances and wrappers return Unsupported.','// their unequal weights and E/Q wrappers return Unsupported.')
+files={'kernel/fk_surface_curve_bounds.cpp':s,'kernel/fk_surface_curve_bounds.h':h};m={}
+for n,d in files.items():
+ p=D/n;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(d);m[n]=hashlib.sha256(p.read_bytes()).hexdigest()
+(T/'candidate-manifest.json').write_text(json.dumps(m,indent=2)+'\n');(T/'candidate.patch').write_text(''.join(''.join(difflib.unified_diff((R/n).read_text().splitlines(True),d.splitlines(True),fromfile='a/'+n,tofile='b/'+n)) for n,d in files.items()));print(m)

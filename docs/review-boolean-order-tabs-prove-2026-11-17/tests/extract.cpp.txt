@@ -1,0 +1,32 @@
+#include "cad_document_io.h"
+#include "fk_body_io.h"
+#include "fk_topology.h"
+#include <QCoreApplication>
+#include <QFile>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <fstream>
+int main(int argc,char **argv) {
+    QCoreApplication app(argc,argv);
+    if(argc!=3) return 2;
+    DocumentState state;
+    const QString error=ForgeCad::loadDocumentFile(QString::fromLocal8Bit(argv[1]),state);
+    QJsonObject result{{"error",error},{"accuracy",state.calculationAccuracy}};
+    QJsonArray bodies, features;
+    for(const auto &body:state.modelBodies) bodies.append(QJsonObject{{"id",QString::number(body.id)},{"name",body.name},{"tipFeatureId",QString::number(body.tipFeatureId)}});
+    for(int i=0;i<state.extrusions.size();++i) {
+        const auto &f=state.extrusions[i];
+        QJsonObject item{{"index",i},{"name",f.name},{"featureId",QString::number(f.featureId)},{"modelBodyId",QString::number(f.modelBodyId)},{"feature",int(f.feature)},{"operation",f.operation},{"firstBody",f.firstBody},{"secondBody",f.secondBody},{"cached",f.cachedGeometry},{"error",f.error},{"hasBody",bool(f.forgeBody)}};
+        if(f.forgeBody) {
+            item["faces"]=int(f.forgeBody->faces().size());
+            const std::string bytes=ForgeCad::Kernel::writeBodyBinary(*f.forgeBody);
+            const std::string path=std::string(argv[2])+"/feature-"+std::to_string(i)+".body";
+            std::ofstream out(path,std::ios::binary);out.write(bytes.data(),bytes.size());
+        }
+        features.append(item);
+    }
+    result["modelBodies"]=bodies; result["features"]=features;
+    QFile output(QString::fromLocal8Bit(argv[2])+"/features.json");output.open(QIODevice::WriteOnly);output.write(QJsonDocument(result).toJson());
+    return error.isEmpty()?0:1;
+}

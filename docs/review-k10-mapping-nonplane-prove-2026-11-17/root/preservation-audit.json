@@ -1,0 +1,35 @@
+{
+  "HEAD_origin_main_unchanged": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "index_empty": true,
+  "no_commit_or_push": true,
+  "baseline_files": 6218,
+  "preserved_existing": 6210,
+  "changed_existing": [
+    "CLAUDE.md",
+    "docs/code-review-2026-11-15.md",
+    "kernel/CMakeLists.txt",
+    "kernel/fk_sheet_join_validation.cpp",
+    "kernel/fk_surface_curve_bounds.cpp",
+    "kernel/fk_surface_curve_bounds.h",
+    "kernel/fk_surface_mapping.cpp",
+    "tools/generate_architecture.py"
+  ],
+  "previous_proof_packages_preserved": 27,
+  "previous_proof_artifacts": 3628,
+  "CLAUDE_bytes": 16184,
+  "binary_hashes": {
+    "forgecad-release/forgecad": "b7b899b8c6e019cdc7e6141716da474c502b5cdd54017b0f1d54c44f64ef932b",
+    "forgecad-release/kernel/libforgekernel.a": "a0c5530e331c08d86fc5c4fa29e4477e66fa1ff4c6c646df15d959f211e9531c",
+    "forgecad-release/kernel/forgekernel_mapping_nonplane_validation_tests": "661854219a88cd5973a88b9415301f2282252038788fab9bace48145f418375d",
+    "forgecad-release/kernel/forgekernel_surface_mapping_tests": "eacebb51c3448f744fcfc48095e2d580d1de2aa8a56323dbcedca0c17da4b3f6",
+    "forgecad-release/kernel/forgekernel_mapping_uv_validation_tests": "f9f7c69d8d8a0cf8ff6dd55d1fb5e991246493b906122719c2b6c39a22fc1079",
+    "forgecad-release/kernel/forgekernel_mapping_carrier_validation_tests": "ce2d5923b4c20bd5bd2968ff1f0714aae546782d4b981f441d5341057baed0a4",
+    "forgecad-release/kernel/forgekernel_mapping_diagonal_validation_tests": "7499d2890962549a41b1ae8d76fb1a7ca125b3720d67fa9d2c6b60372b6c0def",
+    "forgecad-release/kernel/forgekernel_surface_curve_bounds_tests": "babf555bc88bc697ae84939e670489fa9708b216fb53743e1630facb2f7c66c5",
+    "forgecad-release/kernel/forgekernel_sheet_join_validation_tests": "297335258daaef1f599c0cf8dc91284e1063f7200a08788cdf053e8566c99084",
+    "forgecad-release/kernel/forgekernel_tolerance_tests": "7227ff238ec98bd3c23f9bf63a92cd2aac95aba1b1ea000203ffa409cc457d8c"
+  },
+  "UI_runner_unchanged_not_run": "52c77cc2435c2024aa37cc853ecd035facc0e0c37958c369882c52e9b572440f",
+  "no_UI_tests_no_new_CI_no_general483_run": true,
+  "final_api_and_Fraction_bound_to_root_lib": true
+}

@@ -1,0 +1,59 @@
+{
+  "sha256": "bc4b76518f737d7a73bda4bd40a9004bcfa554198efad9d28700901c24f14728",
+  "nodes_total": 785,
+  "edges_total": 11461,
+  "nodes": [
+    {
+      "id": "kernel/fk_bspline_surface.cpp",
+      "description": "Superfici NURBS con jet locali double e istanze immutabili: estensione periodica opzionale del dominio clamped, isoparametriche e breakpoints coerenti, estremi distinti per la chiusura; copie atomiche delle cache Bezier/proiezione/isoparametriche e pubblicazione unica del risultato concorrente.",
+      "group": "kernel"
+    },
+    {
+      "id": "kernel/fk_curve_fit_bounds.cpp",
+      "description": "Limiti continui Bernstein outward per posizione, offset NURBS e composizione isoparametrica NURBS e affine anche obliqua su estrusione con SP-curve originale; limiti delle derivate del supporto per il trasferimento UV, coefficienti originali, pesi, istanze, budget e cancellazione. Proiezione affine su Plane dagli originali IEEE, normale da assi del piano e direzione originale, con residuo omogeneo outward. Offset bordi: posizione edge e normale del generatore indipendenti, SP-curve affine originale e controllo continuo dei poli dopo assemblaggio. Doppio certificato Plane/SP-curve: proiezione fisica per il fit e residuo completo della fin, coefficienti originali posseduti e metriche in mm.",
+      "group": "kernel"
+    },
+    {
+      "id": "kernel/fk_offset.cpp",
+      "description": "Superfici e bordi a distanza; divisione esatta delle sole pieghe C0, nodi lisci conservati, solve uniforme regolarizzato sui bordi quasi tangenti, intersezioni stabilizzate per bordo con pesi distinti per precisione e arresto sul residuo 3D verificato, budget locali, domini derivati dalle SP-curve esatte senza celle terminali artificiali, sezioni circolari analitiche e vertici di cucitura conservati nei supporti sostitutivi dello sformo, rifilatura e provenienza. Costruzioni analitiche autorizzate dai supporti e da bounds geometrici uniformi, regolarita toroidale sul dominio periodico e raffinamento curve con cancellazione cooperativa e fallimenti atomici; offset di estrusioni/rivoluzioni NURBS con limite continuo, callback generiche ancora campionate. Offset di singola faccia estrusa e SP-curve affine certificato dagli originali separati; provenienza esplicita e ricontrollo delle cubiche realmente emesse. Ricostruzioni UV Plane con metrica certificata in mm, ricontrollo delle fin effettive da AssemblyMap e budget/conteggi invariati. Helper interni Plane per costruzione e verifica delle pcurve con metrica fisica, budget transazionali e ricontrollo dei coefficienti effettivi.",
+      "group": "kernel"
+    },
+    {
+      "id": "kernel/fk_shell.cpp",
+      "description": "Svuotamento: offset interno, giunzioni tolleranti, gusci annidati con aperture planari e chiusura tramite piano di appoggio; controlli geometrici e genealogia.",
+      "group": "kernel"
+    }
+  ],
+  "edges": [
+    {
+      "source": "kernel/fk_curve_fit_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_offset.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "kernel/fk_offset.cpp",
+      "target": "kernel/fk_curve_fit_bounds.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "kernel/fk_shell.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_shell.cpp",
+      "target": "kernel/fk_offset.cpp",
+      "kind": "call",
+      "count": 1
+    }
+  ]
+}

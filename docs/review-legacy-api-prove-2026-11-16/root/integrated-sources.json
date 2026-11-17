@@ -1,0 +1,12 @@
+{
+  "forgeCad2026_viewport.h": "68f944cb2aa67f2769c3f9622bb93c2e7064a1e2e2ca87fcb797bfc6c1c5f2e0",
+  "forgeCad2026_viewport_selection.cpp": "fdebd58819cd46dfdc56e3a32876ff72c021944e19677e0571974f68c132d6b9",
+  "cad_drawing_editor.h": "d4d05639d3271b6e4cc788e3cc3e8acc384298f76c3935a584862d6ca2ee025c",
+  "cad_drawing_editor.cpp": "91e57393d7817c78af6b493593ba88a0e6918eed35efc17bf8828c405f4100d7",
+  "cad_drawing_window.cpp": "621e8773f9c4aa06cea1868bf1ef4fd8bb9966741ef23aea1e295b05ec55c995",
+  "cad_forge.h": "9903e27c3cf343483e4212adb6e66f2b8f52887f8672ee05be901b26d0d3301f",
+  "cad_forge.cpp": "162ec8234a117fbb24da7b1e0c7bd6047cee35090a93e075d2bf9c3155b28b2f",
+  "cad_sketch_refs.h": "6ad95627dd114d372b8463d4ad079443f64b5ce9c8c09ac78231fec435d91212",
+  "cad_sketch_refs.cpp": "3dc1136afff94fc7db190761fc6adb6a2f9ffd5f16434a85976b5387e317c04f",
+  "tools/generate_architecture.py": "a1c4f00da18d93df5d63a4789592d8a2e3a72f4e2b5602816a13f195a6cd2c54"
+}

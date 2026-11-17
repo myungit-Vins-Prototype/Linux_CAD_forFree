@@ -1,0 +1,3 @@
+import subprocess,sys
+p='/tmp/k10-global-audit-review/root/run.py'
+for phase in ['ctest','architecture']:subprocess.run([sys.executable,p,phase],check=True)

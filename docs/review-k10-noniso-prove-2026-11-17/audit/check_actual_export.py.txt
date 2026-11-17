@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+"""Preflight scope and exact fixed-cap provenance for the reused Fraction verifier."""
+from pathlib import Path
+import json,sys,hashlib,math
+p=Path(sys.argv[1]);j=json.loads(p.read_text());result=[]
+def value(x):return float.fromhex(x)
+assert len(j['records'])==2
+for r in j['records']:
+ cap=value(r['budget']);upper=value(r['runtimeUpper'])
+ assert cap>0 and math.isfinite(cap)
+ assert r['runtimeStatus']=='Certified' and 0<=upper<=cap
+ assert value(r['edgeTolerance'])==cap==value(r['pcurveTolerance'])
+ for name in ['curve','pcurve']:
+  c=r[name]
+  if c['type']=='line':assert name=='pcurve';continue
+  assert c['type']=='bspline' and not c.get('basis')
+  pdegree=c['degree'];U=list(map(value,c['knots']));W=list(map(value,c.get('weights',[])))
+  assert U[:pdegree+1]==[U[pdegree]]*(pdegree+1) and U[-pdegree-1:]==[U[-pdegree-1]]*(pdegree+1), 'Old exact extractor requires clamped E/Q'
+  assert not W or min(W)>0 and len(set(W))==1
+ s=r['surface'];assert not s.get('basis')
+ W=list(map(value,s.get('weights',[])));assert not W or min(W)>0 and len(set(W))==1
+ result.append({'fin':r['fin'],'face':r['face'],'budget':cap,'runtime_upper':upper,'runtime_status':r['runtimeStatus'],'metadata_equal_fixed_cap':True,'clamped_extractor_scope_checked':True})
+output={'pass':True,'input_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'records':result,'limitation':'Preflight only. Whole-interval exact Fraction certificate is produced separately; no samples certify acceptance.'}
+Path(sys.argv[2]).write_text(json.dumps(output,indent=2)+'\n');print(json.dumps(output,indent=2))

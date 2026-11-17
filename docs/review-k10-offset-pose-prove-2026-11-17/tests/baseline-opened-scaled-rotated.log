@@ -1,0 +1,2 @@
+scale=2.5 pose=1 thickness=1.25 opened=1 sourceIssues=0
+FAIL exception=fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento unchanged=1 historyOperands=0 seconds=5.2530149059999998

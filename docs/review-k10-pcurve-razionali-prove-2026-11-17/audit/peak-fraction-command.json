@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "python3",
+    "/tmp/k10-rational-pcurve-review/audit/verify_rational_Q_peak_witness.py.txt",
+    "/tmp/k10-rational-pcurve-review/tests/candidate-originals.jsonl",
+    "/tmp/k10-rational-pcurve-review/audit/peak-witness-parameter.json",
+    "/tmp/k10-rational-pcurve-review/audit/rational-Q-peak-witness-result.json"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "observedExit": 0
+}

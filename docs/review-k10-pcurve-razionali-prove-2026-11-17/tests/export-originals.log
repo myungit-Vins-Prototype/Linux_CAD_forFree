@@ -1,0 +1,10 @@
+Q-linear status=1 upper=4.5289617189705718e-12
+Q-cubic status=1 upper=3.7413162026278634e-12
+Q-nonlinear-polynomial-S status=1 upper=4.9227844771419259e-14
+Q-reciprocal-correct status=1 upper=1.8460441789282224e-14
+Q-reciprocal-wrong-numerator status=2 upper=inf
+Q-rational-S-placed status=1 upper=2.7306070146646622e-13
+Q-reverse-trim-cells status=1 upper=1.806577366377225e-11
+Q-peak-flat status=1 upper=3.5891430888704525e-08
+Q-peak status=2 upper=inf
+Q-ledger-actual status=1 upper=3.5891430888704525e-08

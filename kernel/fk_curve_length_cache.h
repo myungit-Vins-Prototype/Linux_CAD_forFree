@@ -64,13 +64,38 @@ public:
         ++statistics_.requests;
         if (!range.isFinite() || !(range.lo <= range.hi))
             throw std::invalid_argument("intervallo non finito o vuoto");
+        if (!std::isfinite(range.length())) throw std::domain_error("arcLength: ampiezza non finita");
         const Key whole = key(curve, range, tolerance);
         const auto cached = values_.find(whole);
         if (cached != values_.end()) { ++statistics_.hits; return cached->second; }
         const auto speed = [&curve](double t) {
-            Vec3 d[2]; curve.evaluate(t, 1, d); return norm(d[1]);
+            cancellationPoint();
+            if (!std::isfinite(t)) throw std::domain_error("arcLength: parametro non finito");
+            Vec3 d[2];
+            curve.evaluate(t, 1, d);
+            if (!isFinite(d[1])) throw std::domain_error("arcLength: derivata non finita");
+            const double squared = squaredNorm(d[1]);
+            double value;
+            if (std::isnormal(squared)) {
+                value = std::sqrt(squared);
+            } else {
+                bool zero = true;
+                for (int axis = 0; axis < 3; ++axis) zero = zero && d[1][axis] == 0.0;
+                if (zero) value = 0.0;
+                else value = std::hypot(d[1][0], d[1][1], d[1][2]);
+            }
+            if (!std::isfinite(value)) throw std::domain_error("arcLength: velocita' non finita");
+            return value;
         };
         const auto breaks = curve.breakpoints(range);
+        if (breaks.empty() || breaks.front() != range.lo || breaks.back() != range.hi)
+            throw std::domain_error("arcLength: estremi dei tratti non validi");
+        for (std::size_t i = 0; i < breaks.size(); ++i) {
+            cancellationPoint();
+            if (!std::isfinite(breaks[i]) || breaks[i] < range.lo || breaks[i] > range.hi
+                || (i > 0 && breaks[i] < breaks[i - 1]))
+                throw std::domain_error("arcLength: suddivisione non valida");
+        }
         const double spanTolerance = tolerance / std::max<std::size_t>(1, breaks.size() - 1);
         double length = 0.0;
         // Stessi tratti, stessa tolleranza per tratto, stesso ordine di somme
@@ -83,9 +108,12 @@ public:
             if (found != values_.end()) { ++statistics_.hits; length += found->second; }
             else {
                 const double value = integrate(speed, breaks[span], breaks[span + 1], spanTolerance);
+                if (!std::isfinite(value)) throw std::domain_error("arcLength: integrale non finito");
                 ++statistics_.integrations; put(local, value); length += value;
             }
+            if (!std::isfinite(length)) throw std::domain_error("arcLength: lunghezza non finita");
         }
+        cancellationPoint();
         put(whole, length);
         return length;
     }

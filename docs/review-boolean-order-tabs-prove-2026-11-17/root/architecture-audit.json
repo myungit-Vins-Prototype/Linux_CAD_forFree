@@ -1,0 +1,153 @@
+{
+  "nodes": 786,
+  "edges": 11488,
+  "units": 396,
+  "all_source_hashes_verified": true,
+  "configuration_html_verified": true,
+  "no_structural_change": true,
+  "focus": {
+    "cad_forge.cpp": {
+      "description": "Adatta sketch e parametri al kernel; booleane con genealogia ricondotta agli operandi e recupero dell\u2019unione commutativa nell\u2019ordine inverso dopo un errore geometrico; conversione mesh float con filtro comune dei triangoli degeneri per scena e anteprime, ID topologici coerenti. Il riepilogo delle curve proiettate usa lo scarto della catena finale dopo le giunte.",
+      "incoming": {
+        "call": 39,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 72,
+        "include": 45,
+        "reference": 0
+      }
+    },
+    "kernel/fk_body_check.cpp": {
+      "description": "Controllo di validita' di un body (come PK_BODY_check di Parasolid o BRepCheck_Analyzer di OCCT).",
+      "incoming": {
+        "call": 113,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 15,
+        "include": 7,
+        "reference": 0
+      }
+    },
+    "kernel/fk_boolean.cpp": {
+      "description": "Booleane B-rep: dispatch esatto delle sezioni meridiane di rivoluzione; filtri conservativi sui ritagli e sugli spigoli; classificazione UV sui carrier identici, tagli, ritaglio prima della validazione degli archi e riuso dei soli agganci necessari; riclassificazione di ogni sottoarco nei ritagli, scelta della curva condivisa compatibile con tutte le facce, indice UV dei vertici per i fori e diagnostica delle facce; taglio di solidi su un lato di una faccia finita e chiusure orientate. Contatti Line/trim ellittico: eventi e catena sorgente espliciti, limiti continui e UV affine certificata, mapping dal montaggio e ricontrollo dopo unify; retry transazionale conservativo.",
+      "incoming": {
+        "call": 40,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 29,
+        "include": 20,
+        "reference": 0
+      }
+    },
+    "kernel/fk_boolean_boundary.cpp": {
+      "description": "Certificati continui outward dei contatti fra retta e bordo ellittico: originali IEEE, monotonia, scarto dai carrier Plane/Cylinder e frame double; pcurve affine nel parametro originale con bound di Peano, input non finiti e famiglie non risolte rifiutati.",
+      "incoming": {
+        "call": 3,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 5,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "kernel/fk_intersect.cpp": {
+      "description": "Sezioni meridiane esatte delle rivoluzioni NURBS, con riconoscimento del piano dai poli e rotazione parametrica; raggi sui coni con quadratica centrata e sin/cos, senza perdere le falde quasi coincidenti; intersezioni esatte: gerarchie Bezier2D e scarto conservativo dei candidati; box B-spline limitati esattamente al tratto richiesto. Newton, budget e tolleranze invariati.",
+      "incoming": {
+        "call": 70,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 18,
+        "include": 11,
+        "reference": 0
+      }
+    },
+    "kernel/fk_mapping_carrier.cpp": {
+      "description": "Mapping di lamine piane su carrier originale NURBS/estrusione: trasferimento affine UV, bordi certificati sui coefficienti originali, budget di arrotondamento e quota, conservazione topologia e pubblicazione atomica; famiglie non supportate distinte.",
+      "incoming": {
+        "call": 4,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 16,
+        "include": 5,
+        "reference": 0
+      }
+    },
+    "kernel/fk_sew.cpp": {
+      "description": "Cucitura di superfici (lamine) in una sola lamina e, se il risultato e' chiuso, in un solido.",
+      "incoming": {
+        "call": 31,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 18,
+        "include": 9,
+        "reference": 0
+      }
+    },
+    "kernel/fk_surface_algo.cpp": {
+      "description": "Proiezioni globali NURBS: ricerca Bezier del minimo prima dei bordi del dominio; inviluppi conservativi delle isoparametriche escludono solo minimi impossibili. Bordi, nodi C0 e finestre limitate restano candidati.",
+      "incoming": {
+        "call": 92,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 18,
+        "include": 8,
+        "reference": 0
+      }
+    },
+    "kernel/fk_surface_curve_bounds.cpp": {
+      "description": "Verifica continua del residuo E(t)-S(Q(t)) per E/Q polynomiali su carrier nativo quadratico/bicubico anche razionale a pesi positivi. Coefficienti omogenei originali, denominatore positivo sulle celle attive, intervalli outward, partizione comune, tutte le celle intersecate, budget e cancellazione.",
+      "incoming": {
+        "call": 4,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 8,
+        "include": 4,
+        "reference": 0
+      }
+    },
+    "kernel/fk_surface_mapping.cpp": {
+      "description": "Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: conserva i carrier supportati; trasferimento SP-curve su Plane con limite continuo fisico e verifica delle fin dopo assemblaggio tramite genealogia, coefficienti e budget prefissati. Bordi 3D e famiglie restanti mantengono fit campionato; controlli locali di inversione/trim, nessuna mesh di calcolo.",
+      "incoming": {
+        "call": 8,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 28,
+        "include": 19,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_boolean.cpp": {
+      "description": "Booleane contro OCCT, contatti e sweep elicoidali; volumi analitici delle lamelle spline sottili fino a 1e-4 mm, topologia e concordanza parallela.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 32,
+        "include": 17,
+        "reference": 0
+      }
+    }
+  }
+}

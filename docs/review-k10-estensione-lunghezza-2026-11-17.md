@@ -1,0 +1,64 @@
+# K10: lunghezza fisica dell’estensione — 17 novembre 2026
+
+Corretto un falso successo pubblico di `extendSheet`: la ricerca del parametro lungo la trasversale poteva fermarsi con velocità nulla, passo piccolo o 60 iterazioni esaurite e restituire comunque il parametro. Mancava una verifica della lunghezza raggiunta. **Ora i casi non convergenti vengono rifiutati prima di costruire e pubblicare la striscia.** Non è stato aggiunto un nuovo metodo per risolverli.
+
+Implementato e verificato localmente, senza commit/push. Prosecuzione di K10: i 33 rilievi funzionali della review restano invariati; K10 generale resta parziale.
+
+## Difetto riprodotto con l’API pubblica
+
+Un driver del coordinatore costruisce una lamina nativa tramite `Body::buildSheet`, con curva B-spline cubica su `[-1,1]`, poli X `[-27,-9,-3,-1]`, estrusa lungo Z per 1 mm. Seleziona l’edge terminale per l’incidenza dichiarata nella costruzione, senza ricerca per vicinanza. La curva è `x(u)=(u−2)^3`; è regolare sul dominio sorgente.
+
+Si richiede un’estensione di **3 mm** lungo la stessa superficie:
+
+| Variante nativa | Baseline: risultato restituito | Candidata |
+| --- | --- | --- |
+| `y=0`, velocità nulla a `u=2` nella continuazione | Parametro finale 2; lunghezza emessa ≈1 mm | `domain_error`, nessun corpo restituito |
+| `y=2⁻³⁶u`, continuazione regolare con derivata mai nulla | Parametro finale ≈7,620314; lunghezza emessa ≈178,534088 mm | Stesso rifiuto |
+
+**Sorgente e risultati errati passavano `checkBody`, senza issue.** Sono coordinate ordinarie, dentro la size box; non si usano NaN, enormi fasi UV, curve simulate o accessi a helper privati. Il primo caso arriva a una singolarità della parametrizzazione prolungata; il secondo elimina quella singolarità e mostra la mancata convergenza della ricerca. Sono corpi sintetici nativi, non documenti utente dichiarati risolti.
+
+Il driver legge il carrier effettivamente emesso e misura l’intervallo finale con `arcLength`. L’auditor ha verificato indipendentemente con Fraction il caso `y=0`: la continuazione su `[-1,3]` conserva esattamente il polinomio, `x(1)=−1`, `x(2)=0` e `x′≥0`, quindi la lunghezza è esattamente 1 e il difetto è 2 mm. Compilazioni e runtime sono del coordinatore; l’auditor non ha eseguito C++.
+
+## Correzione e budget
+
+Una sola TU di produzione, `kernel/fk_sheet.cpp`, candidata congelata SHA‑256 `d584e6cf0622bcb59f8a4f57b19230279ab7fd7b7509a48b39a2b3e28ff8df76`. Nessun header pubblico modificato.
+
+`arcParameter` verifica finitezza di dati, velocità, passi e parametri; controlla la larghezza finita **prima** delle quadrature. Dopo l’ultimo aggiornamento del parametro, misura nuovamente l’arco e richiede direzione corretta e residuo entro il budget fisico fissato dall’input. Entrambi i chiamanti, superficie B-spline ed estrusione, passano la `tolerance=1e−9*scale` già calcolata da `extendSheet`.
+
+Questo è un **nuovo controllo della lunghezza** che riusa un budget preesistente dell’operazione: non era un limite prima verificato da `arcParameter`. Il valore `1e−13` rimane la precisione richiesta alla quadratura, non un precedente limite di accettazione da sostituire. Formule Newton, 60 iterazioni, criterio di arresto sul passo e tolleranze esistenti rimangono invariati. Costo aggiuntivo: una misura finale dell’arco.
+
+Su errore nessun risultato viene restituito, l’input resta invariato e non viene pubblicata una history parziale. Come già nella baseline, l’argomento `history` viene azzerato all’ingresso: non si promette di conservarne un eventuale contenuto precedente. La cancellazione si propaga come `OperationCancelled`.
+
+## Verifiche correnti
+
+Tre agenti GPT‑6.1 Sol per candidata, audit e test, esclusivamente in staging. Coordinatore per integrazione e runtime; compilazioni e analisi seriali, senza copie aggiuntive della libreria statica.
+
+| Verifica | Esito |
+| --- | --- |
+| Nuova TU, sei gruppi prima/dopo | 4/6 → 6/6 |
+| ASan/UBSan con leak detection attiva | 6/6 PASS, nessuna segnalazione |
+| Build completa app, runner e target pertinenti | PASS |
+| CTest: nuova lunghezza, fit lamine, giunti lamine | 3/3 PASS, nessuno skip |
+| Runner storico, solo filtro `SheetExtend` | 2/2 PASS |
+| Architettura, hash/configurazione/HTML e `--check` | PASS, 800 nodi / 11710 relazioni / 406 TU |
+
+I sei gruppi comprendono entrambi i testimoni su Extrusion e superficie tensoriale B-spline nativa equivalente; distanze positive 0,25/0,5 mm, verso opposto con posa e scala, controlli lineare/cilindrico, input immutato e annullamento. I positivi leggono gli estremi delle **fin effettive** e la trasversale del carrier finale, confrontando lunghezza e distanza fisica indipendente nei tratti monotoni.
+
+ASan/UBSan strumentano `fk_sheet.cpp`, nuova TU e main; resto kernel Release, non intera app. Nessun test UI, avvio grafico, suite completa 483 o nuova CI. Il binario sul disco è aggiornato; l’app aperta non è stata riavviata. Le chiamate template `arcLength` nel grafo risolvono alla dichiarazione in `fk_curve_algo.h`; implementazione `.cpp` e collegamenti in entrambi i versi sono stati letti separatamente. Un’asserzione iniziale del verificatore presumeva il target `.cpp`, poi è stata corretta senza cambiare software o generatore.
+
+## Limiti e prosecuzione
+
+`arcLength` usa quadratura adattiva con errore stimato: questo controllo non è una prova continua globale della lunghezza. Il controllo interno misura la curva `reach` usata per cercare il parametro; non certifica ogni possibile deriva nella successiva ricostruzione dei coefficienti e nell’unificazione. I positivi verificano anche l’emesso nei casi coperti, senza generalizzare.
+
+La ricerca può continuare a rifiutare estensioni matematicamente possibili. Non sono stati modificati la quadratura interna e il suo comportamento su valutazioni non finite o richieste di cancellazione durante l’integrazione: restano da approfondire. Restano aperti carrier globale, Newton, famiglie non coperte e topologia generale di K10.
+
+## Conservazione
+
+Eliminati soltanto 11 ELF/oggetti privati ricreabili della prova: 311,382,336 byte, circa 297.0 MiB. Conservati sorgenti, log, CAD e build corrente; nessuna cartella QA dell’utente rimossa.
+
+Audit finale sui 7.663 file baseline: sole cinque modifiche esistenti attese, 7.658 preservati, più i nuovi file dichiarati. Verificati 36 pacchetti precedenti e 5.037 artefatti. HEAD/origin `47c7c19`, index vuoto e nessun commit/push. Generati architetturali ignorati non aggiunti a Git.
+
+[Memoria precedente completa](history/claude-prima-k10-estensione-lunghezza-2026-11-17.md), [prove e comandi](review-k10-estensione-lunghezza-prove-2026-11-17/README.txt), [review generale](code-review-2026-11-15.md). Solo testo e sorgenti inerti nelle prove; `SHA256SUMS` verifica i percorsi effettivi. La CI storica non certifica queste modifiche locali.
+
+Eseguibile attuale SHA‑256: `029fa416a2817109afe45eb52ec7dcc009eafcca0b0f9a3ed3847e1fa51c5c74`.
+Kernel attuale SHA‑256: `4fb735add5df8192336d27aa46fe1772c5be8ad36b77ea54fdeb69337a77aee4`.

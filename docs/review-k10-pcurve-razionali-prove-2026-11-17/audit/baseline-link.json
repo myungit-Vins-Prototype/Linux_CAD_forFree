@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "g++",
+    "/tmp/k10-rational-pcurve-review/audit/export-actual-ledger.o",
+    "/tmp/k10-rational-pcurve-review/root/libforgekernel-baseline.a",
+    "-lpthread",
+    "-o",
+    "/tmp/k10-rational-pcurve-review/audit/baseline-actual-ledger"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "exit": 0,
+  "elapsed": 0.3788656649994664,
+  "sourceSHA256": "d5aba890079651b2c593f1a69aa948257c75cdcd6d176ff021ab86553118338a",
+  "librarySHA256": "8641c0a3c65dccd9906a935139669eb64c8e829fdb6bcf20aefcd7c97408c40e"
+}

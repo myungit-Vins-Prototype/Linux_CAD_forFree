@@ -1,0 +1,86 @@
+{
+  "HANDOFF.md": {
+    "sha256": "9d61f4bbded01962d53158170e524f7ef8c036f00d09ab6883675ee5163779ec",
+    "bytes": 4203
+  },
+  "baseline-evidence.json": {
+    "sha256": "3b6868eaa54b3f0461537910d25659f6b1ebdfd7e118f70b28dcc5f8fdfb7d34",
+    "bytes": 330938
+  },
+  "baseline.log": {
+    "sha256": "1a016c499cae22fbb2d9250768c939ca79824d0ab4f5b9a034479cc22688e3a5",
+    "bytes": 95
+  },
+  "callback-before-after.json": {
+    "sha256": "251c6e074dcf70533aebd7c31598122834a69734667d8f49836ca3f158d43098",
+    "bytes": 1094
+  },
+  "candidate-compile.log": {
+    "sha256": "9ba420a29a52607d755cf741b94ef16ddba6b9e12bf49c0dfd68cb83e618554a",
+    "bytes": 1546
+  },
+  "candidate.log": {
+    "sha256": "0be904ed9745e1f5cbe33fdc6d5e0c32801aea955e218cee6f06e6f003f164c7",
+    "bytes": 76
+  },
+  "commands.txt": {
+    "sha256": "b5c6d3e3a496a443cc2bc8912fc45a087b28e534dba0af25e9bf2acd0eb7be9c",
+    "bytes": 1332
+  },
+  "diagnostic.log": {
+    "sha256": "cb82269e58786de97e43fab6c751fd58215ff061104c7ce9a3b60ebc5fce6d90",
+    "bytes": 2092
+  },
+  "fk_offset.after.cpp.txt": {
+    "sha256": "07a3f6e60cfd2ed659b6f9ea74b7596c5504130cfe9a78ecd658bbfd901f8aa2",
+    "bytes": 149594
+  },
+  "fk_offset.before.cpp.txt": {
+    "sha256": "239e84e8192e97bbada84b624753bd016cfff96720c14328465c1fc9f9e72fe5",
+    "bytes": 149287
+  },
+  "fk_offset.diagnostic.cpp.txt": {
+    "sha256": "8c288f512b215faaa957d7bfede777fccf1d2565ff4ba0e2755c6450fc7f3e74",
+    "bytes": 150173
+  },
+  "fk_offset.profile-after.cpp.txt": {
+    "sha256": "f7f3de10a5ed4a34a11158c7210a9f04110d24f77e85f409397d84d66da4a16c",
+    "bytes": 151177
+  },
+  "fk_offset.profile-before.cpp.txt": {
+    "sha256": "57ce6b76392a5af231ef6738cb4dd3a97cd28239d919526e467a709eac4ee25e",
+    "bytes": 150870
+  },
+  "offset-projection.patch": {
+    "sha256": "b30c2455da0c65e4144fed07735443ce567382a4ec62cc010fef2ac517c3c615",
+    "bytes": 984
+  },
+  "paired-cost.json": {
+    "sha256": "a847d5b0c31f7766413879076e481fde1a36039cee0f37f72faae818cd37babc",
+    "bytes": 1518
+  },
+  "patch-dry-run.log": {
+    "sha256": "7a761badec3665528bf6581c192dc7453e6001fddfca3bcb328a84c3431c99cc",
+    "bytes": 163
+  },
+  "probe.cpp.txt": {
+    "sha256": "eef8a62703018c428939803e14bdedf1d08ff81dd03771a1a938b4884d5c8270",
+    "bytes": 1341
+  },
+  "profile-after-compile.log": {
+    "sha256": "9d1b833730c6c3789fb029df1dd8b8ef0472a279c57c1d0b9c6c2664172a61dc",
+    "bytes": 1574
+  },
+  "profile-after.log": {
+    "sha256": "7dedcda506a1cf6de1a3c208b5e336db9cb4cffa13e6b0ebb2eef73e13acb164",
+    "bytes": 1944
+  },
+  "profile-before-compile.log": {
+    "sha256": "8d4b0fe32eb84b2abc2d42eb662ebc286fc1b3052b154b4a5cad3c811a75e4e8",
+    "bytes": 1578
+  },
+  "profile-before.log": {
+    "sha256": "30feac30cb6ce682bbb4f6f46b95017a2a1068898927a91c2ec0920a988b4e05",
+    "bytes": 1946
+  }
+}

@@ -1,0 +1,12 @@
+# Scalar IEEE/Fraction oracle only; no C++ or adaptive recursion.
+from fractions import Fraction
+import math
+f=math.ldexp(1.,1023); width=math.ldexp(1.,-1023)
+assert Fraction.from_float(f)*Fraction.from_float(width)==1
+assert math.isfinite(f) and math.isinf(f+f)
+assert math.isnan((math.inf-math.inf)*(.5*width))
+a,b=1e308,1.1e308
+assert math.isinf(.5*(a+b)) and math.isfinite(.5*a+.5*b)
+a,b=-f,f
+assert math.isinf(.5*(b-a)) and math.isfinite(.5*b-.5*a)
+print('Fraction integral=1; finite-input pair/center/half overflow and NaN confirmed')

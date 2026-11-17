@@ -1,0 +1,24 @@
+{
+  "argv": [
+    "g++",
+    "-O2",
+    "-std=c++17",
+    "-ffp-contract=off",
+    "-fno-fast-math",
+    "-I",
+    "kernel",
+    "-x",
+    "c++",
+    "/tmp/boolean-order-review/audit/inspect_metadata.cpp.txt",
+    "-x",
+    "none",
+    "/tmp/boolean-order-review/tests/libforgekernel-baseline.a",
+    "-lpthread",
+    "-o",
+    "/tmp/boolean-order-review/audit/inspect_metadata"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "exit": 0,
+  "elapsed": 0.7966443030018127,
+  "librarySHA256": "ea1825d26334bd83b1169859a425fa1efb451ceab9136ea8c4e388542857960b"
+}

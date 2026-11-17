@@ -1,0 +1,25 @@
+{
+  "tests": [
+    {
+      "ctest": "forgecad_display_mesh_tests",
+      "argument": "--display-mesh",
+      "source": "tests/test_display_mesh.h:3",
+      "purpose": "forgePickFace actual application wrapper/firstRayHit plus display triangle IDs, no GL context."
+    },
+    {
+      "ctest": "forgecad_linked_sketch_reference_tests",
+      "argument": "--linked-sketch-references",
+      "source": "tests/test_sketch_linked_refs.h:134",
+      "purpose": "Associative sketch refresh, identity, axes/planes, solver/noFix, IO and mouse/Undo/Redo."
+    },
+    {
+      "ctest": "forgecad_body_sketch_reference_cache_tests",
+      "argument": "--body-sketch-reference-cache",
+      "source": "tests/test_sketch_linked_refs.h:2",
+      "purpose": "Default synthetic body fixtures; provenance and projected cache equivalence. No external CAD argument."
+    }
+  ],
+  "command": "ctest --test-dir forgecad-release --output-on-failure -R \"^forgecad_(display_mesh|linked_sketch_reference|body_sketch_reference_cache)_tests$\"",
+  "executed": false,
+  "limitation": "Regressions of retained functionality. None exercises the removed APIs directly; new mirror tests would provide no behavioral coverage."
+}

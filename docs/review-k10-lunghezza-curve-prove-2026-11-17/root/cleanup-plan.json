@@ -1,0 +1,72 @@
+[
+  {
+    "path": "/tmp/k10-arclength-review/root/baseline-ordinary",
+    "bytes": 2913424,
+    "sha256": "29c5bed668f020dad8dfc1a26656aea1239d2be8e9878f144cf1d5c676ba8e23"
+  },
+  {
+    "path": "/tmp/k10-arclength-review/root/baseline-probe",
+    "bytes": 2776304,
+    "sha256": "3213c3fdb171c93c3abdb6d9a43a68302b054b792664889c0a11e90f9b91fa1e"
+  },
+  {
+    "path": "/tmp/k10-arclength-review/root/baseline-test.o",
+    "bytes": 1583808,
+    "sha256": "5c2281cee9ce538a78cac8c6a2a501c2cba12d89b5659a0f7477977173a8b4ac"
+  },
+  {
+    "path": "/tmp/k10-arclength-review/root/baseline-tests",
+    "bytes": 3722016,
+    "sha256": "71d02dea9824b84d9d86baf6e47fc691d4ca8a1169aadfa0c2b3446f02a1ee99"
+  },
+  {
+    "path": "/tmp/k10-arclength-review/root/candidate-ordinary",
+    "bytes": 2943552,
+    "sha256": "2f765ea8323b6800d31d65677958b31508ae022c2f4e06997c8742201a5caba5"
+  },
+  {
+    "path": "/tmp/k10-arclength-review/root/candidate-probe",
+    "bytes": 2797736,
+    "sha256": "211ba310528cde976a7a310b808b8e997f964cc347577ca2e7cf26e6409c635b"
+  },
+  {
+    "path": "/tmp/k10-arclength-review/root/candidate-tests",
+    "bytes": 3752136,
+    "sha256": "2f58f28b99455e27f809399c2c1be17009c8745796a262304bc105211cbfd033"
+  },
+  {
+    "path": "/tmp/k10-arclength-review/root/candidate.o",
+    "bytes": 998672,
+    "sha256": "518061e449d50bc8455b7804f827b1bca7d339d23887bbdcd446afc056f46095"
+  },
+  {
+    "path": "/tmp/k10-arclength-review/root/main.o",
+    "bytes": 108000,
+    "sha256": "1b76143dee028611b7ba179631fcb54c05e9d7b6ce7281d22db40771f4dc72cc"
+  },
+  {
+    "path": "/tmp/k10-arclength-review/root/san-main.o",
+    "bytes": 219072,
+    "sha256": "fff9d3dd28b85452a0bebfc9d50115f62d1576530417a1f74ff46eb1e6fa36a7"
+  },
+  {
+    "path": "/tmp/k10-arclength-review/root/san-provider.o",
+    "bytes": 2679032,
+    "sha256": "6f1a8ff2fee3807f317ddd7b3adc4c5d81d8ce0e94160066ec1fac9396e05d7b"
+  },
+  {
+    "path": "/tmp/k10-arclength-review/root/san-test.o",
+    "bytes": 2561120,
+    "sha256": "03fcbfade2043e14fbb2904b162b8f29ab02864fa14ab243da40666b4aa51ca2"
+  },
+  {
+    "path": "/tmp/k10-arclength-review/root/san-tests",
+    "bytes": 6195144,
+    "sha256": "d0b14b46e439d2d8c7941a50f314fed674008e30a4e2573ee32dbb0cc9d432a5"
+  },
+  {
+    "path": "/tmp/k10-arclength-review/root/test.o",
+    "bytes": 1600624,
+    "sha256": "30b1d7db19a609c5ccad793e59675f29c365625cf76b6e6b1dec8b3522b40a0b"
+  }
+]

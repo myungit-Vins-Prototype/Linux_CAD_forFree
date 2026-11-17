@@ -1,0 +1,16 @@
+[
+  "c++",
+  "-fsanitize=address,undefined",
+  "-fno-omit-frame-pointer",
+  "/tmp/k10-next-review/tests/san/provider.o",
+  "/tmp/k10-next-review/tests/san/ledger.o",
+  "/tmp/k10-next-review/tests/san/provider-tests.o",
+  "/tmp/k10-next-review/tests/san/rational-tests.o",
+  "/tmp/k10-next-review/tests/san/ledger-tests.o",
+  "/tmp/k10-next-review/tests/san/existing33.o",
+  "/tmp/k10-next-review/tests/san/main.o",
+  "/tmp/k10-next-review/tests/libforgekernel-baseline.a",
+  "-pthread",
+  "-o",
+  "/tmp/k10-next-review/tests/san/candidate-tests"
+]

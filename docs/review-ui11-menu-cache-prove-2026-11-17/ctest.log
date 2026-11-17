@@ -1,0 +1,25 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 150
+    Start 150: forgecad_application_theme_tests
+
+150: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_application_theme_tests
+150: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+150: Environment variables: 
+150:  QT_QPA_PLATFORM=offscreen
+150: Test timeout computed to be: 15
+150: PASS Fusion, quattro transizioni chiaro/scuro, finestre aperte, campi, disabilitati, metriche e stabilità eventi (Qt 6.12.0); richieste native=0, segnali simulati=9; fallback palette, menu, preferenze e override manuale PASS
+1/1 Test #150: forgecad_application_theme_tests ...   Passed    0.09 sec
+
+The following tests passed:
+	forgecad_application_theme_tests
+
+100% tests passed out of 1
+
+Total Test time (real) =   0.10 sec

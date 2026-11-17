@@ -1,0 +1,6 @@
+patch --dry-run -p1 -d /tmp/k10-next-review/core/patch-check < /tmp/k10-next-review/core/provider-and-ledger.patch
+exit0
+checking file kernel/fk_surface_curve_bounds.h
+checking file kernel/fk_surface_curve_bounds.cpp
+checking file kernel/fk_sheet_join_validation.h
+checking file kernel/fk_sheet_join_validation.cpp

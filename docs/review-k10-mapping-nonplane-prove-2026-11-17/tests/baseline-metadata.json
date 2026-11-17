@@ -1,0 +1,42 @@
+{
+  "librarySha256": "ea1825d26334bd83b1169859a425fa1efb451ceab9136ea8c4e388542857960b",
+  "driverSourceSha256": "dac95d0fc9d2edb49052c750f4612eb7607c21e37bed4ecbc324b931142eebba",
+  "driverSha256": "40efd602db4c3a5fb41ad6982cbda0df849d232d7cf9d68bbafd3a7acceb5dc7",
+  "exportSha256": "af0a274dfce1661e752e4f33a91039577dcf1661bd886b1cc8271a47cadbc615",
+  "statusCounts": {
+    "cylinder": {
+      "Unsupported": 0,
+      "Certified": 16,
+      "Failed": 8
+    },
+    "nurbs": {
+      "Unsupported": 0,
+      "Certified": 16,
+      "Failed": 8
+    },
+    "narrow": {
+      "Unsupported": 0,
+      "Certified": 2,
+      "Failed": 2
+    }
+  },
+  "contract": "budget=.8*min(tolerance,linearResolution), tolerance1e-6; new metadata contract is not a claim of a historical bug",
+  "actualGeometricWitness": {
+    "label": "narrow",
+    "fin": 0,
+    "t": "0x1.9ce075f6fd220p-4",
+    "observedResidual": "0x1.89374bc6a7efap-11",
+    "budget": "0x1.5798ee2308c3ap-24",
+    "scope": "existing internal mapBodyByFunction, not public wrap API"
+  },
+  "testSourceSha256": "ee301ceaf193008457b263c13ce36fe9c0fbf3e75011bcbcea5ead3bd1af75e3",
+  "sources": {
+    "kernel/fk_surface_mapping.cpp": "c830c1c802657b50dd1cafa223af91263dba185cdf109524a16c602b6986f707",
+    "kernel/fk_surface_curve_bounds.cpp": "01e69c5c5bea9aa78cbad607750cc58aa3b3fd562ab86cccb889d02519a9cf7a",
+    "kernel/fk_mapping_fit.cpp": "f9187aa9903c07096fe029dad8f271cf850d12d6c6a273b9ed538c2afc5a8b27",
+    "kernel/fk_mapping_carrier.cpp": "1c769c5136df3502903afea4771636c939425735a975319e1d68848d0316ab25",
+    "kernel/fk_quilt_mapping.cpp": "21a41fb7513ba6ca48987956632aa2d2bbdf57c49c4f9681907a4c512668df05",
+    "kernel/fk_pcurve.cpp": "ad5e5ce7082274aee5c279772f30caa56b21689b7b4b7331d27543444c58df79",
+    "kernel/tests/fk_test_main.cpp": "d4e8174aa18faf0d899dd5731be71f6029fa9113a8eab6385f7151a44f57e70c"
+  }
+}

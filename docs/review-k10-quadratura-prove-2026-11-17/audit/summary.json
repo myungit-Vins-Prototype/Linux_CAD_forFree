@@ -1,0 +1,19 @@
+{
+  "sourceSHA256": "30964c986ea45e022115223d60ae6277373d844ecced2d75b97a3ecd9b345310",
+  "graphCounts": {
+    "nodes": 801,
+    "edges": 11726
+  },
+  "execution": "Python only, single-panel arithmetic; no C++/build/repo mutations",
+  "findings": [
+    "finite constant integrand, exact integral1, panel pair and accumulator overflow",
+    "NaN adaptive scalar/vector may expand to depth30",
+    "finite endpoints can overflow center or half",
+    "output/noise/child sum nonfinite requires guard"
+  ],
+  "proposal": "preserve ordinary arithmetic and tolerance semantics; conservative finite guards; guarded endpoint arithmetic; optional whole-panel exact-power-of-two fallback rather than pair-only rewrite",
+  "reportSHA256": "32be6dafd4dedd0141cfa29102b05509c2589ba01411e8dfb59bc4e4f72266ba",
+  "candidateSHA256": "048c8007849e807c2721a20e90387c855a2076ba3e56bcc90cf55320e3a804b7",
+  "testsSHA256": "88f9718de56f1488f24e0aa637c03f563d67868894437fc6af9f18c4f6f60e29",
+  "candidateVerdict": "No static blocker within authorized scope"
+}

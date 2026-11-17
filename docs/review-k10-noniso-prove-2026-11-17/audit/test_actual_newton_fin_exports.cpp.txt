@@ -1,0 +1,65 @@
+#include "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_curve_bounds.h"
+#include "/home/myungit/Linux_CAD_forFree/kernel/tests/test_sheet_join_validation.cpp"
+FK_TEST(OffsetLoftActualNewtonFinExports) {
+    std::ifstream input(std::string(FORGEKERNEL_TEST_DATA_DIR) + "/offset_loft.body", std::ios::binary);
+    std::stringstream bytes; bytes << input.rdbuf();
+    const Body source = readBodyBinary(bytes.str());
+    std::vector<FaceId> sides;
+    for (FaceId f : source.faces()) if (source.face(f).surface->type() == SurfaceType::BSpline) sides.push_back(f);
+    const Body before = offsetFaces(source,sides,1,1e-7,true).body;
+    const EdgeId originalSeam(1);
+    const Edge &seed = before.edge(originalSeam);
+    const FaceId a = before.finFace(seed.forward), b = before.finFace(seed.backward);
+    const VertexId start = before.edgeStart(originalSeam), end = before.edgeEnd(originalSeam);
+    const VertexId endpoint = before.vertex(start).point.y() > before.vertex(end).point.y() ? start : end;
+    std::vector<EdgeId> ring;
+    for (EdgeId id : before.edges()) if (before.isLaminar(id)) {
+        const auto &edge = before.edge(id);
+        if (edge.curve->point(.5*(edge.range.lo+edge.range.hi)).y() > 15) ring.push_back(id);
+    }
+    BodyHistory history;
+    const Body output = extendSheet(before,ring,3,false,&history);
+    const Body noUserHistory = extendSheet(before,ring,3,false,nullptr);
+    FK_CHECK(checkBody(noUserHistory,{true,true}).empty());
+    FK_CHECK(writeBodyBinary(noUserHistory) == writeBodyBinary(output));
+    FK_CHECK(checkBody(output,{true,true}).empty());
+    const auto fa = history.descendants(EntityKind::Face,0,a.index), fb = history.descendants(EntityKind::Face,0,b.index);
+    const auto old = history.descendants(EntityKind::Edge,0,originalSeam.index);
+    const auto vertex = history.descendants(EntityKind::Vertex,0,endpoint.index);
+    FK_CHECK(!fa.empty() && !fb.empty() && !old.empty() && !vertex.empty());
+    auto contains = [](const std::vector<int> &values,int x) { return std::find(values.begin(),values.end(),x) != values.end(); };
+    std::vector<EdgeId> selected;
+    for (EdgeId id : output.edges()) {
+        if (output.isLaminar(id) || contains(old,id.index)) continue;
+        const auto &edge = output.edge(id);
+        const int x = output.finFace(edge.forward).index, y = output.finFace(edge.backward).index;
+        if (!((contains(fa,x) && contains(fb,y)) || (contains(fa,y) && contains(fb,x)))) continue;
+        if (contains(vertex,output.edgeStart(id).index) || contains(vertex,output.edgeEnd(id).index)) selected.push_back(id);
+    }
+    FK_CHECK(selected.size() == 1);
+    if (selected.size() != 1) return;
+    const char *path = std::getenv("CI_NEWTON_FIN_EXPORT");
+    if (!path) return;
+    std::ofstream out(path);
+    const EdgeId id = selected.front(); const auto &edge = output.edge(id);
+    FK_CHECK(std::isfinite(edge.tolerance) && edge.tolerance > 0.0);
+    out << "{\"scope\":\"public-extendSheet-actual-Newton-fin-pair\",\"sourceEdge\":1,\"sourceFaces\":[" << a.index << ',' << b.index << "],\"edge\":" << id.index << ",\"records\":[";
+    bool first = true;
+    for (FinId finId : {edge.forward,edge.backward}) {
+        const auto &fin = output.fin(finId);
+        const auto &actualSurface = output.face(output.finFace(finId)).surface;
+        const auto proof = detail::surfaceCurveResidualBound(edge.curve, actualSurface, fin.pcurve, edge.range, edge.tolerance);
+        FK_CHECK(proof.status == detail::SurfaceCurveBoundStatus::Certified);
+        FK_CHECK(std::isfinite(proof.upperBound) && proof.upperBound >= 0.0 && proof.upperBound <= edge.tolerance);
+        FK_CHECK(fin.pcurveTolerance == edge.tolerance);
+        if (!first) out << ',';
+        first = false;
+        out << "{\"face\":" << output.finFace(finId).index << ",\"fin\":" << finId.index << ",\"edge\":" << id.index
+            << ",\"range\":[" << number(edge.range.lo) << ',' << number(edge.range.hi) << "],\"budget\":" << number(edge.tolerance)
+            << ",\"runtimeStatus\":\"" << (proof.status == detail::SurfaceCurveBoundStatus::Certified ? "Certified" : proof.status == detail::SurfaceCurveBoundStatus::Unsupported ? "Unsupported" : "Failed") << "\",\"runtimeUpper\":" << number(proof.upperBound)
+            << ",\"edgeTolerance\":" << number(edge.tolerance) << ",\"pcurveTolerance\":" << number(fin.pcurveTolerance) << ",\"curve\":";
+        curveJson(out,edge.curve); out << ",\"pcurve\":"; curveJson(out,fin.pcurve); out << ",\"surface\":";
+        surfaceJson(out,dynamic_cast<const BSplineSurface &>(*output.face(output.finFace(finId)).surface)); out << '}';
+    }
+    out << "]}";
+}

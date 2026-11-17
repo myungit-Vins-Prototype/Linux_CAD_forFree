@@ -1,0 +1,14 @@
+from pathlib import Path
+import subprocess,json,time,hashlib,xml.etree.ElementTree as E
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-offset-pose-review/root');ui={'forgecad_surface_tools_tests','forgecad_extension_panel_tests','forgecad_all_history_tests','forgecad_blend_history_tests'};bad={'forgecad_surface_tools_tests','forgecad_extension_panel_tests'}
+assert json.loads((T/'build-result.json').read_text())['exit']==0
+initial=list(E.parse(T/'ctest.xml').getroot().iter('testcase'));assert len(initial)==21
+assert {t.get('name') for t in initial if t.find('failure') is not None}==bad
+assert not any(t.find('skipped') is not None for t in initial)
+kernel={t.get('name') for t in initial if t.get('name') not in ui};assert len(kernel)==17
+exe=R/'forgecad-release/forgecad_view_tests';before=hashlib.sha256(exe.read_bytes()).hexdigest();args=['ctest','--test-dir','forgecad-release','--output-on-failure','--parallel','1','--output-junit',str(T/'ctest-ui-final.xml'),'-V','-R','^('+'|'.join(sorted(ui))+')$'];start=time.monotonic()
+with (T/'ctest-ui-final.log').open('w') as log:code=subprocess.run(args,cwd=R,stdout=log,stderr=subprocess.STDOUT).returncode
+j={'exit':code,'seconds':time.monotonic()-start,'command':args};(T/'ctest-ui-final-result.json').write_text(json.dumps(j,indent=2)+'\n');assert code==0,j
+final=list(E.parse(T/'ctest-ui-final.xml').getroot().iter('testcase'));assert {t.get('name') for t in final}==ui;assert not any(t.find('failure') is not None or t.find('skipped') is not None for t in final);assert hashlib.sha256(exe.read_bytes()).hexdigest()==before
+j={'exit':0,'actual_passed':21,'skipped':[],'selected_tests':sorted(kernel|ui),'final_kernel_tests_from_first_attempt':sorted(kernel),'final_UI_tests_after_full_build':sorted(ui),'initial_result':{'passed':19,'launch_errors':sorted(bad),'UI_passes_before_final_link_excluded':sorted(ui-bad),'details':'permission denied launching view runner while full application build was still active; not a test body failure'},'final_view_test_sha256':before,'result_policy':'17 kernel tests on already relinked targets plus4 UI tests after completed full build; initial two successful UI runs are not counted as final-source checks'}
+(T/'ctest-final-result.json').write_text(json.dumps(j,indent=2)+'\n');print(j)

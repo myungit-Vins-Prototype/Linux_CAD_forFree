@@ -1,0 +1,5135 @@
+{
+  "head": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "mode": "sola lettura; nessuna patch/repoedit/fixtureedit/build/test eseguito/commit/push",
+  "graph_sha256": "5efd0872f307e6659c1fad13683c8f8cbb9d42d929c8e4df714e2874a3989798",
+  "counts": [
+    778,
+    11373,
+    390
+  ],
+  "errors": {},
+  "source_sha256": {
+    "kernel/fk_sheet.cpp": "b99a70318f2cf7dcd6b24e646d8976bd287f6622ed9cf4accab968403380afbc",
+    "kernel/fk_curve_fit_bounds.cpp": "3faf91d68ee1511dd31c2c6a37a6c51dd1da8a49286c54873739b102b268052e",
+    "kernel/fk_curve_fit_bounds.h": "62dcaa3a96ad3a0aad4dc144ca138b3c03e78f44b98da18656b100d916b930a9",
+    "kernel/fk_affine_surface_fit.cpp": "4f00481ed10f996cc45d339f70283b5d2ecbcd41efc9f9d4dd2399c2bbb4cfea",
+    "kernel/fk_affine_surface_fit.h": "112bc1720e2049e0f99ddff182c75748312d1838b786a6c0e8d68705f850f4fa",
+    "kernel/fk_pcurve.cpp": "ad5e5ce7082274aee5c279772f30caa56b21689b7b4b7331d27543444c58df79",
+    "kernel/fk_pcurve.h": "220685c8ead067f18e5b9b0612e2ad86031b7fa85a488e9dfdb1b11988880636",
+    "kernel/fk_blend_model.h": "40d972a816756f6eea6b74fd44d760d8843c8b79ef973e8bc64d83670a99cdd9",
+    "kernel/fk_blend_section_curve.cpp": "3c2fece62fbf033de91693b520e82055aae2e63a6cac7011b314a1f7f74dbd7d",
+    "kernel/fk_blend_section_curve.h": "13e09f031b0c6acb7f43c47c6f6a9bb2886f3d79c7209372f040f812b5768966",
+    "kernel/tests/test_sheet_join_validation.cpp": "451b30b1488b94f3e817449a27779bef85ad0d28abf2896cabd4e22e4b5ab763",
+    "docs/ci-sheet-join-2026-11-16.md": "35cd488868ccc5d5de10b0652999864d86c5352dd9a5580a139d9590e44f3b24"
+  },
+  "graph_hash_matches": {
+    "kernel/fk_sheet.cpp": true,
+    "kernel/fk_curve_fit_bounds.cpp": true,
+    "kernel/fk_curve_fit_bounds.h": true,
+    "kernel/fk_affine_surface_fit.cpp": true,
+    "kernel/fk_affine_surface_fit.h": true,
+    "kernel/fk_pcurve.cpp": true,
+    "kernel/fk_pcurve.h": true,
+    "kernel/fk_blend_model.h": true,
+    "kernel/fk_blend_section_curve.cpp": true,
+    "kernel/fk_blend_section_curve.h": true,
+    "kernel/tests/test_sheet_join_validation.cpp": true
+  },
+  "descriptions": {
+    "kernel/fk_affine_surface_fit.cpp": "Riconoscimento delle SP-curve affini originali per superfici estruse: segmenti UV anche obliqui, dominio, copertura, pesi, budget e cancellazione; inoltro al certificato continuo sul generatore originale.",
+    "kernel/fk_affine_surface_fit.h": "Contratto della composizione affine UV su estrusioni: intervalli e coefficienti originali, famiglie supportate e controllo inconclusivo distinto dal caso non supportato.",
+    "kernel/fk_blend_model.h": "Interno ai raccordi senza booleane (fk_blend_loop, fk_blend_surface): il body come liste modificabili di Body::build, per la chirurgia topologica.",
+    "kernel/fk_blend_section_curve.cpp": "Curve di riferimento delle sezioni e continuazioni dei bordi spline: concatenazione omogenea con parametro originale preservato; ISO riconosciute dai coefficienti originali e verificate continuamente su entrambi i supporti con cap prefissato. Installazione delle mappe per identita e ricontrollo delle fin emesse; famiglie non supportate e Newton restano campionati. Preservazione globale dei carrier estesi non certificata a runtime.",
+    "kernel/fk_blend_section_curve.h": "Curve di riferimento delle sezioni e continuazioni dei bordi spline: concatenazione omogenea con parametro originale preservato; ISO riconosciute dai coefficienti originali e verificate continuamente su entrambi i supporti con cap prefissato. Installazione delle mappe per identita e ricontrollo delle fin emesse; famiglie non supportate e Newton restano campionati. Preservazione globale dei carrier estesi non certificata a runtime.",
+    "kernel/fk_curve_fit_bounds.cpp": "Limiti continui Bernstein outward per posizione, offset NURBS e composizione isoparametrica NURBS e affine anche obliqua su estrusione con SP-curve originale; limiti delle derivate del supporto per il trasferimento UV, coefficienti originali, pesi, istanze, budget e cancellazione. Proiezione affine su Plane dagli originali IEEE, normale da assi del piano e direzione originale, con residuo omogeneo outward. Offset bordi: posizione edge e normale del generatore indipendenti, SP-curve affine originale e controllo continuo dei poli dopo assemblaggio. Doppio certificato Plane/SP-curve: proiezione fisica per il fit e residuo completo della fin, coefficienti originali posseduti e metriche in mm.",
+    "kernel/fk_curve_fit_bounds.h": "Contratti del fit continuo, provider di posizione/offset/composizione superficie-SP-curve e limiti delle derivate U/V del supporto; distingue famiglie supportate, intervalli affini espliciti e rifiuto quando il controllo non conclude. Include il provider della proiezione originale su Plane con dati copiati e durate indipendenti dai chiamanti. Contratto offset edge di estrusione con dati originali posseduti e normale nel parametro del generatore. Contratto duale Plane/SP-curve e distinzione fra dati non supportati, factory invalida e query inconclusiva. API interne mirate fitPCurveOnPlane/requirePCurveOnPlane: costruzione e ricontrollo del residuo fisico con pubblicazione transazionale.",
+    "kernel/fk_pcurve.cpp": "SP-curve (Parasolid) / pcurve (OCCT): la curva di un edge nello spazio dei parametri (u, v) di una faccia, con lo stesso parametro dell'edge: S(p(t)) = C(t) per t nel range dell'edge.",
+    "kernel/fk_pcurve.h": "SP-curve (Parasolid) / pcurve (OCCT): la curva di un edge nello spazio dei parametri (u, v) di una faccia, con lo stesso parametro dell'edge: S(p(t)) = C(t) per t nel range dell'edge.",
+    "kernel/fk_sheet.cpp": "Taglio, rifilo ed estensione di lamine; offset NURBS planari certificati. Famiglia ISO scelta dalle pcurve sorgenti originali con limite fisico continuo e ancore per incidenza; giunti ISO verificati sui due supporti a cap fisso e fin ricontrollate dopo build/unify. Sorgenti nonISO, anche quasi tangenti, usano Newton campionato; certificati ISO falliti restano terminali.",
+    "kernel/tests/test_sheet_join_validation.cpp": "Giunti ISO NURBS: prove continue, cap fisso e negativi per picchi/gap; ancore e genealogia, codec e cancellazione. Offset loft con pcurve nonISO quasi tangenti: quattro varianti pubbliche, pose/scale, doppia estensione e taglio reciproco, sorgente immutabile."
+  },
+  "two_way_function_relations": {
+    "ForgeCad::Kernel::joinSplineExtensions": {
+      "incoming": [
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 1008,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        }
+      ],
+      "outgoing": [
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_blend_model.h",
+          "kind": "call",
+          "line": 749,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::addEdge",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_blend_model.h",
+          "kind": "call",
+          "line": 750,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::addEdge",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_bspline.h",
+          "kind": "call",
+          "line": 664,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_cancel.h",
+          "kind": "call",
+          "line": 512,
+          "symbol": "ForgeCad::Kernel::cancellationPoint",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_cancel.h",
+          "kind": "call",
+          "line": 569,
+          "symbol": "ForgeCad::Kernel::cancellationPoint",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_cancel.h",
+          "kind": "call",
+          "line": 579,
+          "symbol": "ForgeCad::Kernel::cancellationPoint",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 574,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 682,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 730,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 741,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 673,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 674,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 535,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 550,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 551,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 553,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 554,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 555,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 556,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 557,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 557,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 558,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 558,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 559,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 571,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 572,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 574,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 575,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 575,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 575,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 580,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 581,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 581,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 582,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 582,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 583,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 583,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 584,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 584,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 585,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 587,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 587,
+          "symbol": "ForgeCad::Kernel::operator/",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 590,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 593,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 594,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 596,
+          "symbol": "ForgeCad::Kernel::cross",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 596,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 598,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 598,
+          "symbol": "ForgeCad::Kernel::cross",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 598,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 599,
+          "symbol": "ForgeCad::Kernel::cross",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 599,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 600,
+          "symbol": "ForgeCad::Kernel::cross",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 600,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 601,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 601,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 602,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 602,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 603,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 603,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 604,
+          "symbol": "ForgeCad::Kernel::isFinite",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 606,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 606,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 607,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 607,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 607,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 607,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 607,
+          "symbol": "ForgeCad::Kernel::operator+",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 619,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 629,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 631,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 635,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 638,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 639,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 640,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 640,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 640,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 648,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 649,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 650,
+          "symbol": "ForgeCad::Kernel::isFinite",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 665,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 666,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 683,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 683,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 689,
+          "symbol": "ForgeCad::Kernel::cross",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 689,
+          "symbol": "ForgeCad::Kernel::normalized",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 690,
+          "symbol": "ForgeCad::Kernel::cross",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 690,
+          "symbol": "ForgeCad::Kernel::normalized",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 691,
+          "symbol": "ForgeCad::Kernel::cross",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 691,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 715,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 716,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 717,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 718,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 730,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 732,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 733,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 741,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 631,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 681,
+          "symbol": "ForgeCad::Kernel::fitCurveCertified",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_precision.h",
+          "kind": "call",
+          "line": 544,
+          "symbol": "ForgeCad::Kernel::linearResolution",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 513,
+          "symbol": "ForgeCad::Kernel::SplineExtensionSide::SplineExtensionSide",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 545,
+          "symbol": "ForgeCad::Kernel::originalIsoSeed",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 576,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::Sample::Sample",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 607,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::Sample::Sample",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 619,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:568:33)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 620,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:617:31)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:619:38)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 626,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:617:31)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:619:38)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 629,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:568:33)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 631,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:568:33)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 657,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:634:37)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:645:38)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 658,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:634:37)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:645:38)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 668,
+          "symbol": "ForgeCad::Kernel::extendBSplineSurface",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 671,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:634:37)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:659:46)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 672,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:634:37)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:659:46)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 685,
+          "symbol": "ForgeCad::Kernel::requireSplineJoin",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 686,
+          "symbol": "ForgeCad::Kernel::requireSplineJoin",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 700,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:634:37)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 705,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:617:31)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 714,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:568:33)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 722,
+          "symbol": "ForgeCad::Kernel::extendBSplineSurface",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 724,
+          "symbol": "ForgeCad::Kernel::extendBSplineSurface",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 739,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:568:33)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 739,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:729:33)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 740,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:568:33)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 740,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:729:33)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.cpp",
+          "kind": "call",
+          "line": 575,
+          "symbol": "ForgeCad::Kernel::Surface::point",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.cpp",
+          "kind": "call",
+          "line": 606,
+          "symbol": "ForgeCad::Kernel::Surface::point",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.cpp",
+          "kind": "call",
+          "line": 640,
+          "symbol": "ForgeCad::Kernel::Surface::point",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.cpp",
+          "kind": "call",
+          "line": 683,
+          "symbol": "ForgeCad::Kernel::Surface::point",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 557,
+          "symbol": "ForgeCad::Kernel::Surface::evaluate",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 558,
+          "symbol": "ForgeCad::Kernel::Surface::evaluate",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 581,
+          "symbol": "ForgeCad::Kernel::Surface::evaluate",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 582,
+          "symbol": "ForgeCad::Kernel::Surface::evaluate",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 660,
+          "symbol": "ForgeCad::Kernel::Surface::uDomain",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 660,
+          "symbol": "ForgeCad::Kernel::Surface::vDomain",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 710,
+          "symbol": "ForgeCad::Kernel::Surface::uDomain",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 710,
+          "symbol": "ForgeCad::Kernel::Surface::vDomain",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 737,
+          "symbol": "ForgeCad::Kernel::Surface::uIso",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 737,
+          "symbol": "ForgeCad::Kernel::Surface::vIso",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 517,
+          "symbol": "ForgeCad::Kernel::Body::edges",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 518,
+          "symbol": "ForgeCad::Kernel::Body::edge",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 532,
+          "symbol": "ForgeCad::Kernel::Body::edge",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 541,
+          "symbol": "ForgeCad::Kernel::Body::fin",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 544,
+          "symbol": "ForgeCad::Kernel::Body::fin",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 545,
+          "symbol": "ForgeCad::Kernel::Body::fin",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 515,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 517,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 518,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 519,
+          "symbol": "ForgeCad::Kernel::Id::valid",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 520,
+          "symbol": "ForgeCad::Kernel::Body::finFace",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 520,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 521,
+          "symbol": "ForgeCad::Kernel::Body::finFace",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 521,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 523,
+          "symbol": "ForgeCad::Kernel::Body::edgeStart",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 523,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 524,
+          "symbol": "ForgeCad::Kernel::Body::edgeEnd",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 524,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 525,
+          "symbol": "ForgeCad::Kernel::Id::valid",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 526,
+          "symbol": "ForgeCad::Kernel::Id::operator=",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 528,
+          "symbol": "ForgeCad::Kernel::Id::valid",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 532,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 533,
+          "symbol": "ForgeCad::Kernel::Body::edgeStart",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 533,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 536,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 537,
+          "symbol": "ForgeCad::Kernel::Body::finFace",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 537,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 541,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 544,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 545,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        }
+      ]
+    },
+    "ForgeCad::Kernel::extendSheet": {
+      "incoming": [
+        {
+          "source": "cad_forge.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 908,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "ForgeCad::forgeExtendSheet"
+        },
+        {
+          "source": "kernel/fk_surface_tools.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 121,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "ForgeCad::Kernel::extendSheetTo"
+        },
+        {
+          "source": "kernel/tests/test_history.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 1030,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "HistoryTrimExtendShellAndProjectionComposeOrigins"
+        },
+        {
+          "source": "kernel/tests/test_offset.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 393,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "OffsetLoftExtension"
+        },
+        {
+          "source": "kernel/tests/test_offset.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 502,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "OffsetLoftInternalCreasesOneMillimeter"
+        },
+        {
+          "source": "kernel/tests/test_offset.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 525,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "OffsetLoftExtendedSeamsTrimBoth"
+        },
+        {
+          "source": "kernel/tests/test_offset.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 615,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "OffsetLoftSeamExtensionFollowsTangentSeam"
+        },
+        {
+          "source": "kernel/tests/test_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 121,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "SheetExtend"
+        },
+        {
+          "source": "kernel/tests/test_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 124,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "SheetExtend"
+        },
+        {
+          "source": "kernel/tests/test_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 139,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "SheetExtend"
+        },
+        {
+          "source": "kernel/tests/test_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 145,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "SheetExtend"
+        },
+        {
+          "source": "kernel/tests/test_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 151,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "SheetExtend"
+        },
+        {
+          "source": "kernel/tests/test_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 156,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "SheetExtend"
+        },
+        {
+          "source": "kernel/tests/test_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 157,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "SheetExtend"
+        },
+        {
+          "source": "kernel/tests/test_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 160,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "SheetExtend"
+        },
+        {
+          "source": "kernel/tests/test_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 168,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "SheetExtend"
+        },
+        {
+          "source": "kernel/tests/test_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 171,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "SheetExtend"
+        },
+        {
+          "source": "kernel/tests/test_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 172,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "SheetExtend"
+        },
+        {
+          "source": "kernel/tests/test_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 173,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "SheetExtend"
+        },
+        {
+          "source": "kernel/tests/test_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 183,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "SheetExtend"
+        },
+        {
+          "source": "kernel/tests/test_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 187,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "SheetExtend"
+        },
+        {
+          "source": "kernel/tests/test_sheet_fit_validation.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 128,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "checkFixture"
+        },
+        {
+          "source": "kernel/tests/test_sheet_join_validation.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 364,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "positive"
+        },
+        {
+          "source": "kernel/tests/test_sheet_join_validation.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 452,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "rejection"
+        },
+        {
+          "source": "kernel/tests/test_sheet_join_validation.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 551,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "SheetJoinCancellationAtomic"
+        },
+        {
+          "source": "kernel/tests/test_sheet_join_validation.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 573,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "SheetJoinInvalidLengthAtomic"
+        },
+        {
+          "source": "kernel/tests/test_sheet_join_validation.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 631,
+          "symbol": "ForgeCad::Kernel::extendSheet",
+          "owner": "checkNonIsoOffsetLoftContinuation"
+        }
+      ],
+      "outgoing": [
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_blend_model.h",
+          "kind": "call",
+          "line": 809,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::BlendModel",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_blend_model.h",
+          "kind": "call",
+          "line": 817,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::addPoint",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_blend_model.h",
+          "kind": "call",
+          "line": 828,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::addEdge",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_blend_model.h",
+          "kind": "call",
+          "line": 1001,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::addGeneratedFace",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_blend_model.h",
+          "kind": "call",
+          "line": 1010,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::build",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_body_check.cpp",
+          "kind": "call",
+          "line": 1015,
+          "symbol": "ForgeCad::Kernel::checkBody",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_body_check.cpp",
+          "kind": "call",
+          "line": 1016,
+          "symbol": "ForgeCad::Kernel::describe",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_bspline.h",
+          "kind": "call",
+          "line": 903,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::domain",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_cancel.h",
+          "kind": "call",
+          "line": 793,
+          "symbol": "ForgeCad::Kernel::cancellationPoint",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_cancel.h",
+          "kind": "call",
+          "line": 1017,
+          "symbol": "ForgeCad::Kernel::cancellationPoint",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_classify.cpp",
+          "kind": "call",
+          "line": 800,
+          "symbol": "ForgeCad::Kernel::faceBox",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 827,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 843,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 844,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 875,
+          "symbol": "ForgeCad::Kernel::Curve::derivative",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 877,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 879,
+          "symbol": "ForgeCad::Kernel::Curve::breakpoints",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 887,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 888,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 899,
+          "symbol": "ForgeCad::Kernel::Curve::derivative",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 946,
+          "symbol": "ForgeCad::Kernel::Curve::derivative",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 969,
+          "symbol": "ForgeCad::Kernel::Curve::domain",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 972,
+          "symbol": "ForgeCad::Kernel::Curve::type",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 974,
+          "symbol": "ForgeCad::Kernel::Curve::derivative",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 979,
+          "symbol": "ForgeCad::Kernel::Curve::type",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 881,
+          "symbol": "ForgeCad::Kernel::detail::extrusionOffsetErrorBound",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_history.cpp",
+          "kind": "call",
+          "line": 1018,
+          "symbol": "ForgeCad::Kernel::BodyHistory::compose",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_history.h",
+          "kind": "call",
+          "line": 792,
+          "symbol": "ForgeCad::Kernel::BodyHistory::BodyHistory",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_history.h",
+          "kind": "call",
+          "line": 792,
+          "symbol": "ForgeCad::Kernel::BodyHistory::operator=",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_history.h",
+          "kind": "call",
+          "line": 805,
+          "symbol": "ForgeCad::Kernel::BodyHistory::operator=",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_history.h",
+          "kind": "call",
+          "line": 1009,
+          "symbol": "ForgeCad::Kernel::BodyHistory::BodyHistory",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_history.h",
+          "kind": "call",
+          "line": 1018,
+          "symbol": "ForgeCad::Kernel::BodyHistory::operator=",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_history_tools.h",
+          "kind": "call",
+          "line": 805,
+          "symbol": "ForgeCad::Kernel::detail::generatedFaces",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_intersect.cpp",
+          "kind": "call",
+          "line": 799,
+          "symbol": "ForgeCad::Kernel::Box::add",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_intersect.cpp",
+          "kind": "call",
+          "line": 800,
+          "symbol": "ForgeCad::Kernel::Box::add",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_intersect.h",
+          "kind": "call",
+          "line": 798,
+          "symbol": "ForgeCad::Kernel::Box::Box",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_intersect.h",
+          "kind": "call",
+          "line": 801,
+          "symbol": "ForgeCad::Kernel::Box::diagonal",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.cpp",
+          "kind": "call",
+          "line": 950,
+          "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 816,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 827,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 845,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 845,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 846,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 846,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 852,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 852,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 853,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 853,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 853,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 854,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 854,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 855,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 855,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 861,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 871,
+          "symbol": "ForgeCad::Kernel::Frame3::zDir",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 871,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 875,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 876,
+          "symbol": "ForgeCad::Kernel::cross",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 876,
+          "symbol": "ForgeCad::Kernel::normalized",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 876,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 877,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 877,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 877,
+          "symbol": "ForgeCad::Kernel::operator+",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 889,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 890,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 891,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 891,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 891,
+          "symbol": "ForgeCad::Kernel::normalized",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 891,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 892,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 892,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 892,
+          "symbol": "ForgeCad::Kernel::normalized",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 892,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 897,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 897,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 898,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 898,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 899,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 915,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 915,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 916,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 916,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 917,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 917,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 918,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 918,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 920,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 921,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 926,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 927,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 927,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 928,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 929,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 930,
+          "symbol": "ForgeCad::Kernel::Interval::contains",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 933,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 934,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 936,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 937,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 938,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 941,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 942,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 943,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 943,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 944,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 944,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 945,
+          "symbol": "ForgeCad::Kernel::normalized",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 945,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 946,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 946,
+          "symbol": "ForgeCad::Kernel::cross",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 946,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 946,
+          "symbol": "ForgeCad::Kernel::normalized",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 946,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 946,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 948,
+          "symbol": "ForgeCad::Kernel::cross",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 949,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 949,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 949,
+          "symbol": "ForgeCad::Kernel::normalized",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 949,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 952,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 952,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 952,
+          "symbol": "ForgeCad::Kernel::operator+",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 953,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 953,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 953,
+          "symbol": "ForgeCad::Kernel::operator+",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 956,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 957,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 957,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 957,
+          "symbol": "ForgeCad::Kernel::normalized",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 957,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 960,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 974,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 978,
+          "symbol": "ForgeCad::Kernel::Interval::contains",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 990,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 991,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 993,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 994,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 995,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 883,
+          "symbol": "ForgeCad::Kernel::fitCurveCertified",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 884,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 797,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 1011,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_precision.h",
+          "kind": "call",
+          "line": 795,
+          "symbol": "ForgeCad::Kernel::linearResolution",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_precision.h",
+          "kind": "call",
+          "line": 900,
+          "symbol": "ForgeCad::Kernel::linearResolution",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 804,
+          "symbol": "ForgeCad::Kernel::extendPlanarFace",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 887,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:814:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 888,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:814:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 891,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:823:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 892,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:823:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 893,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:823:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 903,
+          "symbol": "ForgeCad::Kernel::extendBSpline",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 904,
+          "symbol": "ForgeCad::Kernel::arcParameter",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 910,
+          "symbol": "ForgeCad::Kernel::extendBSplineSurface",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 915,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:814:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 916,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:814:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 917,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:823:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 918,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:823:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 919,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:823:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 933,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:814:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 934,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:814:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 936,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:823:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 937,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:823:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 938,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:823:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 952,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:814:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 953,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:814:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 954,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:823:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 955,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:823:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 957,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:823:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 975,
+          "symbol": "ForgeCad::Kernel::extendBSpline",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 977,
+          "symbol": "ForgeCad::Kernel::arcParameter",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 981,
+          "symbol": "ForgeCad::Kernel::extendBSpline",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 990,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:814:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 991,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:814:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 993,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:823:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 994,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:823:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 995,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:823:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 1000,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:832:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 1008,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 1012,
+          "symbol": "ForgeCad::Kernel::emittedSplineJoins",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_sheet.cpp",
+          "kind": "call",
+          "line": 1014,
+          "symbol": "ForgeCad::Kernel::requireUnifiedSplineJoins",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.cpp",
+          "kind": "call",
+          "line": 915,
+          "symbol": "ForgeCad::Kernel::Surface::point",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.cpp",
+          "kind": "call",
+          "line": 916,
+          "symbol": "ForgeCad::Kernel::Surface::point",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.cpp",
+          "kind": "call",
+          "line": 933,
+          "symbol": "ForgeCad::Kernel::Surface::point",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.cpp",
+          "kind": "call",
+          "line": 934,
+          "symbol": "ForgeCad::Kernel::Surface::point",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.cpp",
+          "kind": "call",
+          "line": 990,
+          "symbol": "ForgeCad::Kernel::Surface::point",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.cpp",
+          "kind": "call",
+          "line": 991,
+          "symbol": "ForgeCad::Kernel::Surface::point",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 803,
+          "symbol": "ForgeCad::Kernel::Surface::type",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 848,
+          "symbol": "ForgeCad::Kernel::Surface::type",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 859,
+          "symbol": "ForgeCad::Kernel::Surface::type",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 871,
+          "symbol": "ForgeCad::Kernel::Plane::frame",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 898,
+          "symbol": "ForgeCad::Kernel::Surface::uIso",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 898,
+          "symbol": "ForgeCad::Kernel::Surface::vIso",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 906,
+          "symbol": "ForgeCad::Kernel::Surface::uDomain",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 906,
+          "symbol": "ForgeCad::Kernel::Surface::vDomain",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 917,
+          "symbol": "ForgeCad::Kernel::Surface::uIso",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 917,
+          "symbol": "ForgeCad::Kernel::Surface::vIso",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 918,
+          "symbol": "ForgeCad::Kernel::Surface::uIso",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 918,
+          "symbol": "ForgeCad::Kernel::Surface::vIso",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 919,
+          "symbol": "ForgeCad::Kernel::Surface::uIso",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 919,
+          "symbol": "ForgeCad::Kernel::Surface::vIso",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 927,
+          "symbol": "ForgeCad::Kernel::Surface::evaluate",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 928,
+          "symbol": "ForgeCad::Kernel::Surface::derivativeIndex",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 930,
+          "symbol": "ForgeCad::Kernel::Surface::isVPeriodic",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 930,
+          "symbol": "ForgeCad::Kernel::Surface::vDomain",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 936,
+          "symbol": "ForgeCad::Kernel::Surface::uIso",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 937,
+          "symbol": "ForgeCad::Kernel::Surface::uIso",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 938,
+          "symbol": "ForgeCad::Kernel::Surface::vIso",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 943,
+          "symbol": "ForgeCad::Kernel::Surface::evaluate",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 944,
+          "symbol": "ForgeCad::Kernel::Surface::evaluate",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 945,
+          "symbol": "ForgeCad::Kernel::Surface::derivativeIndex",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 946,
+          "symbol": "ForgeCad::Kernel::Surface::derivativeIndex",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 948,
+          "symbol": "ForgeCad::Kernel::Surface::derivativeIndex",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 965,
+          "symbol": "ForgeCad::Kernel::CylindricalSurface::radius",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 968,
+          "symbol": "ForgeCad::Kernel::ExtrusionSurface::curve",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 978,
+          "symbol": "ForgeCad::Kernel::ExtrusionSurface::isUPeriodic",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 982,
+          "symbol": "ForgeCad::Kernel::ExtrusionSurface::direction",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 993,
+          "symbol": "ForgeCad::Kernel::Surface::vIso",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 994,
+          "symbol": "ForgeCad::Kernel::Surface::vIso",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 995,
+          "symbol": "ForgeCad::Kernel::Surface::uIso",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 794,
+          "symbol": "ForgeCad::Kernel::Body::isSheet",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 799,
+          "symbol": "ForgeCad::Kernel::Body::vertex",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 799,
+          "symbol": "ForgeCad::Kernel::Body::vertices",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 800,
+          "symbol": "ForgeCad::Kernel::Body::faces",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 803,
+          "symbol": "ForgeCad::Kernel::Body::face",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 803,
+          "symbol": "ForgeCad::Kernel::Body::faces",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 805,
+          "symbol": "ForgeCad::Kernel::Body::faces",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 836,
+          "symbol": "ForgeCad::Kernel::Body::edge",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 838,
+          "symbol": "ForgeCad::Kernel::Body::fin",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 840,
+          "symbol": "ForgeCad::Kernel::Body::face",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 796,
+          "symbol": "ForgeCad::Kernel::Body::Body",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 799,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 800,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 803,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 806,
+          "symbol": "ForgeCad::Kernel::Body::Body",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 834,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 835,
+          "symbol": "ForgeCad::Kernel::Body::isLaminar",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 835,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 836,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 837,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 837,
+          "symbol": "ForgeCad::Kernel::Id::valid",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 838,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 839,
+          "symbol": "ForgeCad::Kernel::Body::finFace",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 839,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 840,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 860,
+          "symbol": "ForgeCad::Kernel::Body::finEnd",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 860,
+          "symbol": "ForgeCad::Kernel::Body::finStart",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 860,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 862,
+          "symbol": "ForgeCad::Kernel::Body::BuildFace::BuildFace",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 1001,
+          "symbol": "ForgeCad::Kernel::Body::BuildFace::BuildFace",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 1013,
+          "symbol": "ForgeCad::Kernel::Body::operator=",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 1019,
+          "symbol": "ForgeCad::Kernel::Body::Body",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_unify.cpp",
+          "kind": "call",
+          "line": 1013,
+          "symbol": "ForgeCad::Kernel::unifySameDomain",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        }
+      ]
+    },
+    "ForgeCad::Kernel::fitCurve": {
+      "incoming": [
+        {
+          "source": "cad_sketch_offset.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 440,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::extended"
+        },
+        {
+          "source": "cad_sketch_offset.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 643,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 254,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::appendProjectedCurve"
+        },
+        {
+          "source": "kernel/fk_blend_mitre.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 266,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::detail::traceBlendMitre"
+        },
+        {
+          "source": "kernel/fk_blend_section_curve.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 457,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::detail::extendBlendBoundary"
+        },
+        {
+          "source": "kernel/fk_boundary.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 335,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::boundarySheet"
+        },
+        {
+          "source": "kernel/fk_exchange.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 808,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::detail::sewnPCurve"
+        },
+        {
+          "source": "kernel/fk_fill.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 1123,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::fillSurface"
+        },
+        {
+          "source": "kernel/fk_offset.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 759,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::offsetCurve"
+        },
+        {
+          "source": "kernel/fk_offset.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 1488,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+        },
+        {
+          "source": "kernel/fk_offset.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 1511,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+        },
+        {
+          "source": "kernel/fk_offset.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 2053,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "source": "kernel/fk_offset.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 2570,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "source": "kernel/fk_project.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 511,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::Projector::finish"
+        },
+        {
+          "source": "kernel/fk_quilt_mapping.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 468,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+        },
+        {
+          "source": "kernel/fk_quilt_mapping.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 720,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 221,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::extendPlanarFace"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 631,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 884,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_surface_mapping.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 165,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::mapBody"
+        },
+        {
+          "source": "kernel/fk_surface_mapping.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 205,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::mapBody"
+        },
+        {
+          "source": "kernel/fk_surface_poles.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 115,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::editBodyFacesPoles"
+        },
+        {
+          "source": "kernel/fk_thicken.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 340,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::thickenAlongNormal"
+        },
+        {
+          "source": "kernel/fk_thicken.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 341,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::thickenAlongNormal"
+        },
+        {
+          "source": "kernel/tests/test_curve_fit_validation.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 221,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "CurveFitLegacyInvalidInputAndAtomic"
+        },
+        {
+          "source": "kernel/tests/test_curve_fit_validation.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 232,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "CurveFitLegacyInvalidInputAndAtomic"
+        },
+        {
+          "source": "kernel/tests/test_curve_fit_validation.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 248,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "CurveFitLegacyInvalidInputAndAtomic"
+        },
+        {
+          "source": "kernel/tests/test_offset.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 438,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "OffsetFitCurveSmallSmoothFeature"
+        },
+        {
+          "source": "kernel/tests/test_offset_validation.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 59,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "OffsetValidationCancellationAndReset"
+        },
+        {
+          "source": "kernel/tests/test_offset_validation.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 74,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "OffsetValidationCancellationAndReset"
+        },
+        {
+          "source": "kernel/tests/test_offset_validation.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 91,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "OffsetValidationCancellationAndReset"
+        },
+        {
+          "source": "kernel/tests/test_offset_validation.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 105,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "OffsetValidationCancellationAndReset"
+        }
+      ],
+      "outgoing": [
+        {
+          "source": "kernel/fk_offset.cpp",
+          "target": "kernel/fk_offset.cpp",
+          "kind": "call",
+          "line": 1346,
+          "symbol": "ForgeCad::Kernel::fitCurveImpl",
+          "owner": "ForgeCad::Kernel::fitCurve"
+        }
+      ]
+    },
+    "ForgeCad::Kernel::computePCurves": {
+      "incoming": [
+        {
+          "source": "kernel/fk_blend.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 352,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::buildPiece"
+        },
+        {
+          "source": "kernel/fk_blend.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 624,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::sewBodies"
+        },
+        {
+          "source": "kernel/fk_blend_loop.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 873,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::blendPlanarChains"
+        },
+        {
+          "source": "kernel/fk_blend_polar.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 347,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::detail::blendPolarEdges"
+        },
+        {
+          "source": "kernel/fk_blend_surface.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 1779,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "source": "kernel/fk_blend_surface.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 3753,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "source": "kernel/fk_blend_surface.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 3780,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "source": "kernel/fk_boolean.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 257,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::BooleanBuilder::BooleanBuilder"
+        },
+        {
+          "source": "kernel/fk_boolean.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 3028,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::BooleanBuilder::assemble"
+        },
+        {
+          "source": "kernel/fk_draft.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 190,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::draftFaces"
+        },
+        {
+          "source": "kernel/fk_exchange.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 627,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::detail::assembleBody"
+        },
+        {
+          "source": "kernel/fk_exchange.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 664,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::detail::assembleBody"
+        },
+        {
+          "source": "kernel/fk_exchange.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 678,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::detail::assembleBody"
+        },
+        {
+          "source": "kernel/fk_exchange.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 681,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::detail::assembleBody"
+        },
+        {
+          "source": "kernel/fk_extrude.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 231,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::makeExtrusion"
+        },
+        {
+          "source": "kernel/fk_extrude.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 309,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::makeSheetExtrusion"
+        },
+        {
+          "source": "kernel/fk_loft.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 2028,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::loftCore"
+        },
+        {
+          "source": "kernel/fk_offset.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 1147,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::splitTrimmedCreases"
+        },
+        {
+          "source": "kernel/fk_offset.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 1556,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "source": "kernel/fk_offset.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 2109,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "source": "kernel/fk_quilt_mapping.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 564,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+        },
+        {
+          "source": "kernel/fk_revolve.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 232,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::makeFullRevolution"
+        },
+        {
+          "source": "kernel/fk_revolve.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 246,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::makeSheetRevolution"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 177,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::makePlaneSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 797,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 1011,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "source": "kernel/fk_surface_mapping.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 363,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::unrollFace"
+        },
+        {
+          "source": "kernel/fk_surface_poles.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 88,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::editBodyFacesPoles"
+        },
+        {
+          "source": "kernel/fk_surface_poles_constraints.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 294,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::SurfacePoleConstraints::SurfacePoleConstraints"
+        },
+        {
+          "source": "kernel/fk_surface_poles_constraints.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 612,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::checkSurfacePoleContinuity"
+        },
+        {
+          "source": "kernel/fk_surface_poles_conversion.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 85,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::surfacePoleSupport"
+        },
+        {
+          "source": "kernel/fk_surface_poles_conversion.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 99,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::prepareSurfacePoleBody"
+        },
+        {
+          "source": "kernel/fk_surface_tools.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 119,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::extendSheetTo"
+        },
+        {
+          "source": "kernel/fk_surface_tools.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 120,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::extendSheetTo"
+        },
+        {
+          "source": "kernel/fk_surface_tools.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 129,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::extendSheetTo"
+        },
+        {
+          "source": "kernel/fk_sweep.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 954,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::sweep"
+        },
+        {
+          "source": "kernel/fk_tessellate.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 1783,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::tessellate"
+        },
+        {
+          "source": "kernel/fk_thicken.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 436,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::thickenSheet"
+        },
+        {
+          "source": "kernel/fk_transform.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 256,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::transformBody"
+        },
+        {
+          "source": "kernel/fk_transform.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 292,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::transformBody"
+        },
+        {
+          "source": "kernel/fk_unify.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 365,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::unifyBody"
+        },
+        {
+          "source": "kernel/occt/fk_occt_import.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 486,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::bodyFromOcct"
+        },
+        {
+          "source": "kernel/tests/probe_blend_candidates.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 193,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "main"
+        },
+        {
+          "source": "kernel/tests/probe_blend_candidates.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 214,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "main"
+        },
+        {
+          "source": "kernel/tests/probe_blend_candidates.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 229,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "main"
+        },
+        {
+          "source": "kernel/tests/test_blend_boundary_validation.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 145,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "preserveOriginal"
+        },
+        {
+          "source": "kernel/tests/test_blend_boundary_validation.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 283,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "extendedEmission"
+        },
+        {
+          "source": "kernel/tests/test_blend_boundary_validation.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 378,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "BoundaryActualEmissionKeepsDistinctFacesOnSharedCarrier"
+        },
+        {
+          "source": "kernel/tests/test_boolean.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 1164,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "slab"
+        },
+        {
+          "source": "kernel/tests/test_boolean.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 1308,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "BooleanTolerantVertices"
+        },
+        {
+          "source": "kernel/tests/test_disjoint_union.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 93,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "graphCell"
+        },
+        {
+          "source": "kernel/tests/test_mass.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 137,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "resetPCurves"
+        },
+        {
+          "source": "kernel/tests/test_nurbs_supports.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 49,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "adjacentCharts"
+        },
+        {
+          "source": "kernel/tests/test_sew_pcurve_validation.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 98,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "sourceSheet"
+        },
+        {
+          "source": "kernel/tests/test_sheet_fit_validation.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 102,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "fixture"
+        },
+        {
+          "source": "kernel/tests/test_sheet_join_validation.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 66,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "fixture"
+        },
+        {
+          "source": "kernel/tests/test_sheet_join_validation.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 132,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "aliasFixture"
+        },
+        {
+          "source": "kernel/tests/test_sheet_join_validation.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 346,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "variant"
+        },
+        {
+          "source": "kernel/tests/test_step.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 781,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "closedSplineEndSheet"
+        },
+        {
+          "source": "kernel/tests/test_surface_mapping.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 35,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "main"
+        },
+        {
+          "source": "kernel/tests/test_surface_mapping.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 116,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "main"
+        },
+        {
+          "source": "kernel/tests/test_surface_mapping.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 127,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "main"
+        },
+        {
+          "source": "kernel/tests/test_surface_mapping.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 200,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "main"
+        },
+        {
+          "source": "kernel/tests/test_surface_tools.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 267,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "SurfacePolesMultipleFacesOfSolid"
+        },
+        {
+          "source": "kernel/tests/test_topology.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 189,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ReverseEdgePreservesSolidAndLaminarGeometry"
+        },
+        {
+          "source": "kernel/tests/test_trimmed_face_bounds.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 32,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "rectangle"
+        },
+        {
+          "source": "tests/test_drawing.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 67,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "nurbsPatch"
+        },
+        {
+          "source": "tests/test_drawing_dimension_controls.h",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 10,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "drawingProfileRadiusControlTests"
+        },
+        {
+          "source": "tests/test_drawing_dimensions.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 127,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "main"
+        },
+        {
+          "source": "tests/test_extrusion_next_body.h",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 102,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ViewportInteractionTest::extrusionNextBodyTests"
+        },
+        {
+          "source": "tests/test_projected_drawing.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 46,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "patch"
+        }
+      ],
+      "outgoing": [
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_parallel.h",
+          "kind": "call",
+          "line": 525,
+          "symbol": "ForgeCad::Kernel::parallelFor",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_parallel.h",
+          "kind": "call",
+          "line": 525,
+          "symbol": "ForgeCad::Kernel::threadCount",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 507,
+          "symbol": "ForgeCad::Kernel::exactPCurve",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 513,
+          "symbol": "ForgeCad::Kernel::fitPCurve",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_pcurve.cpp",
+          "kind": "call",
+          "line": 520,
+          "symbol": "ForgeCad::Kernel::computePCurves::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_pcurve.cpp:503:29)::operator()",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_precision.h",
+          "kind": "call",
+          "line": 506,
+          "symbol": "ForgeCad::Kernel::linearResolution",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 494,
+          "symbol": "ForgeCad::Kernel::Body::faces",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 495,
+          "symbol": "ForgeCad::Kernel::Body::face",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 497,
+          "symbol": "ForgeCad::Kernel::Body::face",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 498,
+          "symbol": "ForgeCad::Kernel::Body::loopFins",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 505,
+          "symbol": "ForgeCad::Kernel::Body::edge",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 505,
+          "symbol": "ForgeCad::Kernel::Body::fin",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 534,
+          "symbol": "ForgeCad::Kernel::Body::fin",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 494,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 495,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 497,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 498,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 505,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 534,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "source": "kernel/fk_pcurve.h",
+          "target": "kernel/fk_precision.h",
+          "kind": "call",
+          "line": 45,
+          "symbol": "ForgeCad::Kernel::pCurveTolerance",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        }
+      ]
+    },
+    "ForgeCad::Kernel::detail::surfaceCompositionErrorBound": {
+      "incoming": [
+        {
+          "source": "kernel/fk_blend_mitre.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 171,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "ForgeCad::Kernel::detail::requireBlendMitreCertificate"
+        },
+        {
+          "source": "kernel/fk_blend_mitre.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 240,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "ForgeCad::Kernel::detail::traceBlendMitre"
+        },
+        {
+          "source": "kernel/fk_blend_section_curve.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 128,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "ForgeCad::Kernel::detail::requireBoundaryComposition"
+        },
+        {
+          "source": "kernel/fk_blend_section_curve.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 248,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "ForgeCad::Kernel::detail::blendBoundaryIsoGuide"
+        },
+        {
+          "source": "kernel/fk_blend_section_curve.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 249,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "ForgeCad::Kernel::detail::blendBoundaryIsoGuide"
+        },
+        {
+          "source": "kernel/fk_mapping_carrier.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 386,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 419,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "ForgeCad::Kernel::requireSplineJoin"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 673,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 674,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "source": "kernel/fk_surface_poles.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 108,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "ForgeCad::Kernel::editBodyFacesPoles"
+        },
+        {
+          "source": "kernel/fk_surface_poles.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 127,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "ForgeCad::Kernel::editBodyFacesPoles"
+        },
+        {
+          "source": "kernel/tests/test_surface_curve_fit_validation.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 167,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "SurfaceCurveFitDirectOracleKnotCrossingsAndUnsupportedUV"
+        },
+        {
+          "source": "kernel/tests/test_surface_curve_fit_validation.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 212,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "SurfaceCurveFitInstancedSurfaceAndMaterializedAffine"
+        },
+        {
+          "source": "kernel/tests/test_surface_curve_fit_validation.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 227,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "SurfaceCurveFitInvalidInputAndCancellation"
+        },
+        {
+          "source": "kernel/tests/test_surface_curve_fit_validation.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 228,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "SurfaceCurveFitInvalidInputAndCancellation"
+        },
+        {
+          "source": "kernel/tests/test_surface_curve_fit_validation.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 233,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "SurfaceCurveFitInvalidInputAndCancellation"
+        },
+        {
+          "source": "kernel/tests/test_surface_curve_fit_validation.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 234,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "SurfaceCurveFitInvalidInputAndCancellation"
+        },
+        {
+          "source": "kernel/tests/test_surface_curve_fit_validation.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 241,
+          "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+          "owner": "SurfaceCurveFitInvalidInputAndCancellation"
+        }
+      ],
+      "outgoing": [
+        {
+          "source": "kernel/fk_curve_fit_bounds.cpp",
+          "target": "kernel/fk_affine_surface_fit.cpp",
+          "kind": "call",
+          "line": 1655,
+          "symbol": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound",
+          "owner": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_curve_fit_bounds.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 1654,
+          "symbol": "ForgeCad::Kernel::detail::compositionFactory",
+          "owner": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_curve_fit_bounds.cpp",
+          "target": "kernel/fk_curve_fit_bounds.h",
+          "kind": "call",
+          "line": 1655,
+          "symbol": "ForgeCad::Kernel::detail::SurfaceCurveFitData::SurfaceCurveFitData",
+          "owner": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound"
+        }
+      ]
+    },
+    "ForgeCad::Kernel::detail::curvePositionErrorBound": {
+      "incoming": [
+        {
+          "source": "kernel/fk_blend_section_curve.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 114,
+          "symbol": "ForgeCad::Kernel::detail::curvePositionErrorBound",
+          "owner": "ForgeCad::Kernel::detail::requireCurveAgreement"
+        },
+        {
+          "source": "kernel/fk_blend_section_curve.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 115,
+          "symbol": "ForgeCad::Kernel::detail::curvePositionErrorBound",
+          "owner": "ForgeCad::Kernel::detail::requireCurveAgreement"
+        },
+        {
+          "source": "kernel/fk_blend_section_curve.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 127,
+          "symbol": "ForgeCad::Kernel::detail::curvePositionErrorBound",
+          "owner": "ForgeCad::Kernel::detail::requireBoundaryComposition"
+        },
+        {
+          "source": "kernel/fk_boundary.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 328,
+          "symbol": "ForgeCad::Kernel::detail::curvePositionErrorBound",
+          "owner": "ForgeCad::Kernel::boundarySheet"
+        },
+        {
+          "source": "kernel/tests/test_boundary_fit_validation.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 272,
+          "symbol": "ForgeCad::Kernel::detail::curvePositionErrorBound",
+          "owner": "BoundaryFitOracleClosedJunctionEndpoints"
+        }
+      ],
+      "outgoing": [
+        {
+          "source": "kernel/fk_curve_fit_bounds.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 1658,
+          "symbol": "ForgeCad::Kernel::detail::positionFactory",
+          "owner": "ForgeCad::Kernel::detail::curvePositionErrorBound"
+        }
+      ]
+    },
+    "ForgeCad::Kernel::detail::surfaceParameterBounds": {
+      "incoming": [
+        {
+          "source": "kernel/fk_mapping_carrier.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 186,
+          "symbol": "ForgeCad::Kernel::detail::surfaceParameterBounds",
+          "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+        },
+        {
+          "source": "kernel/fk_sheet.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 397,
+          "symbol": "ForgeCad::Kernel::detail::surfaceParameterBounds",
+          "owner": "ForgeCad::Kernel::originalIsoSeed"
+        }
+      ],
+      "outgoing": [
+        {
+          "source": "kernel/fk_curve_fit_bounds.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 1645,
+          "symbol": "ForgeCad::Kernel::detail::parameterBounds",
+          "owner": "ForgeCad::Kernel::detail::surfaceParameterBounds"
+        }
+      ]
+    },
+    "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound": {
+      "incoming": [
+        {
+          "source": "kernel/fk_curve_fit_bounds.cpp",
+          "target": "kernel/fk_affine_surface_fit.cpp",
+          "kind": "call",
+          "line": 1655,
+          "symbol": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound",
+          "owner": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/tests/test_mapping_diagonal_validation.cpp",
+          "target": "kernel/fk_affine_surface_fit.cpp",
+          "kind": "call",
+          "line": 293,
+          "symbol": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound",
+          "owner": "MappingDiagonalProviderPullbackKnotsAndWrongCandidate"
+        },
+        {
+          "source": "kernel/tests/test_mapping_diagonal_validation.cpp",
+          "target": "kernel/fk_affine_surface_fit.cpp",
+          "kind": "call",
+          "line": 354,
+          "symbol": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound",
+          "owner": "MappingDiagonalFailureCancellationAreAtomicAndTensorIsUnsupported"
+        },
+        {
+          "source": "kernel/tests/test_mapping_diagonal_validation.cpp",
+          "target": "kernel/fk_affine_surface_fit.cpp",
+          "kind": "call",
+          "line": 393,
+          "symbol": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound",
+          "owner": "MappingDiagonalProviderTinyNonzeroUDirectionMustNotSnap"
+        },
+        {
+          "source": "kernel/tests/test_mapping_diagonal_validation.cpp",
+          "target": "kernel/fk_affine_surface_fit.cpp",
+          "kind": "call",
+          "line": 436,
+          "symbol": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound",
+          "owner": "MappingDiagonalProviderLineConstantUAndClosedJunctionQueries"
+        },
+        {
+          "source": "kernel/tests/test_mapping_diagonal_validation.cpp",
+          "target": "kernel/fk_affine_surface_fit.cpp",
+          "kind": "call",
+          "line": 454,
+          "symbol": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound",
+          "owner": "MappingDiagonalProviderLineConstantUAndClosedJunctionQueries"
+        }
+      ],
+      "outgoing": [
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_bspline.h",
+          "kind": "call",
+          "line": 25,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_bspline.h",
+          "kind": "call",
+          "line": 27,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_bspline.h",
+          "kind": "call",
+          "line": 29,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::domain",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_bspline.h",
+          "kind": "call",
+          "line": 31,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_bspline.h",
+          "kind": "call",
+          "line": 33,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_bspline.h",
+          "kind": "call",
+          "line": 36,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::weight",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_bspline.h",
+          "kind": "call",
+          "line": 39,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_cancel.h",
+          "kind": "call",
+          "line": 9,
+          "symbol": "ForgeCad::Kernel::cancellationPoint",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_cancel.h",
+          "kind": "call",
+          "line": 16,
+          "symbol": "ForgeCad::Kernel::cancellationPoint",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_cancel.h",
+          "kind": "call",
+          "line": 32,
+          "symbol": "ForgeCad::Kernel::cancellationPoint",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 15,
+          "symbol": "ForgeCad::Kernel::Curve::type",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 17,
+          "symbol": "ForgeCad::Kernel::TrimmedCurve::basis",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 20,
+          "symbol": "ForgeCad::Kernel::Curve::type",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 22,
+          "symbol": "ForgeCad::Kernel::Line::direction",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 22,
+          "symbol": "ForgeCad::Kernel::Line::origin",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_curve.h",
+          "kind": "call",
+          "line": 23,
+          "symbol": "ForgeCad::Kernel::Curve::type",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_curve_fit_bounds.cpp",
+          "kind": "call",
+          "line": 44,
+          "symbol": "ForgeCad::Kernel::detail::extrusionAffineCompositionErrorBound",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 10,
+          "symbol": "ForgeCad::Kernel::Interval::isFinite",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 10,
+          "symbol": "ForgeCad::Kernel::Interval::length",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        },
+        {
+          "source": "kernel/fk_affine_surface_fit.cpp",
+          "target": "kernel/fk_surface.h",
+          "kind": "call",
+          "line": 12,
+          "symbol": "ForgeCad::Kernel::Surface::type",
+          "owner": "ForgeCad::Kernel::detail::affineSurfaceCompositionErrorBound"
+        }
+      ]
+    }
+  },
+  "new_bug_confirmed": false,
+  "reason": "Nessun nuovo riproduttore eseguito; limite di copertura runtime gia documentato."
+}

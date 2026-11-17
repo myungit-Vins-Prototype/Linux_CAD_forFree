@@ -1,0 +1,17 @@
+{
+  "pass": true,
+  "scope": "Exact counterexample to rounded-pole flattening; not a current production result",
+  "translation_fraction": "262144",
+  "lost_delta_fraction": "1/68719476736",
+  "budget_fraction": "1/1099511627776",
+  "original_endpoint_residual_fraction": "1/68719476736",
+  "original_endpoint_residual_over_budget": "16",
+  "rounded_representation_upper_mm": 2.5376526277146437e-17,
+  "original_full_verifier_failure": "Exact midpoint witness exceeds budget: t=1/2 squared=4398046511113/20769187434139310514121985316880384",
+  "basis_regular_plane": true,
+  "not_claimed": [
+    "Any actual public operation failed",
+    "Production provider false accepted",
+    "Global placement or Newton accuracy"
+  ]
+}

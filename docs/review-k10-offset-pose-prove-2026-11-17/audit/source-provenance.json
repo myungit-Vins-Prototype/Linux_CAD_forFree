@@ -1,0 +1,30 @@
+{
+  "/home/myungit/Linux_CAD_forFree/AGENTS.md": {
+    "sha256": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+    "bytes": 3985
+  },
+  "/home/myungit/Linux_CAD_forFree/CLAUDE.md": {
+    "sha256": "13457c3a1bb527a2a46b8ec61ef18c59994a8b1e00c96246e8408d8c80901f50",
+    "bytes": 16296
+  },
+  "/home/myungit/Linux_CAD_forFree/docs/tolerance-policy.md": {
+    "sha256": "2cf51f1ef37206a596ececffd3ed2365197ea9531e78e723d45e3426dd4b678c",
+    "bytes": 8764
+  },
+  "/tmp/k10-offset-pose-review/core/before/kernel/fk_offset.cpp": {
+    "sha256": "239e84e8192e97bbada84b624753bd016cfff96720c14328465c1fc9f9e72fe5",
+    "bytes": 149287
+  },
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp": {
+    "sha256": "07a3f6e60cfd2ed659b6f9ea74b7596c5504130cfe9a78ecd658bbfd901f8aa2",
+    "bytes": 149594
+  },
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_shell.cpp": {
+    "sha256": "197a1a8dd7f2be000da51cde611a817a7b2e2311fbff3e5eba0bbd04a6804a8e",
+    "bytes": 17024
+  },
+  "/home/myungit/Linux_CAD_forFree/kernel/tests/data/shell_stitched_tangent.body": {
+    "sha256": "f266d6fd50ebb5c69b97038dcf05c787fa2ff763426946930d4093b4425af7f9",
+    "bytes": 156850
+  }
+}

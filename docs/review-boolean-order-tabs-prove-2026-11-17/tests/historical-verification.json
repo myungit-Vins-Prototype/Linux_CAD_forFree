@@ -1,0 +1,42 @@
+{
+  "date": "2026-11-01",
+  "source": "/home/myungit/Documenti/File_Esempio/Flacone3.prt",
+  "initial_sha256": "82a0a375379e14d6ae2bf7e140c3bdafae916f9315a9a62a3873dc1599f11def",
+  "latest_snapshot_sha256": "952f76ce2d5e6e909715878222f84396a0894580c7dbdf81ed84e02f631e4ed2",
+  "latest_operand_breps_identical": true,
+  "app": "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad",
+  "app_sha256": "d5e755bd804b41b5263052656440fd95e4b10a7ce439893fb81396a20e50bcb3",
+  "kernel_curve_tests_passed": 4,
+  "kernel_boolean_tests_passed": 38,
+  "ctest_passed": 28,
+  "ctest_failed": 0,
+  "ctest_seconds": 4.6,
+  "negative_regression": "Analytic endpoint-contact case fails on previous kernel and passes after fix.",
+  "real_union": {
+    "faces": 13,
+    "shells": 1,
+    "check_issues": 0,
+    "classification_samples": 275,
+    "classification_mismatches": 0,
+    "source_breps_immutable": true,
+    "volume_a_mm3": 190667.16040259137,
+    "volume_b_mm3": 6958.136853849271,
+    "volume_union_mm3": 197625.29725646164
+  },
+  "native_gui": {
+    "xcb": "A=Corpo 1, B=Corpo 4: PASS",
+    "wayland": "A=Corpo 4, B=Corpo 1: PASS"
+  },
+  "roundtrip": "with/without cache, regeneration, Undo/Redo, declared history and names PASS",
+  "recovery": "Union only: one reversed attempt after geometry domain_error, same validation and tolerances; cancellation propagates.",
+  "raw_kernel_limit": "Direct reversed kernel call can still fail geometry validation; application bridge recovers with a valid commutative ordering.",
+  "architecture": {
+    "files": 522,
+    "relations": 7145,
+    "units": 247,
+    "diagnostic_units": 0,
+    "check": "PASS"
+  },
+  "agent_wrote_original_model": false,
+  "user_process_restarted": false
+}

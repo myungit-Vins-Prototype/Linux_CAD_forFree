@@ -1,0 +1,1431 @@
+{
+  "removed_files": 284,
+  "unlinked_bytes": 15065226318,
+  "previous_sealed_packages_verified": 32,
+  "previous_artifacts_verified": 4501,
+  "protected_process_matches": [],
+  "no_process_terminated": true,
+  "source_logs_JSON_CAD_repository_untouched": true,
+  "removed": [
+    {
+      "path": "/tmp/boolean-order-review/audit/inspect_reverse_gap",
+      "bytes": 55114144,
+      "sha256": "8d9b449d3ed75f6ee480c55e8c61c0fcb2daccbdcca66e5c9aa898a3a119ca82"
+    },
+    {
+      "path": "/tmp/boolean-order-review/audit/inspect_metadata",
+      "bytes": 55110144,
+      "sha256": "84b5579151cccd41d3189b94990894d1b6a3328a799d1ba0233ca3295dcc0954"
+    },
+    {
+      "path": "/tmp/boolean-order-review/tests/raw_union",
+      "bytes": 55492688,
+      "sha256": "aaf015c30d7907a9df544f18e6e78e389adb927c30e5eb838e8e79f21140ae83"
+    },
+    {
+      "path": "/tmp/boolean-order-review/tests/extract",
+      "bytes": 23203088,
+      "sha256": "370cb1651a3a280e48cf3416fd781e6f9e178eaf95bc2e3af75a71cf075fe27b"
+    },
+    {
+      "path": "/tmp/boolean-order-review/tests/libforgekernel-baseline.a",
+      "bytes": 181403942,
+      "sha256": "ea1825d26334bd83b1169859a425fa1efb451ceab9136ea8c4e388542857960b"
+    },
+    {
+      "path": "/tmp/boolean-order-review/core/raw-sequential",
+      "bytes": 55127488,
+      "sha256": "46f2dc9feae5f9e533f4a936b5c93db3062ab6d9d4506b20e067599e02a564c7"
+    },
+    {
+      "path": "/tmp/k10-uv-review/core/uv_validation",
+      "bytes": 54438168,
+      "sha256": "8f639609f7210b8fe795b71ead690603a527c6923dd549ac365c8c9b7185f801"
+    },
+    {
+      "path": "/tmp/k10-uv-review/core/probe_guard",
+      "bytes": 51353712,
+      "sha256": "bb505cfc944035c1ea940fd4216e24ae2b3d62b0adf483cd9dc26ab5ef606f23"
+    },
+    {
+      "path": "/tmp/k10-uv-review/core/fk_offset.o",
+      "bytes": 8655600,
+      "sha256": "7e96f9cb4c8d50ce83ce67865f17c340e5f9aaee2806a5712292babd7f11776e"
+    },
+    {
+      "path": "/tmp/k10-uv-review/core/fk_curve_fit_bounds.o",
+      "bytes": 3039320,
+      "sha256": "856bacd783dbfe9cdb6c49a0f2fd01260b3b32c5e49b3b3e5a6ba9e90c002ac7"
+    },
+    {
+      "path": "/tmp/k10-uv-review/core/probe_joined",
+      "bytes": 53745520,
+      "sha256": "898df27e0b766639103658fc172e90bd1da93537e1db2b8eecdbd985d2b652da"
+    },
+    {
+      "path": "/tmp/k10-uv-review/tests/test_uv_offset_validation_stage_v2",
+      "bytes": 53373768,
+      "sha256": "411987857b846c3d455be572c4a44d1566c84eadd60baafd1b1c1a477dc1b743"
+    },
+    {
+      "path": "/tmp/k10-uv-review/tests/test_uv_offset_validation_baseline_final",
+      "bytes": 53030840,
+      "sha256": "c68158de4612839cd9d7e4d3906b7a70ab4e07c675ff0d369ad8c204a84119f2"
+    },
+    {
+      "path": "/tmp/k10-uv-review/tests/test_uv_offset_validation_stage",
+      "bytes": 53368376,
+      "sha256": "eff7615613750ca5f582c60fa35b8724f42f7fc59b06ff28e454e463a2f88775"
+    },
+    {
+      "path": "/tmp/k10-uv-review/tests/test_uv_offset_validation_baseline",
+      "bytes": 53030840,
+      "sha256": "c68158de4612839cd9d7e4d3906b7a70ab4e07c675ff0d369ad8c204a84119f2"
+    },
+    {
+      "path": "/tmp/k10-uv-review/tests/probe_joined",
+      "bytes": 53002416,
+      "sha256": "9f052e30f861c3ae39ce9729911179213291458792fb3186415466ba369ea300"
+    },
+    {
+      "path": "/tmp/k10-uv-review/tests/sanitizer-v2/test_uv_offset_validation",
+      "bytes": 68217784,
+      "sha256": "71f48d7258b8ca8299bc4b08cb139b1b569caff2ded286071e37be61c3346c4b"
+    },
+    {
+      "path": "/tmp/k10-uv-review/tests/sanitizer-v2/fk_offset.o",
+      "bytes": 18664880,
+      "sha256": "ede95aff1ba42b44fa332f37b57e43dd106bb87461d44f5362045f2078b1ec12"
+    },
+    {
+      "path": "/tmp/k10-uv-review/tests/sanitizer/test_uv_offset_validation",
+      "bytes": 68210960,
+      "sha256": "40fbf4f37d85d214c63559f80376b87d930c7a06ac0a6b7d930375ae4069d12b"
+    },
+    {
+      "path": "/tmp/k10-uv-review/tests/sanitizer/fk_curve_fit_bounds.o",
+      "bytes": 6466112,
+      "sha256": "b98b84b2ef69ce438bbb591d4ea9cb992aa7c45ef13c3f712ee4733847685a5a"
+    },
+    {
+      "path": "/tmp/k10-uv-review/tests/sanitizer/fk_offset.o",
+      "bytes": 18657248,
+      "sha256": "4c5b8d2931338196643280b5553b9b4f239e4f942ddaf3a0be28865689df8a07"
+    },
+    {
+      "path": "/tmp/k10-noniso-review/provider/probe",
+      "bytes": 4304104,
+      "sha256": "1f488f663ca9229fc810a0ba5fbe6d5f2d99f8289ffb8a8e8aef3837758bfdb3"
+    },
+    {
+      "path": "/tmp/k10-noniso-review/audit/actual-fin-driver",
+      "bytes": 57738960,
+      "sha256": "366102454eb10ce25d41dbf38d4412f4b479b03659237239f987f19c9297c407"
+    },
+    {
+      "path": "/tmp/k10-noniso-review/audit/libforgekernel-frozen.a",
+      "bytes": 180980982,
+      "sha256": "500d4c72b5adba86e4d5758f71b2fdebfed8eb1f8f95bf7d521ef24cf4f47d3b"
+    },
+    {
+      "path": "/tmp/k10-noniso-review/tests/provider-export",
+      "bytes": 60240432,
+      "sha256": "ff3dae7c3b7abff4138cbe461cac1ffa7265b2e79f8001f9f91acf3943cd6ce7"
+    },
+    {
+      "path": "/tmp/k10-noniso-review/tests/candidate-tests",
+      "bytes": 62145360,
+      "sha256": "af7cd6ca5544c9fbff36036caf636615b16df974eb0dce656a5a1b6ba899f655"
+    },
+    {
+      "path": "/tmp/k10-noniso-review/tests/sheet.o",
+      "bytes": 4192008,
+      "sha256": "4b143cd938a63f42a64c65d798b63a9cb905471519a9fb56c33d387596933e18"
+    },
+    {
+      "path": "/tmp/k10-noniso-review/tests/existing-sheet-tests.o",
+      "bytes": 2837544,
+      "sha256": "fd003d74f51972f71ce0acf68c6a52dd4b0df64428c2f409d83374ec85e52fe4"
+    },
+    {
+      "path": "/tmp/k10-noniso-review/tests/test_sheet_join_ledger.o",
+      "bytes": 2393640,
+      "sha256": "2a603eb44a46ebead79aec2b6e65a6a4fb0960e081d7318fec9167e0b1769d47"
+    },
+    {
+      "path": "/tmp/k10-noniso-review/tests/test_surface_curve_bounds.o",
+      "bytes": 2205352,
+      "sha256": "31c358cda63290ab9aa7a391d933f96b051214a31155d2abaeb98430b17097b2"
+    },
+    {
+      "path": "/tmp/k10-noniso-review/tests/libforgekernel-release.a",
+      "bytes": 179556964,
+      "sha256": "f70e65bc0ea5d2c9107ad105a521633d2ed8f6a63de916f5fbfe5315b42bed01"
+    },
+    {
+      "path": "/tmp/k10-noniso-review/tests/san/candidate-tests",
+      "bytes": 77569264,
+      "sha256": "ea2a50ff1fdf87c5be7431dd885f5c20e24669e15712979a7ff52e5f26710928"
+    },
+    {
+      "path": "/tmp/k10-noniso-review/tests/san/existing-tests.o",
+      "bytes": 6749552,
+      "sha256": "ec3bea773d760ee0aeb126975d3cfef62b742e2cec020ced93e01c0b9c702136"
+    },
+    {
+      "path": "/tmp/k10-noniso-review/tests/san/sheet.o",
+      "bytes": 12704800,
+      "sha256": "44a87318fce3eb490811164ba52863d3f3e5de36e419851708323001666fcd10"
+    },
+    {
+      "path": "/tmp/k10-noniso-review/tests/san/ledger-tests.o",
+      "bytes": 5041392,
+      "sha256": "83d23f746f26673fae8626bc5df2f40fdafc48099c7983f1ff8109144fdf0d08"
+    },
+    {
+      "path": "/tmp/k10-noniso-review/tests/san/provider-tests.o",
+      "bytes": 3320984,
+      "sha256": "6edb1565c0120fcb2df31df98989168a2bb05144b33fc08a4b42003e903b2a33"
+    },
+    {
+      "path": "/tmp/k10-noniso-review/tests/san/provider.o",
+      "bytes": 2880088,
+      "sha256": "d790e9300b383333e067c1b00fbab846a2292e2dcef17aa31b6352cbc375d1ef"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/audit/final-actual-ledger",
+      "bytes": 55321784,
+      "sha256": "46f8e4d023de0606984eac8696e7452ada497123dbacd3c97ad5f4cbed79cac9"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/audit/baseline-actual-ledger",
+      "bytes": 55142040,
+      "sha256": "c54454b59266ef78eba51d94e0b0067ffa4298cca3be9a14e8244aa329017ea7"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/new.o",
+      "bytes": 2339424,
+      "sha256": "251ece1ecc02e8f3570961b9ea6d7d7f6f10d087bc1ba414885d93d9ea0eb058"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/core/edge-candidate",
+      "bytes": 3236048,
+      "sha256": "5fa068e4ea9b5b54a4342c73a9fabb0264d40547a17724c79f031c965b94a58b"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/core/edge-baseline",
+      "bytes": 3987384,
+      "sha256": "dfab415d054ccd6c91e78df015d7eece75d997102bf5183eb9f48c5af5e2f971"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/core/poly-candidate",
+      "bytes": 61186224,
+      "sha256": "66da782f9006a02c2583f69318b1571893233fc7bf23c042df625aaeb89bb126"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/core/poly-baseline",
+      "bytes": 61897960,
+      "sha256": "807336ee61726a43ce7b5a89a43fbdc53382e645b4141f072ddc51804422c5d7"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/core/probe",
+      "bytes": 3235000,
+      "sha256": "1755dbbee0d48e7877da4f4398adf0a555f2db862650eb726dbf35333103f587"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/root/libforgekernel-baseline.a",
+      "bytes": 181342404,
+      "sha256": "8641c0a3c65dccd9906a935139669eb64c8e829fdb6bcf20aefcd7c97408c40e"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/asan/rational-pcurve-tests",
+      "bytes": 84065680,
+      "sha256": "5e02aa49c58063cefb834de3b3c59a74302e7cf70e03ad2d8ee294ff76228fbf"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/asan/test_sheet_join_ledger.o",
+      "bytes": 5816752,
+      "sha256": "bc6f9d87b678179edf3c4f1845283c58ce5d8938870163a611101db893f725d8"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/asan/test_mapping_nonplane_validation.o",
+      "bytes": 3820496,
+      "sha256": "b8f6d0f4c968b85e552edefdccc605f80266af676b10c33a40897f1d030f1d37"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/asan/test_surface_curve_rational.o",
+      "bytes": 2822752,
+      "sha256": "2f7311b68fea7fb1608814122aa17845bb85ef71cf8e2b9e1bb19c1c8624d91d"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/asan/test_surface_curve_instances.o",
+      "bytes": 4740200,
+      "sha256": "1d55f5387755febf306e8fb3a14829c96fc60c7eb3713e89a245c7dc3469c0ad"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/asan/test_surface_curve_bounds.o",
+      "bytes": 3322752,
+      "sha256": "2501a66e276b1fb8ac95222aeea49fd7619254d297ad9dd65c3339e683995407"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/asan/test_surface_curve_rational_edges.o",
+      "bytes": 3857552,
+      "sha256": "82333cfe2dd05c131d4cca2e37b845bd343f892f27b2b8d21c40959b27bea03a"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/asan/fk_surface_curve_bounds.o",
+      "bytes": 4310560,
+      "sha256": "b9f0d03514119a96d2a241e37ed6eb7b1c69ccb3b8c9dcc43cc44c6d139dc2e5"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/asan/test_surface_curve_rational_pcurves.o",
+      "bytes": 4083736,
+      "sha256": "b7308873bd25807c02b974b54713e7b3f44450dec913caa1642c0d943b1d48de"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/release/baseline-final-tests",
+      "bytes": 56577288,
+      "sha256": "abff533a0b34d0c7148d5af1e3d2794375fb3465121965ea71d7b4824146f4c0"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/release/rational-pcurve-tests",
+      "bytes": 71554816,
+      "sha256": "62e1a1b7068f44b0d51c0d9127d1f918a1d2d3029084e31e36fb5c420c46eabb"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/release/test_mapping_nonplane_validation.o",
+      "bytes": 2075376,
+      "sha256": "4ea3a17b12c32e5b58a800cce2d0c3b3fd4dfb57d281564ccdde0b54da4c7795"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/release/test_sheet_join_ledger.o",
+      "bytes": 2808904,
+      "sha256": "4f1b6f10e81c9e5563ab69e31d7639ab02f74c03171664dcafe6b4abd591f655"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/release/test_surface_curve_instances.o",
+      "bytes": 2569056,
+      "sha256": "90725b51d19739796e36f73e9714d8d88146a193dc1ba94e5c920a1dd36dba24"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/release/test_surface_curve_rational.o",
+      "bytes": 1686776,
+      "sha256": "689c9942e74ca025a1135b24ceefd12b5dbb19a3aaab716d0c06fea3735a40ee"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/release/test_surface_curve_bounds.o",
+      "bytes": 2203816,
+      "sha256": "7cb3f5f1fab0d4946ef0797cea5189309b234a43452b838d9aecd74f46125828"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/release/test_surface_curve_rational_edges.o",
+      "bytes": 2106296,
+      "sha256": "a7646066190679d8baa5b555bffdfa129723976c05eb746cc5c857feb5374d5e"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/release/fk_surface_curve_bounds.o",
+      "bytes": 1504672,
+      "sha256": "b53fdb89c0925fdc80c3383f19f059901b598a80abb9818c6c880cd9ddec3b58"
+    },
+    {
+      "path": "/tmp/k10-rational-pcurve-review/tests/release/test_surface_curve_rational_pcurves.o",
+      "bytes": 2339424,
+      "sha256": "5adcb91ecb65aa7348a2215879dc6a6c21b256cb8347447f0b5275128b2a77f2"
+    },
+    {
+      "path": "/tmp/k10-sew-review/core/probe_provenance",
+      "bytes": 50504088,
+      "sha256": "444eb987fd3b88e850d6e1df9a98e6910a85b30a6fd2e4bd4d065fca3579aa39"
+    },
+    {
+      "path": "/tmp/k10-sew-review/core/fk_exchange.o",
+      "bytes": 4196400,
+      "sha256": "ba32dc42b289140a980e39d02ab12bdb6e5b51277a305a59b5717d67d49c8230"
+    },
+    {
+      "path": "/tmp/k10-sew-review/core/probe_sew",
+      "bytes": 52796184,
+      "sha256": "a2640c7f2f7097b59c289fc2395b00b6bfb5fc555aacff3800229e11049c6da8"
+    },
+    {
+      "path": "/tmp/k10-sew-review/core/fk_offset.o",
+      "bytes": 8740016,
+      "sha256": "d58539910c3b090c822b81348ac73b228d482428a90149a1a234f68b1207c868"
+    },
+    {
+      "path": "/tmp/k10-sew-review/core/fk_sew.o",
+      "bytes": 2245352,
+      "sha256": "d8a18ea5c8e76bff211d2bb84c5864f9255c98a69907bec3eaf1144a5b0c888f"
+    },
+    {
+      "path": "/tmp/k10-sew-review/tests/test_sew_pcurve_stage_final",
+      "bytes": 52448168,
+      "sha256": "277e1f17187e90592ae7b25a95171bd2b5d63cbf18d0ff7ca24c83e3f199de06"
+    },
+    {
+      "path": "/tmp/k10-sew-review/tests/probe_procedural_helix",
+      "bytes": 50274272,
+      "sha256": "3216c1ae9e186450dad3397b6278f9e1a7c3aeda80bdf9cc26f0498a87c70a14"
+    },
+    {
+      "path": "/tmp/k10-sew-review/tests/baseline-libforgekernel.a",
+      "bytes": 175541340,
+      "sha256": "a45c97a1faeaf0fdb735d429cb3f9cf40acee6c0e48f670bcc3ee7c330fb07e8"
+    },
+    {
+      "path": "/tmp/k10-sew-review/tests/test_sew_pcurve_stage",
+      "bytes": 52448168,
+      "sha256": "277e1f17187e90592ae7b25a95171bd2b5d63cbf18d0ff7ca24c83e3f199de06"
+    },
+    {
+      "path": "/tmp/k10-sew-review/tests/test_sew_pcurve_baseline",
+      "bytes": 52019824,
+      "sha256": "7b7b1689d601d1fba89a23a6705363fb539c07a8f01f174a9b83103238517798"
+    },
+    {
+      "path": "/tmp/k10-sew-review/tests/probe_sew_trace",
+      "bytes": 49581408,
+      "sha256": "c87ec8f834e7d94ef4de61e4f4ccfcee827f29b130d5f270e574f444eb3889c8"
+    },
+    {
+      "path": "/tmp/k10-sew-review/tests/probe_sew",
+      "bytes": 51996456,
+      "sha256": "d0ed5a4702029e32b7b316066f67da620a4593e2831c41e9a65fc06aa175714a"
+    },
+    {
+      "path": "/tmp/k10-sew-review/tests/sanitizer/test_sew_pcurve_validation",
+      "bytes": 69744304,
+      "sha256": "c3ba3d473c7d5fa2b5871df13e2cbb8d6f4bcba9ff1b533ac1ad748f6e17088d"
+    },
+    {
+      "path": "/tmp/k10-sew-review/tests/sanitizer/fk_sew.o",
+      "bytes": 4123168,
+      "sha256": "108438aaee54d82a1edf1f4411e8f0f4eac8e0a60c6226adf0e5a52b1869e6b8"
+    },
+    {
+      "path": "/tmp/k10-sew-review/tests/sanitizer/fk_offset.o",
+      "bytes": 18817816,
+      "sha256": "c125cf0368827e1a1cdd57c968e63b6f8fbd05274a48dd908dfdba3cd5bf5ee3"
+    },
+    {
+      "path": "/tmp/k10-sew-review/tests/sanitizer/fk_exchange.o",
+      "bytes": 8523448,
+      "sha256": "a2caa470fa535ea191605be3ee82a0b5f6b13ddc6beb6baa03bb99d88d37df24"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/new.o",
+      "bytes": 2695776,
+      "sha256": "55db7ca31c05f88d29a921b3176740329405c14dc08fa2a7326f9c99f8e3b456"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/audit/final-actual-ledger",
+      "bytes": 55369952,
+      "sha256": "9affe16ef568abd17ede734960bb9547b73e3f4d97fc72d6315d86f0661d021e"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/audit/baseline-actual-ledger",
+      "bytes": 55329984,
+      "sha256": "1d296c957668acae0ae46dfeb4e4427aab4053f8e8e684e15ad3dbb01bd617c9"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/core/pcurve-candidate",
+      "bytes": 3241424,
+      "sha256": "6f875be3dfba74b5dad5ee594381b8b078275478faab38f42f725076cd5e25f9"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/core/pcurve-baseline",
+      "bytes": 4166088,
+      "sha256": "2c41f4b3a0ddc00ee51bd95601713309e5a737007191b80eb748b224563a0a31"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/core/edge-candidate",
+      "bytes": 3242448,
+      "sha256": "42e74dfa534286c3147c4ba4df11ca18a0d5e11fa8d652ebe58d5fafc0fa3c76"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/core/edge-baseline",
+      "bytes": 4167120,
+      "sha256": "fc8889d5ec6d5283689938a9950c636d94b8a72b18385a4f375a6bf73b82fe4e"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/core/poly-candidate",
+      "bytes": 61191392,
+      "sha256": "a9ebc1f95094599e3c82922acd0584eb9f6c15bfc6e20aa74075f198374f05e9"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/core/poly-baseline",
+      "bytes": 62077704,
+      "sha256": "84f93887ee2542fa7089703c0a5a9e4dbfbb7ae5dba454c6fdb5abe037273ec2"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/core/probe",
+      "bytes": 3257848,
+      "sha256": "e2565be54d45f73d598fb04d58a238fca54a2e4f6db588454a9ddaff881072cd"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/root/libforgekernel-baseline.a",
+      "bytes": 181604788,
+      "sha256": "6f0a76dfdde164289e0b646843120c1efdcaabcede8eb38446f5aa3459987356"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/asan/curve-wrapper-tests",
+      "bytes": 87834664,
+      "sha256": "e97b8773113fe19af3262973108b9b19e31af888e9b5316d78dde686a788a0b4"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/asan/test_sheet_join_ledger.o",
+      "bytes": 5816752,
+      "sha256": "bc6f9d87b678179edf3c4f1845283c58ce5d8938870163a611101db893f725d8"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/asan/test_mapping_nonplane_validation.o",
+      "bytes": 3820496,
+      "sha256": "1a2e0f2eae698265ac970c1817bb0ba4d58d288e5958b5abadabc910c6cda45b"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/asan/test_surface_curve_instances.o",
+      "bytes": 4740192,
+      "sha256": "b4ba1abed3922da6a85fdc2fe2f8b0c9f30215a888f8d96ea6454c12f10c5ebf"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/asan/test_surface_curve_rational.o",
+      "bytes": 2822752,
+      "sha256": "9396566171b8467d954365fa80215de9a0ac2f068ace3c77e371de54f8a774a7"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/asan/test_surface_curve_bounds.o",
+      "bytes": 3322936,
+      "sha256": "8fcd0ed1c093c92ba5e801f2c5137da8443925da6473e9034ec15b25d5323d27"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/asan/test_surface_curve_rational_edges.o",
+      "bytes": 3857552,
+      "sha256": "c8e4fe97392ddec1aceb0f9d36cc215f0317b99edfb0d0ca21f4a267732cda8e"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/asan/test_surface_curve_rational_pcurves.o",
+      "bytes": 4083736,
+      "sha256": "e2e4f67bc369bd9eb8210f33bf00d21a7fbccd6ae2c11117bd929e38be30717d"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/asan/fk_surface_curve_bounds.o",
+      "bytes": 4571384,
+      "sha256": "9d3ef831c51f5eb2c68ad153c5952a499fd06f75cb26236d43d4dfc7f6ee5096"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/asan/test_surface_curve_wrappers.o",
+      "bytes": 5226120,
+      "sha256": "5044a4d293493085258c9fe0356e0a75c0850d2a3e783c2cdafd898d4d0fca27"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/release/baseline-final-tests",
+      "bytes": 56989016,
+      "sha256": "d35d39b46f77de176c9b3a8deb493bce7eb0c1ad8abd578d21c29038735a2ad4"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/release/curve-wrapper-tests",
+      "bytes": 73205344,
+      "sha256": "7ba09f7cb474af7d6cdf5b22ec14c0450eb6bdb1f4a93aa926f90ebf598633ff"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/release/test_mapping_nonplane_validation.o",
+      "bytes": 2075384,
+      "sha256": "00efada5eca8320c13e117b00002780c9ad33bd01c9bf11e188f963d5170fc6f"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/release/test_sheet_join_ledger.o",
+      "bytes": 2808904,
+      "sha256": "4f1b6f10e81c9e5563ab69e31d7639ab02f74c03171664dcafe6b4abd591f655"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/release/test_surface_curve_rational.o",
+      "bytes": 1686776,
+      "sha256": "fe54dedf0590f531abdca2df8ac68624513636f8e0f34a64c81e4c0a27beeae0"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/release/test_surface_curve_instances.o",
+      "bytes": 2569192,
+      "sha256": "d275e6763f5982e5a8541d89632b820bdf94076ce21b566e9cb86599589034fd"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/release/test_surface_curve_bounds.o",
+      "bytes": 2203640,
+      "sha256": "6b799b59fa7078db2872c95209bc25dfb65ddd9613f09b37922d958104ec1007"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/release/test_surface_curve_rational_pcurves.o",
+      "bytes": 2339448,
+      "sha256": "6adc9b20d7b0d0bbe72f0db5699e0eab295ac2e0c0e0e4042734b7e0bc9780ee"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/release/test_surface_curve_rational_edges.o",
+      "bytes": 2106312,
+      "sha256": "6eeb73e137fb76f5692232877184a9b169d24552b01ab2f34ebd941b307149c1"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/release/test_surface_curve_wrappers.o",
+      "bytes": 2695784,
+      "sha256": "990ebb909fae15aa0db6652ce15739c86432401dab359afb07dc5e9beecfeefe"
+    },
+    {
+      "path": "/tmp/k10-curve-wrapper-review/tests/release/fk_surface_curve_bounds.o",
+      "bytes": 1571168,
+      "sha256": "96fe2cb66a2315d69ce60af30f3785ad7b7e31505ee15c4826e742c2d78b7733"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/core/candidate-tests",
+      "bytes": 5528456,
+      "sha256": "dd9e96dd2bbb559c10dd788c660219b30625639e30e2540c075c9a30abe81383"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/core/candidate-sheet.o",
+      "bytes": 4091736,
+      "sha256": "7083b3a7dc5943f408d3f61eab42c1dd5ff99750fe2f320f493082f62f690190"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/core/diag-v2-tests",
+      "bytes": 5528336,
+      "sha256": "53412ec9a0ad199fb47d15f820d40988834257dac22c4d426ce9b064ae190d18"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/core/instrumented-tests",
+      "bytes": 5533240,
+      "sha256": "7f45b3d475221896bb62fca669afef5372875e904bee152b71d76a2c9eae041d"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/core/instrumented-sheet.o",
+      "bytes": 4110464,
+      "sha256": "e629e763d6f12961f6dde8601b34e514104c2a157b1d3732dc4959bea99251c1"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/new-join-tests-final-san",
+      "bytes": 68735208,
+      "sha256": "38bea57c7261ad98033d39a20fff1806a8409a5e08b0683f24322eb83357446c"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/new-join-tests-final-clang",
+      "bytes": 56720736,
+      "sha256": "533b286b4e5b5549e19a5094f65df242fe0059faad88d9a196e5e690c9dbeb76"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/newton-fin-exporter",
+      "bytes": 58459208,
+      "sha256": "a027f9cda85ccaff800744d499926334c7a5a908052210a9c0b64d642988714a"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/fk_sheet-final-san.o",
+      "bytes": 12408960,
+      "sha256": "80ef90e653b36e3bd81b91981de6d46a646c377585b4b71f303b4827c51e4a27"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/public-final",
+      "bytes": 9799576,
+      "sha256": "e6ac2e2b257bdff341890e2686cd0af0574f7c63118cdfed21533ca5db9d4db1"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/new-join-tests-final",
+      "bytes": 58370040,
+      "sha256": "5880d8c6608ce7c3188af0defe92a9ed54c6c804d042b230e2ca9d8cde1b7d68"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/fk_sheet-final-clang.o",
+      "bytes": 2728560,
+      "sha256": "b75a528d9c195ef5f7a0a38e0f22c30386fea749d1467b134936d91d2524928d"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/fk_sheet-candidate-v2-san.o",
+      "bytes": 12270872,
+      "sha256": "dfbe4884c86a9003a70427b0faa1804bcdc1e9ecde00b0601a867fb1e859f25c"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/fk_sheet-candidate-v2-clang.o",
+      "bytes": 2705368,
+      "sha256": "ef8443f7db26a5772a1dddd728fae1fa835eea5fbeeeacac8c0696f37ee1ad2f"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/new-join-tests-candidate-v2",
+      "bytes": 58339688,
+      "sha256": "cd5f92af552d30ada9f2cfa083a72038e138b1a1e3f9f598a14ea1ba782f787b"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/public-candidate-v2",
+      "bytes": 9795064,
+      "sha256": "75c24f5cd5ce9dfaefbc26da0093a6570a22e8249d00d103081f34bdcb7ee172"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/new-join-tests-candidate",
+      "bytes": 58328616,
+      "sha256": "ee4774b05e39aedfe191b613ea9a1542f9f3ed96cd798f25d78280a6b39ec9d7"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/public-candidate",
+      "bytes": 9794752,
+      "sha256": "76e325b8f0619a6f995414a389d0ef2d8c6200ba57a8d6c9ce69ad51620426f6"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/fk_sheet-candidate-clang.o",
+      "bytes": 2699736,
+      "sha256": "64104f6a1a2fafc2d0c115d0c2b999f7c8966b8fa2fdef3fedeffe7f7ab56cf4"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/new-join-tests-baseline",
+      "bytes": 58304440,
+      "sha256": "3e3426b4208b559bb2b2184a4d9aadc42798ddee2220abdafdce099a550a44e5"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/fk_sheet-clang.o",
+      "bytes": 2692856,
+      "sha256": "9e0140758ba2172a374cf1a92f65677ef8f31e88313010ff9e20e65aa5946c06"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/tests/libforgekernel-baseline.a",
+      "bytes": 179376842,
+      "sha256": "6bbbea1da27ee01943529ab2f1c2176728f71d414bb6521d141d38d6e90f25ad"
+    },
+    {
+      "path": "/tmp/ci-sheet-fix/core/before/libforgekernel.a",
+      "bytes": 179376842,
+      "sha256": "6bbbea1da27ee01943529ab2f1c2176728f71d414bb6521d141d38d6e90f25ad"
+    },
+    {
+      "path": "/tmp/k10-sketch-review/core/probe_provider",
+      "bytes": 51206048,
+      "sha256": "400c69b5951f45c1e9d5a4b917f16e7842d1f642da889a9c5225a3b368b3202d"
+    },
+    {
+      "path": "/tmp/k10-sketch-review/tests/suite-header",
+      "bytes": 130155464,
+      "sha256": "9fe98cfb8f5cfe9fccb50dbfbce8c43e8b96beae74a0fb99d73c0403e1f9dbd0"
+    },
+    {
+      "path": "/tmp/k10-sketch-review/tests/suite-stage",
+      "bytes": 130159608,
+      "sha256": "3ad6fa7af68e705d21154f43d0f6c512e491da7f6ebc404c52d324fbc3ee105d"
+    },
+    {
+      "path": "/tmp/k10-sketch-review/tests/suite-baseline",
+      "bytes": 129814192,
+      "sha256": "3fea07fee4ecb89f642b46444048e55bbe96a9c7dd9b94b5af210eec3eaaad08"
+    },
+    {
+      "path": "/tmp/k10-sketch-review/tests/probe_projected_helix",
+      "bytes": 129786056,
+      "sha256": "4126c2bf387f86db3ff67f407325493c5c16837eb946a2979becf70e1a0c2806"
+    },
+    {
+      "path": "/tmp/k10-sketch-review/tests/sanitizer/suite",
+      "bytes": 148419584,
+      "sha256": "1d9acaa353d2b6e5b1d62d6c86615f2859ec834a98ccc820c1fef113718569e4"
+    },
+    {
+      "path": "/tmp/k10-sketch-review/tests/sanitizer/driver.o",
+      "bytes": 8472528,
+      "sha256": "01657d04c8f5bbaf8085c9a3201c66a1335ea064ba24aa2e795d0635a18304e8"
+    },
+    {
+      "path": "/tmp/k10-sketch-review/tests/sanitizer/provider.o",
+      "bytes": 1599312,
+      "sha256": "6fefbfec594abb2fcf334833f123c77c1e49040a61d975f8a999e9c8cc2a68ad"
+    },
+    {
+      "path": "/tmp/k10-sketch-review/tests/sanitizer/refs.o",
+      "bytes": 14532768,
+      "sha256": "f09210ef0691bb6318f3e8f2460d004cdcb3b8d9d19e6815fa3bd0a8775a6111"
+    },
+    {
+      "path": "/tmp/k10-sketch-review/tests/baseline/libforgekernel.a",
+      "bytes": 175979084,
+      "sha256": "7550466e240451022b647a192017f1b5f85bb07971407e7651de618542040b7f"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/audit/export-public-final",
+      "bytes": 61798896,
+      "sha256": "aaf0b3fdaf21faa7df5649eea5fc2ebc91339e0589e2a8dca3694c0bf5efb50f"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/audit/libforgekernel-final.a",
+      "bytes": 181216900,
+      "sha256": "a0c5530e331c08d86fc5c4fa29e4477e66fa1ff4c6c646df15d959f211e9531c"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/audit/probe-public-rational-baseline",
+      "bytes": 60568888,
+      "sha256": "af153df8eac0cd76782a85929d0fc9a051bc24aeddcc253847ec65daabf69137"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/candidate-rational",
+      "bytes": 61329560,
+      "sha256": "c10496f48144ddd465788fc32646c44b02c71e57dee204f6cc8a357bce835e38"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/candidate-public",
+      "bytes": 62622632,
+      "sha256": "148588b677e6905a317f662499eb1aac8c2a68394db9889eff78da2e404d2365"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/baseline-tests",
+      "bytes": 63173824,
+      "sha256": "4bdddc17c16adcfa5caddb6d5bd96e5fa0e0178187f5eb1cc8fa05b1ff986521"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/baseline-probe",
+      "bytes": 62739544,
+      "sha256": "40efd602db4c3a5fb41ad6982cbda0df849d232d7cf9d68bbafd3a7acceb5dc7"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/libforgekernel-baseline.a",
+      "bytes": 181403942,
+      "sha256": "ea1825d26334bd83b1169859a425fa1efb451ceab9136ea8c4e388542857960b"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/core/candidate-probe",
+      "bytes": 61918104,
+      "sha256": "c2f3fe22ef8adf12fd9c91a0613c8facb7982e5b8658117183d65db262dca756"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/asan/mapping-tests",
+      "bytes": 80970624,
+      "sha256": "55b637e2fb89a612c09fad56d7dbe40f5c49951b4670db66117323c3e136044f"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/asan/test_sheet_join_ledger.o",
+      "bytes": 5816752,
+      "sha256": "bc6f9d87b678179edf3c4f1845283c58ce5d8938870163a611101db893f725d8"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/asan/test_surface_curve_rational.o",
+      "bytes": 2822760,
+      "sha256": "1a9eda714c1b9ccbf6bcd8a75ac400fde6df30e3de5dd18e2315332d2dd7bddd"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/asan/test_surface_curve_bounds.o",
+      "bytes": 3321152,
+      "sha256": "cacfeb74d665d3ae8ab634b044f83d6c94800f7f70bb537c7fc9acf52d0f0564"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/asan/fk_surface_mapping.o",
+      "bytes": 9816640,
+      "sha256": "cd048a3509fd8135402fbcd007eb7720d50bfface082e27ee042205def9aaa1b"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/asan/test_mapping_nonplane_validation.o",
+      "bytes": 3820528,
+      "sha256": "2056c560c5c5c963c230ed55ca7fe4ae36a1f292faf45d31522835f0324ab31a"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/asan/fk_surface_curve_bounds.o",
+      "bytes": 3644096,
+      "sha256": "4332e5755d58013db4fe8156f60c6219aa229e7b05974441eef7f3db98aa5f12"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/asan/fk_sheet_join_validation.o",
+      "bytes": 1059128,
+      "sha256": "91b02391e80b704b3e7d2dc7c7f0695876434b5b0e67ddc28b71291933c49df9"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/release/mapping-tests",
+      "bytes": 67135144,
+      "sha256": "d222866582a1c89a5d95d547279b51d8ce120cc2a1d55ab4af92fd5678f6d7c0"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/release/test_sheet_join_ledger.o",
+      "bytes": 2808904,
+      "sha256": "4f1b6f10e81c9e5563ab69e31d7639ab02f74c03171664dcafe6b4abd591f655"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/release/test_surface_curve_rational.o",
+      "bytes": 1686784,
+      "sha256": "a4c6ed4bd6fd9f303aa4405b7181c165ccd1ae99c270b946af523256b0af78b7"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/release/test_surface_curve_bounds.o",
+      "bytes": 2205488,
+      "sha256": "2bb500189e4ea0e0e245828d8aaf68b5b5c10c2f1f0325274005448e89014025"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/release/fk_surface_mapping.o",
+      "bytes": 3063472,
+      "sha256": "f5f7b2feae252c3650593100ddc6569ade41a43c931f9d98abf018b6099b6379"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/release/test_mapping_nonplane_validation.o",
+      "bytes": 2075408,
+      "sha256": "9a51707ad29ac63ed249f07987b478539e514935f4e5b4567c2f39e1dcd84820"
+    },
+    {
+      "path": "/tmp/k10-mapping-nonplane-review/tests/release/fk_surface_curve_bounds.o",
+      "bytes": 1116800,
+      "sha256": "7be3a4f286511d007498e203e268c035af0d1f943dffd9e7fde7fed55e2c1766"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/audit/conic_parameter",
+      "bytes": 1733712,
+      "sha256": "52a8b35948d3b57eba70f9065105b14f699d73c3b5f9fb6f298c91d1701caf60"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/tests/baseline-final-tests",
+      "bytes": 57656280,
+      "sha256": "462cf17cbf9e21ced3d99b336375f56309e23a8bb47a0e6753d8e0edfdf7b78f"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/tests/candidate-v3-tests",
+      "bytes": 57892944,
+      "sha256": "4815f8169e47334ab6b611fb4a72a7042412f45dfddb2cfca94965c2fb785f1d"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/tests/candidate-tests",
+      "bytes": 57890680,
+      "sha256": "a2670a634d9e01507a026448bc5fec68862535af65642a47fc95cd4e59bcb6e8"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/tests/baseline-tests",
+      "bytes": 57651840,
+      "sha256": "1b570dfb0091ac8d5a5054f5e887935847ea7d885b87d91b462e56ec15d5078e"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/tests/faruv-candidate",
+      "bytes": 57890880,
+      "sha256": "2944a42fd6c3a2ff9768816e329a3376d819a2c243cb5e669ac9716ab8dd32c2"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/tests/faruv-baseline",
+      "bytes": 57652040,
+      "sha256": "a729905e0cf044e75d8aa898489c1c2c65897d6eadd43ae8e9a5f009fbf6f3db"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/tests/probe",
+      "bytes": 55408552,
+      "sha256": "f0df14410e8a05560f65e6eff7fe0fb1b52f903683fefecfff63502a825221b7"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/core/surface_mapping_tests",
+      "bytes": 67242208,
+      "sha256": "c5f8991bf1ca9fac07d168d1e6e5caa536fd40ae0e38dff40ae77d497f3495c2"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/core/fk_surface_mapping.cpp.o",
+      "bytes": 3080344,
+      "sha256": "77a1afd3fde4d063be824eedd4fb48d9e0a93cf3b0ffc75a2b27e3ffdf0e039a"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/core/fk_quilt_mapping.cpp.o",
+      "bytes": 2291056,
+      "sha256": "3c1ae0eac247d44380a4b0bc0881ab3a44f9f4cb307d1a00e10cccb91544de78"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/core/experiments/faruv-strict",
+      "bytes": 57892880,
+      "sha256": "20259ffaf8cd94246d716da46ea90fa395213c0156b06c2d635cabda1cc72f91"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/core/experiments/strict.o",
+      "bytes": 3080408,
+      "sha256": "c8afc1c5f42ab33247e7add040315772f8d1ad808b0a6eb83cbfc45054106b44"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/core/baseline/forgecad-release/kernel/libforgekernel.a",
+      "bytes": 176618242,
+      "sha256": "e30b40c55b27f0702a2a1e95279b627643679b1823368e3c60ebc4d8c67f2a72"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/core/baseline/forgecad-release/kernel/CMakeFiles/forgekernel.dir/fk_quilt_mapping.cpp.o",
+      "bytes": 2288312,
+      "sha256": "a1363c83214378a1ef5bf350b71547dca5eda9b5f7ebf7e19e293fbe1c710f5d"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/core/baseline/forgecad-release/kernel/CMakeFiles/forgekernel.dir/fk_surface_mapping.cpp.o",
+      "bytes": 2837024,
+      "sha256": "776e4d0b1318a37211c5084ddcaa212eb80efbd80adf69ea9c3886495c57fca4"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/tests/sanitizer/mapping-uv-tests",
+      "bytes": 76291912,
+      "sha256": "872300e5efa3814eb51d41d0e5e6c31955ef16191b73f2aaeddf4be0bbf97d5a"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/tests/sanitizer/fk_curve_fit_bounds.o",
+      "bytes": 9006856,
+      "sha256": "63471da8adbfe9b2bb8330ce16f8d392ec70be1f258e542bc5636f2d5a56ebd4"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/tests/sanitizer/fk_surface_mapping.o",
+      "bytes": 9769368,
+      "sha256": "8afc1f74423295febd14877520d890ec3ccb21b2e1c0326289a17d70ef867bfb"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/tests/sanitizer/fk_quilt_mapping.o",
+      "bytes": 7891808,
+      "sha256": "46b92863d6c9c75d2944c1116b68363d6b0291515ed0c1f8f1ccb101ba8d61d1"
+    },
+    {
+      "path": "/tmp/mapping-uv-review/tests/baseline/libforgekernel.a",
+      "bytes": 176618242,
+      "sha256": "e30b40c55b27f0702a2a1e95279b627643679b1823368e3c60ebc4d8c67f2a72"
+    },
+    {
+      "path": "/tmp/preview-next-review/regression-baseline-header",
+      "bytes": 130570832,
+      "sha256": "9959240ddb0917f05c78e2e7786de640b0192461ee9a878342e83b63903163ff"
+    },
+    {
+      "path": "/tmp/preview-next-review/regression-private-header",
+      "bytes": 130875608,
+      "sha256": "51f1e97d711dd881cc4720e42227681b5a30afbae5967b0cfe240c196e5e9410"
+    },
+    {
+      "path": "/tmp/preview-next-review/mapping.o",
+      "bytes": 1296664,
+      "sha256": "e6a2aa71773c10081bbf700857791a0344f82ceb51f1e69e321b9e0a93913722"
+    },
+    {
+      "path": "/tmp/preview-next-review/regression-private",
+      "bytes": 130864824,
+      "sha256": "411d1397a1ff5688b74795c4183766124eae2e3421e112f59c442f9bab96151a"
+    },
+    {
+      "path": "/tmp/preview-next-review/regression-baseline",
+      "bytes": 130548760,
+      "sha256": "cf5e5e5619fc66cc40d1fd15955a13fe953db9d09f6cddbd2c90db5c782e7217"
+    },
+    {
+      "path": "/tmp/preview-next-review/repro",
+      "bytes": 130516336,
+      "sha256": "ea668f7cd731c4c850e5b3ae0e006f39aa42e95e6f7383ef924753e016518fd6"
+    },
+    {
+      "path": "/tmp/preview-next-review/next/regression-baseline-header",
+      "bytes": 130843272,
+      "sha256": "960898fe567113f19716275db75a3ca728d4bd5dbad01bdad7b49e9809415dd6"
+    },
+    {
+      "path": "/tmp/preview-next-review/next/regression-private-header",
+      "bytes": 131442880,
+      "sha256": "6099ed3b5ad83ce7c0ff7a3aa8f5d5a570d3ce7d87abed6ada9453e77bd97a4b"
+    },
+    {
+      "path": "/tmp/preview-next-review/next/regression-private",
+      "bytes": 131441224,
+      "sha256": "503cecfc12b39c2d8625bc30ab83465bf26f49ec7eade59478397965c9b4e950"
+    },
+    {
+      "path": "/tmp/preview-next-review/next/solids.o",
+      "bytes": 2062360,
+      "sha256": "be617cda2316ea42eb999924c0f8c1fcec0dbaba5258900d6a740dd2fcd76bac"
+    },
+    {
+      "path": "/tmp/preview-next-review/next/regression-baseline",
+      "bytes": 130841616,
+      "sha256": "228ebc7d080eb17d646094bfdb2afbb1004c54336e52f2a650acf952307e812a"
+    },
+    {
+      "path": "/tmp/preview-next-review/next/chamfer",
+      "bytes": 130846360,
+      "sha256": "a45bbd17c723a54a7659aaa660cf06e47e2dfc8ed3b8948de92244daa2382ae6"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/audit/drawing_scene_probe",
+      "bytes": 57065352,
+      "sha256": "38ddf7c15d9d270d384dd78a0c3e8d98cfdb5f3a3d3a78e4d9cef400356c97d2"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/audit/icons_menu_probe",
+      "bytes": 1700888,
+      "sha256": "1101dd4dfaff4812827b9021c1b6a97e85de007e1d9cb97e3b4eb796598ece09"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/header_runner.o",
+      "bytes": 1077784,
+      "sha256": "c20a19171db10e88e70ef59a57a9a67d73c4c48ed4ee8cf5545e0295b1b65765"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/sanitizer/header_runner",
+      "bytes": 135255704,
+      "sha256": "193589c36562b98b318832d811ce4b4e681232979a1dbb9cabba65dc06a36c38"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/sanitizer/header_runner.o",
+      "bytes": 5283992,
+      "sha256": "325ad3a439e06fb37a27d0f514ca9c5ad2517eed2c834949b62b6fed82453a81"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/sanitizer/theme_probe",
+      "bytes": 135102952,
+      "sha256": "007b68e92992900f314e6d454848366127c73246f95a21a316d25a2c6d597443"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/sanitizer/theme_probe.o",
+      "bytes": 5114792,
+      "sha256": "5582e0b97c795c333604c41a99bd0f11372a025561f300c1faf4836b9932fbdd"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/candidate/header_runner",
+      "bytes": 130533280,
+      "sha256": "10e5f7d98653d5011490f64d4c362db22dffef20c44ac1f19aa0fcf5f2e30a4a"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/candidate/theme_probe",
+      "bytes": 130519360,
+      "sha256": "de020bf9fb13129e6d618c30f329903c422b9feb8c04178c5c9a5f72b3a200f6"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/candidate/forgeCad2026_gui.cpp.o",
+      "bytes": 2132904,
+      "sha256": "339fdaa2b404ee3f4fd96df31f023f93d9ca7f7cd4439cf846a712349ffb584a"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/baseline/header_runner",
+      "bytes": 130537616,
+      "sha256": "52f244a1f62c7922fe5cf825ea30031da40d08a1f1d6485e441f04b5d7200191"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/baseline/theme_probe_final",
+      "bytes": 130519600,
+      "sha256": "4083865a8ab874190009ae2995f8ec9db731c9539c722267822d9f0a9b901a85"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/baseline/theme_probe",
+      "bytes": 130519272,
+      "sha256": "6236d8885ff271e2ca8bb298123782489e765a5694d40983737265bb6fd5f334"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/baseline/kernel/libforgekernel.a",
+      "bytes": 176618242,
+      "sha256": "e30b40c55b27f0702a2a1e95279b627643679b1823368e3c60ebc4d8c67f2a72"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/baseline/CMakeFiles/forgecad_view_tests.dir/cad_drawing_editor.cpp.o",
+      "bytes": 3043104,
+      "sha256": "b374e4e8796bd84968cfce984f7c8581b032cbd01dba93ffac91e203beb494fb"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/baseline/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_gui.cpp.o",
+      "bytes": 2140856,
+      "sha256": "e3e5bf85482a0f21acc9280a03980d831a8f73b091903c79f1e524ea3c773d25"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/baseline/CMakeFiles/forgecad_view_tests.dir/tests/test_viewport.cpp.o",
+      "bytes": 10020744,
+      "sha256": "f1b3ed2233e428b5d57ce909dbc96021736ffcc9e3f3fbd94379cda85e4b6413"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/audit/deeper-probe",
+      "bytes": 51497368,
+      "sha256": "70d28decf4094437799b7be48fdb3b353c5ac1c9141414d00385ffbc4bdb8a6a"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/audit/trace-probe",
+      "bytes": 51497376,
+      "sha256": "0aa3c485ccfa86c49792f118329f0da13d2db1f7930c73b5cf32b1c373b3deaa"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/audit/known-point-probe",
+      "bytes": 52404440,
+      "sha256": "52a702d0ac953abad3a793d06f145097c3d562ce1ed1f160b2e5bd3fa0505ace"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/core/probe_trace_cancel",
+      "bytes": 55562856,
+      "sha256": "c4dde933b02e42de5fdd326771d7ceec4178a2a09fbd82a2cf9c1bba55c35477"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/core/probe_candidate",
+      "bytes": 69197616,
+      "sha256": "dd20ecfbaa3ea235c8b889adfc09c69656398e2ecd6585229c6a9582ded18cc7"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/core/fk_blend_surface.o",
+      "bytes": 8761256,
+      "sha256": "917db40ef854a86c33d173cfa47dc409f235230f4f549b15c947a032fd02c7e0"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/core/probe_sv",
+      "bytes": 67275864,
+      "sha256": "6ebb7519bb80f37de064220633f9c8926413f4b31c8e4ef18e67d6777ce85ac6"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/core/diagnostic-sv.o",
+      "bytes": 5606696,
+      "sha256": "496096220ed0699094d5ee53e79da78ad9e071b029d33c77a342de29bb04a7fa"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/core/probe_trace_u",
+      "bytes": 58008184,
+      "sha256": "077aa73e12ccf963b69135d4898af9e45d9817c6a5cde3e81346905bb1bc731c"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/core/probe_trace_direct",
+      "bytes": 57887480,
+      "sha256": "19c5dd1f43754363e5be90ac977d5b63758cb14fe2ea7c42a6b6a0c14967aef7"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/core/probe_boundary",
+      "bytes": 52568608,
+      "sha256": "be942626b63cbe5b62514fdac8b04af6e17a44bf0b782adc2f859b076a40d51a"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/core/probe_failure",
+      "bytes": 52602944,
+      "sha256": "40e1a912d8d4ee7d7a840e93e71592c437b1eda11cb7ccdf37bf4e3c1fb6d8d8"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/core/probe_trace",
+      "bytes": 68943464,
+      "sha256": "427ba59f4f3ce868b86912726ba7c0412278e7594c7dcb2315cb019f1ae2f1ef"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/core/probe_baseline",
+      "bytes": 69146056,
+      "sha256": "9b80960cb17276aa84eb709837219b6a59921c0ee180c415647a180b14f35778"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/root/audit-fins-release",
+      "bytes": 52404280,
+      "sha256": "e99f56a86013c1871445b5972219036d4a06e4f9fbcf4a36e6ea156e7e786355"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/root/probe-release",
+      "bytes": 71690696,
+      "sha256": "ffc110eaf3f9e6421b558d38e85e1391c082c85d99e03ba54d2c53d83c1963fe"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/root/export-failure",
+      "bytes": 52404464,
+      "sha256": "c8181f41e2f72baa4a20303953f3f5ee592d9995604d7d6f44e56e72b4b13fa6"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/regressions-stage-final",
+      "bytes": 71705496,
+      "sha256": "71f833c80489d112d62dd8c52e8f73cab259d2e6b15a4609c4697cdf5e3874e6"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/original-eight-stage",
+      "bytes": 71762736,
+      "sha256": "12de4d959b16b1334857f1a1ae132d963058ca92bfdae59c846f1b6b0629dfb3"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/probe-stage-final",
+      "bytes": 71690736,
+      "sha256": "a65ab714dae97163fc968808f234f59c3266b918031f79f34fa1b771b7ef0634"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/regressions-baseline-six-final",
+      "bytes": 71653904,
+      "sha256": "a98b1d94966f210790a0308059ec4faf89f287a611ff81952707a85d5a05869d"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/probe-baseline-six-final",
+      "bytes": 71639144,
+      "sha256": "00196e4b12f96f2a1248797babc56eb6a70d3de3341d8e99602d1d496dfba663"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/regressions-baseline-six",
+      "bytes": 71649792,
+      "sha256": "c94653f26bedaa084757f8cf9c5d8e9aa678af97a02e8bdb948612aee873e513"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/probe-baseline-six",
+      "bytes": 71639144,
+      "sha256": "00196e4b12f96f2a1248797babc56eb6a70d3de3341d8e99602d1d496dfba663"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/audit_actual_fins",
+      "bytes": 52404280,
+      "sha256": "e99f56a86013c1871445b5972219036d4a06e4f9fbcf4a36e6ea156e7e786355"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/regressions-baseline-final",
+      "bytes": 71639816,
+      "sha256": "1e84b6e87c27f0b93a2509b62027abd0edfd57530780c579f36d850fdf100647"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/probe-baseline-final",
+      "bytes": 71639144,
+      "sha256": "00196e4b12f96f2a1248797babc56eb6a70d3de3341d8e99602d1d496dfba663"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/cavity-regressions-baseline",
+      "bytes": 71639816,
+      "sha256": "1e84b6e87c27f0b93a2509b62027abd0edfd57530780c579f36d850fdf100647"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/probe_cavity_variants",
+      "bytes": 71635048,
+      "sha256": "ab28772592de84dddf840a6caeb55cc18eaf8a52a8ef98b7e413a89eeaf25492"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/sanitizer/regressions",
+      "bytes": 89751320,
+      "sha256": "ed54208b97613a8c187304d9ca3de73e4f45e10cb42559b0a1c28ecb9afbae08"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/sanitizer/probe",
+      "bytes": 89151352,
+      "sha256": "574dee8db21edbd0d04af065520ca232ab3410dcea3ad94c3742e801bc6fe0bb"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/sanitizer/regressions.o",
+      "bytes": 2839872,
+      "sha256": "aa5fa794045e50c72007f11630e47e69d83bab4111eb71074fd3c052edf2f6ae"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/sanitizer/probe.o",
+      "bytes": 2203712,
+      "sha256": "0b7a6817d9c322fcb578325c8ea0ee66062b1f6b12ca709b8dfa2f8b82c33d52"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/sanitizer/blend.o",
+      "bytes": 27203672,
+      "sha256": "40dc275dccf93ae0e0b205c688f1f22ccfdd36d624c7aa83e6ceccc87e097b8b"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/baseline/forgekernel_blend_cavity_tests",
+      "bytes": 71707048,
+      "sha256": "57d6d8e0726509ad2c16cd4b9456c1d2a8f96700baa93a9ede055b4263a3bb31"
+    },
+    {
+      "path": "/tmp/blend-cavity-review/tests/baseline/libforgekernel.a",
+      "bytes": 176529010,
+      "sha256": "9eccfa56f36268d8d6680cf0b0db292cb827ec2f2ed1af08c111d394bcbc4554"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/fillet-separator-audit/probe",
+      "bytes": 132055912,
+      "sha256": "99940a54cd2a67015e001e22647daf4d1bf350aa0bb8ebeec8e615cdbe2490ca"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/audit/layout-candidate",
+      "bytes": 132042728,
+      "sha256": "5ecc4cea86f8bfeb8a1068168c76ffe6ddfd77767cd4ebfa6b619494b237ca15"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/audit/layout-baseline",
+      "bytes": 132042536,
+      "sha256": "a786b3ea258687b3be80e953a27a587808c18c990f33fe4b7d576eeb1544ad1e"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/audit/audit-candidate",
+      "bytes": 132077776,
+      "sha256": "42b74635e6438f96d316070273c2d7cfc8b0792349d1861cc50f9e61ab54c5da"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/audit/audit-baseline",
+      "bytes": 132077616,
+      "sha256": "1211d110bf50a10c2c2694d94b11f4fa97a3ac6a587b21b100799d7d8c8cb0af"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/candidate",
+      "bytes": 132074008,
+      "sha256": "1f7bf15ee939f43a4235cae2f877065c0d1196924c29bc079bd3607ac9eef78f"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/baseline",
+      "bytes": 132073816,
+      "sha256": "d96087253725924d9b3307a0d004257d8827585dbb075b47df9eabefce2afb18"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/candidate-full",
+      "bytes": 138075720,
+      "sha256": "d796935b0ed6eac4f46f9579ce72af436b7b5748ad42f0cf25074bcdc7a02725"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/baseline-full",
+      "bytes": 138075560,
+      "sha256": "1d8fe05bdaf3d76d714cca67268188b440764ea5ffc069f2b38564993ac90afe"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/test_viewport-full.o",
+      "bytes": 10164320,
+      "sha256": "1e2d7363daec0f20af0bb5712d28e9144a9e796b330c96a3525eda7a8af8588c"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/forgeCad2026_gui.cpp.o",
+      "bytes": 2133528,
+      "sha256": "9ccff1f654abec76eed95e624e3c985c575240566536556cd6c7b6bb0a585591"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/clipboard-supplement/success-sentinel",
+      "bytes": 132113128,
+      "sha256": "04bb35c5d40713bf735162de0b3f367b00d9b77696ae111881ce392a5cdfc4c6"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/clipboard-supplement/failure-sentinel",
+      "bytes": 132087512,
+      "sha256": "9f1d9356e0a80ba9358f50fdad68087673ae72e8bafae610594982619fb0bcac"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/layout-supplement/baseline-final",
+      "bytes": 132081840,
+      "sha256": "4a2f0bc1951c68a6630bda705f85eb71f8ccf7b80be86e8e36b8808e5e1adef9"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/layout-supplement/candidate-final",
+      "bytes": 132082064,
+      "sha256": "06508ec3cd7b8d429cf3d750cc85006aa5b805304ef727e817f9f313f9482f67"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/layout-supplement/gui-v2final.o",
+      "bytes": 2135128,
+      "sha256": "8b03da15074c3f31ffe4ce62da2984cb1897d6ff2022d73f8b770f64888a2193"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/layout-supplement/candidate",
+      "bytes": 132082144,
+      "sha256": "5341b59143f8acdd8550395d478cf7f17bf1b7237caca4617f0449f2419a39aa"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/layout-supplement/baseline",
+      "bytes": 132081840,
+      "sha256": "58e4ceb9fbec73cf8a051a92050a12120d3df615d2563bfcdb2d46f3bc83861a"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/layout-supplement/gui-v2.o",
+      "bytes": 2134656,
+      "sha256": "1e64096a95ba33bb9c21a423ec2f1d9e698e42c58022e420e0c0c3e1291aa300"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/audit/layout-v2-work/layout-v2",
+      "bytes": 132059304,
+      "sha256": "319bd93c45417f0f86dc93e9dbb73e4a691948bf17d5fcb3f5ff8ee58d957342"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/audit/layout-v2-work/color-baseline",
+      "bytes": 132059080,
+      "sha256": "b61dac861673a66d4a91587f441663b3d21cc58b5fb8e735f6697ecbadd9f629"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/fillet-separator-audit/candidate/probe",
+      "bytes": 132056032,
+      "sha256": "4608a1aa4665a37e5e6fc0848eb52a685e0fdb56b54d8b887f5a625d182146ed"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/fillet-separator-audit/baseline/probe",
+      "bytes": 132056032,
+      "sha256": "d0f2136445c7a1901b1c8a7f074b23f9dcbe85f0857f4de422daade405151846"
+    },
+    {
+      "path": "/tmp/helix-independent-audit/depth-probe",
+      "bytes": 50718976,
+      "sha256": "046386d8be403e90f41d2a948fdfcd9a8b8daef06dd3fdac6ea865f9ce45a824"
+    },
+    {
+      "path": "/tmp/helix-independent-audit/edge-probe",
+      "bytes": 50736608,
+      "sha256": "10df07b4a77c61a339fb912f9f95f4e2537899b7a1232b73f79a7fe7ca8d498d"
+    },
+    {
+      "path": "/tmp/k10-helix-review/root/probe-cavity",
+      "bytes": 68904824,
+      "sha256": "f96317da9153ca9af99d93cb1a482e673206b957e1f2d5ad2d0f3e6f9e6d1f6a"
+    },
+    {
+      "path": "/tmp/k10-helix-review/root/baseline-cavity",
+      "bytes": 71706992,
+      "sha256": "f42872babc6b34ed4b919b58b9decfdd8bc72f846442b6ae1b5cca0cb3915940"
+    },
+    {
+      "path": "/tmp/boundary-review/root/object-comparison/nurbs-before.o",
+      "bytes": 1492848,
+      "sha256": "862b68fd6a7146272347a4b4cc639840f9f98178a2b4ba92292a26241678bdd3"
+    }
+  ]
+}

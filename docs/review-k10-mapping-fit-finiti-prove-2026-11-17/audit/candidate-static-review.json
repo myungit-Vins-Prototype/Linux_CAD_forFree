@@ -1,0 +1,31 @@
+{
+  "candidateSha256": "03d21ceab86aead510559aee7101ade9a4aba8b1ef516671943b0bfa823fd001",
+  "result": "No static blocker found for this narrowly scoped nonfinite rejection fix",
+  "runtimeByThisObserver": false,
+  "independentChecks": [
+    {
+      "location": "candidate lines52\u201362",
+      "conclusion": "Finite strictly positive tolerance; finite strictly increasing initial grids; finite consecutive differences; pre-existing degree/fraction checks retained."
+    },
+    {
+      "location": "candidate lines63\u201372,114\u2013118,120\u2013151",
+      "conclusion": "All f invocations checked once on return; all analytic jet components checked before cache; numeric derivative checks retained; finiteDistance catches invalid arithmetic even when callback values are finite."
+    },
+    {
+      "location": "candidate lines234\u2013247",
+      "conclusion": "Each used cell control point checked before probes. Every probe distance checked before std::max, closing the demonstrated NaN second-argument bypass."
+    },
+    {
+      "location": "candidate lines275\u2013277",
+      "conclusion": "Surface constructor succeeds before deviation accumulator publication; thrown failure cannot publish deviation from this fit."
+    },
+    {
+      "location": "whole patch",
+      "conclusion": "Finite branch formulas, probe coordinates, refinement choices, iteration/resource limits and nominal tolerance are retained; no sampled fallback, cap raise or provider perimeter change."
+    }
+  ],
+  "deviationAccumulatorNote": "No new entry precondition added. Production mapBody starts worst=0 and quilt chart starts deviation=0. Existing accumulator semantics retained; no general claim about invalid caller-owned initial accumulator.",
+  "newtonConclusion": "No additional concrete acceptance of nonfinite Newton geometry or unbounded Newton loop established in the inspected code. Newton32, bracket enlargement12 and bisection45 are bounded. This does not prove correct intersection selection or continuous carrier/intent fidelity.",
+  "scopeBoundary": "Fix rejects nonfinite values at points actually evaluated. Finite hidden peaks between probes, global callback regularity, Newton convergence/branch uniqueness, continuous carrier-vs-map error and topology/global intent remain unproved.",
+  "witnessAttribution": "Independent source-level reasoning only. Parent/core may execute the supplied reproduction separately; no external execution result is silently attributed to this observer."
+}

@@ -1,0 +1,225 @@
+--- a/kernel/fk_surface_curve_bounds.cpp
++++ b/kernel/fk_surface_curve_bounds.cpp
+@@ -238,6 +238,28 @@
+     }
+     return previous;
+ }
++// Homogeneous Cox polynomial: B_i,p(U/D) * D^p. Keep the original
++// polynomial-Q recurrence above unchanged, including its rounding order.
++std::vector<P> homogeneousBasis(const std::vector<double> &knots, int cell,
++                                const P &numerator, const P &denominator, int order) {
++    std::vector<P> previous(1, P{I(1)});
++    for (int degree = 1; degree <= order; ++degree) {
++        std::vector<P> current(std::size_t(degree + 1), P{I(0)});
++        for (int r = 0; r <= degree; ++r) {
++            const int i = cell - degree + r;
++            const double a = knots[std::size_t(i)], b = knots[std::size_t(i + degree)];
++            const double c = knots[std::size_t(i + 1)], d = knots[std::size_t(i + degree + 1)];
++            if (r && a < b)
++                current[std::size_t(r)] = sum(current[std::size_t(r)], product(previous[std::size_t(r - 1)],
++                    scaled(sum(numerator, scaled(denominator, I(a)), true), I(1) / (I(b) - I(a)))));
++            if (r < degree && c < d)
++                current[std::size_t(r)] = sum(current[std::size_t(r)], product(previous[std::size_t(r)],
++                    scaled(sum(scaled(denominator, I(d)), numerator, true), I(1) / (I(d) - I(c)))));
++        }
++        previous = std::move(current);
++    }
++    return previous;
++}
+ std::vector<int> cells(const std::vector<double> &knots, int count, I image, int degree) {
+     std::vector<int> result;
+     int i = int(std::lower_bound(knots.begin() + degree, knots.begin() + count + 1, image.lo) - knots.begin()) - 1;
+@@ -302,6 +324,60 @@
+     }
+     return rational ? (I(numerator) / I(lower)).hi : numerator;
+ }
++// Separate rational-Q branch: the polynomial-Q residual and its arithmetic
++// stay unchanged. Both tensor axes share D, so every carrier coordinate has
++// the common denominator D^(pu+pv), even when the carrier is polynomial.
++double rationalUVResidual(const Carrier &surface, int ku, int kv,
++                          const VP<2> &uvNumerator, const P &uvDenominator, double uvLower,
++                          const VP<3> &edge, const P *edgeDenominator, double edgeLower) {
++    const auto u = homogeneousBasis(surface.u, ku, uvNumerator[0], uvDenominator, surface.pu);
++    const auto v = homogeneousBasis(surface.v, kv, uvNumerator[1], uvDenominator, surface.pv);
++    VP<3> composed{P{I(0)}, P{I(0)}, P{I(0)}};
++    P denominator{I(0)};
++    const bool rational = !surface.weights.empty();
++    const int power = surface.pu + surface.pv;
++    for (int i = 0; i <= surface.pu; ++i)
++        for (int j = 0; j <= surface.pv; ++j) {
++            const P factor = product(u[std::size_t(i)], v[std::size_t(j)]);
++            const auto index = std::size_t((ku - surface.pu + i) * surface.nv + kv - surface.pv + j);
++            if (rational) denominator = sum(denominator, scaled(factor, surface.weights[index]));
++            for (int axis = 0; axis < 3; ++axis)
++                composed[std::size_t(axis)] = sum(composed[std::size_t(axis)],
++                    scaled(factor, surface.poles[index][std::size_t(axis)]));
++        }
++    if (!rational) {
++        denominator = P{I(1)};
++        for (int degree = 0; degree < power; ++degree) denominator = product(denominator, uvDenominator);
++    }
++    const I denominatorHull = hull(denominator);
++    if (!finite(denominatorHull)) return infinity;
++    double largest = 0;
++    for (int axis = 0; axis < 3; ++axis) {
++        const P projected = product(edge[std::size_t(axis)], denominator);
++        const I value = edgeDenominator
++            ? hull(sum(product(composed[std::size_t(axis)], *edgeDenominator), projected, true))
++            : hull(sum(composed[std::size_t(axis)], projected, true));
++        if (!finite(value)) return infinity;
++        largest = std::max({largest, std::fabs(value.lo), std::fabs(value.hi)});
++    }
++    if (largest == 0) return 0;
++    const double numerator = std::nextafter(largest * std::nextafter(std::sqrt(3.0), infinity), infinity);
++    // On the ACTIVE portion of this cell, W_Sbar >= effectiveMinSW * D^power.
++    // A constant carrier weight was normalized away by the original snapshot:
++    // its effective minimum is ONE, not that discarded common weight.
++    I upper = I(numerator) / I(rational ? surface.minimumWeight : 1);
++    for (int degree = 0; degree < power; ++degree) upper = upper / I(uvLower);
++    if (edgeDenominator) upper = upper / I(edgeLower);
++    // The full cell polynomial hull supplies a second independent bound.
++    // Taking the smaller of VALID uppers avoids an unsafe nominal product
++    // of denominator lowers and remains valid if either division overflows.
++    if (denominatorHull.lo > 0) {
++        I alternative = I(numerator) / I(denominatorHull.lo);
++        if (edgeDenominator) alternative = alternative / I(edgeLower);
++        return std::min(upper.hi, alternative.hi);
++    }
++    return upper.hi;
++}
+ template<int N> bool finitePoles(const BSplineCurve<N> &curve) {
+     for (const auto &pole : curve.poles()) {
+         cancellationPoint();
+@@ -323,15 +399,6 @@
+ // Candidate construction, before the ONE continuous acceptance check.
+ // Source E/S, the edge parameter and the caller's fixed budget are unchanged.
+ // Unsupported families retain their exact original pcurve pointer.
+-template<int N> bool polynomialWeights(const BSplineCurve<N> &curve) {
+-    const double first = curve.weight(0);
+-    for (int i = 0; i < curve.poleCount(); ++i) {
+-        cancellationPoint();
+-        const double value = curve.weight(i);
+-        if (!(value > 0) || !std::isfinite(value) || value != first) return false;
+-    }
+-    return true;
+-}
+ // Read placement links BEFORE any recursive knot/weight/pole accessor.
+ // The public constructor already canonicalizes to one native base. This
+ // bounded walk also fails closed if a future representation adds links.
+@@ -411,7 +478,7 @@
+         || !range.isFinite() || !(range.lo < range.hi)
+         || !std::isfinite(range.length())) return original;
+     if (weights(ne, [&](int i) { return e->weight(i); }) < 0
+-        || (q && !polynomialWeights(*q))) return original;
++        || (q && weights(nq, [&](int i) { return q->weight(i); }) < 0)) return original;
+     for (int i = 0; i < nu; ++i)
+         for (int j = 0; j < nv; ++j) {
+             cancellationPoint();
+@@ -482,13 +549,13 @@
+     const int qw = q ? weights(nq, [&](int i) { return q->weight(i); }) : 1;
+     const int sw = weights(nu * nv, [&](int i) { return base->weight(i / nv, i % nv); });
+     if (ew < 0 || qw < 0 || sw < 0) return failed;
+-    if (!qw) return unsupported;
+     // A rational E adds Source<1>: two interval scalars and one copied knot
+     // per pole, plus four additional cubic knots and its two hull scalars.
+     // Charge all additional storage BEFORE any snapshot allocation.
+     const std::size_t edgeWeightScalars = ew ? 0 : 3 * std::size_t(ne) + 6;
++    const std::size_t uvWeightScalars = qw ? 0 : 3 * std::size_t(nq) + std::size_t(q->degree()) + 3;
+     const std::size_t carrierScalars = (sw ? 3 : 4) * std::size_t(nu) * std::size_t(nv);
+-    if (carrierScalars + 16 * std::size_t(ne + nq) + edgeWeightScalars > maxScalars) return failed;
++    if (carrierScalars + 16 * std::size_t(ne + nq) + edgeWeightScalars + uvWeightScalars > maxScalars) return failed;
+     // Polynomial partition of unity allows one ORIGINAL translation to be
+     // subtracted from both E and S, retaining small residuals at large poses.
+     const auto anchor = e->poles().front();
+@@ -510,7 +577,23 @@
+             for (I &coordinate : edgeData.poles[std::size_t(i)]) coordinate = coordinate * I(weight);
+         }
+     }
+-    const auto uvData = q ? snapshot<2>(*q, Point<2>{I(0), I(0)}) : Source<2>{};
++    auto uvData = q ? snapshot<2>(*q, Point<2>{I(0), I(0)}) : Source<2>{};
++    Source<1> uvWeightData;
++    double minimumUVWeight = infinity;
++    if (!qw) {
++        uvWeightData.degree = q->degree();
++        uvWeightData.knots = q->knots();
++        uvWeightData.poles.reserve(std::size_t(nq));
++        for (int i = 0; i < nq; ++i) {
++            cancellationPoint();
++            const double weight = q->weight(i);
++            minimumUVWeight = std::min(minimumUVWeight, weight);
++            uvWeightData.poles.push_back(Point<1>{I(weight)});
++            // Keep originalHull Euclidean: its positive-weight convex hull
++            // is an independent enclosure of the RATIONAL UV image.
++            for (I &coordinate : uvData.poles[std::size_t(i)]) coordinate = coordinate * I(weight);
++        }
++    }
+     Carrier carrier{base->uKnots(), base->vKnots(), nu, nv, base->uDegree(), base->vDegree(), {}, {}, infinity};
+     if (!sw) carrier.weights.reserve(std::size_t(nu) * std::size_t(nv));
+     carrier.poles.reserve(std::size_t(nu) * std::size_t(nv));
+@@ -538,7 +621,8 @@
+     }
+     std::vector<double> cuts{range.lo, range.hi};
+     const auto &edgeKnots = std::as_const(edgeData.knots);
+-    for (const auto *knots : {&edgeKnots, &uvData.knots})
++    const auto &uvKnots = std::as_const(uvData.knots);
++    for (const auto *knots : {&edgeKnots, &uvKnots})
+         for (double value : *knots) if (value > range.lo && value < range.hi) cuts.push_back(value);
+     std::sort(cuts.begin(), cuts.end()); cuts.erase(std::unique(cuts.begin(), cuts.end()), cuts.end());
+     if (cuts.size() > maxVisits) return failed;
+@@ -569,11 +653,22 @@
+                     for (int axis = 0; axis < 2; ++axis)
+                         uv[std::size_t(axis)] = {I(o[axis]) + I(d[axis]) * I(node.range.lo), I(o[axis]) + I(d[axis]) * I(node.range.hi)};
+                 }
++                P uvDenominator;
++                I uvDenominatorHull;
++                double uvLower = 1;
++                if (!qw) {
++                    uvDenominator = onRange(uvWeightData, node.range)[0];
++                    uvDenominatorHull = hull(uvDenominator);
++                    uvLower = std::max(minimumUVWeight, uvDenominatorHull.lo);
++                    if (!finite(uvDenominatorHull) || !(uvLower > 0)
++                        || uvLower > uvDenominatorHull.hi || !std::isfinite(uvLower)) return failed;
++                }
+                 std::array<I, 2> image;
+                 bool inDomain = true;
+                 const Interval domains[] = {base->uDomain(), base->vDomain()};
+                 for (int axis = 0; axis < 2; ++axis) {
+-                    image[std::size_t(axis)] = hull(uv[std::size_t(axis)]);
++                    image[std::size_t(axis)] = qw ? hull(uv[std::size_t(axis)])
++                        : hull(uv[std::size_t(axis)]) / I(uvLower, uvDenominatorHull.hi);
+                     // Intersection with the exact ORIGINAL pole hull is a
+                     // second independent enclosure, not a clamp to the domain.
+                     auto &value = image[std::size_t(axis)];
+@@ -589,8 +684,11 @@
+                         for (int ku : us) {
+                             for (int kv : vs) {
+                                 work.visit();
+-                                const double bound = ew ? residual(carrier, ku, kv, uv, actual)
+-                                    : residual(carrier, ku, kv, uv, actual, &edgeDenominator, edgeLower);
++                                const double bound = !qw
++                                    ? rationalUVResidual(carrier, ku, kv, uv, uvDenominator, uvLower,
++                                        actual, ew ? nullptr : &edgeDenominator, edgeLower)
++                                    : (ew ? residual(carrier, ku, kv, uv, actual)
++                                        : residual(carrier, ku, kv, uv, actual, &edgeDenominator, edgeLower));
+                                 local = std::max(local, bound);
+                                 if (!std::isfinite(bound) || bound > budget) { passed = false; break; }
+                             }
+--- a/kernel/fk_surface_curve_bounds.h
++++ b/kernel/fk_surface_curve_bounds.h
+@@ -30,11 +30,11 @@
+ // Instance bounds use native base poles and stored IEEE placements with
+ // outward intervals, never rounded transformed pole() data. Traversal is
+ // bounded/cancellable; exhaustion or inconclusive data return Failed.
+-// E supports empty or arbitrary strictly positive finite original weights.
+-// Q supports empty or exactly constant positive original weights only;
+-// unequal Q weights and E/Q wrappers return Unsupported.
+-// Original homogeneous E/S coefficients and positive denominator bounds
+-// certify rational E/S without changing the caller's physical budget.
++// E/Q support empty or arbitrary strictly positive finite original weights;
++// E/Q wrappers return Unsupported. Rational Q uses homogeneous local Cox
++// polynomials and its original positive denominator, including D^(pu+pv)
++// for a polynomial carrier. Original homogeneous E/Q/S coefficients and
++// positive denominator bounds retain the caller's physical budget.
+ // Invalid/null data, domains not proved, exhausted fixed resources and
+ // unresolved/over-budget bounds return Failed; callers must treat this as
+ // terminal for the recognized family. Certified alone publishes a finite

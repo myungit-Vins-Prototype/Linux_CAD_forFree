@@ -1,0 +1,14 @@
+[
+  "c++",
+  "-fsanitize=address,undefined",
+  "-fno-omit-frame-pointer",
+  "/tmp/k10-offset-pose-review/tests/san/offset.o",
+  "/tmp/k10-offset-pose-review/tests/san/pose-tests.o",
+  "/tmp/k10-offset-pose-review/tests/san/curve-validation.o",
+  "/tmp/k10-offset-pose-review/tests/san/offset-validation.o",
+  "/tmp/k10-offset-pose-review/tests/san/main.o",
+  "/tmp/k10-offset-pose-review/tests/libforgekernel-baseline.a",
+  "-pthread",
+  "-o",
+  "/tmp/k10-offset-pose-review/tests/san/candidate-tests"
+]

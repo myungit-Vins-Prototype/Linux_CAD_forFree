@@ -1,0 +1,132 @@
+{
+  "nodes": 785,
+  "edges": 11461,
+  "units": 395,
+  "errors": [],
+  "hashes_html_configuration_verified": true,
+  "calls": {
+    "surfaceCurveResidualBound": 4,
+    "certifySheetJoins": 2,
+    "requireUnifiedSheetJoins": 2,
+    "BlendModel::build": 7
+  },
+  "focus": {
+    "kernel/fk_blend_model.h": {
+      "description": "Modello modificabile delle liste Body::build per raccordi ed estensioni; build espone la mappa esplicita degli edge compattati per le verifiche finali dei giunti, senza associazioni per prossimita.",
+      "incoming": {
+        "call": 8,
+        "include": 8,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 9,
+        "include": 5,
+        "reference": 0
+      }
+    },
+    "kernel/fk_sheet.cpp": {
+      "description": "Taglio, rifilo ed estensione di lamine; offset NURBS planari certificati. Famiglia ISO scelta dalle pcurve sorgenti originali con limite fisico continuo e ancore per incidenza; giunti ISO verificati sui due supporti a cap fisso e fin ricontrollate dopo build/unify. Newton resta una costruzione campionata; fin Newton su supporti nativi quadratici/bicubici anche razionali positivi sono verificate continuamente con budget prefit e candidate UV nel dominio, dopo build/unify tramite mappa edge esplicita, con fallimenti riconosciuti terminali e famiglie unsupported legacy.",
+      "incoming": {
+        "call": 39,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 32,
+        "include": 17,
+        "reference": 0
+      }
+    },
+    "kernel/fk_sheet_join_validation.cpp": {
+      "description": "Costruisce pcurve candidate nel dominio naturale per le sole fin Newton pianificate; mantiene E/S/parametro e cap prefit, certifica prima di assegnare Q e ricontrolla i discendenti dopo unify anche senza history utente. Niente epsilon UV o recupero campionato dopo Failed; Unsupported conserva la via legacy.",
+      "incoming": {
+        "call": 3,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 11,
+        "include": 5,
+        "reference": 0
+      }
+    },
+    "kernel/fk_sheet_join_validation.h": {
+      "description": "Contratto interno delle fin Newton pianificate ed emesse, con curva/range e budget originali e mappa esplicita dei bordi modello.",
+      "incoming": {
+        "call": 0,
+        "include": 3,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "kernel/fk_surface_curve_bounds.cpp": {
+      "description": "Verifica continua del residuo E(t)-S(Q(t)) per E/Q polynomiali su carrier nativo quadratico/bicubico anche razionale a pesi positivi. Coefficienti omogenei originali, denominatore positivo sulle celle attive, intervalli outward, partizione comune, tutte le celle intersecate, budget e cancellazione.",
+      "incoming": {
+        "call": 4,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 8,
+        "include": 4,
+        "reference": 0
+      }
+    },
+    "kernel/fk_surface_curve_bounds.h": {
+      "description": "Contratto del residuo continuo bordo/SP-curve/superficie: distingue unsupported, certificato e fallito, con budget fisico fissato dal chiamante.",
+      "incoming": {
+        "call": 1,
+        "include": 4,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_sheet_join_ledger.cpp": {
+      "description": "Contratti delle fin Newton e costruzione UV prima della prova: mappa modello-edge, intervalli e cap originali, overshoot e halfULP, pcurve condivise preservate, gap reali rifiutati, modifiche dopo unify; nessun recupero campionato.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 16,
+        "include": 8,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_surface_curve_bounds.cpp": {
+      "description": "Residuo continuo su superfici bicubiche: positivi e negativi fra campioni, dominio e celle nodali, trim, budget e cancellazione; contratti delle fin Newton prima e dopo unificazione.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 11,
+        "include": 5,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_surface_curve_rational.cpp": {
+      "description": "Carrier razionali quadratici/bicubici e misti: positivi a pesi e scale diversi, tutte le celle attive anche con denominatore estrapolato negativo, picchi nascosti, dominio, limiti risorse e cancellazione.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 10,
+        "include": 5,
+        "reference": 0
+      }
+    }
+  }
+}

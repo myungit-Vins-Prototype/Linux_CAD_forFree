@@ -1,0 +1,2657 @@
+{
+  "nodes": [
+    {
+      "id": "forgeCad2026_ribbon_preview.cpp",
+      "group": "startup",
+      "description": "Ribbon del viewport: schede/gruppi adattivi, fascia superiore riservata; Conferma/Annulla contestuali invocano il pannello, Termina chiude lo schizzo; ritorno alla scheda Schizzo e stato sincronizzato al ciclo del pannello, identita esplicita del comando e pulsante attivo visibile anche oltre i promossi, configurazione persistente.",
+      "lines": 1315,
+      "symbols": [
+        "ForgeCad::RibbonCommandButton::paintEvent",
+        "ForgeCad::RibbonCornerAccent::RibbonCornerAccent",
+        "ForgeCad::RibbonCornerAccent::paintEvent",
+        "ForgeCad::RibbonCornerAccent::setContours",
+        "ForgeCad::RibbonPreview::Impl::Impl",
+        "ForgeCad::RibbonPreview::Impl::add",
+        "ForgeCad::RibbonPreview::Impl::applyLayout",
+        "ForgeCad::RibbonPreview::Impl::button",
+        "ForgeCad::RibbonPreview::Impl::cardRect",
+        "ForgeCad::RibbonPreview::Impl::clearGlass",
+        "ForgeCad::RibbonPreview::Impl::contentPadding",
+        "ForgeCad::RibbonPreview::Impl::current",
+        "ForgeCad::RibbonPreview::Impl::customize",
+        "ForgeCad::RibbonPreview::Impl::dialogShown",
+        "ForgeCad::RibbonPreview::Impl::finishPanel",
+        "ForgeCad::RibbonPreview::Impl::glassId",
+        "ForgeCad::RibbonPreview::Impl::groupWidth",
+        "ForgeCad::RibbonPreview::Impl::layout",
+        "ForgeCad::RibbonPreview::Impl::panelAcceptButton",
+        "ForgeCad::RibbonPreview::Impl::place",
+        "ForgeCad::RibbonPreview::Impl::plans",
+        "ForgeCad::RibbonPreview::Impl::rebuild",
+        "ForgeCad::RibbonPreview::Impl::restorePanelContext",
+        "ForgeCad::RibbonPreview::Impl::ribbonHeight",
+        "ForgeCad::RibbonPreview::Impl::schedule",
+        "ForgeCad::RibbonPreview::Impl::selectTab",
+        "ForgeCad::RibbonPreview::Impl::setRunning",
+        "ForgeCad::RibbonPreview::Impl::syncFinishControls",
+        "ForgeCad::RibbonPreview::Impl::syncGlass",
+        "ForgeCad::RibbonPreview::Impl::syncPadding",
+        "ForgeCad::RibbonPreview::Impl::workspaceWidth",
+        "ForgeCad::RibbonPreview::RibbonPreview",
+        "ForgeCad::RibbonPreview::compact",
+        "ForgeCad::RibbonPreview::eventFilter",
+        "ForgeCad::RibbonPreview::paintEvent",
+        "ForgeCad::RibbonPreview::resizeEvent",
+        "ForgeCad::RibbonPreview::runSelfTest",
+        "ForgeCad::RibbonPreview::runSelfTest::Stripes::paintEvent",
+        "ForgeCad::RibbonPreview::selectForAction",
+        "ForgeCad::RibbonPreview::selectedTab",
+        "ForgeCad::RibbonPreview::setCompact",
+        "ForgeCad::RibbonPreview::syncContext",
+        "ForgeCad::RibbonPreview::wheelEvent",
+        "ForgeCad::RibbonPreview::~RibbonPreview",
+        "ForgeCad::RibbonTabBar::paintEvent",
+        "ForgeCad::buttonText",
+        "ForgeCad::caption",
+        "ForgeCad::collect",
+        "ForgeCad::rasterizeCards",
+        "ForgeCad::text"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "forgeCad2026_ribbon_preview.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 4044,
+          "symbol": "ForgeCad::RibbonPreview::RibbonPreview",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "cad_icons.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 580,
+          "symbol": "ForgeCad::commandIcon",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "cad_icons.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 14,
+          "symbol": "cad_icons.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "cad_menu.h",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 905,
+          "symbol": "addCadMenu",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 944,
+          "symbol": "addCadMenu",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "cad_menu.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 15,
+          "symbol": "cad_menu.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 10,
+      "sites": [
+        {
+          "line": 717,
+          "symbol": "DocumentState::DocumentState",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 719,
+          "symbol": "SketchObject::SketchObject",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 724,
+          "symbol": "DocumentState::DocumentState",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 745,
+          "symbol": "DocumentState::DocumentState",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 762,
+          "symbol": "DocumentState::DocumentState",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 789,
+          "symbol": "ExtrusionObject::ExtrusionObject",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 798,
+          "symbol": "DocumentState::DocumentState",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1116,
+          "symbol": "DocumentState::DocumentState",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1233,
+          "symbol": "BackgroundSettings::BackgroundSettings",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1234,
+          "symbol": "BackgroundSettings::BackgroundSettings",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_dialogs.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 4,
+          "symbol": "forgeCad2026_dialogs.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_dialogs_common.cpp",
+      "kind": "call",
+      "count": 26,
+      "sites": [
+        {
+          "line": 397,
+          "symbol": "FunctionDialogPanel::setViewportTopInset",
+          "owner": "ForgeCad::RibbonPreview::Impl::place"
+        },
+        {
+          "line": 630,
+          "symbol": "FunctionDialogPanel::setViewportTopInset",
+          "owner": "ForgeCad::RibbonPreview::~RibbonPreview"
+        },
+        {
+          "line": 661,
+          "symbol": "FunctionDialogPanel::setViewportTopInset",
+          "owner": "ForgeCad::RibbonPreview::eventFilter"
+        },
+        {
+          "line": 727,
+          "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 728,
+          "symbol": "FunctionDialogPanel::createScrollableForm",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 855,
+          "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 857,
+          "symbol": "FunctionDialogPanel::createScrollableForm",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 865,
+          "symbol": "FunctionDialogPanel::setDockSide",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 865,
+          "symbol": "FunctionDialogPanel::setFullHeight",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 871,
+          "symbol": "FunctionDialogPanel::setDockSide",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 871,
+          "symbol": "FunctionDialogPanel::setFullHeight",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 873,
+          "symbol": "FunctionDialogPanel::beginEmbeddedMove",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 873,
+          "symbol": "FunctionDialogPanel::endEmbeddedMove",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 873,
+          "symbol": "FunctionDialogPanel::updateEmbeddedMove",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 874,
+          "symbol": "FunctionDialogPanel::setFullHeight",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1126,
+          "symbol": "FunctionDialogPanel::panelOpacity",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1126,
+          "symbol": "FunctionDialogPanel::setPanelOpacity",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1128,
+          "symbol": "FunctionDialogPanel::setPanelOpacity",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1132,
+          "symbol": "FunctionDialogPanel::panelColor",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1135,
+          "symbol": "FunctionDialogPanel::setPanelOpacity",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1142,
+          "symbol": "FunctionDialogPanel::setPanelOpacity",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1154,
+          "symbol": "FunctionDialogPanel::cornerRadius",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1156,
+          "symbol": "FunctionDialogPanel::setCornerRadius",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1159,
+          "symbol": "FunctionDialogPanel::setCornerRadius",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1177,
+          "symbol": "FloatingPanel::FloatingPanel",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1199,
+          "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_dialogs_common.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 851,
+          "symbol": "FunctionDialogPanel::fullHeight",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_dialogs_common.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 3,
+          "symbol": "forgeCad2026_dialogs_common.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_dialogs_solids.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 706,
+          "symbol": "threadChoices",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_dialogs_surfaces.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 790,
+          "symbol": "loftDialog",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_menu.cpp",
+      "kind": "call",
+      "count": 5,
+      "sites": [
+        {
+          "line": 510,
+          "symbol": "CadMenu::CadMenu",
+          "owner": "ForgeCad::RibbonPreview::Impl::rebuild"
+        },
+        {
+          "line": 519,
+          "symbol": "CadMenu::CadMenu",
+          "owner": "ForgeCad::RibbonPreview::Impl::rebuild"
+        },
+        {
+          "line": 903,
+          "symbol": "CadMenu::CadMenu",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 943,
+          "symbol": "CadMenu::CadMenu",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1003,
+          "symbol": "CadMenu::CadMenu",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_ribbon_editor.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 380,
+          "symbol": "ForgeCad::editRibbonLayout",
+          "owner": "ForgeCad::RibbonPreview::Impl::customize"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_ribbon_editor.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 2,
+          "symbol": "forgeCad2026_ribbon_editor.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_ribbon_preview.cpp",
+      "kind": "call",
+      "count": 359,
+      "sites": [
+        {
+          "line": 83,
+          "symbol": "ForgeCad::text",
+          "owner": "ForgeCad::collect"
+        },
+        {
+          "line": 84,
+          "symbol": "ForgeCad::collect",
+          "owner": "ForgeCad::collect"
+        },
+        {
+          "line": 89,
+          "symbol": "ForgeCad::text",
+          "owner": "ForgeCad::caption"
+        },
+        {
+          "line": 101,
+          "symbol": "ForgeCad::caption",
+          "owner": "ForgeCad::buttonText"
+        },
+        {
+          "line": 184,
+          "symbol": "ForgeCad::rasterizeCards",
+          "owner": "ForgeCad::RibbonCornerAccent::paintEvent"
+        },
+        {
+          "line": 248,
+          "symbol": "ForgeCad::RibbonPreview::Impl::contentPadding",
+          "owner": "ForgeCad::RibbonPreview::Impl::workspaceWidth"
+        },
+        {
+          "line": 249,
+          "symbol": "ForgeCad::RibbonPreview::Impl::contentPadding",
+          "owner": "ForgeCad::RibbonPreview::Impl::ribbonHeight"
+        },
+        {
+          "line": 251,
+          "symbol": "ForgeCad::RibbonPreview::Impl::workspaceWidth",
+          "owner": "ForgeCad::RibbonPreview::Impl::cardRect"
+        },
+        {
+          "line": 255,
+          "symbol": "ForgeCad::RibbonPreview::Impl::contentPadding",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncPadding"
+        },
+        {
+          "line": 258,
+          "symbol": "ForgeCad::RibbonPreview::Impl::workspaceWidth",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncPadding"
+        },
+        {
+          "line": 264,
+          "symbol": "ForgeCad::RibbonPreview::Impl::ribbonHeight",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncPadding"
+        },
+        {
+          "line": 265,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncPadding"
+        },
+        {
+          "line": 269,
+          "symbol": "ForgeCad::RibbonPreview::Impl::glassId",
+          "owner": "ForgeCad::RibbonPreview::Impl::clearGlass"
+        },
+        {
+          "line": 280,
+          "symbol": "ForgeCad::RibbonPreview::Impl::syncPadding",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncGlass"
+        },
+        {
+          "line": 286,
+          "symbol": "ForgeCad::RibbonPreview::Impl::cardRect",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncGlass"
+        },
+        {
+          "line": 286,
+          "symbol": "ForgeCad::rasterizeCards",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncGlass"
+        },
+        {
+          "line": 291,
+          "symbol": "ForgeCad::RibbonCornerAccent::setContours",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncGlass"
+        },
+        {
+          "line": 291,
+          "symbol": "ForgeCad::RibbonPreview::Impl::cardRect",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncGlass"
+        },
+        {
+          "line": 295,
+          "symbol": "ForgeCad::RibbonPreview::Impl::cardRect",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncGlass"
+        },
+        {
+          "line": 298,
+          "symbol": "ForgeCad::RibbonPreview::Impl::clearGlass",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncGlass"
+        },
+        {
+          "line": 300,
+          "symbol": "ForgeCad::RibbonPreview::Impl::cardRect",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncGlass"
+        },
+        {
+          "line": 303,
+          "symbol": "ForgeCad::RibbonPreview::Impl::glassId",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncGlass"
+        },
+        {
+          "line": 312,
+          "symbol": "ForgeCad::collect",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 312,
+          "symbol": "ForgeCad::text",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 317,
+          "symbol": "ForgeCad::text",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 320,
+          "symbol": "ForgeCad::RibbonPreview::Impl::add",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 325,
+          "symbol": "ForgeCad::RibbonPreview::Impl::add",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 326,
+          "symbol": "ForgeCad::RibbonPreview::Impl::add",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 329,
+          "symbol": "ForgeCad::RibbonPreview::Impl::add",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 330,
+          "symbol": "ForgeCad::RibbonPreview::Impl::add",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 332,
+          "symbol": "ForgeCad::RibbonPreview::Impl::add",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 333,
+          "symbol": "ForgeCad::RibbonPreview::Impl::add",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 334,
+          "symbol": "ForgeCad::RibbonPreview::Impl::add",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 335,
+          "symbol": "ForgeCad::RibbonPreview::Impl::add",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 336,
+          "symbol": "ForgeCad::RibbonPreview::Impl::add",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 337,
+          "symbol": "ForgeCad::RibbonPreview::Impl::add",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 338,
+          "symbol": "ForgeCad::RibbonPreview::Impl::add",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 339,
+          "symbol": "ForgeCad::RibbonPreview::Impl::add",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 340,
+          "symbol": "ForgeCad::RibbonPreview::Impl::add",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 341,
+          "symbol": "ForgeCad::RibbonPreview::Impl::add",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 342,
+          "symbol": "ForgeCad::RibbonPreview::Impl::add",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 352,
+          "symbol": "ForgeCad::RibbonPreview::Impl::layout",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 353,
+          "symbol": "ForgeCad::RibbonPreview::Impl::applyLayout",
+          "owner": "ForgeCad::RibbonPreview::Impl::Impl"
+        },
+        {
+          "line": 362,
+          "symbol": "ForgeCad::RibbonPreview::Impl::Group::Group",
+          "owner": "ForgeCad::RibbonPreview::Impl::applyLayout"
+        },
+        {
+          "line": 362,
+          "symbol": "ForgeCad::RibbonPreview::Impl::Group::operator=",
+          "owner": "ForgeCad::RibbonPreview::Impl::applyLayout"
+        },
+        {
+          "line": 366,
+          "symbol": "ForgeCad::RibbonPreview::Impl::Group::Group",
+          "owner": "ForgeCad::RibbonPreview::Impl::applyLayout"
+        },
+        {
+          "line": 380,
+          "symbol": "ForgeCad::RibbonPreview::Impl::applyLayout",
+          "owner": "ForgeCad::RibbonPreview::Impl::customize"
+        },
+        {
+          "line": 380,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::Impl::customize"
+        },
+        {
+          "line": 391,
+          "symbol": "ForgeCad::RibbonPreview::Impl::rebuild",
+          "owner": "ForgeCad::RibbonPreview::Impl::schedule"
+        },
+        {
+          "line": 393,
+          "symbol": "ForgeCad::RibbonPreview::Impl::ribbonHeight",
+          "owner": "ForgeCad::RibbonPreview::Impl::place"
+        },
+        {
+          "line": 396,
+          "symbol": "ForgeCad::RibbonPreview::Impl::syncGlass",
+          "owner": "ForgeCad::RibbonPreview::Impl::place"
+        },
+        {
+          "line": 424,
+          "symbol": "ForgeCad::RibbonPreview::Impl::panelAcceptButton",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncFinishControls"
+        },
+        {
+          "line": 440,
+          "symbol": "ForgeCad::RibbonPreview::Impl::selectTab",
+          "owner": "ForgeCad::RibbonPreview::Impl::restorePanelContext"
+        },
+        {
+          "line": 442,
+          "symbol": "ForgeCad::RibbonPreview::Impl::syncFinishControls",
+          "owner": "ForgeCad::RibbonPreview::Impl::restorePanelContext"
+        },
+        {
+          "line": 446,
+          "symbol": "ForgeCad::RibbonPreview::Impl::restorePanelContext",
+          "owner": "ForgeCad::RibbonPreview::Impl::finishPanel"
+        },
+        {
+          "line": 446,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::Impl::finishPanel"
+        },
+        {
+          "line": 446,
+          "symbol": "ForgeCad::RibbonPreview::Impl::setRunning",
+          "owner": "ForgeCad::RibbonPreview::Impl::finishPanel"
+        },
+        {
+          "line": 460,
+          "symbol": "ForgeCad::RibbonPreview::Impl::groupWidth",
+          "owner": "ForgeCad::RibbonPreview::Impl::plans"
+        },
+        {
+          "line": 461,
+          "symbol": "ForgeCad::RibbonPreview::Impl::plans::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:460:25)::operator()",
+          "owner": "ForgeCad::RibbonPreview::Impl::plans"
+        },
+        {
+          "line": 462,
+          "symbol": "ForgeCad::RibbonPreview::Impl::plans::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:460:25)::operator()",
+          "owner": "ForgeCad::RibbonPreview::Impl::plans"
+        },
+        {
+          "line": 468,
+          "symbol": "ForgeCad::RibbonPreview::Impl::plans::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:460:25)::operator()",
+          "owner": "ForgeCad::RibbonPreview::Impl::plans"
+        },
+        {
+          "line": 471,
+          "symbol": "ForgeCad::RibbonPreview::Impl::plans::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:460:25)::operator()",
+          "owner": "ForgeCad::RibbonPreview::Impl::plans"
+        },
+        {
+          "line": 473,
+          "symbol": "ForgeCad::RibbonPreview::Impl::groupWidth",
+          "owner": "ForgeCad::RibbonPreview::Impl::plans"
+        },
+        {
+          "line": 477,
+          "symbol": "ForgeCad::RibbonCommandButton::QToolButton",
+          "owner": "ForgeCad::RibbonPreview::Impl::button"
+        },
+        {
+          "line": 487,
+          "symbol": "ForgeCad::buttonText",
+          "owner": "ForgeCad::RibbonPreview::Impl::button"
+        },
+        {
+          "line": 488,
+          "symbol": "ForgeCad::text",
+          "owner": "ForgeCad::RibbonPreview::Impl::button"
+        },
+        {
+          "line": 491,
+          "symbol": "ForgeCad::buttonText",
+          "owner": "ForgeCad::RibbonPreview::Impl::button"
+        },
+        {
+          "line": 499,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::Impl::rebuild"
+        },
+        {
+          "line": 504,
+          "symbol": "ForgeCad::RibbonPreview::Impl::current",
+          "owner": "ForgeCad::RibbonPreview::Impl::rebuild"
+        },
+        {
+          "line": 505,
+          "symbol": "ForgeCad::RibbonPreview::Impl::plans",
+          "owner": "ForgeCad::RibbonPreview::Impl::rebuild"
+        },
+        {
+          "line": 529,
+          "symbol": "ForgeCad::RibbonPreview::Impl::button",
+          "owner": "ForgeCad::RibbonPreview::Impl::rebuild"
+        },
+        {
+          "line": 547,
+          "symbol": "ForgeCad::RibbonPreview::Impl::syncFinishControls",
+          "owner": "ForgeCad::RibbonPreview::Impl::dialogShown"
+        },
+        {
+          "line": 552,
+          "symbol": "ForgeCad::RibbonPreview::Impl::restorePanelContext",
+          "owner": "ForgeCad::RibbonPreview::Impl::dialogShown"
+        },
+        {
+          "line": 552,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::Impl::dialogShown"
+        },
+        {
+          "line": 552,
+          "symbol": "ForgeCad::RibbonPreview::Impl::setRunning",
+          "owner": "ForgeCad::RibbonPreview::Impl::dialogShown"
+        },
+        {
+          "line": 558,
+          "symbol": "ForgeCad::RibbonPreview::Impl::selectTab",
+          "owner": "ForgeCad::RibbonPreview::Impl::dialogShown"
+        },
+        {
+          "line": 561,
+          "symbol": "ForgeCad::RibbonPreview::Impl::selectTab",
+          "owner": "ForgeCad::RibbonPreview::Impl::dialogShown"
+        },
+        {
+          "line": 561,
+          "symbol": "ForgeCad::RibbonPreview::Impl::setRunning",
+          "owner": "ForgeCad::RibbonPreview::Impl::dialogShown"
+        },
+        {
+          "line": 564,
+          "symbol": "ForgeCad::caption",
+          "owner": "ForgeCad::RibbonPreview::Impl::dialogShown"
+        },
+        {
+          "line": 565,
+          "symbol": "ForgeCad::RibbonPreview::Impl::setRunning",
+          "owner": "ForgeCad::RibbonPreview::Impl::dialogShown"
+        },
+        {
+          "line": 567,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::Impl::dialogShown"
+        },
+        {
+          "line": 568,
+          "symbol": "ForgeCad::RibbonPreview::Impl::finishPanel",
+          "owner": "ForgeCad::RibbonPreview::Impl::dialogShown"
+        },
+        {
+          "line": 591,
+          "symbol": "ForgeCad::RibbonPreview::Impl::panelAcceptButton",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 595,
+          "symbol": "ForgeCad::RibbonPreview::setCompact",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 596,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 599,
+          "symbol": "ForgeCad::RibbonTabBar::QTabBar",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 601,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 601,
+          "symbol": "ForgeCad::RibbonPreview::selectedTab",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 603,
+          "symbol": "ForgeCad::RibbonCornerAccent::RibbonCornerAccent",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 607,
+          "symbol": "ForgeCad::RibbonPreview::Impl::syncGlass",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 608,
+          "symbol": "ForgeCad::RibbonPreview::Impl::customize",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 610,
+          "symbol": "ForgeCad::RibbonPreview::Impl::customize",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 615,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 615,
+          "symbol": "ForgeCad::RibbonPreview::Impl::setRunning",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 623,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 628,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 628,
+          "symbol": "ForgeCad::RibbonPreview::setCompact",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 628,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 630,
+          "symbol": "ForgeCad::RibbonPreview::Impl::clearGlass",
+          "owner": "ForgeCad::RibbonPreview::~RibbonPreview"
+        },
+        {
+          "line": 635,
+          "symbol": "ForgeCad::RibbonPreview::Impl::syncFinishControls",
+          "owner": "ForgeCad::RibbonPreview::setCompact"
+        },
+        {
+          "line": 636,
+          "symbol": "ForgeCad::RibbonPreview::Impl::place",
+          "owner": "ForgeCad::RibbonPreview::setCompact"
+        },
+        {
+          "line": 636,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::setCompact"
+        },
+        {
+          "line": 641,
+          "symbol": "ForgeCad::RibbonPreview::selectedTab",
+          "owner": "ForgeCad::RibbonPreview::syncContext"
+        },
+        {
+          "line": 643,
+          "symbol": "ForgeCad::RibbonPreview::Impl::selectTab",
+          "owner": "ForgeCad::RibbonPreview::syncContext"
+        },
+        {
+          "line": 644,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::syncContext"
+        },
+        {
+          "line": 644,
+          "symbol": "ForgeCad::RibbonPreview::Impl::setRunning",
+          "owner": "ForgeCad::RibbonPreview::syncContext"
+        },
+        {
+          "line": 646,
+          "symbol": "ForgeCad::RibbonPreview::Impl::syncFinishControls",
+          "owner": "ForgeCad::RibbonPreview::syncContext"
+        },
+        {
+          "line": 647,
+          "symbol": "ForgeCad::RibbonPreview::Impl::place",
+          "owner": "ForgeCad::RibbonPreview::syncContext"
+        },
+        {
+          "line": 653,
+          "symbol": "ForgeCad::RibbonPreview::Impl::current",
+          "owner": "ForgeCad::RibbonPreview::selectForAction"
+        },
+        {
+          "line": 653,
+          "symbol": "ForgeCad::RibbonPreview::Impl::selectTab",
+          "owner": "ForgeCad::RibbonPreview::selectForAction"
+        },
+        {
+          "line": 653,
+          "symbol": "ForgeCad::RibbonPreview::selectForAction::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:652:25)::operator()",
+          "owner": "ForgeCad::RibbonPreview::selectForAction"
+        },
+        {
+          "line": 655,
+          "symbol": "ForgeCad::RibbonPreview::Impl::setRunning",
+          "owner": "ForgeCad::RibbonPreview::selectForAction"
+        },
+        {
+          "line": 659,
+          "symbol": "ForgeCad::RibbonPreview::Impl::clearGlass",
+          "owner": "ForgeCad::RibbonPreview::eventFilter"
+        },
+        {
+          "line": 662,
+          "symbol": "ForgeCad::RibbonPreview::Impl::syncGlass",
+          "owner": "ForgeCad::RibbonPreview::eventFilter"
+        },
+        {
+          "line": 664,
+          "symbol": "ForgeCad::RibbonPreview::Impl::place",
+          "owner": "ForgeCad::RibbonPreview::eventFilter"
+        },
+        {
+          "line": 664,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::eventFilter"
+        },
+        {
+          "line": 666,
+          "symbol": "ForgeCad::RibbonPreview::Impl::dialogShown",
+          "owner": "ForgeCad::RibbonPreview::eventFilter"
+        },
+        {
+          "line": 667,
+          "symbol": "ForgeCad::RibbonPreview::Impl::finishPanel",
+          "owner": "ForgeCad::RibbonPreview::eventFilter"
+        },
+        {
+          "line": 682,
+          "symbol": "ForgeCad::RibbonPreview::eventFilter::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:676:28)::operator()",
+          "owner": "ForgeCad::RibbonPreview::eventFilter"
+        },
+        {
+          "line": 683,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::eventFilter"
+        },
+        {
+          "line": 683,
+          "symbol": "ForgeCad::RibbonPreview::Impl::setRunning",
+          "owner": "ForgeCad::RibbonPreview::eventFilter"
+        },
+        {
+          "line": 689,
+          "symbol": "ForgeCad::RibbonPreview::eventFilter::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:676:28)::operator()",
+          "owner": "ForgeCad::RibbonPreview::eventFilter"
+        },
+        {
+          "line": 691,
+          "symbol": "ForgeCad::RibbonPreview::selectForAction",
+          "owner": "ForgeCad::RibbonPreview::eventFilter"
+        },
+        {
+          "line": 694,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::resizeEvent"
+        },
+        {
+          "line": 701,
+          "symbol": "ForgeCad::RibbonPreview::Impl::cardRect",
+          "owner": "ForgeCad::RibbonPreview::paintEvent"
+        },
+        {
+          "line": 710,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 710,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:705:39)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:707:33)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 711,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:705:39)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:707:33)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 712,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 724,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 726,
+          "symbol": "ForgeCad::RibbonPreview::setCompact",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 733,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 734,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 735,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 736,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 737,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 738,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 739,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 739,
+          "symbol": "ForgeCad::RibbonPreview::selectedTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 740,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 741,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 741,
+          "symbol": "ForgeCad::RibbonPreview::selectedTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 745,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 746,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 751,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 751,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 753,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 756,
+          "symbol": "ForgeCad::RibbonPreview::selectForAction",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 758,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 758,
+          "symbol": "ForgeCad::RibbonPreview::selectedTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 761,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 761,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 762,
+          "symbol": "ForgeCad::RibbonPreview::setCompact",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 769,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 770,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 773,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 776,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 777,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 785,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 794,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 795,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 796,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 798,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 800,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:705:39)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 804,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 810,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 815,
+          "symbol": "ForgeCad::RibbonPreview::Impl::selectTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 815,
+          "symbol": "ForgeCad::RibbonPreview::setCompact",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 823,
+          "symbol": "ForgeCad::RibbonPreview::selectedTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 837,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 839,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 843,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 850,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 851,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 862,
+          "symbol": "ForgeCad::RibbonPreview::selectForAction",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 863,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 865,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:801:30)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:847:30)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 865,
+          "symbol": "ForgeCad::RibbonPreview::setCompact",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 866,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:801:30)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:847:30)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 867,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:801:30)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:847:30)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 868,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:801:30)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:847:30)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 869,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 873,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:801:30)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:847:30)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 874,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:801:30)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:847:30)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 875,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:801:30)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:847:30)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 879,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 880,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 882,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 883,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 886,
+          "symbol": "ForgeCad::RibbonPreview::setCompact",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 888,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:801:30)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 890,
+          "symbol": "ForgeCad::rasterizeCards",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 895,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 896,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 898,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 909,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 912,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 913,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 914,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 917,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 919,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 923,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 932,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:926:32)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 933,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 934,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:926:32)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 940,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::Stripes::QWidget",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 947,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:926:32)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 949,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 951,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:926:32)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 952,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 953,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 955,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 956,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:926:32)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 957,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 969,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 973,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:926:32)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 977,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:926:32)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 978,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 979,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 985,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:926:32)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 987,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 989,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 992,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 993,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 994,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1000,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:926:32)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1001,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1004,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:926:32)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1005,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1008,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1009,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1013,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:926:32)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1014,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1018,
+          "symbol": "ForgeCad::RibbonPreview::Impl::selectTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1018,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:926:32)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1024,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1028,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:926:32)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1030,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1038,
+          "symbol": "ForgeCad::RibbonPreview::Impl::selectTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1038,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:926:32)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1045,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1048,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1050,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1051,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1054,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1056,
+          "symbol": "ForgeCad::RibbonPreview::setCompact",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1058,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1059,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1061,
+          "symbol": "ForgeCad::RibbonPreview::Impl::cardRect",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1062,
+          "symbol": "ForgeCad::RibbonPreview::Impl::cardRect",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1065,
+          "symbol": "ForgeCad::RibbonPreview::Impl::cardRect",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1065,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1066,
+          "symbol": "ForgeCad::RibbonPreview::Impl::cardRect",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1066,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1069,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1071,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:1063:31)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1071,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1073,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:1063:31)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1073,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1076,
+          "symbol": "ForgeCad::RibbonPreview::setCompact",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1076,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1077,
+          "symbol": "ForgeCad::RibbonPreview::Impl::contentPadding",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1077,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1078,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1079,
+          "symbol": "ForgeCad::RibbonPreview::Impl::selectTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1085,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1087,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1091,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1092,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1095,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1096,
+          "symbol": "ForgeCad::RibbonPreview::Impl::selectTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1096,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1096,
+          "symbol": "ForgeCad::RibbonPreview::selectForAction",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1096,
+          "symbol": "ForgeCad::RibbonPreview::selectedTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1102,
+          "symbol": "ForgeCad::RibbonPreview::Impl::selectTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1106,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1107,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1107,
+          "symbol": "ForgeCad::RibbonPreview::selectedTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1111,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1112,
+          "symbol": "ForgeCad::RibbonPreview::Impl::contentPadding",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1112,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1112,
+          "symbol": "ForgeCad::RibbonPreview::setCompact",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1117,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1118,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1118,
+          "symbol": "ForgeCad::RibbonPreview::selectedTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1123,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1129,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1132,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1133,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1150,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1152,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1153,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1157,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1162,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1172,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1175,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1178,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1182,
+          "symbol": "ForgeCad::RibbonPreview::Impl::selectTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1182,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1182,
+          "symbol": "ForgeCad::RibbonPreview::selectedTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1182,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1183,
+          "symbol": "ForgeCad::RibbonPreview::Impl::selectTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1183,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1184,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1185,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1186,
+          "symbol": "ForgeCad::RibbonPreview::Impl::current",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1186,
+          "symbol": "ForgeCad::RibbonPreview::Impl::plans",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1187,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1188,
+          "symbol": "ForgeCad::RibbonPreview::Impl::current",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1188,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1189,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1190,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1190,
+          "symbol": "ForgeCad::RibbonPreview::selectedTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1191,
+          "symbol": "ForgeCad::RibbonPreview::Impl::selectTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1192,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1193,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1193,
+          "symbol": "ForgeCad::RibbonPreview::selectedTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1195,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1196,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1197,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1197,
+          "symbol": "ForgeCad::RibbonPreview::selectedTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1200,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1200,
+          "symbol": "ForgeCad::RibbonPreview::selectedTab",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1201,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1203,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:801:30)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1204,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1206,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1210,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1212,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1214,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1215,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1217,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1222,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1231,
+          "symbol": "ForgeCad::RibbonPreview::Impl::cardRect",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1231,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:1224:22)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1231,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1232,
+          "symbol": "ForgeCad::RibbonPreview::Impl::workspaceWidth",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1232,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:1224:22)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1232,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1265,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1272,
+          "symbol": "ForgeCad::RibbonPreview::selectForAction",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1273,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1274,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1279,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1295,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1298,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1300,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1301,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1302,
+          "symbol": "ForgeCad::RibbonPreview::Impl::applyLayout",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1303,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1304,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1305,
+          "symbol": "ForgeCad::RibbonPreview::Impl::rebuild",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1307,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1309,
+          "symbol": "ForgeCad::RibbonPreview::Impl::layout",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1309,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1310,
+          "symbol": "ForgeCad::RibbonPreview::Impl::applyLayout",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1311,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp:704:24)::operator()",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1312,
+          "symbol": "ForgeCad::RibbonPreview::Impl::applyLayout",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1312,
+          "symbol": "ForgeCad::RibbonPreview::Impl::schedule",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_ribbon_preview.cpp",
+      "kind": "reference",
+      "count": 1,
+      "sites": [
+        {
+          "line": 627,
+          "symbol": "ForgeCad::RibbonPreview::syncContext",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_ribbon_preview.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1,
+          "symbol": "forgeCad2026_ribbon_preview.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_ui_glass.cpp",
+      "kind": "call",
+      "count": 10,
+      "sites": [
+        {
+          "line": 275,
+          "symbol": "ForgeCad::readUiGlassAppearance",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncGlass"
+        },
+        {
+          "line": 295,
+          "symbol": "ForgeCad::UiGlassShadow::setCards",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncGlass"
+        },
+        {
+          "line": 572,
+          "symbol": "ForgeCad::UiGlassShadow::UiGlassShadow",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 698,
+          "symbol": "ForgeCad::uiGlassPalette",
+          "owner": "ForgeCad::RibbonPreview::paintEvent"
+        },
+        {
+          "line": 911,
+          "symbol": "ForgeCad::uiGlassPalette",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 912,
+          "symbol": "ForgeCad::readUiGlassAppearance",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 925,
+          "symbol": "ForgeCad::readUiGlassAppearance",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 991,
+          "symbol": "ForgeCad::uiGlassPalette",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1029,
+          "symbol": "ForgeCad::readUiGlassAppearance",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1131,
+          "symbol": "ForgeCad::uiGlassPalette",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_ui_glass.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 16,
+          "symbol": "forgeCad2026_ui_glass.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_viewport.cpp",
+      "kind": "call",
+      "count": 23,
+      "sites": [
+        {
+          "line": 269,
+          "symbol": "CadViewport::removeGlassPanel",
+          "owner": "ForgeCad::RibbonPreview::Impl::clearGlass"
+        },
+        {
+          "line": 303,
+          "symbol": "CadViewport::setGlassPanel",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncGlass"
+        },
+        {
+          "line": 422,
+          "symbol": "CadViewport::sketchModeActive",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncFinishControls"
+        },
+        {
+          "line": 433,
+          "symbol": "CadViewport::interactionLocked",
+          "owner": "ForgeCad::RibbonPreview::Impl::syncFinishControls"
+        },
+        {
+          "line": 440,
+          "symbol": "CadViewport::sketchModeActive",
+          "owner": "ForgeCad::RibbonPreview::Impl::restorePanelContext"
+        },
+        {
+          "line": 546,
+          "symbol": "CadViewport::sketchModeActive",
+          "owner": "ForgeCad::RibbonPreview::Impl::dialogShown"
+        },
+        {
+          "line": 593,
+          "symbol": "CadViewport::sketchModeActive",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 594,
+          "symbol": "CadViewport::interactionLocked",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 639,
+          "symbol": "CadViewport::sketchModeActive",
+          "owner": "ForgeCad::RibbonPreview::syncContext"
+        },
+        {
+          "line": 758,
+          "symbol": "CadViewport::sketchModeActive",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 761,
+          "symbol": "CadViewport::sketchModeActive",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 796,
+          "symbol": "CadViewport::sketchModeActive",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1217,
+          "symbol": "CadViewport::gpuGlassAvailable",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1233,
+          "symbol": "CadViewport::background",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1237,
+          "symbol": "CadViewport::antialiasing",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1238,
+          "symbol": "CadViewport::setGridVisible",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1238,
+          "symbol": "CadViewport::setReferencePlanesVisible",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1239,
+          "symbol": "CadViewport::setBackground",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1241,
+          "symbol": "CadViewport::setAntialiasing",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1262,
+          "symbol": "CadViewport::setBackground",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1263,
+          "symbol": "CadViewport::setGridVisible",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1263,
+          "symbol": "CadViewport::setReferencePlanesVisible",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1264,
+          "symbol": "CadViewport::setAntialiasing",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_viewport.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 13,
+          "symbol": "forgeCad2026_viewport.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_viewport_document.cpp",
+      "kind": "call",
+      "count": 16,
+      "sites": [
+        {
+          "line": 716,
+          "symbol": "CadViewport::currentDocument",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 724,
+          "symbol": "CadViewport::loadDocument",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 745,
+          "symbol": "CadViewport::loadDocument",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 759,
+          "symbol": "CadViewport::extrusions",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 762,
+          "symbol": "CadViewport::loadDocument",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 793,
+          "symbol": "CadViewport::sketches",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 796,
+          "symbol": "CadViewport::sketches",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 798,
+          "symbol": "CadViewport::loadDocument",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1114,
+          "symbol": "CadViewport::currentDocument",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1116,
+          "symbol": "CadViewport::loadDocument",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1214,
+          "symbol": "CadViewport::wheelZoomEnabled",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1215,
+          "symbol": "CadViewport::wheelZoomEnabled",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1236,
+          "symbol": "CadViewport::gridVisible",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1236,
+          "symbol": "CadViewport::referencePlanesVisible",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1272,
+          "symbol": "CadViewport::extrusions",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1274,
+          "symbol": "CadViewport::extrusions",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_viewport_scene.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1242,
+          "symbol": "CadViewport::setViewPreset",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "forgeCad2026_viewport_sketch.cpp",
+      "kind": "call",
+      "count": 9,
+      "sites": [
+        {
+          "line": 594,
+          "symbol": "CadViewport::endSketchMode",
+          "owner": "ForgeCad::RibbonPreview::RibbonPreview"
+        },
+        {
+          "line": 724,
+          "symbol": "CadViewport::selectSketch",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 745,
+          "symbol": "CadViewport::selectSketch",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 794,
+          "symbol": "CadViewport::createSketch",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1113,
+          "symbol": "CadViewport::createSketch",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1116,
+          "symbol": "CadViewport::selectSketch",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1189,
+          "symbol": "CadViewport::endSketchMode",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1192,
+          "symbol": "CadViewport::selectSketch",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        },
+        {
+          "line": 1196,
+          "symbol": "CadViewport::endSketchMode",
+          "owner": "ForgeCad::RibbonPreview::runSelfTest"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview_main.cpp",
+      "target": "forgeCad2026_ribbon_preview.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 124,
+          "symbol": "ForgeCad::RibbonPreview::runSelfTest",
+          "owner": "main"
+        }
+      ]
+    }
+  ]
+}

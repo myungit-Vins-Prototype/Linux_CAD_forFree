@@ -1,0 +1,9 @@
+{
+  "command": [
+    "/tmp/k10-quadrature-review/root/baseline-tests",
+    "SafeControls"
+  ],
+  "exit": 0,
+  "seconds": 0.0026482109969947487,
+  "watchdog_seconds": 10
+}

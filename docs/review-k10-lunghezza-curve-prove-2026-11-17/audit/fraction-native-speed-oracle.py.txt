@@ -1,0 +1,11 @@
+# Inert scalar oracle; NO quadrature recursion or kernel API call.
+from fractions import Fraction as F
+import math
+h=math.ldexp(1.,-600);d=math.ldexp(1.,600)
+assert math.isfinite(d)
+assert not math.isfinite(d*d)
+assert F(h)*F(d)==1
+error=abs(float("inf")-float("inf"))
+assert math.isnan(error)
+assert not error<=1e-10 and not error<=float("inf")
+print("ordinary coordinate native segment: exact arc1, norm overflowInf, GKerrorNaN")

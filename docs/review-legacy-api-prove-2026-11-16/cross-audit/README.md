@@ -1,0 +1,9 @@
+# Audit incrociato statico Estendi/provider
+
+PASS, 35 controlli su cinque file candidati congelati. Lo script inerte verify_static.py.txt confronta i corpi baseline HEAD47c7c19 e finali di staging; risultati, hash e corrispondenza del workingtree root sono in results.json. Nessun sorgente repository modificato da questo audit.
+
+Estendi: beginExtendPick/startEdgePick/edgePicked/cancelEdgePick/pickReferences/beginBlendEdit identici. finishEdgePick cambia esclusivamente consegna callback orfana in return anticipato; cancellazione condivisa e points vuoti precedono il return, che precede entrambi i callback raccordo/modifica. Flag Extend/Linear, changed e callback Invio/Esc del pannello restano presenti. Le tre API e il campo callback orfani sono assenti.
+
+Provider: updateModel/installPreparedModel/isReadOnly e updateFromSource/refreshTitle/refreshEditAccess/requireEditAccess/refreshModelUpdateNotice identici. setReadOnly perde solo l'abilitazione della vecchia azione e mantiene gli altri controlli. installEditor perde solo commento proprio e findChild non protetto della vecchia azione. Nome drawingUpdateModelAction eliminato dalla creazione, tabella icone e contenitore; nessun Impl::provider/updateAction o setter residuo. Distinta e conservata DrawingWindow::updateAction_ per drawingReloadSourceAction; la connessione a updateFromSource e l'abilitazione con read-only/busy restano. L'icona drawingModelUpdate resta usata da questa azione salvata e non va eliminata.
+
+Grafo consultato per descrizioni e archi incidenti nei due versi. Nessuna esecuzione app, compilazione, test runtime o nuovo test speculare. È una verifica statica del delta, non prova di comportamento interattivo o di assenza di consumatori esterni. Root esegue app full build e regressioni esistenti del piano, aggiorna CLAUDE e rigenera/verifica la mappa. Nessun commit/push.

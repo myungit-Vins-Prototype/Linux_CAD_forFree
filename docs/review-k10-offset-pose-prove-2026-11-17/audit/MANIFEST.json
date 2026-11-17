@@ -1,0 +1,123 @@
+{
+  "scope": "Independent exact UV stopping counterexample and actual public posed shell regression",
+  "files": [
+    {
+      "path": "README.txt",
+      "bytes": 1583,
+      "sha256": "5793f91b6f780e68ce959a2d1003ce41ea4cb0869f3496add737f964a0d6d7a3"
+    },
+    {
+      "path": "core-callback-before-after.json",
+      "bytes": 1094,
+      "sha256": "251c6e074dcf70533aebd7c31598122834a69734667d8f49836ca3f158d43098"
+    },
+    {
+      "path": "core-diagnostic.log",
+      "bytes": 2092,
+      "sha256": "cb82269e58786de97e43fab6c751fd58215ff061104c7ce9a3b60ebc5fce6d90"
+    },
+    {
+      "path": "core-profile-after.log",
+      "bytes": 1944,
+      "sha256": "7dedcda506a1cf6de1a3c208b5e336db9cb4cffa13e6b0ebb2eef73e13acb164"
+    },
+    {
+      "path": "core-profile-before.log",
+      "bytes": 1946,
+      "sha256": "30feac30cb6ce682bbb4f6f46b95017a2a1068898927a91c2ec0920a988b4e05"
+    },
+    {
+      "path": "final-api-run.json",
+      "bytes": 247,
+      "sha256": "b3e48f947d7046ba60a9be80f788c9bdb26453f02f025e5c4b15faa743d19a56"
+    },
+    {
+      "path": "final-api.log",
+      "bytes": 114,
+      "sha256": "8a512e3ee33087d105c9c9d4dc8978130f4ce6eb8459b07c13194623266a4746"
+    },
+    {
+      "path": "final-build.json",
+      "bytes": 574,
+      "sha256": "5555a478b3a18af4d67e1d5110c978b312b4f3cb53146c0178658787a1dd3f2a"
+    },
+    {
+      "path": "final-build.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "final-library.json",
+      "bytes": 373,
+      "sha256": "6fafaad6a7beeff51c37e4ee7bebd681c52cd5ef79a1be5ccc68326bf5f04f8b"
+    },
+    {
+      "path": "fk_offset.before.cpp.txt",
+      "bytes": 149287,
+      "sha256": "239e84e8192e97bbada84b624753bd016cfff96720c14328465c1fc9f9e72fe5"
+    },
+    {
+      "path": "fk_offset.final.cpp.txt",
+      "bytes": 149594,
+      "sha256": "07a3f6e60cfd2ed659b6f9ea74b7596c5504130cfe9a78ecd658bbfd901f8aa2"
+    },
+    {
+      "path": "fk_shell.final.cpp.txt",
+      "bytes": 17024,
+      "sha256": "197a1a8dd7f2be000da51cde611a817a7b2e2311fbff3e5eba0bbd04a6804a8e"
+    },
+    {
+      "path": "graph-consult.json",
+      "bytes": 3623,
+      "sha256": "e300d47895a78208e9464a127285951a6c177ee5bbeb32e53a729ea2e6328c11"
+    },
+    {
+      "path": "minimal.patch.txt",
+      "bytes": 984,
+      "sha256": "b30c2455da0c65e4144fed07735443ce567382a4ec62cc010fef2ac517c3c615"
+    },
+    {
+      "path": "probe_public_pose.cpp.txt",
+      "bytes": 4385,
+      "sha256": "d17da5fff310d5ef9a1f8ad032d61b10b8898a23c0da2e3fdc9a3a18f2611943"
+    },
+    {
+      "path": "public-pose-result.json",
+      "bytes": 2423,
+      "sha256": "5433eb5c14000bddcea524be21b3655790ba5670ad8b1efdae0935e26688e54a"
+    },
+    {
+      "path": "review.txt",
+      "bytes": 5875,
+      "sha256": "79e8cf32a9e63c85c77e95dd54810afc5720d02e421a55e8cbff9353bfac448b"
+    },
+    {
+      "path": "source-provenance.json",
+      "bytes": 1180,
+      "sha256": "2e0c6005845af10881cc7d3c270884fd69557792db760e17f639891c3e77a7c9"
+    },
+    {
+      "path": "tester-paired-cost.json",
+      "bytes": 1518,
+      "sha256": "a847d5b0c31f7766413879076e481fde1a36039cee0f37f72faae818cd37babc"
+    },
+    {
+      "path": "uv-stop-counterexample-result.json",
+      "bytes": 1671,
+      "sha256": "c8068bc8d6270428f1efebbbc9b8cac8e56bd2d8445710300d2a3b450e9aab5e"
+    },
+    {
+      "path": "uv-stop-counterexample.log",
+      "bytes": 1671,
+      "sha256": "c8068bc8d6270428f1efebbbc9b8cac8e56bd2d8445710300d2a3b450e9aab5e"
+    },
+    {
+      "path": "verify_uv_stop_counterexample.py.txt",
+      "bytes": 2648,
+      "sha256": "d02405686d0109b3cd9c45177356b3e758ca4f8234b5b4079026e0acca577dcb"
+    }
+  ],
+  "payload_files": 23,
+  "payload_bytes": 351850,
+  "allowed": "UTF8 text JSON inert source only"
+}

@@ -1,0 +1,86 @@
+{
+  "productionSourceSha256": "32b161a97903c5ca746a87b3bde59fb3c79566316d0f274a189127cc396f62e6",
+  "initialFreezeManifestUnchanged": "../MANIFEST.sha256",
+  "files": [
+    {
+      "path": "COMMANDS.txt",
+      "bytes": 2090,
+      "sha256": "d75e13e6eed6c3038e6a0821eb42b985d6af4171fb4c8023d1f4b70a783b4439"
+    },
+    {
+      "path": "DESIGN.md",
+      "bytes": 3368,
+      "sha256": "a0f3cdd63b4d0c46ae8515c852530dd175a81b5d5eb89eea6c43148d2dd0cb82"
+    },
+    {
+      "path": "candidate.patch",
+      "bytes": 8200,
+      "sha256": "0e9b873cc975515a1584f8320536176eea8429bc12489fc1ced1c5a98420b153"
+    },
+    {
+      "path": "compile-status.json",
+      "bytes": 492,
+      "sha256": "522fe09dd5f88ed789c79eb422a2b3e9335a239e193e4598ec12ded8a6eb4b15"
+    },
+    {
+      "path": "graph-before.json",
+      "bytes": 548915,
+      "sha256": "e9bad4d1904166400de7892b79d89b9d9bd16b667b284a554145a16837e66554"
+    },
+    {
+      "path": "kernel/fk_surface_curve_bounds.cpp.txt",
+      "bytes": 30987,
+      "sha256": "32b161a97903c5ca746a87b3bde59fb3c79566316d0f274a189127cc396f62e6"
+    },
+    {
+      "path": "kernel/fk_surface_curve_bounds.h.txt",
+      "bytes": 2820,
+      "sha256": "b6ccad5f246b08c9e69523e485f978600b51ae46104d64d12b18c53dbd487d00"
+    },
+    {
+      "path": "poly-baseline.jsonl",
+      "bytes": 357558,
+      "sha256": "47fa8415739cc50816edf303b77d63a8231d236754b136b694edbdb90714f4bb"
+    },
+    {
+      "path": "poly-baseline.log",
+      "bytes": 6662,
+      "sha256": "ba68b0d0c55519c965ab2c4e95905b9494761710f9808754300d29c23315fc48"
+    },
+    {
+      "path": "poly-candidate.jsonl",
+      "bytes": 357558,
+      "sha256": "47fa8415739cc50816edf303b77d63a8231d236754b136b694edbdb90714f4bb"
+    },
+    {
+      "path": "poly-candidate.log",
+      "bytes": 6662,
+      "sha256": "ba68b0d0c55519c965ab2c4e95905b9494761710f9808754300d29c23315fc48"
+    },
+    {
+      "path": "polynomial-comparison.json",
+      "bytes": 859,
+      "sha256": "f1c2f401fc6f23b3a944bee03b6ba65adf8def1eb2158b8870bb98da36bd35a1"
+    },
+    {
+      "path": "polynomial-probe.cpp.txt",
+      "bytes": 7661,
+      "sha256": "dac95d0fc9d2edb49052c750f4612eb7607c21e37bed4ecbc324b931142eebba"
+    },
+    {
+      "path": "probe.cpp.txt",
+      "bytes": 1406,
+      "sha256": "d009044ed5df63b089d4fffe0b07b9ecac7835c6f790bb12aa824d19032345a6"
+    },
+    {
+      "path": "probe.log",
+      "bytes": 399,
+      "sha256": "1f3eea99f36894b8648728452b85d1dc95a8f6c974626a521e57b84de4bd5440"
+    },
+    {
+      "path": "source-hashes-before.json",
+      "bytes": 428,
+      "sha256": "8d9a842921b2dd5477568f51c99966e0237b88d1247405d9f8ed46cb49cf0e54"
+    }
+  ]
+}

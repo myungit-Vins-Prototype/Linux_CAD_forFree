@@ -1,0 +1,21 @@
+{
+  "command": [
+    "cmake",
+    "--build",
+    "forgecad-release",
+    "--target",
+    "forgecad",
+    "forgekernel_mapping_nonplane_validation_tests",
+    "forgekernel_surface_mapping_tests",
+    "forgekernel_mapping_uv_validation_tests",
+    "forgekernel_mapping_carrier_validation_tests",
+    "forgekernel_mapping_diagonal_validation_tests",
+    "forgekernel_surface_curve_bounds_tests",
+    "forgekernel_sheet_join_validation_tests",
+    "forgekernel_tolerance_tests",
+    "--parallel",
+    "2"
+  ],
+  "exit": 2,
+  "seconds": 19.950524711995968
+}

@@ -1053,8 +1053,8 @@ set_tests_properties(forgecad_overlay_uniform_tests PROPERTIES
     SKIP_RETURN_CODE 77 LABELS "opengl"
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=")
 
-# Offset NURBS dello schizzo: regressioni pubbliche senza viewport o contesto GL.
-set_source_files_properties(cad_sketch_offset.cpp PROPERTIES COMPILE_OPTIONS
+# Controlli finiti di offset NURBS e quadrature: niente assunzioni fast-math.
+set_source_files_properties(cad_sketch_offset.cpp cad_mass.cpp PROPERTIES COMPILE_OPTIONS
     "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
 add_executable(forgecad_sketch_offset_validation_tests tests/test_sketch_offset_validation.cpp cad_sketch_offset.cpp cad_curve_solver.cpp cad_ellipse.cpp)
 target_include_directories(forgecad_sketch_offset_validation_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")

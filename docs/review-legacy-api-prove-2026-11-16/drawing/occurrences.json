@@ -1,0 +1,41 @@
+{
+  "scope": "Tracked source/UI/build inputs; docs excluded; after is virtual overlay with3stagedfiles, repository untouched",
+  "filesScanned": 772,
+  "matches": {
+    "before": {
+      "deadPublicSetter": [
+        {
+          "file": "/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp",
+          "line": 3649,
+          "text": "void DrawingSheetEditor::setModelProvider(std::function<DrawingEditorModel()> provider){impl_->provider=std::move(provider);impl_->updateAction->setEnabled(bool(impl_->provider)&&!impl_->readOnly);}"
+        },
+        {
+          "file": "/home/myungit/Linux_CAD_forFree/cad_drawing_editor.h",
+          "line": 104,
+          "text": "    void setModelProvider(std::function<DrawingEditorModel()> provider);"
+        }
+      ],
+      "deadActionObjectName": [
+        {
+          "file": "/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp",
+          "line": 2947,
+          "text": "    impl_->updateAction=action(QStringLiteral(\"Aggiorna dal modello\"),\"drawingUpdateModelAction\",[this]{if(impl_->provider){try{impl_->report(updateModel(impl_->provider()));}catch(const std::exception &error){impl_->report(QString::fromUtf8(error.what()));}}});"
+        },
+        {
+          "file": "/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp",
+          "line": 3036,
+          "text": "        {\"drawingUpdateModelAction\",\"drawingModelUpdate\"},"
+        },
+        {
+          "file": "/home/myungit/Linux_CAD_forFree/cad_drawing_window.cpp",
+          "line": 151,
+          "text": "    next->findChild<QAction *>(\"drawingUpdateModelAction\")->setVisible(false);"
+        }
+      ]
+    },
+    "after": {
+      "deadPublicSetter": [],
+      "deadActionObjectName": []
+    }
+  }
+}

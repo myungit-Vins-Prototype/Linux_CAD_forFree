@@ -1,0 +1,8 @@
+./forgeCad2026_viewport.h:455:    void setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback);
+./forgeCad2026_viewport.h:457:    void setEdgePickLinear(bool linear);
+./forgeCad2026_viewport.h:459:    void resumeExtendPick(int body, const QVector<EdgePoint> &edges, bool linear);
+./forgeCad2026_viewport.h:1756:    std::function<void(int, QVector<EdgePoint>)> extendPickFinished_;
+./forgeCad2026_viewport_selection.cpp:230:void CadViewport::setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback) { extendPickFinished_ = std::move(callback); }
+./forgeCad2026_viewport_selection.cpp:232:void CadViewport::setEdgePickLinear(bool linear) {
+./forgeCad2026_viewport_selection.cpp:237:void CadViewport::resumeExtendPick(int body, const QVector<EdgePoint> &edges, bool linear) {
+./forgeCad2026_viewport_selection.cpp:1697:        if (extendPickFinished_) extendPickFinished_(body, points);

@@ -1,0 +1,70 @@
+[
+  {
+    "file": "kernel/fk_surface_mapping.cpp",
+    "sha256": "c830c1c802657b50dd1cafa223af91263dba185cdf109524a16c602b6986f707"
+  },
+  {
+    "file": "kernel/fk_surface_mapping.h",
+    "sha256": "57ac10496468c15e1423a804a7cb32d012d293e22d3816f1855a3a6f834a5f17"
+  },
+  {
+    "file": "kernel/fk_surface_curve_bounds.cpp",
+    "sha256": "01e69c5c5bea9aa78cbad607750cc58aa3b3fd562ab86cccb889d02519a9cf7a"
+  },
+  {
+    "file": "kernel/fk_surface_curve_bounds.h",
+    "sha256": "b44a33f8842ce44be82674594c48e1a6480ea76d66fb695010dd2885d8f4cfa6"
+  },
+  {
+    "file": "kernel/fk_mapping_fit.cpp",
+    "sha256": "f9187aa9903c07096fe029dad8f271cf850d12d6c6a273b9ed538c2afc5a8b27"
+  },
+  {
+    "file": "kernel/fk_mapping_fit.h",
+    "sha256": "21eca96b7e1895e572e6b7feb55874fd1e7316555e893a9eccc215d5849ba8ad"
+  },
+  {
+    "file": "kernel/fk_mapping_carrier.cpp",
+    "sha256": "1c769c5136df3502903afea4771636c939425735a975319e1d68848d0316ab25"
+  },
+  {
+    "file": "kernel/fk_mapping_carrier.h",
+    "sha256": "c29783e892974552b681a9c8060f15eb6679077ecc72462988724da667289eb6"
+  },
+  {
+    "file": "kernel/fk_quilt_mapping.cpp",
+    "sha256": "21a41fb7513ba6ca48987956632aa2d2bbdf57c49c4f9681907a4c512668df05"
+  },
+  {
+    "file": "kernel/fk_quilt_mapping.h",
+    "sha256": "f2caaaca17d8b5083bc00a919fa6c6eaedc8a72ad7c97aa3ab95000e1a735c54"
+  },
+  {
+    "file": "kernel/fk_topology.cpp",
+    "sha256": "615fe071b4a4fb5e29e7d3d3c7d95193db286b30dac67e680eb1eb7bbe766c58"
+  },
+  {
+    "file": "kernel/fk_topology.h",
+    "sha256": "8ac1764cb9ce24981f1da4e95a5601d655b55df4bc877b30571ab6a0aa9f2814"
+  },
+  {
+    "file": "kernel/fk_history.cpp",
+    "sha256": "a2e7b531f796624fa0a38a42d84f2c42f541a6637a5d751e3ebe0639e762da46"
+  },
+  {
+    "file": "kernel/fk_history.h",
+    "sha256": "84d2c0f7fc8a0370ea11e23e8fc7375aaf1ec2381db6b5e51fd993bb26a53daf"
+  },
+  {
+    "file": "AGENTS.md",
+    "sha256": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac"
+  },
+  {
+    "file": "CLAUDE.md",
+    "sha256": "1b223cdcd6d8163736c194c9a54392911edaa8266d62f4367dde6e3f17ba0b1d"
+  },
+  {
+    "file": "docs/tolerance-policy.md",
+    "sha256": "2cf51f1ef37206a596ececffd3ed2365197ea9531e78e723d45e3426dd4b678c"
+  }
+]

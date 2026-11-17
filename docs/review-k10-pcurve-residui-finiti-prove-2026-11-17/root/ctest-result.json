@@ -1,0 +1,17 @@
+{
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "-V",
+    "--parallel",
+    "1",
+    "--output-junit",
+    "/tmp/k10-pcurve-pole-review/root/ctest.xml",
+    "-R",
+    "^(forgekernel_pcurve_deviation_validation_tests|forgekernel_offset_pcurve_tests|forgekernel_sheet_join_validation_tests|forgekernel_sew_pcurve_tests)$"
+  ],
+  "exit": 0,
+  "seconds": 61.02363558400248
+}

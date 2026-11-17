@@ -1,0 +1,10 @@
+{
+  "scope": "Python exact Fraction / binary64 only",
+  "largestSampleHex": "0x1.0000000000000p+1023",
+  "smallestNonzeroSampleHex": "0x0.0000000000001p-1022",
+  "normalizationExponent": 1024,
+  "normalizedSmallHex": "0x0.0p+0",
+  "restoredSmallHex": "0x0.0p+0",
+  "roundtripEqual": false,
+  "requiredConservativeBehavior": "Reject a fallback that loses this nonzero sample, rather than silently accepting it as zero; magnitude fields require the same independent check."
+}

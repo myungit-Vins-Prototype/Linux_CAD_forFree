@@ -1,0 +1,47 @@
+#include "fk_curve_algo.h"
+#include "fk_bspline.h"
+
+#include <iomanip>
+#include <iostream>
+#include <string>
+
+using namespace ForgeCad::Kernel;
+
+int main(int argc, char **argv) {
+    const std::string mode = argc > 1 ? argv[1] : "cancel";
+    std::cout << std::setprecision(17) << "MODE " << mode << std::endl;
+    try {
+        if (mode == "cancel") {
+            const Line<3> line({0, 0, 0}, {1, 0, 0});
+            const auto token = std::make_shared<std::atomic<bool>>(true);
+            const CancellationScope scope(token);
+            const double value = arcLength(line, {0, 1});
+            std::cout << "RETURNED " << value << std::endl;
+        } else if (mode == "velocity") {
+            // Run baseline ONLY with a process watchdog: NaN quadrature
+            // error can recursively expand the complete depth30 tree.
+            const double h = std::ldexp(1.0, -1023);
+            const BSplineCurve<3> curve(1, {0, 0, h, h}, {{0, 0, 0}, {1, 0, 0}});
+            std::cout << "DERIVATIVE " << curve.derivative(.5*h)[0] << " FINITE " << std::isfinite(curve.derivative(.5*h)[0]) << std::endl;
+            const double value = arcLength(curve, {0, h});
+            std::cout << "RETURNED " << value << std::endl;
+        } else if (mode == "underflow") {
+            const double h = std::ldexp(1.0, 600);
+            const BSplineCurve<3> curve(1, {0,0,h,h}, {{0,0,0},{1,0,0}});
+            std::cout << "DERIVATIVE " << curve.derivative(.5*h)[0] << " NORM " << norm(curve.derivative(.5*h)) << std::endl;
+            std::cout << "RETURNED " << arcLength(curve,{0,h}) << std::endl;
+        } else if (mode == "center") {
+            const Line<2> line({0, 0}, {1, 0});
+            // Endpoints and width are finite, .5*(a+b) is not.
+            const double value = arcLength(line, {1e308, 1.1e308});
+            std::cout << "RETURNED " << value << std::endl;
+        } else {
+            std::cerr << "unknown mode" << std::endl;
+            return 2;
+        }
+    } catch (const OperationCancelled &) {
+        std::cout << "CANCELLED" << std::endl;
+    } catch (const std::exception &e) {
+        std::cout << "REJECTED " << e.what() << std::endl;
+    }
+}

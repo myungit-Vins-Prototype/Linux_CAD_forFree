@@ -1,11 +1,12 @@
 # CLAUDE.md — memoria operativa ForgeCAD
 
-Aggiornato **16 novembre 2026**.
+Aggiornato **17 novembre 2026**.
 
 [Cronologia](docs/history/claude-2026-11-02.md); [stato prima di Part23](docs/history/claude-prima-part23-2026-11-14.md).
 
 ## Regole permanenti e decisioni
 
+- **17/11: utente autorizza commit/push delle modifiche accumulate, poi proseguire la review.**
 - Italiano; nessun `codex` nei nomi dei branch. `main` unico;
   `solver-mesh-gpu` è stato integrato e archiviato il 30 ottobre. CUDA e Metal restano backend opzionali negli stessi
   sorgenti, con fallback CPU.
@@ -60,8 +61,11 @@ ctest --test-dir forgecad-release --output-on-failure
 
 - `FORGECAD_BUILD_OCCT_TESTS=OFF`: niente confronti OCCT/`forgekernel_tests`; restano i test indipendenti.
   Senza OCCT i confronti sono saltati con avviso. `FORGECAD_ENABLE_CUDA=OFF`: build CPU; altre opzioni in CMake/README.
-- Test pertinenti, inclusi persistenza/Undo/storia se coinvolti; Qt offscreen non certifica OpenGL: usare la sessione grafica.
+- **17/11, richiesta utente:** test mirati all’area modificata; ripetere UI solo per modifiche UI, dipendenze coinvolte
+  o regressioni concrete, non sistematicamente durante il lavoro kernel. Qt offscreen non certifica OpenGL.
   Distinguere piattaforma, skip, prove correnti, storiche e riferite dall'utente.
+- 17/11, memoria: compilazioni/analisi seriali; ripulire solo ELF/archive ricreabili degli staging `/tmp` conclusi;
+  conservare sorgenti, CAD, log e prove.
 - App Linux: `forgecad-release/forgecad`; riaprirla dopo la build e verificare il collegamento effettivo.
   Non attribuire vecchi hash/test al nuovo HEAD.
 - Architettura: prima delle modifiche consultare descrizioni e connessioni fra funzioni in `docs/architecture/index.html`/`graph.json`
@@ -82,11 +86,11 @@ ctest --test-dir forgecad-release --output-on-failure
   B-rep unione/ripetizione senza errori. Originale SHA256 invariato; nessuna modifica app o prova UI nuova.
   Grafico consultato. [Istruzioni e limiti](docs/girante-variazioni-2026-11-13.md).
 
-- Svuotamento `Superfici.prt`: riusciti fondo piano aperto e guscio chiuso a 0,5/1 mm sul modello originale. La variante con
-  geometria scalata 2,5 e ruotata 0,42 rad fallisce ancora il fit di un bordo offset; il prototipo con base locale non è
-  integrato. Limite generale aperto.
-- Unione `Flacone3`, Corpo 1/4: l'app gestisce entrambi gli ordini con un tentativo inverso validato dopo errore. La chiamata
-  kernel grezza nell'ordine inverso può ancora fallire su un contatto tollerante.
+- Svuotamento `Superfici.prt`: originali aperto/chiuso0,5/1mm verificati. Fixture scalata2,5, anche ruotata0,42, ora
+  riesce a1,25mm dopo correzione proiezioneUV; aperto aggiuntivo PASS. Non è prova universale per superfici libere.
+  [Prove e costo](docs/review-k10-offset-pose-2026-11-17.md).
+- Unione `Flacone3`, Corpo1/4: RAW attuale PASS nei due ordini sugli stessi record storici; inverso con connessione
+  tollerante1,475e-7. Recupero app conservato; nessuna garanzia globale. [Prove](docs/review-boolean-order-tabs-2026-11-17.md).
 - Raccordi liberi, sformo generale, collasso dei raccordi nello svuotamento e alcune geometrie di contorno apparente restano
   limitati ai casi verificati. Le reti U/V sono celle Coons G0, non una superficie Gordon globale G1/G2. I controlli
   campionati dei poli non certificano l'assenza globale di auto-intersezioni.
@@ -108,61 +112,56 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-**16/11 — UI9/UI10 verificate,33rilievi corretti.**
-Palette Sezione/massa/Raccordo e altezza Sezione;4wrapper tolti,6query conservate,7legacy aperte.
-App/12CTest+3mirati/74Wayland/appunti/mappa PASS; 958ed68 push, CI Linux/macOS PASS.
-Wayland schede:timeout, sessione bloccata; offscreen PASS.
-[Prove e limiti](docs/review-ui-colori-api-2026-11-16.md).
+17/11 checkpoint: 40archivi/5712payload e hash sorgenti/binari verificati; mappa PASS. Commit/push autorizzati in corso, nuova CI da verificare.
 
-**16/11 — CI risolta, push verificato.**
-046685e: GitHub Linux108PASS/2SKIP, macOS112PASS/1SKIP; build e483kernel PASS.
-K12/OffsetLoft PASS; a99c411 registra solo prove. [Log](docs/ci-sheet-join-2026-11-16.md).
+**17/11 — UI11 menu cache/ribbon corretto; inventario review aggiornato.**
+Due factory sostituite con addCadMenu: baseline13/17FAIL→17/17PASS, app/testtema/mappa PASS.
+34rilievi corretti; K10parziale. Sei filoni K10 e altri limiti nell’indice; kernel/runner invariati.
+[Elenco aperti](docs/review-punti-aperti-2026-11-17.md), [menu](docs/review-ui11-menu-cache-2026-11-17.md),
+[quadratura](docs/review-k10-quadratura-2026-11-17.md), [memoria precedente](docs/history/claude-prima-menu-cache-stato-review-2026-11-17.md).
 
-**16/11 — K10 continuazioni verificate con tre agenti Sol.**
-Parametro razionale/ISO e fin: app/28CTest/15mirati/sanitizer/Wayland/Fraction PASS.
-Pubbliche3/3 legacy, zero ISO certificate. K10:24/24parziali,31rilievi invariati;
-Newton/unsupported/carrier globale runtime aperti. [Prove/limiti](docs/review-k10-boundary-2026-11-16.md).
+Q/E razionali17/11: app/6CTest/59/52mirati+SAN/ledger4+Fraction/mappa PASS.
+[Q](docs/review-k10-pcurve-razionali-2026-11-17.md), [E](docs/review-k10-edge-razionali-2026-11-17.md).
 
-**16/11 — K10 mitre ISO verificate con tre agenti Sol.**
-App/27CTest/13mirati/19sanitizer/Wayland/Fraction PASS; fin sintetiche reali.
-Pubbliche16/16 senzaISO; diagonali/Newton campionati. K10:23/24parziali+1aperto.
-[Prove/limiti](docs/review-k10-mitre-2026-11-16.md).
+Carrier istanziati17/11: app/6CTest/46mirati+SAN/Fraction/mappa PASS. [Rapporto](docs/review-k10-carrier-istanze-2026-11-17.md).
 
-**16/11 — K10 giunti estensioni, tre agenti Sol.**
-Via tangente continua/cap fisso; app/22CTest/29sanitizer/41Sheet/Wayland/Fraction PASS.
-Newton trasverso aperto. [Prove/limiti](docs/review-k10-sheet-join-2026-11-16.md).
+Mapping nonPlane17/11: app/8CTest/40mirati+SAN/API+Fraction52/mappa PASS; cap invariati,K10parziale.
+[Rapporto](docs/review-k10-mapping-nonplane-2026-11-17.md).
 
-**16/11 — K10 Mapping/Quilt UV, tre agenti Sol.**
-Plane/offset:app/26CTest/Wayland/21sanitizer/Fraction80fin PASS; altri carrier campionati.
-[Prove/limiti](docs/review-k10-mapping-uv-2026-11-16.md).
+Flacone3 RAW2/2 e schede/tema Wayland PASS; nessun fix,limiti di connessione e timeout documentati.
+[Prove](docs/review-boolean-order-tabs-2026-11-17.md).
 
-**16/11 — UI8 tema/schede, tre agenti Sol.**
-Palette/QSS e menuTema2D:app/21CTest/Wayland/API PASS; carta/colori invariati,
-LSan escluso. [Prove](docs/review-theme-tabs-2026-11-16.md).
+Offset/Superfici17/11: posa/scala/aperto corretti,cap invariati; app/21CTest/483kernel/19SAN/Fraction/mappa PASS.
+[Prove, costo e limiti](docs/review-k10-offset-pose-2026-11-17.md).
 
-**16/11 — K12 cavità corretto con tre agenti Sol.**
-R0,5:quarto vincolo/fit minimo e continuazioneU; supporti e budget invariati.
-App/Wayland/34CTest,8varianti/6regressioni/sanitizer4TU/Fraction PASS;
-audit734fin campionato. K10 resta19/24parziali+5aperti.
-[Rapporto/prove/limiti](docs/review-blend-cavity-2026-11-16.md).
+17/11 K10 carrier2/3 razionali: app/16CTest/483kernel/67mirati+sanitizer/Fraction18fin/avvio/mappa PASS.
+[Prove](docs/review-k10-carrier-razionali-2026-11-17.md).
+K10 nonISO: app/22CTest/55mirati+SAN/Fraction/mappa PASS. [Prove e limiti](docs/review-k10-noniso-2026-11-17.md).
 
-**16/11 — K10 Helix e cinque orfane verificati con tre agenti Sol.**
-Helix trasformate: limite continuo e poli Qt ricontrollati; due alias rifiutati.
-Percorso quintico C2 conservato; rimosse5private,17API aperte. App/Wayland,
-13Qt/sanitizer3TU,37guardie,Fraction8varianti/624campate e11export PASS.
-CTest20/21 poi risolto da K12 sopra; mappa772/11165/385 PASS.
-[Rapporto e limiti](docs/review-k10-helix-orphans-2026-11-16.md).
+API legacy16/11:22candidate,16rimosse/6intenzionali;33bug invariati,app/10CTest/mappa PASS.
+[Prove e limiti](docs/review-legacy-api-2026-11-16.md).
 
-**16/11 — K10 cucitura e PRE8 verificati con tre agenti Sol.**
-Plane rimappato: parametro originale e fin effettive via genealogia,cap invariato;
-Smusso aggiorna anteprima dopo Tab.29rilievi;app/37CTest/12sanitizer/90statiUI
-Wayland/Fraction64fin e mappa PASS. Matching/cap sorgente campionati restano.
-[Prove e limiti](docs/review-k10-sew-preview-2026-11-16.md).
+UI9/UI10: [prove storiche e limiti](docs/review-ui-colori-api-2026-11-16.md).
 
-UV/PRE7: due ricostruzioni Plane e selezione Mapping/Pattern corrette;
-app/30CTest,10sanitizer e79stati UI Wayland,192fin Fraction/mappa PASS.
-[Prove/limiti](docs/review-k10-uv-preview-2026-11-16.md),
-[memoria](docs/history/claude-prima-k10-uv-preview-2026-11-16.md).
+CI046685e Linux/macOS PASS: [log e perimetro](docs/ci-sheet-join-2026-11-16.md).
+
+16/11 continuazioni Sol: app/28CTest/15mirati/SAN/Wayland/Fraction PASS,24/24parziali. [Limiti](docs/review-k10-boundary-2026-11-16.md).
+
+K10 mitre/giunti/Mapping: app e27/22/26CTest PASS; certificati ISO/Plane parziali,
+Newton e carrier generici campionati. [Mitre](docs/review-k10-mitre-2026-11-16.md),
+[giunti](docs/review-k10-sheet-join-2026-11-16.md), [UV](docs/review-k10-mapping-uv-2026-11-16.md).
+Dettagli conservati nella [memoria precedente](docs/history/claude-prima-legacy-api-2026-11-16.md).
+
+UI8: [prove storiche e limiti](docs/review-theme-tabs-2026-11-16.md).
+
+16/11 K12 cavità R0,5 corretto, budget invariati; app/34CTest/8varianti/6regressioni/SAN/Wayland/Fraction PASS.
+[Audit734fin campionato e stato storico](docs/review-blend-cavity-2026-11-16.md).
+
+K10 Helix/orfane e cucitura/PRE8: app/Wayland/sanitizer/Fraction e mappa PASS;
+limiti campionati e dettagli nella [memoria precedente](docs/history/claude-prima-k10-noniso-2026-11-16.md),
+[Helix](docs/review-k10-helix-orphans-2026-11-16.md), [cucitura](docs/review-k10-sew-preview-2026-11-16.md).
+
+UV/PRE7: Plane e picker corretti e verificati; [prove e limiti](docs/review-k10-uv-preview-2026-11-16.md).
 
 Supporto.prt/K11: Corpo2/3 e tre corpi uniti, app/24CTest/38Boolean/78sanitizer PASS;
 output con UUID nuovo. Input prove SHA79887e91; originale successivo70e4ec5c non ricertificato.
@@ -177,28 +176,22 @@ App/24CTest/sanitizer/Wayland/GL/mappa PASS. [Uso e limiti](docs/ellisse-estremi
 K2 in produzione:app/54kernel/8CTest/22sanitizer PASS; risorsefinite possono rifiutarecurvevalide.
 [Prove/limiti](docs/sweep-k2-completamento-2026-11-15.md).
 
-15/11 — Altri14rilievi corretti con agenti Sol.
-K4/K5/K6,S1/S2,UI1–6,PRE1–3: sweep/loft/lamine,input,picker eanteprime.
-App/74testkernel(75esecuzioni)/34CTest,mappa724/10429/353TU PASS;fixture
-confrontodouble baseline corretto,nessun nuovoGL. [Prove/limiti](docs/review-fix-next-2026-11-15.md).
+15/11: K4/K5/K6,S1/S2,UI1–6,PRE1–3 corretti; app/74kernel/34CTest/mappa PASS.
+[Dettagli e limiti conservati](docs/review-fix-next-2026-11-15.md).
 
-15/11 — Sweep K1/K3 corretti con due agenti GPT-6.1 Sol.
-Frame ortonormale e cuciture UV: app/runner,42 test kernel e16CTest PASS; mappa724/10414 PASS.
-K4 e K2 poi corretti; riferimenti sopra. [Rapporto e prove](docs/sweep-review-fix-2026-11-15.md).
+K1/K3 corretti: app/42kernel/16CTest/mappa PASS. [Prove](docs/sweep-review-fix-2026-11-15.md).
 
-Cache M1/M2: snapshot/CAS, copie atomiche e shared_ptr; app/47CTest/5ASan/TSan PASS,
-runner325 poi timeout300s,nessun GL. [Prove](docs/cache-bspline-2026-11-15.md); dettagli in memoria precedente.
+Cache M1/M2: snapshot/CAS e copie atomiche; app/47CTest/5ASan/TSan PASS, timeout generale documentato.
+[Prove e limiti](docs/cache-bspline-2026-11-15.md).
 
-Review iniziale con quattro agenti (15/11): 19difetti e22candidate orfane;
-45test mirati,16Sweep,mappa723/10397 PASS; nessunleak permanente certificato.
-Stato eprove storiche nel [rapporto](docs/code-review-2026-11-15.md) e nella
-[memoria conservata](docs/history/claude-prima-preview-unification-2026-11-16.md).
+Review iniziale15/11:19difetti/22candidate orfane; nessun leak permanente certificato.
+[Prove e stato](docs/code-review-2026-11-15.md); [memoria](docs/history/claude-prima-preview-unification-2026-11-16.md).
 
 Sweep/vincoli15/11:96casi,codec/Undo,app/mappa; volumeNURBS poi correttoK3.
 [Geometria](docs/exhaust-mainfold-sweep-2026-11-15.md),
 [solver](docs/vincoli-tangenza-transitiva-2026-11-15.md); dettagli in memoria precedente.
 
-Schede14/11: [prove/limiti](docs/schede-documenti-2026-11-14.md), [memoria](docs/history/claude-prima-ellisse-estremi-2026-11-16.md).
+Schede14/11: [prove/limiti](docs/schede-documenti-2026-11-14.md).
 
 CT0578/tavole14/11: codec,app,Wayland/PDF eCTest PASS;
 [prestazioni e template](docs/ct0578-tavole-template-2026-11-14.md),

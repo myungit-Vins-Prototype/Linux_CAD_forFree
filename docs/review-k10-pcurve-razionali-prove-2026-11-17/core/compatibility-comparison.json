@@ -1,0 +1,56 @@
+{
+  "publicMappingFinRecords": 48,
+  "edgeProbeRecords": 6,
+  "runtimeComparisons": [
+    {
+      "baseline": "poly-baseline.jsonl",
+      "candidate": "poly-candidate.jsonl",
+      "byteEqual": true,
+      "sha256Baseline": "47fa8415739cc50816edf303b77d63a8231d236754b136b694edbdb90714f4bb",
+      "sha256Candidate": "47fa8415739cc50816edf303b77d63a8231d236754b136b694edbdb90714f4bb",
+      "cmpExitCode": 0
+    },
+    {
+      "baseline": "poly-baseline.log",
+      "candidate": "poly-candidate.log",
+      "byteEqual": true,
+      "sha256Baseline": "ba68b0d0c55519c965ab2c4e95905b9494761710f9808754300d29c23315fc48",
+      "sha256Candidate": "ba68b0d0c55519c965ab2c4e95905b9494761710f9808754300d29c23315fc48",
+      "cmpExitCode": 0
+    },
+    {
+      "baseline": "edge-baseline.log",
+      "candidate": "edge-candidate.log",
+      "byteEqual": true,
+      "sha256Baseline": "1f3eea99f36894b8648728452b85d1dc95a8f6c974626a521e57b84de4bd5440",
+      "sha256Candidate": "1f3eea99f36894b8648728452b85d1dc95a8f6c974626a521e57b84de4bd5440",
+      "cmpExitCode": 0
+    }
+  ],
+  "originalFunctionComparisons": [
+    {
+      "symbol": "std::vector<P> basis(",
+      "byteEqual": true,
+      "baselineSha256": "9dc494b82b36f49831007742d2fb6d4b5100e47897d32843a6b8496ff94e9fd4",
+      "candidateSha256": "9dc494b82b36f49831007742d2fb6d4b5100e47897d32843a6b8496ff94e9fd4"
+    },
+    {
+      "symbol": "double residual(",
+      "byteEqual": true,
+      "baselineSha256": "ea68c14602454d9388d589f1dcfee79c5169c0e505bb4007cdfdaebfe9442e50",
+      "candidateSha256": "ea68c14602454d9388d589f1dcfee79c5169c0e505bb4007cdfdaebfe9442e50"
+    },
+    {
+      "symbol": "template<int N> Source<N> snapshot(",
+      "byteEqual": true,
+      "baselineSha256": "1efc95793c5548ffdd0be8677a9ff4a15f57ae428c74c244255c4fc5672334c7",
+      "candidateSha256": "1efc95793c5548ffdd0be8677a9ff4a15f57ae428c74c244255c4fc5672334c7"
+    },
+    {
+      "symbol": "template<int N> VP<N> onRange(",
+      "byteEqual": true,
+      "baselineSha256": "6a88dcd1289483507e7f4abaa6d163248c3caa200c24ca10842c759c8421f616",
+      "candidateSha256": "6a88dcd1289483507e7f4abaa6d163248c3caa200c24ca10842c759c8421f616"
+    }
+  ]
+}

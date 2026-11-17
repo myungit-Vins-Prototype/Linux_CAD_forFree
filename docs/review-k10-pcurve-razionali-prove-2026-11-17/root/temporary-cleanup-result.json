@@ -1,0 +1,16 @@
+{
+  "removed_only_completed_own_archives": [
+    {
+      "path": "/tmp/k10-instance-carrier-review/root/libforgekernel-baseline.a",
+      "sha256": "a0c5530e331c08d86fc5c4fa29e4477e66fa1ff4c6c646df15d959f211e9531c",
+      "bytes": 181216900
+    },
+    {
+      "path": "/tmp/k10-rational-edge-review/root/libforgekernel-baseline.a",
+      "sha256": "57c11033779f33893b07d166c682a0c5e8e3d24c14c98abfee43c7253ca62fa7",
+      "bytes": 181246180
+    }
+  ],
+  "bytes_freed": 362463080,
+  "source_logs_repo_evidence_and_user_CAD_untouched": true
+}

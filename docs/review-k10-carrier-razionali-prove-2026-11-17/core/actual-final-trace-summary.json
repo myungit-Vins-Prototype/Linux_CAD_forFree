@@ -1,0 +1,38 @@
+[
+  {
+    "case": "SheetJoinCanonicalReversal-final",
+    "postBuild": 3,
+    "postUnify": 3,
+    "allCertifiedWithFrozenEdgeFinCap": true
+  },
+  {
+    "case": "SheetJoinFaceSense-final",
+    "postBuild": 3,
+    "postUnify": 3,
+    "allCertifiedWithFrozenEdgeFinCap": true
+  },
+  {
+    "case": "SheetJoinRational-final",
+    "postBuild": 3,
+    "postUnify": 3,
+    "allCertifiedWithFrozenEdgeFinCap": true
+  },
+  {
+    "case": "SheetJoinLargeScale-final",
+    "postBuild": 3,
+    "postUnify": 3,
+    "allCertifiedWithFrozenEdgeFinCap": true
+  },
+  {
+    "case": "SheetJoinSmallScale-final",
+    "postBuild": 3,
+    "postUnify": 3,
+    "allCertifiedWithFrozenEdgeFinCap": true
+  },
+  {
+    "case": "SheetJoinImplicitPolynomial-final",
+    "postBuild": 3,
+    "postUnify": 3,
+    "allCertifiedWithFrozenEdgeFinCap": true
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "kernel/fk_quadrature.h": "f1ec31f8673d753192d7d9646448f30a78f16fb9ec0bac514f74680dc663d3d6",
+  "kernel/tests/test_quadrature_validation.cpp": "fbdf6dde51a2c29b69c88a2d2b53990ff7d88c1c906627035c76f2b58e9ff88b",
+  "kernel/CMakeLists.txt": "868812c8edd1fd4ddff86301343cae332d1cb232e5492d79858a5989cb0bbfc5",
+  "CMakeLists.txt": "2a53d89f23fde1c04c9b536800a05a1ec7ade6e85fa1d975017aed3d55107531",
+  "tools/generate_architecture.py": "bf39d8787849a269273d27e6ed50ed18b9dd3a83e6d034ca53e1bcd91310de62",
+  "kernel/fk_mass.cpp": "8248392ee0b7be25dd2b4217bc0ad29eeaf04c939e4e4940a12d328be45c66aa"
+}

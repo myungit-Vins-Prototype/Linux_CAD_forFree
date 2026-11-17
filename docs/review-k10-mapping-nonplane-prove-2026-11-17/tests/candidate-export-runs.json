@@ -1,0 +1,20 @@
+[
+  {
+    "name": "candidate-public",
+    "exit": 0,
+    "seconds": 0.13144258000829723,
+    "command": [
+      "/tmp/k10-mapping-nonplane-review/tests/candidate-public",
+      "/tmp/k10-mapping-nonplane-review/tests/candidate-public.jsonl"
+    ]
+  },
+  {
+    "name": "candidate-rational",
+    "exit": 0,
+    "seconds": 0.00857727498805616,
+    "command": [
+      "/tmp/k10-mapping-nonplane-review/tests/candidate-rational",
+      "/tmp/k10-mapping-nonplane-review/tests/candidate-rational.json"
+    ]
+  }
+]

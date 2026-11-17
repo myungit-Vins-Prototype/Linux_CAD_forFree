@@ -1,0 +1,33 @@
+#include "fk_surface_curve_bounds.h"
+#include "fk_bspline_surface.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+int main(){
+ const std::vector<double>k3{0,0,0,0,1,1,1,1},k2{0,0,0,1,1,1};
+ auto plane=[&](double t){std::vector<Vec3>p;for(int i=0;i<3;++i)for(int j=0;j<3;++j)p.emplace_back(t+i*.5,j*.5,0);return std::make_shared<BSplineSurface>(2,2,k2,k2,3,3,p);};
+ auto lineEdge=[&](double x){return std::make_shared<BSplineCurve<3>>(3,k3,std::vector<Vec3>{{x,0,0},{x,1/3.,0},{x,2/3.,0},{x,1,0}});};
+ auto q=std::make_shared<Line<2>>(Vec2(),Vec2(0,1));int failed=0;
+ auto check=[&](const char*n,const CurvePtr<3>&e,const SurfacePtr&s,const CurvePtr<2>&pc,Interval r,double cap,detail::SurfaceCurveBoundStatus want){auto v=detail::surfaceCurveResidualBound(e,s,pc,r,cap);std::cout<<n<<" status="<<int(v.status)<<" upper="<<std::setprecision(17)<<v.upperBound<<'\n';failed+=v.status!=want;};
+ const auto cert=detail::SurfaceCurveBoundStatus::Certified,fail=detail::SurfaceCurveBoundStatus::Failed;
+ CurvePtr<3> chain=lineEdge(0);for(int i=0;i<32;++i)chain=std::make_shared<TransformedCurve>(chain,Transform3());
+ check("E32",chain,plane(0),q,{0,1},1e-7,cert);
+ check("E33",std::make_shared<TransformedCurve>(chain,Transform3()),plane(0),q,{0,1},1e-7,fail);
+ CurvePtr<2>qchain=q;for(int i=0;i<32;++i)qchain=std::make_shared<TrimmedCurve<2>>(qchain,0,1);
+ check("Q32",lineEdge(0),plane(0),qchain,{0,1},1e-7,cert);
+ check("Q33",lineEdge(0),plane(0),std::make_shared<TrimmedCurve<2>>(qchain,0,1),{0,1},1e-7,fail);
+ auto inner=std::make_shared<TrimmedCurve<2>>(q,0,1);auto outer=std::make_shared<TrimmedCurve<2>>(inner,-0x1p-54,1);
+ const std::vector<double>wideK{-1,-1,-1,-1,2,2,2,2},wideV{-1,-1,-1,2,2,2};
+ auto wideEdge=std::make_shared<BSplineCurve<3>>(3,wideK,std::vector<Vec3>{{0,-1,0},{0,0,0},{0,1,0},{0,2,0}});
+ std::vector<Vec3>widePoles;for(int i=0;i<3;++i)for(int j=0;j<3;++j)widePoles.emplace_back(i*.5,-1+j*1.5,0);
+ auto widePlane=std::make_shared<BSplineSurface>(2,2,k2,wideV,3,3,widePoles);
+ check("Qexact-trim",wideEdge,widePlane,outer,{-0x1p-54,1},1e-7,fail);
+ check("Qexact-paired-unwrapped",wideEdge,widePlane,q,{-0x1p-54,1},1e-7,cert);
+ bool same=detail::surfaceCurvePCurveCandidate(wideEdge,widePlane,outer,{-0x1p-54,1})==outer;std::cout<<"Qexact-candidate-pointer="<<same<<'\n';failed+=!same;
+ const double offset=0x1p18,delta=0x1p-36;
+ check("anti-flatten",std::make_shared<TransformedCurve>(lineEdge(delta),Transform3::translation({offset,0,0})),plane(offset),q,{0,1},0x1p-40,fail);
+ check("rounded-native-control",lineEdge(offset),plane(offset),q,{0,1},0x1p-40,cert);
+ double m[3][3]={{1,.5,0},{0,1,0},{0,0,0}};auto t=Transform3::fromParts(m,{2,3,4});std::vector<Vec3>p;for(int i=0;i<3;++i)for(int j=0;j<3;++j)p.push_back(t.applyToPoint({i*.5,j*.5,0}));auto s=std::make_shared<BSplineSurface>(2,2,k2,k2,3,3,p);auto trim=std::make_shared<TrimmedCurve<2>>(q,.25,.75);auto edge=std::make_shared<TrimmedCurve<3>>(std::make_shared<TransformedCurve>(lineEdge(0),t),.25,.75);
+ check("shear-singular-trim",edge,s,trim,{.25,.75},1e-7,cert);
+ return failed?1:0;
+}

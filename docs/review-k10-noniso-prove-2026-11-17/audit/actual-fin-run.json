@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "/tmp/k10-noniso-review/audit/actual-fin-driver",
+    "OffsetLoftActualNewtonFinExports"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "env": {
+    "CI_NEWTON_FIN_EXPORT": "/tmp/k10-noniso-review/audit/actual-newton-fins.json"
+  },
+  "returncode": 0,
+  "elapsed_seconds": 7.1600416469955235,
+  "no_user_history_output_byte_identical": true
+}

@@ -1,0 +1,8 @@
+{
+  "command": [
+    "/tmp/k10-arc-review/root/candidate-tests"
+  ],
+  "exit": 0,
+  "seconds": 0.005585480001172982,
+  "watchdog_seconds": 30
+}

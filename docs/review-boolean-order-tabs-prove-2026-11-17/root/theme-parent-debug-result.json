@@ -1,0 +1,23 @@
+{
+  "command": [
+    "gdb",
+    "-q",
+    "-batch",
+    "-ex",
+    "set pagination off",
+    "-ex",
+    "set confirm off",
+    "-ex",
+    "run",
+    "-ex",
+    "thread apply all bt 18",
+    "-ex",
+    "quit",
+    "--args",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests",
+    "--theme-tabs-only-2d"
+  ],
+  "exit": 0,
+  "interrupted": false,
+  "only_own_process_group": true
+}

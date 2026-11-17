@@ -1,0 +1,13 @@
+Audit indipendente quadrantBreakpoints — controllo di avanzamento
+
+Candidato7f47f426d3d19182cc2261741beb4fc6efb94ac72994946c2009863219b98011: nessun blocker statico. Nessuna compilazione o esecuzione C++ da questo observer; solo oracolo scalare Python senza loop patologico e confezionamento testuale.
+
+Finding nativo: su Circle/Ellipse e delegati Surface, range[1e20,1e20+1e9]. Il primo indice k è0x1.b9be638027fc8p+65, ULP8192. Aggiungere1 arrotonda allo stesso k; condizione del loop vera con margine899989504 e condizione push falsa. Lo stato si ripete per induzione: niente progresso, niente crescita vettore e niente cancellation nel baseline. Un secondo caso[-Inf,0] mantiene k=-Inf con la stessa proprietà. Parametri IEEE esatti/Fraction e prova del singolo passo in single-step-oracle.json; NON è un certificato geometrico globale.
+
+ROOT ha compilato/eseguito il probe nativo Circle2: baseline stalled e infinite terminati solo da watchdog esterno KILL0.3s, exit137, circa0.314s. Il timeout da solo non dimostra infinità: lo completa l'oracolo indipendente dello stato fisso. Baseline ignora token giàtrue su range breve. Candidata: stalled produce domain_error, infinite invalid_argument, token preset e durante lavoro producono cancelled. Output ordinario8breakpoints identico byte per byte. Questi runtime sono attribuiti a ROOT; l'audit ha letto i log, non eseguito i binari. Metadati/stdout e fonte inerte in root-runtime-attribution.json/root-probe.cpp.txt.
+
+Contratto e correzione: parametri ordinati nel range richiesto, estremi compresi; le coniche periodiche permettono range fuori dominio canonico. Il candidato rifiuta nonfinite/reversed; preserva degenere{t,t} e formule ordinarie. Ogni incremento deve essere finito e strettamente progressivo; cancellation ingresso/iterazione. Nessuna normalizzazione della fase, nessun cap/tolleranza aumentati, nessun risultato parziale restituito su throw.
+
+Eccezioni propagate come tali: pcurveDeviation non trasforma l'eccezione dei breakpoints in+Inf. computePCurves cattura i fallimenti dei job e rilancia prima delle assegnazioni fin. OperationCancelled resta distinto dai recuperi geometrici. Chiamanti diretti Circle2/3,Ellipse2/3; uCylinder/Cone/Sphere/Torus/Revolution e vSphere/Torus; eventuale meridiano conico può delegare Revolution.v.
+
+Limiti: fasi angolari enormi o range invalidi, nessun CAD ordinario dimostrato. Workload enorme ma ancora progressivo non ha un nuovo cap; diventa cancellabile. Non è provata precisione globale della partizione ai grandi parametri. Graph797/11666 e descrizioni/call/include/reference bidirezionali conservati. Repo read-only, no library copy/UI/spawn/commit/push; parent gestisce registri condivisi. Sigilli precedenti immutati.

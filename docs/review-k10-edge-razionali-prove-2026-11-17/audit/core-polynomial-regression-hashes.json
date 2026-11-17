@@ -1,0 +1,10 @@
+{
+  "scope": "Observed coefficient export byte comparison from core probes, not our own runtime execution",
+  "baselinePath": "/tmp/k10-rational-edge-review/core/poly-baseline.jsonl",
+  "candidatePath": "/tmp/k10-rational-edge-review/core/poly-candidate.jsonl",
+  "baselineSHA256": "47fa8415739cc50816edf303b77d63a8231d236754b136b694edbdb90714f4bb",
+  "candidateSHA256": "47fa8415739cc50816edf303b77d63a8231d236754b136b694edbdb90714f4bb",
+  "bytes": 357558,
+  "recordCount": 48,
+  "byteIdentical": true
+}

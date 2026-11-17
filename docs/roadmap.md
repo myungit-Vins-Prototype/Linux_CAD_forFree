@@ -2,6 +2,10 @@
 
 Riesame del 30 ottobre 2026, dopo l'unificazione su `main`. Questo indice raccoglie lo stato corrente; i rapporti datati conservano misure, limiti e verifiche dei rispettivi checkpoint. Il registro condiviso [CLAUDE.md](../CLAUDE.md) contiene gli esiti effettivi e distingue implementazione, verifica ed esperimenti. Le priorità successive sono proposte modificabili durante lo sviluppo.
 
+## Review del codice — stato del 17 novembre 2026
+
+L’[elenco consolidato dei punti ancora aperti](review-punti-aperti-2026-11-17.md) distingue K10, uniformazione UI/anteprime e verifiche mancanti. UI11 del menu cache/overflow è corretto; totale34rilievi confermati corretti, K10 parziale. Le priorità funzionali sotto rimangono separate dal lavoro di correzione.
+
 ## Funzioni già presenti
 
 | Area | Stato da sorgenti e registro | Riferimento |

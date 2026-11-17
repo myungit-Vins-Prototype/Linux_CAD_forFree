@@ -1,0 +1,14 @@
+{
+  "purpose": "Algebraic data for the separate proposed global carrier witness; no runtime C++ execution",
+  "center": "1/16",
+  "halfWidth": "1/1024",
+  "support1D": [
+    "63/1024",
+    "65/1024"
+  ],
+  "amplitudeAndExactCenterZ": "1/1024",
+  "valueAtCenter": "b(c)=1, F(c,c,0).z=1/1024",
+  "jacobian": "[[1,0,0],[0,1,0],[delta*bprime(x)*b(y),delta*b(x)*bprime(y),1]]",
+  "determinantExactly": "1",
+  "regularity": "b=(1-r^2)^4 inside |r|<1 and0 outside has fourfold zero at support boundaries, hence globally C3"
+}

@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+"""Run after root final library is ready: python3 run_final_public.py.txt LIB_SHA256
+Private binary/archive remain outside final-proof. Rebuild object via final-export-compile.json if needed.
+"""
+from pathlib import Path
+import sys,subprocess,json,hashlib,time,shutil
+root=Path(__file__).parent;repo=Path('/home/myungit/Linux_CAD_forFree');expected=sys.argv[1]
+def digest(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+lib=repo/'forgecad-release/kernel/libforgekernel.a';frozen=root/'libforgekernel-final.a'
+assert digest(lib)==expected,'root library changed or not ready'
+shutil.copyfile(lib,frozen);assert digest(frozen)==expected
+(root/'final-library.json').write_text(json.dumps({'source':str(lib),'frozen':str(frozen),'sha256':expected,'bytes':frozen.stat().st_size},indent=2)+'\n')
+meta=json.loads((root/'final-export-compile.json').read_text());assert meta['exit']==0 and digest(root/'export_public_final.cpp.txt')==meta['sourceSHA256']
+cmd=['g++',str(root/'export-public-final.o'),str(frozen),'-lpthread','-o',str(root/'export-public-final')];start=time.monotonic();r=subprocess.run(cmd,cwd=repo,capture_output=True,text=True)
+(root/'final-export-link.log').write_text(r.stdout+r.stderr);(root/'final-export-link.json').write_text(json.dumps({'argv':cmd,'exit':r.returncode,'elapsed':time.monotonic()-start,'objectSHA256':digest(root/'export-public-final.o'),'librarySHA256':expected},indent=2)+'\n');assert r.returncode==0,r.stderr
+outdir=root/'final-exports';outdir.mkdir(exist_ok=True);runs=[]
+for label in ['cylinder','nurbs','quilt-rational']:
+ output=outdir/(label+'.json');cmd=[str(root/'export-public-final'),label,str(output),'final'];start=time.monotonic();r=subprocess.run(cmd,cwd=repo,capture_output=True,text=True);(root/('final-'+label+'.log')).write_text(r.stdout+r.stderr);runs.append({'case':label,'argv':cmd,'exit':r.returncode,'elapsed':time.monotonic()-start,'outputSHA256':digest(output) if output.exists() else None});(root/'final-public-runs.json').write_text(json.dumps(runs,indent=2)+'\n');print(label,r.returncode,r.stdout.strip(),r.stderr.strip(),flush=True);assert r.returncode==0
+results=[]
+for label in ['cylinder','nurbs','quilt-rational']:
+ result=root/('fraction-final-'+label+'.json');cmd=[sys.executable,str(root/'verify_public_fins.py.txt'),str(outdir/(label+'.json')),str(result)];start=time.monotonic();r=subprocess.run(cmd,cwd=repo,capture_output=True,text=True);(root/('fraction-final-'+label+'.log')).write_text(r.stdout+r.stderr);print('Fraction',label,r.returncode,round(time.monotonic()-start,3),flush=True);assert r.returncode==0,r.stderr;d=json.loads(result.read_text());assert d['pass'];results.extend(d['records'])
+assert len(results)==52 and all(r['pass'] for r in results)
+(root/'final-fraction-batch.json').write_text(json.dumps({'pass':True,'scope':'52 actual final fins of three public mapping calls, independent exact Fraction residual proofs','librarySHA256':expected,'records':results,'not_claimed':['Global mapping intent/carrier fit','Unsupported families','Newton/branch','Global trim/topology']},indent=2)+'\n')
+print('Final API52fin and independent Fraction52 PASS',flush=True)

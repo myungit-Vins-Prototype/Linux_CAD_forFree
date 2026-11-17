@@ -1,0 +1,18 @@
+from pathlib import Path
+import os,json,time,hashlib,subprocess
+T=Path('/tmp/review-ram-2026-11-17');R=Path('/home/myungit/Linux_CAD_forFree');j=json.loads((T/'cleanup-plan.json').read_text())
+seals=json.loads((R/'docs/review-k10-wrapper-curve-prove-2026-11-17/root/seals-before.json').read_text());p=R/'docs/review-k10-wrapper-curve-prove-2026-11-17/SHA256SUMS';seals.append({'seal':str(p.relative_to(R)),'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'files':len(p.read_text().splitlines())})
+for s in seals:
+ p=R/s['seal'];assert hashlib.sha256(p.read_bytes()).hexdigest()==s['sha256']
+ for line in p.read_text().splitlines():
+  h,f=line.split('  ',1);assert hashlib.sha256((p.parent/f).read_bytes()).hexdigest()==h
+(T/'previous-seals.json').write_text(json.dumps(seals,indent=2)+'\n')
+for e in j['files']:
+ p=Path(e['path']);assert p.is_relative_to('/tmp') and not p.is_symlink() and not p.is_relative_to(T)
+ st=p.stat();assert (st.st_ino,st.st_size,st.st_mtime_ns)==(e['inode'],e['bytes'],e['mtime_ns']),str(p)
+ with p.open('rb') as f:magic=f.read(8)
+ assert magic.startswith(b'\x7fELF') or magic==b'!<arch>\n'
+removed=[]
+for e in j['files']:
+ p=Path(e['path']);p.unlink();removed.append({'path':str(p),'bytes':e['bytes'],'sha256':e['sha256']})
+result={'removed_files':len(removed),'unlinked_bytes':sum(e['bytes'] for e in removed),'previous_sealed_packages_verified':len(seals),'previous_artifacts_verified':sum(s['files'] for s in seals),'protected_process_matches':j['protected_matches'],'no_process_terminated':True,'source_logs_JSON_CAD_repository_untouched':True,'removed':removed};(T/'cleanup-result.json').write_text(json.dumps(result,indent=2)+'\n');(T/'meminfo-after.txt').write_text(Path('/proc/meminfo').read_text());(T/'tmp-after.txt').write_text(subprocess.check_output(['df','-B1','/tmp'],text=True));print(json.dumps({k:v for k,v in result.items() if k!='removed'},indent=2));print(subprocess.check_output(['free','-h'],text=True));print((T/'tmp-after.txt').read_text())

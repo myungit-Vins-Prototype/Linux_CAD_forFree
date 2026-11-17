@@ -1,0 +1,15 @@
+[
+  "c++",
+  "-std=c++17",
+  "-O2",
+  "-g",
+  "-fno-fast-math",
+  "-ffp-contract=off",
+  "-I/home/myungit/Linux_CAD_forFree/kernel",
+  "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+  "-DFORGEKERNEL_TEST_DATA_DIR=\"/home/myungit/Linux_CAD_forFree/kernel/tests/data\"",
+  "-c",
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_sheet_join_validation.cpp",
+  "-o",
+  "/tmp/k10-noniso-review/tests/ledger.o"
+]

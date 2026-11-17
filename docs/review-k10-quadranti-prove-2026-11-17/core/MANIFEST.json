@@ -1,0 +1,35 @@
+{
+  "files": [
+    {
+      "path": "HANDOFF.md",
+      "bytes": 3135,
+      "sha256": "991697bfa00044190fe16ce8192c1794160f1a5c6f1f0bbfddf9d2fe7c7bc457"
+    },
+    {
+      "path": "SOURCE-FREEZE.json",
+      "bytes": 566,
+      "sha256": "3e63b2261b2741380fab126b5271d0fc9307098d9458f86b8f22dc66ad754bd6"
+    },
+    {
+      "path": "candidate.patch.txt",
+      "bytes": 1016,
+      "sha256": "e1ba3d72f401d8ae2a69c8958b7a83bdf883bcfc1b40bb5910780924b1e48fd4"
+    },
+    {
+      "path": "fk_curve.baseline.cpp.txt",
+      "bytes": 5866,
+      "sha256": "a56cbc9bd3f06f60f7b1ef6bd2c94cf660dc2099da81466993decd43b831f3bc"
+    },
+    {
+      "path": "fk_curve.candidate.cpp.txt",
+      "bytes": 6236,
+      "sha256": "7f47f426d3d19182cc2261741beb4fc6efb94ac72994946c2009863219b98011"
+    },
+    {
+      "path": "graph-evidence.json",
+      "bytes": 674741,
+      "sha256": "ced7012ef1ac827f3145f87b5249a9d42a760a82665720515c944a5e1658dd15"
+    }
+  ],
+  "static_only": true
+}

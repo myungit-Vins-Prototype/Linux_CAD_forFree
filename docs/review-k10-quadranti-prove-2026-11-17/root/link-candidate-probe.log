@@ -1,0 +1,7 @@
+/tmp/k10-quadrant-review/root/probe.cpp: In function ‘int main(int, char**)’:
+/tmp/k10-quadrant-review/root/probe.cpp:22:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   22 |  if(canceller.joinable())canceller.join();return status;
+      |  ^~
+/tmp/k10-quadrant-review/root/probe.cpp:22:43: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   22 |  if(canceller.joinable())canceller.join();return status;
+      |                                           ^~~~~~

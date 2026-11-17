@@ -1,0 +1,22 @@
+{
+  "environment": {
+    "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1",
+    "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1",
+    "LSAN_OPTIONS": "exitcode=23"
+  },
+  "results": [
+    {
+      "executable": "leak-calibration",
+      "exit": 23,
+      "seconds": 0.031798459007404745,
+      "log": "leak-calibration.log"
+    },
+    {
+      "executable": "candidate-tests",
+      "exit": 0,
+      "seconds": 153.5558061740012,
+      "log": "combined-sanitizer.log"
+    }
+  ],
+  "scope": "outside ptrace; changed fk_offset TU plus3 testTUs/main instrumented; remainder frozen Release library"
+}

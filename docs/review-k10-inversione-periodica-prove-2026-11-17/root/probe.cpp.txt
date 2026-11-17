@@ -1,0 +1,11 @@
+#include "fk_surface_algo.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+int main(){
+ CylindricalSurface s(Frame3(),10);const Vec3 p=s.point(.25,2);
+ for(double g:{.25,100.,1e6,1e8,1e12,1e16,1e20}){
+  Vec2 uv(g,2);const bool ok=invertPoint(s,p,uv,1e-8,10);
+  std::cout<<std::setprecision(17)<<g<<" ok="<<ok<<" uv="<<uv.x()<<","<<uv.y()<<" residual="<<distance(p,s.point(uv.x(),uv.y()))<<"\n";
+ }
+}

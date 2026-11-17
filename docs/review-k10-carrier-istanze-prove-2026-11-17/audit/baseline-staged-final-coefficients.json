@@ -1,0 +1,100 @@
+{
+  "pass": true,
+  "scope": "Original E/S(base+stored placement)/Q/range compared exactly; sampled fin metadata deliberately becomes declared prefit cap",
+  "inputs": [
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/baseline-fins.jsonl",
+      "sha256": "a423ee2e6f8030c5a7fc0843dbdfec9bf8bb4c7612f1ce552f19981ab8b154ce"
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/tests/candidate-fins.jsonl",
+      "sha256": "73387d8a6c8199ef3e40399157b9c48fa18651a594f92d00d31c5644d08be0bb"
+    },
+    {
+      "path": "/tmp/k10-instance-carrier-review/audit/actual-public-instance-final.json",
+      "sha256": "9010c3403f78b9f4cf5eee1c49cb1e3c00947f40da640f9e184cf532a7bea4f1"
+    }
+  ],
+  "records": [
+    {
+      "fin": 0,
+      "baselineToFinal": {
+        "curve": true,
+        "surface": true,
+        "pcurve": true,
+        "range": true
+      },
+      "stagedToFinal": {
+        "curve": true,
+        "surface": true,
+        "pcurve": true,
+        "range": true,
+        "edgeTolerance": true,
+        "pcurveTolerance": true
+      },
+      "baselineFinTolerance": "0x1.17c32ea73337bp-34",
+      "finalFinTolerance": "0x1.5798ee2308c3ap-24",
+      "edgeTolerance": "0x0p+0"
+    },
+    {
+      "fin": 1,
+      "baselineToFinal": {
+        "curve": true,
+        "surface": true,
+        "pcurve": true,
+        "range": true
+      },
+      "stagedToFinal": {
+        "curve": true,
+        "surface": true,
+        "pcurve": true,
+        "range": true,
+        "edgeTolerance": true,
+        "pcurveTolerance": true
+      },
+      "baselineFinTolerance": "0x1.45f5d5bae72d9p-34",
+      "finalFinTolerance": "0x1.5798ee2308c3ap-24",
+      "edgeTolerance": "0x0p+0"
+    },
+    {
+      "fin": 2,
+      "baselineToFinal": {
+        "curve": true,
+        "surface": true,
+        "pcurve": true,
+        "range": true
+      },
+      "stagedToFinal": {
+        "curve": true,
+        "surface": true,
+        "pcurve": true,
+        "range": true,
+        "edgeTolerance": true,
+        "pcurveTolerance": true
+      },
+      "baselineFinTolerance": "0x1.a0f6aac4ad971p-35",
+      "finalFinTolerance": "0x1.5798ee2308c3ap-24",
+      "edgeTolerance": "0x0p+0"
+    },
+    {
+      "fin": 3,
+      "baselineToFinal": {
+        "curve": true,
+        "surface": true,
+        "pcurve": true,
+        "range": true
+      },
+      "stagedToFinal": {
+        "curve": true,
+        "surface": true,
+        "pcurve": true,
+        "range": true,
+        "edgeTolerance": true,
+        "pcurveTolerance": true
+      },
+      "baselineFinTolerance": "0x1.4ccb8265c946fp-34",
+      "finalFinTolerance": "0x1.5798ee2308c3ap-24",
+      "edgeTolerance": "0x0p+0"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "symbol": "std::vector<P> basis(",
+    "byteEqual": true,
+    "sha256Baseline": "9dc494b82b36f49831007742d2fb6d4b5100e47897d32843a6b8496ff94e9fd4",
+    "sha256Candidate": "9dc494b82b36f49831007742d2fb6d4b5100e47897d32843a6b8496ff94e9fd4"
+  },
+  {
+    "symbol": "std::vector<P> homogeneousBasis(",
+    "byteEqual": true,
+    "sha256Baseline": "a40fe9f847a4e35c901fdbd990eb31eca7ea7e7fa19f95e7d9d83e2b638dbb6f",
+    "sha256Candidate": "a40fe9f847a4e35c901fdbd990eb31eca7ea7e7fa19f95e7d9d83e2b638dbb6f"
+  },
+  {
+    "symbol": "double residual(",
+    "byteEqual": true,
+    "sha256Baseline": "ea68c14602454d9388d589f1dcfee79c5169c0e505bb4007cdfdaebfe9442e50",
+    "sha256Candidate": "ea68c14602454d9388d589f1dcfee79c5169c0e505bb4007cdfdaebfe9442e50"
+  },
+  {
+    "symbol": "double rationalUVResidual(",
+    "byteEqual": true,
+    "sha256Baseline": "598f19ffa1694e1cdeaebc587894a8ee7c2763ca19e2c0cc05a14383d9070bfe",
+    "sha256Candidate": "598f19ffa1694e1cdeaebc587894a8ee7c2763ca19e2c0cc05a14383d9070bfe"
+  },
+  {
+    "symbol": "template<int N> Source<N> snapshot(",
+    "byteEqual": true,
+    "sha256Baseline": "1efc95793c5548ffdd0be8677a9ff4a15f57ae428c74c244255c4fc5672334c7",
+    "sha256Candidate": "1efc95793c5548ffdd0be8677a9ff4a15f57ae428c74c244255c4fc5672334c7"
+  },
+  {
+    "symbol": "template<int N> VP<N> onRange(",
+    "byteEqual": true,
+    "sha256Baseline": "6a88dcd1289483507e7f4abaa6d163248c3caa200c24ca10842c759c8421f616",
+    "sha256Candidate": "6a88dcd1289483507e7f4abaa6d163248c3caa200c24ca10842c759c8421f616"
+  }
+]

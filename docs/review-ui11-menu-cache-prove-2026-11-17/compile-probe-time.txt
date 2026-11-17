@@ -1,0 +1,23 @@
+	Command being timed: "/usr/bin/c++ -DFORGECAD_HAS_CUDA=1 -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NO_DEBUG -DQT_OPENGLWIDGETS_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -I/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_autogen/include -I/home/myungit/Linux_CAD_forFree/forgecad-release/generated -I/home/myungit/Linux_CAD_forFree -I/home/myungit/Linux_CAD_forFree/kernel -isystem /usr/include/qt6/QtWidgets -isystem /usr/include/qt6 -isystem /usr/include/qt6/QtCore -isystem /usr/lib/qt6/mkspecs/linux-g++ -isystem /usr/include/qt6/QtGui -isystem /usr/include/qt6/QtOpenGL -isystem /usr/include/qt6/QtOpenGLWidgets -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -ffp-contract=off -mno-direct-extern-access -o /tmp/review-menu-style-2026-11-17/probe.o -c /tmp/review-menu-style-2026-11-17/menu-probe.cpp"
+	User time (seconds): 2.02
+	System time (seconds): 0.04
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:02.07
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 412268
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 10885
+	Voluntary context switches: 7
+	Involuntary context switches: 81
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

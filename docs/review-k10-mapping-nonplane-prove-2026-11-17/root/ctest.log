@@ -1,0 +1,203 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 200
+    Start 200: forgekernel_tolerance_tests
+
+200: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_tolerance_tests
+200: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+200: Test timeout computed to be: 10000000
+200: [  OK  ] ToleranceDefaults
+200: [  OK  ] ToleranceInvalidMetadata
+200: [  OK  ] ToleranceVertexBudget
+200: [  OK  ] TolerancePCurveBudget
+200: [  OK  ] ToleranceEdgeFaceBudget
+200: [  OK  ] ToleranceDocumentScopesAndWorkers
+200: [  OK  ] ToleranceDocumentOffsetAccuracy
+200: 7/7 test superati
+1/8 Test #200: forgekernel_tolerance_tests .....................   Passed    0.34 sec
+test 227
+    Start 227: forgekernel_surface_mapping_tests
+
+227: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_mapping_tests
+227: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+227: Test timeout computed to be: 120
+227: PASS sviluppo piano/cilindro/cono, aree/lunghezze, rifiuto doppia curvatura, deformazione cilindrica/volume, genealogia, B-rep, STEP e mesh, appoggio multifaccia continuo/NURBS/vuoti
+2/8 Test #227: forgekernel_surface_mapping_tests ...............   Passed    0.74 sec
+test 238
+    Start 238: forgekernel_sheet_join_validation_tests
+
+238: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_sheet_join_validation_tests
+238: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+238: Test timeout computed to be: 180
+238: [  OK  ] SheetJoinImplicitPolynomial
+238: [  OK  ] SheetJoinTangentPolynomial
+238: [  OK  ] SheetJoinRigidPose
+238: [  OK  ] SheetJoinSmallScale
+238: [  OK  ] SheetJoinLargeScale
+238: [  OK  ] SheetJoinRational
+238: [  OK  ] SheetJoinReverseSelection
+238: [  OK  ] SheetJoinFaceSense
+238: [  OK  ] SheetJoinCanonicalReversal
+238: [  OK  ] SheetJoinLowerBoundary
+238: [  OK  ] SheetJoinTangentRigidPose
+238: [  OK  ] SheetJoinTangentSmallScale
+238: [  OK  ] SheetJoinTangentLargeScale
+238: [  OK  ] SheetJoinTangentRational
+238: [  OK  ] SheetJoinTangentReverseSelection
+238: [  OK  ] SheetJoinTangentFaceSense
+238: [  OK  ] SheetJoinTangentCanonicalReversal
+238: [  OK  ] SheetJoinTangentLowerBoundary
+238: [  OK  ] SheetJoinHiddenNarrowKnots
+238: [  OK  ] SheetJoinTangentGapBudget
+238: [  OK  ] SheetJoinTangentTrimmedSupport
+238: [  OK  ] SheetJoinHiddenNarrowPhases
+238: [  OK  ] SheetJoinHiddenNarrowPose
+238: [  OK  ] SheetJoinHiddenNarrowSmallScale
+238: [  OK  ] SheetJoinHiddenNarrowLargeScale
+238: [  OK  ] SheetJoinHiddenNarrowReverseSelection
+238: [  OK  ] SheetJoinTangentGapPose
+238: [  OK  ] SheetJoinCancellationAtomic
+238: [  OK  ] SheetJoinInvalidLengthAtomic
+238: [  OK  ] SheetJoinNonIsoOffsetLoftOriginal
+238: [  OK  ] SheetJoinNonIsoOffsetLoftRigidPose
+238: [  OK  ] SheetJoinNonIsoOffsetLoftSmallScale
+238: [  OK  ] SheetJoinNonIsoOffsetLoftLargeScalePose
+238: 33/33 test superati
+3/8 Test #238: forgekernel_sheet_join_validation_tests .........   Passed   40.06 sec
+test 242
+    Start 242: forgekernel_mapping_carrier_validation_tests
+
+242: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_mapping_carrier_validation_tests
+242: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+242: Test timeout computed to be: 180
+242: [  OK  ] MappingCarrierHiddenTargetsPolyRationalPoseScale
+242: [  OK  ] MappingCarrierSourceFrameQuarterTurnShiftHolesAndRoundtrip
+242: [  OK  ] MappingCarrierDeclaredLegacyDiagonalPeriodicAndOffset
+242: [  OK  ] MappingCarrierFailureAndCallbackCancellationAreAtomic
+242: [  OK  ] MappingCarrierDegree27SingleSpanAndRoundtrip
+242: [  OK  ] MappingCarrierTolerantSourceDiscrepanciesAreRejectedAtomically
+242: [  OK  ] MappingCarrierSmallSourceVertexDiscrepancyIsReported
+242: [  OK  ] MappingCarrierUnresolvedNaturalBoundaryIsAtomic
+242: [  OK  ] MappingCarrierRecognizedAffineFinBudgetFailsAtomically
+242: 9/9 test superati
+4/8 Test #242: forgekernel_mapping_carrier_validation_tests ....   Passed    1.29 sec
+test 243
+    Start 243: forgekernel_mapping_uv_validation_tests
+
+243: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_mapping_uv_validation_tests
+243: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+243: Test timeout computed to be: 180
+243: mapping_polynomial source=0 residual=2.21233e-11 ratio=0.417834 map_error=2.1222e-11 deviation=5.99703e-11 PASS
+243: mapping_rational source=0 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+243: mapping_trim_range source=0 residual=4.87976e-11 ratio=0.577215 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+243: mapping_reverse source=0 residual=4.06494e-11 ratio=0.577229 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+243: mapping_pose_wrapper source=1.33227e-15 residual=1.35851e-10 ratio=0.950994 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+243: mapping_scale1000 source=2.29143e-13 residual=6.63743e-09 ratio=0.990916 map_error=1.97452e-08 deviation=1.89836e-08 PASS
+243: mapping_scale001 source=1.08779e-15 residual=9.9004e-11 ratio=0.939807 map_error=5.97713e-09 deviation=5.95052e-09 PASS
+243: mapping_height source=5.55112e-17 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+243: mapping_normal_offset source=5.55112e-17 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+243: quilt_polynomial source=0 residual=2.21233e-11 ratio=0.417834 map_error=2.1222e-11 deviation=5.99703e-11 PASS
+243: quilt_rational source=0 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+243: quilt_trim_range source=0 residual=4.87976e-11 ratio=0.577215 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+243: quilt_reverse source=0 residual=4.06494e-11 ratio=0.577229 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+243: quilt_pose_wrapper source=1.33227e-15 residual=1.2318e-10 ratio=0.94292 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+243: quilt_scale1000 source=2.29143e-13 residual=6.63743e-09 ratio=0.990916 map_error=1.97452e-08 deviation=1.89836e-08 PASS
+243: quilt_scale001 source=1.08779e-15 residual=5.71195e-11 ratio=0.668689 map_error=5.97712e-09 deviation=5.95051e-09 PASS
+243: quilt_height source=5.55112e-17 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+243: quilt_normal_offset source=5.55112e-17 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+243: quilt_faruv10000_identity source=5.55112e-17 residual=5.60684e-11 ratio=0.561034 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+243: quilt_faruv10000_pose source=2.03507e-15 residual=1.67554e-08 ratio=0.99596 map_error=1.91676e-08 deviation=1.91555e-08 PASS
+243: atomic_failures PASS
+243: passed=21 failed=0
+5/8 Test #243: forgekernel_mapping_uv_validation_tests .........   Passed    3.80 sec
+test 244
+    Start 244: forgekernel_mapping_diagonal_validation_tests
+
+244: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_mapping_diagonal_validation_tests
+244: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+244: Test timeout computed to be: 180
+244: [  OK  ] MappingDiagonalExtrusionHiddenPolynomialRationalPoseScaleReverse
+244: [  OK  ] MappingDiagonalExtrusionNestedGeneratorTrimHolesHistoryRoundtrip
+244: [  OK  ] MappingDiagonalOriginalLineExtrusionSuccess
+244: [  OK  ] MappingDiagonalProviderPullbackKnotsAndWrongCandidate
+244: [  OK  ] MappingDiagonalFailureCancellationAreAtomicAndTensorIsUnsupported
+244: [  OK  ] MappingDiagonalProviderTinyNonzeroUDirectionMustNotSnap
+244: [  OK  ] MappingDiagonalProviderLineConstantUAndClosedJunctionQueries
+244: 7/7 test superati
+6/8 Test #244: forgekernel_mapping_diagonal_validation_tests ...   Passed    0.76 sec
+test 252
+    Start 252: forgekernel_surface_curve_bounds_tests
+
+252: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_curve_bounds_tests
+252: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+252: Test timeout computed to be: 180
+252: [  OK  ] NonIsoResidualCubicUVOnOriginalTensorPlane
+252: [  OK  ] NonIsoResidualBilinearCarrierAndNativeLineUV
+252: [  OK  ] NonIsoResidualCommonPartitionAcrossEdgeUVAndCarrierKnots
+252: [  OK  ] NonIsoResidualNonUnitDomainSubrangeAndCorrelatedReversal
+252: [  OK  ] NonIsoResidualConstantOriginalWeightsRemainPolynomial
+252: [  OK  ] NonIsoResidualHiddenEdgePeakIsNotAContinuousProof
+252: [  OK  ] NonIsoResidualHiddenCarrierCellPeakIsRejected
+252: [  OK  ] NonIsoResidualUVLeavesDomainBetweenThreeMatchingSamples
+252: [  OK  ] NonIsoResidualInvalidInputsFailClosed
+252: [  OK  ] NonIsoResidualCurveWeightsAndWrappersUnsupportedCarrierGapFails
+252: [  OK  ] NonIsoResidualCancellationPropagates
+252: [  OK  ] NonIsoResidualFixedInputResourceLimitFailsClosed
+252: [  OK  ] NonIsoResidualUnclampedOriginalCubicKnots
+252: [  OK  ] SheetJoinLedgerActualTwoFinsAndExtraFixedCaps
+252: [  OK  ] SheetJoinLedgerExplicitCompactionAndUnifyHistoryPermutation
+252: [  OK  ] SheetJoinLedgerRecognizedGapCannotUseLargeFinDeviation
+252: [  OK  ] SheetJoinLedgerMissingMapCurveRangeOrIncidenceRejects
+252: [  OK  ] SheetJoinLedgerInvalidBudgetAndEdgeMetadataRejects
+252: [  OK  ] SheetJoinLedgerUnsupportedFamilyRetainsLegacyWithoutCertificate
+252: [  OK  ] SheetJoinLedgerUnifiedDriftAndMissingDescendantsReject
+252: [  OK  ] SheetJoinLedgerCancellationPropagates
+252: [  OK  ] SheetJoinLedgerMissingCarrierOrOriginalCurveRejects
+252: [  OK  ] SheetJoinLedgerBoundedCubicCopyPreservesUnplannedSharedMap
+252: [  OK  ] SheetJoinLedgerHalfUlpLineBuildsBoundedNativeMap
+252: [  OK  ] SheetJoinLedgerBoundedCandidateCannotRepairPhysicalGap
+252: [  OK  ] RationalCarrierNativeQuadraticCubicAndMixedIdentity
+252: [  OK  ] RationalCarrierCellExtrapolatedDenominatorMayBeNegative
+252: [  OK  ] RationalCarrierWeightGaugeAndPhysicalScale
+252: [  OK  ] RationalCarrierNonUnitDomainTrimAndCorrelatedReverse
+252: [  OK  ] RationalCarrierChangedWeightIsRecognizedGap
+252: [  OK  ] RationalCarrierUVOutsideOriginalDomainFails
+252: [  OK  ] RationalCarrierCancellationPropagates
+252: [  OK  ] RationalCarrierHiddenKnotCellPeakFailsContinuously
+252: [  OK  ] RationalCarrierFixedOriginalScalarLimitFailsClosed
+252: 34/34 test superati
+7/8 Test #252: forgekernel_surface_curve_bounds_tests ..........   Passed    0.12 sec
+test 253
+    Start 253: forgekernel_mapping_nonplane_validation_tests
+
+253: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_mapping_nonplane_validation_tests
+253: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+253: Test timeout computed to be: 180
+253: [  OK  ] MappingNonPlaneCylinderFinalFinsAndNullHistory
+253: [  OK  ] MappingNonPlaneQuadraticTargetFinalFinsAndNullHistory
+253: [  OK  ] MappingNonPlaneRationalCarrierFinalFinsAndNullHistory
+253: [  OK  ] MappingNonPlaneHiddenCarrierPeakRejectedAtomically
+253: [  OK  ] MappingNonPlaneFarOutsideCannotBeRepairedByClamping
+253: [  OK  ] MappingNonPlaneCancellationPreservesInputsAndOutputs
+253: 6/6 test superati
+8/8 Test #253: forgekernel_mapping_nonplane_validation_tests ...   Passed    0.25 sec
+
+The following tests passed:
+	forgekernel_tolerance_tests
+	forgekernel_surface_mapping_tests
+	forgekernel_sheet_join_validation_tests
+	forgekernel_mapping_carrier_validation_tests
+	forgekernel_mapping_uv_validation_tests
+	forgekernel_mapping_diagonal_validation_tests
+	forgekernel_surface_curve_bounds_tests
+	forgekernel_mapping_nonplane_validation_tests
+
+100% tests passed out of 8
+
+Total Test time (real) =  47.41 sec

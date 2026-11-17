@@ -1,0 +1,17 @@
+from pathlib import Path
+import subprocess,json,time,sys,os,re,xml.etree.ElementTree as ET
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/legacy-api-review/root')
+def run(name,args,timeout=None,env=None):
+ start=time.monotonic()
+ with(T/(name+'.log')).open('w') as log:
+  try:code=subprocess.run(args,cwd=R,stdout=log,stderr=subprocess.STDOUT,timeout=timeout,env=env).returncode
+  except subprocess.TimeoutExpired:code=124
+ j={'exit':code,'seconds':time.monotonic()-start,'command':args};(T/(name+'-result.json')).write_text(json.dumps(j,indent=2)+'\n');print(name,j,flush=True)
+ if code:print((T/(name+'.log')).read_text()[-4000:],flush=True);raise SystemExit(code)
+ return j
+if __name__=='__main__':
+ if sys.argv[1]=='build':run('build',['cmake','--build','forgecad-release','--parallel','2'])
+ elif sys.argv[1]=='tests':
+  wanted=['forgecad_extension_panel_tests','forgecad_chamfer_preview_state_tests','forgecad_surface_tools_tests','forgecad_drawing_editor_tests','forgecad_drawing_layout_history_tests','forgecad_linked_drawing_tests','forgecad_drawing_multisheet_tests','forgecad_display_mesh_tests','forgecad_linked_sketch_reference_tests','forgecad_body_sketch_reference_cache_tests']
+  actual={t['name'] for t in json.loads(subprocess.check_output(['ctest','--test-dir','forgecad-release','--show-only=json-v1'],cwd=R))['tests']};assert set(wanted)<=actual,set(wanted)-actual
+  j=run('ctest',['ctest','--test-dir','forgecad-release','--output-on-failure','--parallel','1','--output-junit',str(T/'ctest.xml'),'-V','-R','^('+'|'.join(map(re.escape,wanted))+')$']);cases=list(ET.parse(T/'ctest.xml').getroot().iter('testcase'));assert len(cases)==len(wanted);skips=[c.get('name') for c in cases if c.find('skipped') is not None];j['selected_tests']=wanted;j['skipped']=skips;j['actual_passed']=len(cases)-len(skips);(T/'ctest-result.json').write_text(json.dumps(j,indent=2)+'\n')

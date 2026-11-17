@@ -1,0 +1,25 @@
+{
+  "scope": "K10 quadrature scalar/vector tests",
+  "frozen": true,
+  "groups": 6,
+  "baselineFilter": "SafeControls",
+  "productionHeaderSHA256": "048c8007849e807c2721a20e90387c855a2076ba3e56bcc90cf55320e3a804b7",
+  "executionByThisAgent": "none",
+  "files": [
+    {
+      "path": "test_quadrature_validation.cpp",
+      "bytes": 8819,
+      "sha256": "88f9718de56f1488f24e0aa637c03f563d67868894437fc6af9f18c4f6f60e29"
+    },
+    {
+      "path": "COVERAGE.txt",
+      "bytes": 3278,
+      "sha256": "5dc96db45e553154ae595de81c4cffd80d65c9f996c16faf6c4c98e0d88a83b4"
+    },
+    {
+      "path": "graph-consult.json",
+      "bytes": 4247,
+      "sha256": "d1d82e966576142bf177e318a1a834a536847c0cb31f9d496718570a67180444"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:90: FK_CHECK(rejected)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:71: FK_CHECK(history.operandCount() == 0)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:73: FK_CHECK(history.resultSize(kind) == 0)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:73: FK_CHECK(history.resultSize(kind) == 0)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:73: FK_CHECK(history.resultSize(kind) == 0)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:90: FK_CHECK(rejected)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:71: FK_CHECK(history.operandCount() == 0)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:73: FK_CHECK(history.resultSize(kind) == 0)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:73: FK_CHECK(history.resultSize(kind) == 0)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:73: FK_CHECK(history.resultSize(kind) == 0)
+[ FAIL ] SheetArcZeroSpeedCannotPublishShortReach (10 controlli falliti)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:90: FK_CHECK(rejected)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:71: FK_CHECK(history.operandCount() == 0)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:73: FK_CHECK(history.resultSize(kind) == 0)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:73: FK_CHECK(history.resultSize(kind) == 0)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:73: FK_CHECK(history.resultSize(kind) == 0)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:90: FK_CHECK(rejected)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:71: FK_CHECK(history.operandCount() == 0)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:73: FK_CHECK(history.resultSize(kind) == 0)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:73: FK_CHECK(history.resultSize(kind) == 0)
+    /tmp/k10-arc-review/tests/test_sheet_arc_validation.cpp:73: FK_CHECK(history.resultSize(kind) == 0)
+[ FAIL ] SheetArcRegularCurveCannotPublishExhaustedNewtonReach (10 controlli falliti)
+[  OK  ] SheetArcNaturalPositiveDistancesUsePhysicalReach
+[  OK  ] SheetArcOppositeDirectionAndPoseScaleKeepPhysicalReach
+[  OK  ] SheetArcLinearAndCylinderControlsKeepTheirPhysicalContract
+[  OK  ] SheetArcCancellationDoesNotPublishOrMutateInput
+4/6 test superati

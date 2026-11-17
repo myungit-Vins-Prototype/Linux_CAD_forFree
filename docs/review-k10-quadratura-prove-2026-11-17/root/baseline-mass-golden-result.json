@@ -1,0 +1,8 @@
+{
+  "command": [
+    "/tmp/k10-quadrature-review/root/baseline-mass-golden"
+  ],
+  "exit": 0,
+  "seconds": 0.005317639996064827,
+  "watchdog_seconds": 30
+}

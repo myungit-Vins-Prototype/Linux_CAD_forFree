@@ -1,0 +1,67 @@
+[
+  {
+    "path": "/tmp/k10-pcurve-pole-review/root/baseline-tests",
+    "bytes": 53688632,
+    "sha256": "7c8959bfdd7bd61d2aa496f457e1f84dc438db502f591eeae3674abf17918f1b"
+  },
+  {
+    "path": "/tmp/k10-pcurve-pole-review/root/candidate-nurbs-probe",
+    "bytes": 53254648,
+    "sha256": "6d97fb700acce99f8b28caaf2feb4ec581e8a0c9012e5cf64b1f336cadbb6a78"
+  },
+  {
+    "path": "/tmp/k10-pcurve-pole-review/root/candidate-probe",
+    "bytes": 53212664,
+    "sha256": "8e24570498e3936029f6e9c44082922830e7cb684a84433d6f42f31c51af46c9"
+  },
+  {
+    "path": "/tmp/k10-pcurve-pole-review/root/candidate-tests",
+    "bytes": 53696640,
+    "sha256": "48a79723ccf3e3ea50463ca1df1b4e6623ce7e9ac690117d297e969d57dc6827"
+  },
+  {
+    "path": "/tmp/k10-pcurve-pole-review/root/candidate.o",
+    "bytes": 1559192,
+    "sha256": "975e651d03eb545ea96a5854f012452d41edb5d7f5679e5447830ecd6e9d5c16"
+  },
+  {
+    "path": "/tmp/k10-pcurve-pole-review/root/main.o",
+    "bytes": 107984,
+    "sha256": "8d8290078f66055dda56b79978a4eeff9e88f1da1aac4dd02fdca0df39284487"
+  },
+  {
+    "path": "/tmp/k10-pcurve-pole-review/root/nurbs-probe",
+    "bytes": 53121632,
+    "sha256": "abbef81e3d451bbd5fdca9223249af233e7497d768365451dd11ac712ff19f1a"
+  },
+  {
+    "path": "/tmp/k10-pcurve-pole-review/root/probe",
+    "bytes": 53121552,
+    "sha256": "f425639409857392af9867ff2aaee5220e9b850a37e3faaf4c9b5592ee736646"
+  },
+  {
+    "path": "/tmp/k10-pcurve-pole-review/root/san-main.o",
+    "bytes": 219064,
+    "sha256": "9626bf731a276d33172b4f095d0817b6bafac0b5f9c63d92b8e25b26d89397b4"
+  },
+  {
+    "path": "/tmp/k10-pcurve-pole-review/root/san-provider.o",
+    "bytes": 4330536,
+    "sha256": "53c6a396304f6029b5eeee0bd8559639f0fcd68bd6092758cd2038958ede97fd"
+  },
+  {
+    "path": "/tmp/k10-pcurve-pole-review/root/san-test.o",
+    "bytes": 1721184,
+    "sha256": "48f5d4bf84786a470494ddd8d1741fb1555128025fd181cc1d989546dfa0e093"
+  },
+  {
+    "path": "/tmp/k10-pcurve-pole-review/root/san-tests",
+    "bytes": 56837080,
+    "sha256": "dea18548a82ab37e38d5ac5c649c58cc5166ddaa8aea216398e8330e51a0086c"
+  },
+  {
+    "path": "/tmp/k10-pcurve-pole-review/root/test.o",
+    "bytes": 833584,
+    "sha256": "b61cb75f57565ca923d4d8001c70d58650ad467cb2ba98c1cb5080684fa1b933"
+  }
+]

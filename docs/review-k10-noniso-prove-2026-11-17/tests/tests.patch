@@ -1,0 +1,421 @@
+--- /dev/null
++++ b/kernel/tests/test_surface_curve_bounds.cpp
+@@ -0,0 +1,202 @@
++#include "fk_surface_curve_bounds.h"
++#include "fk_bspline.h"
++#include "fk_bspline_surface.h"
++#include "fk_cancel.h"
++#include "fk_test.h"
++#include <algorithm>
++#include <array>
++#include <cmath>
++#include <limits>
++#include <memory>
++#include <vector>
++
++using namespace ForgeCad::Kernel;
++namespace {
++using detail::SurfaceCurveBoundStatus;
++std::vector<double> cubicKnots(const std::vector<double> &breaks) {
++    std::vector<double> knots(4, breaks.front());
++    for (size_t i = 1; i + 1 < breaks.size(); ++i)
++        knots.insert(knots.end(), 3, breaks[i]);
++    knots.insert(knots.end(), 4, breaks.back());
++    return knots;
++}
++std::vector<double> linearControls(const std::vector<double> &breaks) {
++    std::vector<double> controls{breaks.front()};
++    for (size_t i = 1; i < breaks.size(); ++i)
++        for (int j = 1; j <= 3; ++j)
++            controls.push_back(breaks[i - 1] + (breaks[i] - breaks[i - 1]) * j / 3.0);
++    return controls;
++}
++std::shared_ptr<BSplineSurface> tensor(const std::vector<double> &u = {0, 1},
++                                     const std::vector<double> &v = {0, 1}, bool bilinear = false,
++                                     double weight = 0) {
++    const auto us = linearControls(u), vs = linearControls(v);
++    std::vector<Vec3> poles;
++    for (double x : us) for (double y : vs) poles.emplace_back(x, y, bilinear ? x * y : 0);
++    return std::make_shared<BSplineSurface>(3, 3, cubicKnots(u), cubicKnots(v), int(us.size()), int(vs.size()),
++        poles, weight ? std::vector<double>(poles.size(), weight) : std::vector<double>{});
++}
++std::shared_ptr<BSplineCurve<2>> cubicUV(std::vector<Vec2> poles = {{0, 0}, {.125, .25}, {.75, .5}, {1, 1}},
++                                      Interval domain = {0, 1}, double weight = 0) {
++    return std::make_shared<BSplineCurve<2>>(3,
++        std::vector<double>{domain.lo, domain.lo, domain.lo, domain.lo, domain.hi, domain.hi, domain.hi, domain.hi},
++        poles, weight ? std::vector<double>(poles.size(), weight) : std::vector<double>{});
++}
++std::shared_ptr<BSplineCurve<3>> planarEdge(const BSplineCurve<2> &uv, double weight = 0) {
++    std::vector<Vec3> poles;
++    for (const auto &p : uv.poles()) poles.emplace_back(p.x(), p.y(), 0);
++    return std::make_shared<BSplineCurve<3>>(3, uv.knots(), poles,
++        weight ? std::vector<double>(poles.size(), weight) : std::vector<double>{});
++}
++void certified(const CurvePtr<3> &edge, const SurfacePtr &surface, const CurvePtr<2> &uv,
++               Interval range = {0, 1}, double budget = 1e-8) {
++    const auto result = detail::surfaceCurveResidualBound(edge, surface, uv, range, budget);
++    FK_CHECK(result.status == SurfaceCurveBoundStatus::Certified);
++    FK_CHECK(std::isfinite(result.upperBound) && result.upperBound >= 0 && result.upperBound <= budget);
++}
++void failed(const CurvePtr<3> &edge, const SurfacePtr &surface, const CurvePtr<2> &uv,
++            Interval range = {0, 1}, double budget = 1e-8) {
++    FK_CHECK(detail::surfaceCurveResidualBound(edge, surface, uv, range, budget).status == SurfaceCurveBoundStatus::Failed);
++}
++void unsupported(const CurvePtr<3> &edge, const SurfacePtr &surface, const CurvePtr<2> &uv) {
++    FK_CHECK(detail::surfaceCurveResidualBound(edge, surface, uv, {0, 1}, 1e-8).status == SurfaceCurveBoundStatus::Unsupported);
++}
++std::shared_ptr<BSplineCurve<3>> diagonalEdge(const std::vector<double> &breaks = {0, 1}) {
++    std::vector<Vec3> poles;
++    for (double t : linearControls(breaks)) poles.emplace_back(t, t, 0);
++    return std::make_shared<BSplineCurve<3>>(3, cubicKnots(breaks), poles);
++}
++std::shared_ptr<BSplineCurve<2>> diagonalUV() {
++    return std::make_shared<BSplineCurve<2>>(1, std::vector<double>{0, 0, 1, 1}, std::vector<Vec2>{{0, 0}, {1, 1}});
++}
++}
++
++FK_TEST(NonIsoResidualCubicUVOnOriginalTensorPlane) {
++    auto uv = cubicUV();
++    certified(planarEdge(*uv), tensor(), uv);
++}
++FK_TEST(NonIsoResidualBilinearCarrierAndNativeLineUV) {
++    auto uv = std::make_shared<Line<2>>(Vec2(0, 0), Vec2(1, 1));
++    const auto d = uv->direction();
++    auto edge = std::make_shared<BSplineCurve<3>>(3, cubicKnots({0, 1}),
++        std::vector<Vec3>{{0, 0, 0}, {d.x()/3, d.y()/3, 0},
++            {2*d.x()/3, 2*d.y()/3, d.x()*d.y()/3}, {d.x(), d.y(), d.x()*d.y()}});
++    certified(edge, tensor({0, 1}, {0, 1}, true), uv);
++}
++FK_TEST(NonIsoResidualCommonPartitionAcrossEdgeUVAndCarrierKnots) {
++    auto uv = std::make_shared<BSplineCurve<2>>(1, std::vector<double>{0, 0, .7, 1, 1},
++        std::vector<Vec2>{{0, 0}, {.7, .7}, {1, 1}});
++    auto edge = diagonalEdge({0, .3, 1});
++    certified(edge, tensor({0, .5, 1}, {0, .5, 1}), uv, {.125, .875});
++    certified(edge, tensor({0, .5, 1}, {0, .5, 1}), uv,
++        {std::nextafter(.5, 0), std::nextafter(.5, 1)});
++}
++FK_TEST(NonIsoResidualNonUnitDomainSubrangeAndCorrelatedReversal) {
++    auto uv = cubicUV({{-2, 7.5}, {-1, 8}, {2, 9}, {4, 10.5}}, {-2, 3});
++    auto support = tensor({-3, 5}, {7, 11});
++    certified(planarEdge(*uv), support, uv, {-1.75, 2.125});
++    auto poles = uv->poles(); std::reverse(poles.begin(), poles.end());
++    auto reversedUV = cubicUV(poles, {-2, 3});
++    certified(planarEdge(*reversedUV), support, reversedUV, {-1.75, 2.125});
++    failed(planarEdge(*uv), support, reversedUV, {-1.75, 2.125});
++}
++FK_TEST(NonIsoResidualConstantOriginalWeightsRemainPolynomial) {
++    auto uv = cubicUV({{0, 0}, {.125, .25}, {.75, .5}, {1, 1}}, {0, 1}, 3);
++    certified(planarEdge(*uv, .25), tensor({0, 1}, {0, 1}, false, 2), uv);
++}
++FK_TEST(NonIsoResidualHiddenEdgePeakIsNotAContinuousProof) {
++    const std::vector<double> breaks{0, .201, .202, .203, 1};
++    std::vector<Vec3> poles;
++    for (size_t span = 0; span + 1 < breaks.size(); ++span)
++        for (int j = span ? 1 : 0; j <= 3; ++j) {
++            const double t = breaks[span] + (breaks[span + 1] - breaks[span]) * j / 3.0;
++            const double z = span == 1 ? (j >= 2 ? 1 : 0) : span == 2 ? (j <= 1 ? 1 : 0) : 0;
++            poles.emplace_back(t, t, z);
++        }
++    auto edge = std::make_shared<BSplineCurve<3>>(3, cubicKnots(breaks), poles);
++    auto uv = diagonalUV();
++    auto support = tensor();
++    certified(diagonalEdge(), tensor(), uv);
++    for (double t : {0., .25, .5, .75, 1.}) {
++        const auto q = uv->point(t);
++        FK_CHECK(norm(edge->point(t) - support->point(q.x(), q.y())) < 1e-12);
++    }
++    FK_CHECK(edge->point(.202).z() > .9);
++    failed(edge, support, uv);
++}
++FK_TEST(NonIsoResidualHiddenCarrierCellPeakIsRejected) {
++    const std::vector<double> breaks{0, .201, .202, .203, 1};
++    const auto us = linearControls(breaks);
++    std::vector<double> zs{0};
++    for (size_t span = 0; span + 1 < breaks.size(); ++span)
++        for (int j = 1; j <= 3; ++j)
++            zs.push_back(span == 1 ? (j >= 2 ? 1 : 0) : span == 2 ? (j <= 1 ? 1 : 0) : 0);
++    std::vector<Vec3> poles;
++    for (size_t i = 0; i < us.size(); ++i)
++        for (double v : {0., 1.0/3, 2.0/3, 1.}) poles.emplace_back(us[i], v, zs[i]);
++    auto support = std::make_shared<BSplineSurface>(3, 3, cubicKnots(breaks), cubicKnots({0, 1}), int(us.size()), 4, poles);
++    auto uv = diagonalUV();
++    auto edge = diagonalEdge();
++    certified(diagonalEdge(), tensor(), uv);
++    for (double t : {0., .25, .5, .75, 1.}) {
++        const auto q = uv->point(t);
++        FK_CHECK(norm(edge->point(t) - support->point(q.x(), q.y())) < 1e-12);
++    }
++    const auto witness = uv->point(.202);
++    FK_CHECK(norm(edge->point(.202) - support->point(witness.x(), witness.y())) > .9);
++    failed(edge, support, uv);
++}
++FK_TEST(NonIsoResidualUVLeavesDomainBetweenThreeMatchingSamples) {
++    auto uv = cubicUV({{0, 0}, {13.0/3, 1.0/3}, {-10.0/3, 2.0/3}, {1, 1}});
++    auto support = tensor();
++    auto edge = planarEdge(*uv);
++    for (double t : {0., .5, 1.}) FK_CHECK(uv->point(t).x() >= -1e-14 && uv->point(t).x() <= 1 + 1e-14);
++    FK_CHECK(uv->point(.25).x() > 1.3);
++    failed(edge, support, uv);
++}
++FK_TEST(NonIsoResidualInvalidInputsFailClosed) {
++    auto uv = cubicUV(); auto edge = planarEdge(*uv); auto support = tensor();
++    const double nan = std::numeric_limits<double>::quiet_NaN(), inf = std::numeric_limits<double>::infinity();
++    failed({}, support, uv); failed(edge, {}, uv); failed(edge, support, {});
++    for (double budget : {0., -1., nan, inf}) failed(edge, support, uv, {0, 1}, budget);
++    for (Interval range : {Interval{0, 0}, Interval{1, 0}, Interval{nan, 1}, Interval{0, inf}, Interval{-.01, 1}, Interval{0, 1.01}})
++        failed(edge, support, uv, range);
++}
++FK_TEST(NonIsoResidualVariableRationalAndWrappersAreUnsupported) {
++    auto uv = cubicUV(); auto edge = planarEdge(*uv); auto support = tensor();
++    unsupported(std::make_shared<BSplineCurve<3>>(3, edge->knots(), edge->poles(), std::vector<double>{1, .25, 1, 1}), support, uv);
++    unsupported(edge, support, std::make_shared<BSplineCurve<2>>(3, uv->knots(), uv->poles(), std::vector<double>{1, .25, 1, 1}));
++    std::vector<double> weights(16, 1); weights[5] = .25;
++    std::vector<Vec3> surfacePoles;
++    for (int i = 0; i < 4; ++i) for (int j = 0; j < 4; ++j) surfacePoles.push_back(support->pole(i, j));
++    unsupported(edge, std::make_shared<BSplineSurface>(3, 3, cubicKnots({0, 1}), cubicKnots({0, 1}), 4, 4,
++        surfacePoles, weights), uv);
++    unsupported(std::make_shared<TrimmedCurve<3>>(edge, 0, 1), support, uv);
++    unsupported(edge, support, std::make_shared<TrimmedCurve<2>>(uv, 0, 1));
++    unsupported(edge, std::make_shared<BSplineSurface>(support, Transform3()), uv);
++    unsupported(edge, std::make_shared<Plane>(Frame3()), uv);
++}
++FK_TEST(NonIsoResidualCancellationPropagates) {
++    auto uv = cubicUV(); auto edge = planarEdge(*uv); auto support = tensor();
++    auto token = std::make_shared<std::atomic<bool>>(true); CancellationScope scope(token);
++    bool cancelled = false;
++    try { (void)detail::surfaceCurveResidualBound(edge, support, uv, {0, 1}, 1e-8); }
++    catch (const OperationCancelled &) { cancelled = true; }
++    FK_CHECK(cancelled);
++}
++
++FK_TEST(NonIsoResidualFixedInputResourceLimitFailsClosed) {
++    // A valid polynomial input beyond the declared fixed 100000-control guard.
++    std::vector<double> breaks;
++    for (int i = 0; i <= 33334; ++i) breaks.push_back(double(i) / 33334);
++    auto edge = diagonalEdge(breaks);
++    FK_CHECK(edge->poleCount() > 100000);
++    failed(edge, tensor(), diagonalUV());
++}
++
++FK_TEST(NonIsoResidualUnclampedOriginalCubicKnots) {
++    auto uv = std::make_shared<BSplineCurve<2>>(3,
++        std::vector<double>{-3, -2, -1, 0, .375, .75, 1, 2, 3, 4},
++        std::vector<Vec2>{{.1, .2}, {.2, .1}, {.3, .4}, {.5, .7}, {.7, .6}, {.9, .8}});
++    certified(planarEdge(*uv), tensor(), uv, {0, 1});
++}
+--- /dev/null
++++ b/kernel/tests/test_sheet_join_ledger.cpp
+@@ -0,0 +1,213 @@
++#include "fk_sheet_join_validation.h"
++#include "fk_bspline.h"
++#include "fk_bspline_surface.h"
++#include "fk_body_check.h"
++#include "fk_body_io.h"
++#include "fk_cancel.h"
++#include "fk_unify.h"
++#include "fk_test.h"
++#include <algorithm>
++#include <array>
++#include <limits>
++#include <memory>
++#include <vector>
++
++using namespace ForgeCad::Kernel;
++namespace {
++constexpr double cap = 1e-7;
++const std::vector<double> knots{0, 0, 0, 0, 1, 1, 1, 1};
++struct Fixture {
++    Body body;
++    std::array<EdgeId, 5> logical;
++    std::array<FaceId, 2> faces;
++};
++Fixture fixture(const Fixture *source = nullptr, bool permuted = false) {
++    const std::vector<Vec3> vertices{{0, 0, 0}, {1, 1, 0}, {0, 1, 0}, {1, 0, 0}};
++    std::array<SurfacePtr, 2> surfaces;
++    std::array<CurvePtr<2>, 2> uv;
++    CurvePtr<3> seam;
++    if (source) {
++        for (int i = 0; i < 2; ++i) {
++            surfaces[i] = source->body.face(source->faces[i]).surface;
++            for (LoopId loop : source->body.face(source->faces[i]).loops)
++                for (FinId fin : source->body.loopFins(loop))
++                    if (source->body.fin(fin).edge == source->logical[0]) uv[i] = source->body.fin(fin).pcurve;
++        }
++        seam = source->body.edge(source->logical[0]).curve;
++    } else {
++        for (int side = 0; side < 2; ++side) {
++            std::vector<Vec3> poles;
++            for (int i = 0; i < 4; ++i) for (int j = 0; j < 4; ++j)
++                poles.emplace_back((side ? j : i) / 3.0, (side ? i : j) / 3.0, 0);
++            surfaces[side] = std::make_shared<BSplineSurface>(3, 3, knots, knots, 4, 4, poles);
++        }
++        std::vector<Vec2> q{{0, 0}, {.2, .1}, {.8, .9}, {1, 1}};
++        std::vector<Vec3> e;
++        for (const auto &p : q) e.emplace_back(p.x(), p.y(), 0);
++        seam = std::make_shared<BSplineCurve<3>>(3, knots, e);
++        uv[0] = std::make_shared<BSplineCurve<2>>(3, knots, q);
++        for (auto &p : q) std::swap(p[0], p[1]);
++        uv[1] = std::make_shared<BSplineCurve<2>>(3, knots, q);
++    }
++    const std::array<std::array<int, 2>, 5> endpoints{{{{0, 1}}, {{1, 2}}, {{2, 0}}, {{0, 3}}, {{3, 1}}}};
++    const std::array<int, 5> order = permuted ? std::array<int, 5>{{3, 2, 0, 4, 1}} : std::array<int, 5>{{0, 1, 2, 3, 4}};
++    std::array<int, 5> modelIndex{};
++    std::vector<Body::BuildEdge> edges;
++    for (int logical : order) {
++        modelIndex[logical] = int(edges.size());
++        const auto start = endpoints[logical][0], end = endpoints[logical][1];
++        CurvePtr<3> curve;
++        if (!logical) curve = seam;
++        else if (logical == 1) {
++            if (source) curve = source->body.edge(source->logical[1]).curve;
++            else {
++                std::vector<Vec3> poles;
++                for (int j = 0; j < 4; ++j) poles.push_back(vertices[start] + (vertices[end] - vertices[start]) * (j / 3.0));
++                curve = std::make_shared<BSplineCurve<3>>(3, knots, poles);
++            }
++        } else curve = std::make_shared<Line<3>>(vertices[start], vertices[end] - vertices[start]);
++        edges.push_back({start, end, curve, {0, 1}, logical == 1 ? cap / 2 : cap});
++    }
++    const auto lineUV = [&](int logical, bool swapped) -> CurvePtr<2> {
++        const auto a = vertices[endpoints[logical][0]], b = vertices[endpoints[logical][1]];
++        return std::make_shared<Line<2>>(swapped ? Vec2(a.y(), a.x()) : Vec2(a.x(), a.y()),
++            swapped ? Vec2(b.y() - a.y(), b.x() - a.x()) : Vec2(b.x() - a.x(), b.y() - a.y()));
++    };
++    Body::BuildFace first, second;
++    first.surface = surfaces[0]; second.surface = surfaces[1]; second.sense = false;
++    first.loops.push_back({{modelIndex[0], true, uv[0], 0}, {modelIndex[1], true, lineUV(1, false), 0}, {modelIndex[2], true, lineUV(2, false), 0}});
++    second.loops.push_back({{modelIndex[0], false, uv[1], 0}, {modelIndex[3], true, lineUV(3, true), 0}, {modelIndex[4], true, lineUV(4, true), 0}});
++    Fixture result;
++    result.body = Body::buildSheet(vertices, edges, permuted ? std::vector<Body::BuildFace>{second, first} : std::vector<Body::BuildFace>{first, second});
++    const auto actualEdges = result.body.edges();
++    const auto actualFaces = result.body.faces();
++    for (int i = 0; i < 5; ++i) result.logical[order[i]] = actualEdges[i];
++    result.faces = permuted ? std::array<FaceId, 2>{{actualFaces[1], actualFaces[0]}} : std::array<FaceId, 2>{{actualFaces[0], actualFaces[1]}};
++    return result;
++}
++FinId incidence(const Fixture &f, int side = 0, int logical = 0) {
++    for (LoopId loop : f.body.face(f.faces[side]).loops)
++        for (FinId fin : f.body.loopFins(loop)) if (f.body.fin(fin).edge == f.logical[logical]) return fin;
++    throw std::runtime_error("fixture incidence missing");
++}
++std::vector<detail::SheetJoinPlan> plans(const Fixture &f, bool extra = true) {
++    const auto ordinal = [&](FaceId face) { const auto ids = f.body.faces(); return int(std::find(ids.begin(), ids.end(), face) - ids.begin()); };
++    const auto &edge = f.body.edge(f.logical[0]);
++    std::vector<detail::SheetJoinPlan> result{{ordinal(f.faces[0]), 0, cap, edge.curve, edge.range}, {ordinal(f.faces[1]), 0, cap, edge.curve, edge.range}};
++    if (extra) {
++        const auto &e = f.body.edge(f.logical[1]);
++        result.push_back({ordinal(f.faces[0]), 1, cap / 2, e.curve, e.range});
++    }
++    return result;
++}
++std::vector<EdgeId> modelEdges(const Fixture &f) { return {f.logical[0], f.logical[1]}; }
++BodyHistory explicitHistory(const Fixture &source, const Fixture &target) {
++    auto history = makeHistory({&source.body}, target.body);
++    for (int i = 0; i < 2; ++i)
++        history.declareOrigins(EntityKind::Face, target.faces[i].index, {{0, EntityKind::Face, source.faces[i].index, HistoryRelation::Modified}});
++    for (int i = 0; i < 5; ++i)
++        history.declareOrigins(EntityKind::Edge, target.logical[i].index, {{0, EntityKind::Edge, source.logical[i].index, HistoryRelation::Modified}});
++    return history;
++}
++}
++
++FK_TEST(SheetJoinLedgerActualTwoFinsAndExtraFixedCaps) {
++    auto f = fixture();
++    const auto records = detail::certifySheetJoins(f.body, plans(f), modelEdges(f));
++    FK_CHECK(records.size() == 3);
++    FK_CHECK(f.body.fin(incidence(f, 0)).pcurveTolerance == cap);
++    FK_CHECK(f.body.fin(incidence(f, 1)).pcurveTolerance == cap);
++    FK_CHECK(f.body.fin(incidence(f, 0, 1)).pcurveTolerance == cap / 2);
++    BodyHistory history;
++    Body unified = unifySameDomain(f.body, 1e-6, &history);
++    detail::requireUnifiedSheetJoins(unified, history, records);
++}
++FK_TEST(SheetJoinLedgerExplicitCompactionAndUnifyHistoryPermutation) {
++    auto source = fixture();
++    const auto records = detail::certifySheetJoins(source.body, plans(source, false), modelEdges(source));
++    auto target = fixture(&source, true);
++    for (int side = 0; side < 2; ++side) target.body.fin(incidence(target, side)).pcurveTolerance = cap;
++    FK_CHECK(source.logical[0] != target.logical[0]);
++    FK_CHECK(source.faces[0] != target.faces[0]);
++    const auto history = explicitHistory(source, target);
++    detail::requireUnifiedSheetJoins(target.body, history, records);
++    auto candidate = fixture(nullptr, true);
++    const auto mapped = detail::certifySheetJoins(candidate.body, plans(candidate, false), modelEdges(candidate));
++    FK_CHECK(mapped.size() == 2 && mapped[0].edge == candidate.logical[0]);
++}
++FK_TEST(SheetJoinLedgerRecognizedGapCannotUseLargeFinDeviation) {
++    auto f = fixture();
++    auto uv = std::dynamic_pointer_cast<const BSplineCurve<2>>(f.body.fin(incidence(f)).pcurve);
++    auto poles = uv->poles(); poles[1][0] += .01; poles[2][0] += .01;
++    f.body.fin(incidence(f)).pcurve = std::make_shared<BSplineCurve<2>>(3, knots, poles);
++    f.body.fin(incidence(f)).pcurveTolerance = 100;
++    FK_CHECK_THROWS(detail::certifySheetJoins(f.body, plans(f, false), modelEdges(f)));
++}
++FK_TEST(SheetJoinLedgerMissingMapCurveRangeOrIncidenceRejects) {
++    auto f = fixture(); auto p = plans(f, false); auto map = modelEdges(f);
++    auto missing = map; missing[0] = EdgeId();
++    FK_CHECK_THROWS(detail::certifySheetJoins(f.body, p, missing));
++    auto badRange = p; badRange[0].range = {.125, .875};
++    FK_CHECK_THROWS(detail::certifySheetJoins(f.body, badRange, map));
++    auto badCurve = p; badCurve[0].curve = std::make_shared<BSplineCurve<3>>(*std::dynamic_pointer_cast<const BSplineCurve<3>>(p[0].curve));
++    FK_CHECK_THROWS(detail::certifySheetJoins(f.body, badCurve, map));
++    auto duplicate = p; duplicate.push_back(p.front());
++    FK_CHECK_THROWS(detail::certifySheetJoins(f.body, duplicate, map));
++    f.body.fin(incidence(f)).pcurve.reset();
++    FK_CHECK_THROWS(detail::certifySheetJoins(f.body, p, map));
++}
++FK_TEST(SheetJoinLedgerInvalidBudgetAndEdgeMetadataRejects) {
++    auto f = fixture(); auto p = plans(f, false);
++    p[0].budget = std::numeric_limits<double>::quiet_NaN();
++    FK_CHECK_THROWS(detail::certifySheetJoins(f.body, p, modelEdges(f)));
++    p = plans(f, false); f.body.edge(f.logical[0]).tolerance = 100;
++    FK_CHECK_THROWS(detail::certifySheetJoins(f.body, p, modelEdges(f)));
++}
++FK_TEST(SheetJoinLedgerUnsupportedFamilyRetainsLegacyWithoutCertificate) {
++    auto f = fixture();
++    for (int side = 0; side < 2; ++side) f.body.face(f.faces[side]).surface = std::make_shared<Plane>(Frame3());
++    const auto records = detail::certifySheetJoins(f.body, plans(f, false), modelEdges(f));
++    FK_CHECK(records.empty());
++    FK_CHECK(f.body.fin(incidence(f)).pcurveTolerance == 0);
++}
++FK_TEST(SheetJoinLedgerUnifiedDriftAndMissingDescendantsReject) {
++    auto original = fixture();
++    const auto records = detail::certifySheetJoins(original.body, plans(original, false), modelEdges(original));
++    const auto history = sameIndexHistory(original.body, original.body);
++    for (int mode = 0; mode < 5; ++mode) {
++        auto changed = original;
++        auto &fin = changed.body.fin(incidence(changed));
++        if (mode == 0) fin.sense = !fin.sense;
++        if (mode == 1) fin.pcurve = std::make_shared<BSplineCurve<2>>(*std::dynamic_pointer_cast<const BSplineCurve<2>>(fin.pcurve));
++        if (mode == 2) changed.body.edge(changed.logical[0]).range.hi = .875;
++        if (mode == 3) fin.pcurveTolerance = 100;
++        if (mode == 4) {
++            auto shifted = fixture();
++            auto support = std::dynamic_pointer_cast<const BSplineSurface>(shifted.body.face(shifted.faces[0]).surface);
++            std::vector<Vec3> poles;
++            for (int i = 0; i < 4; ++i) for (int j = 0; j < 4; ++j) poles.push_back(support->pole(i,j) + Vec3(0,0,.01));
++            changed.body.face(changed.faces[0]).surface = std::make_shared<BSplineSurface>(3,3,knots,knots,4,4,poles);
++        }
++        FK_CHECK_THROWS(detail::requireUnifiedSheetJoins(changed.body, history, records));
++    }
++    auto missing = makeHistory({&original.body}, original.body);
++    FK_CHECK_THROWS(detail::requireUnifiedSheetJoins(original.body, missing, records));
++}
++FK_TEST(SheetJoinLedgerCancellationPropagates) {
++    auto f = fixture(); auto token = std::make_shared<std::atomic<bool>>(true); CancellationScope scope(token);
++    bool cancelled = false;
++    try { (void)detail::certifySheetJoins(f.body, plans(f), modelEdges(f)); }
++    catch (const OperationCancelled &) { cancelled = true; }
++    FK_CHECK(cancelled);
++}
++
++FK_TEST(SheetJoinLedgerMissingCarrierOrOriginalCurveRejects) {
++    auto f = fixture();
++    const auto p = plans(f, false);
++    f.body.face(f.faces[0]).surface.reset();
++    FK_CHECK_THROWS(detail::certifySheetJoins(f.body, p, modelEdges(f)));
++    f = fixture();
++    const auto original = plans(f, false);
++    f.body.edge(f.logical[0]).curve.reset();
++    FK_CHECK_THROWS(detail::certifySheetJoins(f.body, original, modelEdges(f)));
++}

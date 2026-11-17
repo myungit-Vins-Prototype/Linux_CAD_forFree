@@ -1,0 +1,30 @@
+K10 — wrapper curve originali E/Q, range esatti e matrici affine IEEE
+
+Freeze e risultati
+Provider7dfb4c8f4b2d06ac1be0ef469d053232aa879fe2b762cf176567fabfd4059fba; headerdd92c62ce5707241743f70a34602af9b0b0e6eca048c765a23fc7a8e634a1aca.
+NuovaTU test_surface_curve_wrappers.cpp SHA24d856c786e83f821aadd27fce3c37bd07f8053628c1fadd8f2f1f632ef82778,8 test semantici congelati prima della baseline.
+Baseline nuovaTU0/8,exit1. Candidato67/67Release,exit0,0.4848s; ASan/UBSan/LSan67/67,exit0,5.1687s. Nessun warning di compilazione né diagnostic sanitizer.
+QuattroTU precedenti cambiano SOLO sei aspettative wrapper Unsupported→Certified matematicamente corrette (2bounds,2instances,1Erazionale,1Qrazionale), più nome coerente del testbounds. Gli altri requisiti nativi, esclusioni e negativi restano invariati. Questo è un nuovo perimetro: l'Unsupported precedente non è descritto come vecchio bug pubblico.
+
+Otto casi semantici
+1. Trim correlati E3/QLine e QBSpline1, domini nonunità e query[-.25,1.25] strettamente dentro i trim. Il carrier ha dominioU[-1,2] e le geometrie seguono lo stesso parametro.
+2. Catena reale Etrim→transform→trim→transform con shear, scala nonuniforme, specchio e traslazione, E e Q genuine razionali, doppioQtrim. Positivo suSnativa e suSistanza; test separato nello stesso caso con trasformazioneE singolare di proiezione finita: nessuna inversa o similarità è richiesta per E. Ogni matrice originale della catena viene conservata, non composta in una nuova rappresentazione arrotondata.
+3. Anti-flatten: Eleaf=(δ,t,0),δ2^-36, EwrapperTx2^18; S=(2^18+u,v,0),Q=(0,t),cap2^-40. Originale affinemath ha gapδ=16cap eFailed; la cubica SURROGATA costruita arrotondando applyToPoint ai poli perdeδ eCertified. Questo controlla un'estrazione vietata; la baseline originale era Unsupported, non viene rivendicata una falsa certificazione pubblica precedente. Il punto valutato in double può perdereδ: il witness matematico indipendente usa originaliIEEE e matrici, non campioni.
+4. PiccoQ razionale tra33campioni sotto wrapperEtrim/transform eQtrim. La versioneflatCertified e quella colpiccoFailed. Griglia e witness puntuale documentano alias e gap>10cap; la prova continua è il provider, non la griglia.
+5. Ledger: UNA fin pianificata. Positivo mantiene il pointerQwrapper originale efinTolerance=cap8e-8. Primo negativoFailed primaassignment, bodycodec/pointerE/S invariati. Non si afferma atomicità transazionale su piani multipli.
+6. Restrizioni di OGNI trim esatte: inner[0,1], outer[-2^-54,1] creato pubblicamente grazie alla lenienza ctor1e-12. Query[0,1]Certified; query[-2^-54,1]Failed per innertrim. LeafE/S hanno dominio[-1,2] eQLine è illimitata: nessuna confusione con dominio della base o del carrier. surfaceCurvePCurveCandidate deve preservare il pointer invalido per non bypassare il trim. Analogo negativoEtrim.
+7. TransformedCurve pubblico ammette matriciNaN o traslazioneInf: input creati solo con APIpubbliche eFailed terminale; nessun oggetto forzato o hook.
+8. Esattamente32 link reali ETransform eQTrim Certified;33Failed. Circletrim periodica legittima con query[6.5,7]oltre2π ma dentrotrim restaUnsupported; la restrizione del dominio naturale nonperiodico appartiene solo alla famiglia BSpline riconosciuta. Edegree2 continuaUnsupported. Cancellation all'ingresso resta OperationCancelled anche su catena troppo profonda.
+
+Export e audit indipendente
+candidate-originals.jsonl contiene13record:9Certified,4Failed. Curve ricorsive conservano type=trimmed/range/basis e type=transformed/placement(matrix,translation)/basis. Native E/Q riportano controlli/pesi/nodi originaliIEEEhex; Sistanze conservano base eplacement originali senza flatten. Sono presenti matrici singolari finite, catene miste, witnessδ16cap, picco e range che violano soloinnertrim. Il recordwrapper-ledger-actual riporta finTolerance reale post-certificazione. I risultati Fraction indipendenti appartengono all'auditor e non sono rivendicati come esecuzione di questo agente.
+Review indipendente deldiff: nessunP1/P2 trovato. Walk bounded prima degli accessor virtuali ricorsivi, ogni trim locale verificato esattamente, tipo nativo riconosciuto prima del suo dominio, originali affine applicati inner→outer in intervalli outward e centratura prima della somma esterna. L'anchor arrotondato è solo origine comune e non sostituisce coefficienti originali. I test non sostituiscono l'audit matematico.
+
+Sanitizer e riproduzione
+Strumentate SOLO productionTU fk_surface_curve_bounds.cpp + tutte8TUtest +fk_test_main; resto kernel dalla libreria Release congelata UNICA SHA6f0a76dfdde164289e0b646843120c1efdcaabcede8eb38446f5aa3459987356. Non è fullkernelSAN.
+Runtime fuori ptrace viarequire_escalated. ASAN_OPTIONSdetect_leaks=1:halt_on_error=1; UBSAN_OPTIONShalt_on_error=1:print_stacktrace=1; LSAN_OPTIONSexitcode=23. Calibrazione worker separato perde19byte reali, LSan rileva1allocation edexit23; testveri exit0. Comandi, hash, log e tempi inclusi.
+Con autorizzazione root sono stati eliminati soltanto tre duplicatiELF privati ricreabili dopo hash/log/export, liberando166714200byte; piano/hash inremoved-recreatable-duplicates.json. DrivercompletiRelease/SAN conservati fuori pacchetto. Sharedarchive, sorgenti, log, JSON, CAD e sigilli precedenti non modificati. NessunELF/.o/.a/CAD archiviato qui.
+
+Limiti e ownership
+Gli8nuovi test sono provider/ledger di dettaglio, non una nuova regressione di comando pubblico CAD. I6mappingtest pubblici preesistenti restano coperti ma non sono attribuiti al solo nuovo branchwrapper. I59test precedenti sono eseguiti con le sole sei aspettative di scope dichiarate sopra.
+Nessunrepoedit, UI, CADutente, commit/push, appbuild o suite483 eseguiti da questo agente. Root integra CMake/memoria/grafo e gestisce app/regressioni pertinenti. Nessun cap aumentato, fallback dopoFailed, modifica datiCAD o riscrittura delle prove precedenti sigillate.

@@ -1,0 +1,14 @@
+{
+  "pass": true,
+  "exact_coefficient_equalities": 462,
+  "comparison": "Original global Cox monomial recurrence converted algebraically to Bernstein versus polar de Boor on original controls",
+  "families": [
+    "degree1",
+    "degree3",
+    "unclamped natural endpoints",
+    "clamped C0 and simple internal knots",
+    "one-ULP internal knot gap",
+    "full spans and strict subranges"
+  ],
+  "limitation": "Finite algebra identity checks, not exhaustive runtime or a proof by sampling."
+}

@@ -1,0 +1,19 @@
+[
+  "c++",
+  "-std=c++17",
+  "-O2",
+  "-g",
+  "-ffp-contract=off",
+  "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+  "/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+  "/tmp/k10-noniso-review/tests/test_surface_curve_bounds.o",
+  "/tmp/k10-noniso-review/tests/test_sheet_join_ledger.o",
+  "/tmp/k10-noniso-review/tests/existing-sheet-tests.o",
+  "/tmp/k10-noniso-review/tests/provider.o",
+  "/tmp/k10-noniso-review/tests/ledger.o",
+  "/tmp/k10-noniso-review/tests/sheet.o",
+  "/tmp/k10-noniso-review/tests/libforgekernel-release.a",
+  "-pthread",
+  "-o",
+  "/tmp/k10-noniso-review/tests/candidate-tests"
+]

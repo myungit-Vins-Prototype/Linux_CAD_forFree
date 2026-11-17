@@ -1,0 +1,19 @@
+from pathlib import Path
+import re
+R=Path('/home/myungit/Linux_CAD_forFree');p=R/'CLAUDE.md';s=p.read_text();h=R/'docs/history/claude-prima-legacy-api-2026-11-16.md';assert not h.exists() or h.read_text()==s;h.write_text(s)
+s=s.replace('- Italiano; nessun `codex` nei nomi dei branch. `main` unico;','- **16/11: continuare review/correzioni locali; nessun commit o push fino a nuova richiesta.**\n- Italiano; nessun `codex` nei nomi dei branch. `main` unico;')
+a=s.index('**16/11 — K10 mitre ISO');b=s.index('**16/11 — UI8 tema',a)
+s=s[:a]+'''K10 mitre/giunti/Mapping: app e27/22/26CTest PASS; certificati ISO/Plane parziali,
+Newton e carrier generici campionati. [Mitre](docs/review-k10-mitre-2026-11-16.md),
+[giunti](docs/review-k10-sheet-join-2026-11-16.md), [UV](docs/review-k10-mapping-uv-2026-11-16.md).
+Dettagli conservati nella [memoria precedente](docs/history/claude-prima-legacy-api-2026-11-16.md).
+
+'''+s[b:]
+a=s.index('## Ultimi interventi — esiti consolidati');b=s.index('\n\n',a)+2
+s=s[:b]+'''**16/11 — Review locale: sette API legacy in lavorazione.**
+Tre Sol: Estendi/provider/utility; ingressi senza usi.
+Baseline5565file/22sigilli; mappa consultata. App/test/mappa da verificare.
+Totale33rilievi invariato;6query intenzionali e K10 generale ancora aperti.
+
+'''+s[b:]
+assert len(s.encode())<=16384 and len(re.findall(r'^\*\*',s,re.M))<=10;p.write_text(s);print('Memory',len(s.encode()),'bytes; entries',len(re.findall(r'^\*\*',s,re.M)))

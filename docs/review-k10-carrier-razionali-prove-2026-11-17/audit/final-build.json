@@ -1,0 +1,27 @@
+{
+  "argv": [
+    "/usr/bin/c++",
+    "-O3",
+    "-DNDEBUG",
+    "-std=gnu++17",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-ffp-contract=off",
+    "-fno-fast-math",
+    "-DFORGEKERNEL_TEST_DATA_DIR=\"/home/myungit/Linux_CAD_forFree/kernel/tests/data\"",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-x",
+    "c++",
+    "/tmp/k10-next-review/audit/export_actual_native_carrier.cpp.txt",
+    "/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+    "-x",
+    "none",
+    "/tmp/k10-next-review/audit/libforgekernel-final.a",
+    "-o",
+    "/tmp/k10-next-review/audit/export-actual-native-carrier"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "returncode": 0,
+  "elapsed_seconds": 4.713934024999617
+}

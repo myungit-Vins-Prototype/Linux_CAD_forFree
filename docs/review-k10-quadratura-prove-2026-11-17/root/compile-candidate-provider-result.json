@@ -1,0 +1,23 @@
+{
+  "command": [
+    "/usr/bin/c++",
+    "-I/tmp/k10-quadrature-review/core/v2/kernel",
+    "-std=c++17",
+    "-O2",
+    "-g",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "-c",
+    "/tmp/k10-quadrature-review/core/v2/kernel/fk_curve_algo.cpp",
+    "-o",
+    "/tmp/k10-quadrature-review/root/candidate.o"
+  ],
+  "exit": 0,
+  "seconds": 1.6587636140029645,
+  "watchdog_seconds": 600
+}

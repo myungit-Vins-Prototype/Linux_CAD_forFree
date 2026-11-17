@@ -1,0 +1,426 @@
+
+FILE kernel/fk_sheet.cpp SHA256 b99a70318f2cf7dcd6b24e646d8976bd287f6622ed9cf4accab968403380afbc
+403: 
+404: // A planned seam keeps the original cubic coefficients and affine UV map.
+405: // The same pointers identify its emitted fins; no geometric proximity lookup.
+406: struct SplineJoinCertificate {
+407:     CurvePtr<3> curve;
+408:     CurvePtr<2> pcurve;
+409:     double budget;
+410:     int expectedUses;
+411: };
+412: 
+415:     cancellationPoint();
+416:     const auto *spline = dynamic_cast<const BSplineCurve<3> *>(curve.get());
+417:     if (!spline || spline->degree() != 3 || spline->isRational())
+418:         throw std::domain_error("extendSheet: rappresentazione della giunzione certificata modificata");
+419:     const auto data = detail::surfaceCompositionErrorBound(surface, pcurve, range);
+420:     if (!data.bound)
+421:         throw std::domain_error("extendSheet: supporto della giunzione certificata non riconosciuto");
+422:     const auto &knots = spline->knots();
+423:     const auto &poles = spline->poles();
+424:     if (poles.size() < 4 || (poles.size() - 1) % 3 || knots.size() != poles.size() + 4)
+425:         throw std::domain_error("extendSheet: campate della giunzione non riconosciute");
+426:     double covered = range.lo;
+427:     for (std::size_t k = 0; k + 3 < poles.size(); k += 3) {
+428:         cancellationPoint();
+429:         const Interval span{knots[k + 3], knots[k + 4]};
+430:         for (int j = 0; j < 3; ++j)
+431:             if (knots[k + j + 1] != span.lo || knots[k + j + 4] != span.hi)
+432:                 throw std::domain_error("extendSheet: nodi della giunzione non riconosciuti");
+433:         if (span.hi <= range.lo || span.lo >= range.hi) continue;
+434:         // Trims must coincide with the planned breaks. Do not certify rounded
+435:         // Bezier extraction as though its controls were the original edge.
+436:         if (span.lo != covered || span.hi > range.hi || !(span.lo < span.hi))
+437:             throw std::domain_error("extendSheet: parametro della giunzione certificata modificato");
+438:         const double error = data.bound(span, {poles[k], poles[k + 1], poles[k + 2], poles[k + 3]});
+439:         if (!std::isfinite(error) || !(error >= 0) || error > budget)
+440:             throw std::domain_error("extendSheet: giunzione fuori dal budget continuo");
+441:         covered = span.hi;
+442:     }
+443:     if (covered != range.hi)
+444:         throw std::domain_error("extendSheet: copertura della giunzione certificata incompleta");
+445: }
+446: 
+447: struct EmittedSplineJoin {
+448:     FaceId face;
+480: void requireUnifiedSplineJoins(const Body &body, const BodyHistory &history,
+481:                               const std::vector<EmittedSplineJoin> &plans) {
+482:     for (const auto &plan : plans) {
+483:         cancellationPoint();
+484:         const auto faces = history.descendants(EntityKind::Face, 0, plan.face.index);
+485:         const auto edges = history.descendants(EntityKind::Edge, 0, plan.edge.index);
+486:         int uses = 0;
+487:         for (int faceIndex : faces) {
+488:             const FaceId face(faceIndex);
+489:             for (LoopId loop : body.face(face).loops)
+490:                 for (FinId finId : body.loopFins(loop)) {
+491:                     const Fin &fin = body.fin(finId);
+492:                     if (std::find(edges.begin(), edges.end(), fin.edge.index) == edges.end()) continue;
+493:                     const Edge &edge = body.edge(fin.edge);
+494:                     if (edge.curve != plan.curve || fin.pcurve != plan.pcurve
+495:                         || edge.range.lo != plan.range.lo || edge.range.hi != plan.range.hi
+496:                         || edge.tolerance != plan.budget || fin.pcurveTolerance != plan.budget)
+497:                         throw std::domain_error("extendSheet: unificazione della giunzione certificata non supportata");
+498:                     requireSplineJoin(edge.curve, body.face(face).surface, fin.pcurve, edge.range, plan.budget);
+499:                     ++uses;
+500:                 }
+501:         }
+502:         if (uses != 1)
+503:             throw std::domain_error("extendSheet: genealogia della giunzione certificata ambigua");
+504:     }
+505: }
+568:             const auto sample = [&](double t) {
+569:                 cancellationPoint();
+570:                 Sample q{a.start, b.start, {}};
+571:                 q.a[da] += sign * t;
+572:                 q.b[db] += signB * rate * t;
+573:                 if (followSeam) {
+574:                     q.a = affineA->point(t); q.b = affineB->point(t);
+575:                     q.point = certifiedA->point(q.a.x(), q.a.y());
+576:                     return q;
+577:                 }
+578:                 for (int iteration = 0; iteration < 32; ++iteration) {
+579:                     cancellationPoint();
+580:                     Vec3 ja[4], jb[4];
+581:                     sa->evaluate(q.a.x(), q.a.y(), 1, ja);
+582:                     sb->evaluate(q.b.x(), q.b.y(), 1, jb);
+583:                     const Vec3 r = jb[0] - ja[0];
+584:                     const Vec3 x = ja[da == 1 ? 2 : 1], y = -jb[2], z = -jb[1];
+585:                     const double nx = norm(x), ny = norm(y), nz = norm(z);
+586:                     if (!(nx > 0 && ny > 0 && nz > 0)) break;
+587:                     const Vec3 columns[3] = {x / nx, y / ny, z / nz};
+588:                     // Regolarizzazione vicino alla tangenza: l'intersezione
+589:                     // delle approssimazioni non deve amplificare il rumore UV.
+590:                     Vec3 m[3];
+591:                     for (int row = 0; row < 3; ++row)
+592:                         for (int col = 0; col < 3; ++col) {
+593:                             m[col][row] = row == col ? (iteration < 16 ? 1e-8 : 1e-12) : 0.0;
+594:                             for (const auto &c : columns) m[col][row] += c[row] * c[col];
+595:                         }
+596:                     const double det = dot(m[0], cross(m[1], m[2]));
+597:                     if (!(std::fabs(det) > 1e-24)) break;
+598:                     const Vec3 correction(dot(r, cross(m[1], m[2])) / det,
+599:                                           dot(m[0], cross(r, m[2])) / det,
+600:                                           dot(m[0], cross(m[1], r)) / det);
+601:                     q.a[1 - da] += dot(columns[0], correction) / nx;
+602:                     q.b[0] += dot(columns[1], correction) / ny;
+603:                     q.b[1] += dot(columns[2], correction) / nz;
+604:                     if (!isFinite(q.a) || !isFinite(q.b)) break;
+605:                     if (iteration == 31) {
+606:                         const Vec3 pa = sa->point(q.a.x(), q.a.y()), pb = sb->point(q.b.x(), q.b.y());
+607:                         if (distance(pa, pb) <= tolerance) { q.point = 0.5 * (pa + pb); return q; }
+608:                     }
+609:                 }
+610:                 throw std::domain_error("extendSheet: impossibile prolungare la giunzione tra le facce "
+611:                                         + std::to_string(a.face) + " e " + std::to_string(b.face));
+612:             };
+615:             double endB = endA, end = endA;
+616:             CurvePtr<3> curve;
+617:             const auto join = [&]() {
+618:                 double lo = 0.0, hi = endA;
+619:                 const auto beyondB = [&](double t) { return signB * (sample(t).b[db] - b.end) >= 0.0; };
+620:                 for (int k = 0; !beyondB(hi); ++k) {
+621:                     if (k == 12) throw std::domain_error("extendSheet: giunzione fuori dalla regione di estensione");
+622:                     hi *= 1.25;
+623:                 }
+624:                 for (int k = 0; k < 45; ++k) {
+625:                     const double mid = 0.5 * (lo + hi);
+626:                     if (beyondB(mid)) hi = mid; else lo = mid;
+627:                 }
+628:                 endB = 0.5 * (lo + hi);
+629:                 if (distance(sample(endA).point, sample(endB).point) <= tolerance) endB = endA;
+630:                 end = std::max(endA, endB);
+631:                 curve = fitCurve([&](double t) { return sample(t).point; }, {0.0, end},
+632:                                  {0.0, std::min(endA, endB), end}, tolerance);
+633:             };
+693:                 throw std::domain_error("extendSheet: normale della giunzione non valida");
+694:             if (sine < 1e-3 && sourceIso) {
+695:                 // Only an ORIGINAL ISO image selects this affine continuation.
+696:                 // The two-carrier proof verifies its affine correspondence; the
+697:                 // old edge parameter need not itself be affine in UV.
+698:                 // Recognized failures remain terminal: sampled Newton must
+699:                 // never re-admit a failed continuous ISO construction.
+700:                 affineJoin();
+701:             } else {
+702:                 // General source UV maps require the implicit continuation,
+703:                 // including almost tangent endpoints. This existing Newton
+704:                 // path remains explicitly sampled, outside the ISO certificate.
+705:                 join();
+706:             }
+707:             const double joinTolerance = tolerance;
+708:             // Le superfici restano identiche sul dominio originale. Espandiamo
+709:             // solo il loro dominio per includere il nuovo bordo rifilato.
+710:             Interval au = sa->uDomain(), av = sa->vDomain(), bu = sb->uDomain(), bv = sb->vDomain();
+711:             if (!followSeam) {
+712:                 // Explicitly sampled legacy domain envelope for Newton joins.
+713:                 for (int k = 0; k <= 64; ++k) {
+714:                     const auto q = sample(end * k / 64.0);
+715:                     au.lo = std::min(au.lo, q.a.x()); au.hi = std::max(au.hi, q.a.x());
+716:                     av.lo = std::min(av.lo, q.a.y()); av.hi = std::max(av.hi, q.a.y());
+717:                     bu.lo = std::min(bu.lo, q.b.x()); bu.hi = std::max(bu.hi, q.b.x());
+718:                     bv.lo = std::min(bv.lo, q.b.y()); bv.hi = std::max(bv.hi, q.b.y());
+747:             const auto &longer = endA <= endB ? b : a;
+748:             const double shortEnd = std::min(endA, endB);
+749:             const int common = model.addEdge(a.vertex, shorter.farVertex, curve, {0.0, shortEnd}, joinTolerance);
+750:             const int extra = endA == endB ? -1 : model.addEdge(shorter.farVertex, longer.farVertex, curve, {shortEnd, end}, joinTolerance);
+751:             if (followSeam) {
+766:                 for (auto &face : model.faces)
+767:                     for (auto &loop : face.loops) {
+768:                         std::vector<Body::BuildFin> rebuilt;
+769:                         for (const auto &fin : loop) {
+770:                             if (fin.edge != side->edge) { rebuilt.push_back(fin); continue; }
+771:                             const bool forward = fin.sense == fromBase;
+772:                             const CurvePtr<2> pc = followSeam ? (side == &a ? affineA : affineB) : nullptr;
+773:                             const double pcBudget = followSeam ? tolerance : 0.0;
+774:                             if (followSeam) (side == &a ? usesA : usesB) += side == &longer && extra >= 0 ? 2 : 1;
+775:                             if (side == &longer && extra >= 0 && !forward) rebuilt.push_back({extra, false, pc, pcBudget});
+776:                             rebuilt.push_back({common, forward, pc, pcBudget});
+777:                             if (side == &longer && extra >= 0 && forward) rebuilt.push_back({extra, true, pc, pcBudget});
+778:                         }
+779:                         loop = std::move(rebuilt);
+780:                     }
+781:             }
+782:             if (followSeam) {
+783:                 certificates.push_back({curve, affineA, tolerance, usesA});
+784:                 certificates.push_back({curve, affineB, tolerance, usesB});
+785:             }
+786:         }
+1006:     }
+1007:     std::vector<SplineJoinCertificate> certificates;
+1008:     joinSplineExtensions(model, body, splineSides, scale, certificates);
+1009:     BodyHistory built,unified;
+1010:     Body result = model.build(history?&built:nullptr);
+1011:     computePCurves(result);
+1012:     const auto emitted = emittedSplineJoins(result, certificates);
+1013:     result = unifySameDomain(result,1e-6,(history || !emitted.empty())?&unified:nullptr);
+1014:     requireUnifiedSplineJoins(result, unified, emitted);
+1015:     const std::vector<CheckIssue> issues = checkBody(result);
+1016:     if (!issues.empty()) throw std::domain_error("extendSheet: superficie estesa non valida (" + describe(issues.front().code) + ": " + issues.front().message + ")");
+1017:     cancellationPoint();
+1018:     if(history)*history=BodyHistory::compose(built,unified,0);
+1019:     return result;
+1020: }
+
+FILE kernel/fk_curve_fit_bounds.h SHA256 62dcaa3a96ad3a0aad4dc144ca138b3c03e78f44b98da18656b100d916b930a9
+28:     std::vector<double> breaks;
+29: };
+30: // Original BSpline data with isoparametric affine UV spans; original
+31: // Extrusion(Line/NURBS generator) also supports general affine UV spans.
+32: // Line2/equal-weight degree-one BSpline2 and Trimmed wrappers retain their
+33: // original anchors/parameters. Unsupported kinds return an empty bound.
+34: // Recognized spans outside the natural domain (including periodic shifts),
+35: // unresolved data or exhausted resources throw. Instances use original data.
+36: SurfaceCurveFitData surfaceCompositionErrorBound(const SurfacePtr &surface, const CurvePtr<2> &pcurve,
+37:                                                  const Interval &range);
+38: // One explicit affine source map on fitRange. sourceRange is ordered;
+47: // Closed queries at a compound junction enclose both neighboring values.
+48: // Line/NURBS and their Trimmed/Transformed wrappers preserve their original
+49: // parameter. Empty if any source kind is unsupported; never a partial bound.
+50: CurveFitErrorBound curvePositionErrorBound(const std::vector<CurveFitSourceSpan> &spans);
+51: 
+80: // query returns +infinity and cannot authorize an accepted fit.
+81: struct PlanePCurveFitData {
+82:     CurveFitErrorBound projection;
+83:     CurveFitErrorBound residual;
+84:     std::vector<double> breaks;
+85: };
+86: PlanePCurveFitData planePCurveErrorBound(const CurvePtr<3> &edge, const SurfacePtr &surface,
+87:                                         const Interval &range);
+88: // Targeted Plane construction: the approximation budget and the returned
+89: // deviation are physical distances in mm. Unsupported source/support returns
+90: // null; recognized invalid/unresolved data throw. deviation is transactional.
+91: CurvePtr<2> fitPCurveOnPlane(const CurvePtr<3> &edge, const SurfacePtr &surface, const Interval &range,
+92:                             double fitTolerance, double residualBudget, double *deviation = nullptr);
+93: // Rebuilds the oracle from the actually emitted edge/Plane and checks every
+94: // ORIGINAL control of a cubic nonrational C0 Bezier pcurve. Throws on unsupported
+95: // or invalid representation, unresolved bounds or a residual above budget.
+96: // The return value is the continuous residual upper bound over the whole range.
+97: double requirePCurveOnPlane(const CurvePtr<3> &edge, const SurfacePtr &surface, const CurvePtr<2> &pcurve,
+98:                             const Interval &range, double residualBudget);
+99: CurveFitErrorBound extrusionOffsetErrorBound(const CurvePtr<3> &source, const Interval &range, double distance,
+
+FILE kernel/fk_curve_fit_bounds.cpp SHA256 3faf91d68ee1511dd31c2c6a37a6c51dd1da8a49286c54873739b102b268052e
+981: SurfaceCurveFitData compositionFactory(const SurfacePtr &surface, const CurvePtr<2> &pcurve,
+982:                                       const Interval &requested) {
+983:     cancellationPoint();
+984:     if (!surface || !pcurve || !requested.isFinite() || !(requested.lo < requested.hi) ||
+985:         !std::isfinite(requested.length()))
+986:         throw std::domain_error("fit composizione: sorgente o dominio non valido");
+987:     const auto *support = dynamic_cast<const BSplineSurface *>(surface.get());
+988:     const auto *extrusion = dynamic_cast<const ExtrusionSurface *>(surface.get());
+989:     if (!support && !extrusion)
+990:         return {};
+991:     if (extrusion && !positionSourceSupported(extrusion->curve()))
+992:         return {};
+993:     const Curve<2> *basis = pcurve.get();
+994:     while (basis->type() == CurveType::Trimmed) {
+995:         cancellationPoint();
+996:         basis = static_cast<const TrimmedCurve<2> *>(basis)->basis().get();
+997:     }
+998:     auto maps = std::make_shared<std::vector<IsoMap>>();
+999:     if (basis->type() == CurveType::Line) {
+1000:         const auto &line = static_cast<const Line<2> &>(*basis);
+1001:         const auto d = line.direction(), o = line.origin();
+1002:         if ((d.x() == 0) == (d.y() == 0))
+1003:             return {};
+1004:         IsoMap map;
+1005:         map.line = true;
+1006:         map.fixedU = d.x() == 0;
+1007:         map.fixed = o[map.fixedU ? 0 : 1];
+1008:         map.origin = o[map.fixedU ? 1 : 0];
+1015:         const auto &curve = static_cast<const BSplineCurve<2> &>(*basis);
+1016:         if (curve.degree() != 1)
+1017:             return {};
+1018:         if (curve.poleCount() > 100000 || requested.lo < curve.domain().lo || requested.hi > curve.domain().hi)
+1019:             throw std::domain_error("fit composizione: dominio UV o budget non valido");
+1020:         for (int i = 1; i < curve.poleCount(); ++i) {
+1021:             cancellationPoint();
+1022:             const Interval anchor{curve.knots()[i], curve.knots()[i + 1]};
+1023:             if (!(anchor.lo < anchor.hi) || anchor.hi <= requested.lo || anchor.lo >= requested.hi)
+1024:                 continue;
+1025:             const Vec2 a = curve.poles()[i - 1], b = curve.poles()[i];
+1026:             // Equal weights make the original degree-one map affine in t.
+1027:             if (curve.weight(i - 1) != curve.weight(i) || (a.x() == b.x()) == (a.y() == b.y()))
+1028:                 return {};
+1029:             IsoMap map;
+1030:             map.fixedU = a.x() == b.x();
+1031:             map.fixed = a[map.fixedU ? 0 : 1];
+1647: SurfaceCurveFitData extrusionAffineCompositionErrorBound(const SurfacePtr &surface,
+1648:                                                          const std::vector<AffineUVSpan> &spans,
+1649:                                                          const Interval &range) {
+1650:     return extrusionAffineFactory(surface, spans, range);
+1651: }
+1652: SurfaceCurveFitData surfaceCompositionErrorBound(const SurfacePtr &surface, const CurvePtr<2> &pcurve,
+1653:                                                  const Interval &range) {
+1654:     auto result = compositionFactory(surface, pcurve, range);
+1655:     return result.bound ? result : affineSurfaceCompositionErrorBound(surface, pcurve, range);
+1656: }
+1657: CurveFitErrorBound curvePositionErrorBound(const std::vector<CurveFitSourceSpan> &spans) {
+1658:     return positionFactory(spans);
+1659: }
+
+FILE kernel/fk_affine_surface_fit.cpp SHA256 4f00481ed10f996cc45d339f70283b5d2ecbcd41efc9f9d4dd2399c2bbb4cfea
+7: SurfaceCurveFitData affineSurfaceCompositionErrorBound(const SurfacePtr &surface, const CurvePtr<2> &pcurve,
+8:                                                        const Interval &range) {
+9:     cancellationPoint();
+10:     if (!surface || !pcurve || !range.isFinite() || !(range.lo < range.hi) || !std::isfinite(range.length()))
+11:         throw std::domain_error("fit UV affine: sorgente o intervallo non valido");
+12:     if (surface->type() != SurfaceType::Extrusion)
+13:         return {};
+14:     const Curve<2> *source = pcurve.get();
+15:     while (source->type() == CurveType::Trimmed) {
+24:         const auto &curve = static_cast<const BSplineCurve<2> &>(*source);
+25:         if (curve.degree() != 1)
+26:             return {};
+27:         if (curve.poleCount() > 100000)
+28:             throw std::domain_error("fit UV affine: budget poli esaurito");
+29:         if (range.lo < curve.domain().lo || range.hi > curve.domain().hi)
+30:             throw std::domain_error("fit UV affine: intervallo fuori dominio UV");
+31:         for (int i = 1; i < curve.poleCount(); ++i) {
+32:             cancellationPoint();
+33:             const Interval anchor{curve.knots()[i], curve.knots()[i + 1]};
+34:             if (!(anchor.lo < anchor.hi) || anchor.hi <= range.lo || anchor.lo >= range.hi)
+35:                 continue;
+36:             if (curve.weight(i - 1) != curve.weight(i))
+37:                 return {};
+38:             spans.push_back({{std::max(range.lo, anchor.lo), std::min(range.hi, anchor.hi)}, anchor,
+39:                              curve.poles()[i - 1], curve.poles()[i], false});
+40:         }
+41:     } else {
+42:         return {};
+
+FILE kernel/fk_pcurve.cpp SHA256 ad5e5ce7082274aee5c279772f30caa56b21689b7b4b7331d27543444c58df79
+385:     if (nodes.size() < 2) return nullptr;
+386:     // Tratti di Bezier cubici; nodi interni di molteplicita' 3 (C1 perche'
+387:     // le derivate nei nodi sono le stesse a sinistra e a destra).
+388:     std::vector<double> knots(4, nodes.front().t);
+389:     std::vector<Vec2> poles{nodes.front().uv + shift};
+390:     for (std::size_t i = 0; i + 1 < nodes.size(); ++i) {
+391:         const HermiteNode &a = nodes[i], &b = nodes[i + 1];
+392:         const double h = b.t - a.t;
+393:         poles.push_back(a.uv + shift + (h / 3.0) * a.derivative);
+394:         poles.push_back(b.uv + shift - (h / 3.0) * b.derivative);
+395:         poles.push_back(b.uv + shift);
+396:         knots.insert(knots.end(), i + 2 == nodes.size() ? 4 : 3, b.t);
+397:     }
+398:     auto fitted = std::make_shared<BSplineCurve<2>>(3, std::move(knots), std::move(poles));
+399:     const double measured = pcurveDeviation(surface, *curve, *fitted, range);
+400:     if (!(measured <= tolerance)) return nullptr;
+401:     if (deviation) *deviation = measured;
+402:     return fitted;
+403: }
+425:     const std::function<bool(double, Vec2, double, Vec2, int)> refine = [&](double ta, Vec2 a, double tb, Vec2 b, int depth) {
+426:         cancellationPoint();
+427:         if (budget == 0) return false;
+428:         --budget;
+429:         double worst = 0.0;
+430:         bool close = true;
+431:         for (double s : {0.25, 0.5, 0.75}) {
+432:             const Vec2 uv = a + s * (b - a);
+464:         knots.push_back(nodesT[i]);
+465:         poles.push_back(nodesUv[i] + shift);
+466:     }
+467:     knots.push_back(nodesT.back());
+468:     if (poles.size() < 2) return nullptr;
+469:     auto fitted = std::make_shared<BSplineCurve<2>>(1, std::move(knots), std::move(poles));
+470:     const double measured = pcurveDeviation(surface, *curve, *fitted, range);
+471:     if (!(measured <= 50.0 * tolerance)) return nullptr;
+472:     if (deviation) *deviation = measured;
+473:     return fitted;
+474: }
+475: 
+476: }
+477: 
+478: CurvePtr<2> fitPCurve(const Surface &surface, const CurvePtr<3> &curve, const Interval &range, double tolerance, double *deviation) {
+479:     if (CurvePtr<2> fitted = fitHermitePCurve(surface, curve, range, tolerance, deviation)) return fitted;
+480:     if (!curve || !range.isFinite() || !(range.lo < range.hi)) return nullptr;
+502:     std::vector<std::exception_ptr> failures(jobs.size());
+503:     const auto computeOne = [&](std::size_t k) {
+504:         Job &job = jobs[k];
+505:         const Edge &edge = source.edge(source.fin(job.fin).edge);
+506:         const double edgeTolerance = std::max(linearResolution(), edge.tolerance);
+507:         if (CurvePtr<2> exact = exactPCurve(*job.surface, edge.curve, edge.range, edgeTolerance)) {
+508:             job.pcurve = std::move(exact);
+509:             job.pcurveTolerance = 0.0;
+510:             return;
+511:         }
+512:         double deviation = 0.0;
+513:         if (CurvePtr<2> fitted = fitPCurve(*job.surface, edge.curve, edge.range, std::max(tolerance, edgeTolerance), &deviation)) {
+514:             job.pcurve = std::move(fitted);
+515:             job.pcurveTolerance = std::max(deviation, std::numeric_limits<double>::min());
+516:         }
+530:         if (!job.pcurve) {
+531:             ++missing;
+532:             continue;
+533:         }
+534:         Fin &fin = body.fin(job.fin);
+535:         fin.pcurve = std::move(job.pcurve);
+536:         fin.pcurveTolerance = job.pcurveTolerance;
+537:     }
+538:     return missing;
+539: }
+540: 
+
+FILE kernel/fk_blend_model.h SHA256 40d972a816756f6eea6b74fd44d760d8843c8b79ef973e8bc64d83670a99cdd9
+284:     Body build(BodyHistory *history = nullptr) const {
+285:         // Solo i vertici usati, rinumerati.
+286:         std::vector<int> used(points.size(), -1);
+287:         std::vector<Vec3> kept;
+288:         std::vector<double> keptTolerance;
+289:         std::vector<Body::BuildEdge> keptEdges;
+290:         std::vector<int> edgeMap(edges.size(), -1);
+300:         for (Body::BuildFace &face : keptFaces)
+301:             for (auto &loop : face.loops)
+302:                 for (Body::BuildFin &fin : loop) {
+303:                     if (edgeMap[std::size_t(fin.edge)] < 0) {
+304:                         Body::BuildEdge e = edges[std::size_t(fin.edge)];
+305:                         e.start = point(e.start);
+306:                         e.end = point(e.end);
+307:                         edgeMap[std::size_t(fin.edge)] = int(keptEdges.size());
+308:                         keptEdges.push_back(e);
+309:                     }
+310:                     fin.edge = edgeMap[std::size_t(fin.edge)];
+311:                 }
+312:         Body body = sheet ? Body::buildSheet(kept, keptEdges, keptFaces) : Body::build(kept, keptEdges, keptFaces);
+313:         const std::vector<VertexId> vertices = body.vertices();

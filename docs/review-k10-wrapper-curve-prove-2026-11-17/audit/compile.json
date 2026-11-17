@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "g++",
+    "-O2",
+    "-std=c++17",
+    "-ffp-contract=off",
+    "-fno-fast-math",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-I",
+    "kernel",
+    "-x",
+    "c++",
+    "-c",
+    "/tmp/k10-curve-wrapper-review/audit/export_actual_ledger.cpp.txt",
+    "-o",
+    "/tmp/k10-curve-wrapper-review/audit/export-actual-ledger.o"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "exit": 0,
+  "elapsed": 1.9106180499948096,
+  "sourceSHA256": "0d51d7b421e7ba249ec714b9edcd7a24bf17c68165439b4b968cd82e15d1b404",
+  "librarySHA256": "6f0a76dfdde164289e0b646843120c1efdcaabcede8eb38446f5aa3459987356"
+}

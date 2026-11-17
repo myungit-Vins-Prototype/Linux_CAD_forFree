@@ -1,0 +1,18 @@
+{
+  "frozen": true,
+  "groups": 6,
+  "baselineFilter": "SafeControls",
+  "executionByThisAgent": "none",
+  "files": [
+    {
+      "path": "test_quadrature_validation.cpp",
+      "bytes": 11849,
+      "sha256": "fbdf6dde51a2c29b69c88a2d2b53990ff7d88c1c906627035c76f2b58e9ff88b"
+    },
+    {
+      "path": "COVERAGE.txt",
+      "bytes": 1118,
+      "sha256": "42be0ec74d06576e15157a5295c7d55502bb2454168b9a24f969817ed4547e3a"
+    }
+  ]
+}

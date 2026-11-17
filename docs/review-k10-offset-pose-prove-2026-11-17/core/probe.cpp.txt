@@ -1,0 +1,11 @@
+#include "fk_body_io.h"
+#include "fk_body_check.h"
+#include "fk_mass.h"
+#include "fk_shell.h"
+#include "fk_transform.h"
+#include "fk_tessellate.h"
+#include <fstream>
+#include <iostream>
+#include <iterator>
+using namespace ForgeCad::Kernel;
+int main(){std::cout.setf(std::ios::unitbuf);std::ifstream f("/home/myungit/Linux_CAD_forFree/kernel/tests/data/shell_stitched_tangent.body",std::ios::binary);auto original=readBodyBinary(std::string(std::istreambuf_iterator<char>(f),{}));auto source=scaleBody(original,Vec3(),2.5);source=transformBody(source,Transform3::rotation(Vec3(12,-23,7),Vec3(1,2,.3),.42));CheckOptions sourceChecks;sourceChecks.loopCrossings=true;std::cout<<"source issues="<<checkBody(source,sourceChecks).size()<<std::endl;const auto saved=writeBodyBinary(source);try{auto result=shellBody(source,{},1.25);CheckOptions o;o.loopCrossings=true;auto issues=checkBody(result,o);TessellationOptions t;t.deflection=.1;t.threads=2;auto mesh=tessellate(result,t);std::cout<<"faces="<<result.faces().size()<<" shells="<<result.shells().size()<<" issues="<<issues.size()<<" mesh="<<mesh.failedFaces<<" volume="<<massProperties(result).volume<<" unchanged="<<(saved==writeBodyBinary(source))<<"\n";return !issues.empty()||mesh.failedFaces||saved!=writeBodyBinary(source);}catch(std::exception&e){std::cerr<<e.what()<<"\n";return 1;}}

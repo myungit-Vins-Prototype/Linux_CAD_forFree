@@ -1,0 +1,141 @@
+{
+  "pass": true,
+  "scope": "Exact affine endpoint domain classification on actual exported baseline fin pcurves; inside endpoints imply inside whole Line range",
+  "input_sha256": "af0a274dfce1661e752e4f33a91039577dcf1661bd886b1cc8271a47cadbc615",
+  "records": [
+    {
+      "label": "cylinder",
+      "fin": 8,
+      "face": 2,
+      "edge": 8,
+      "exactEndpointsOutside": false,
+      "witnesses": []
+    },
+    {
+      "label": "cylinder",
+      "fin": 10,
+      "face": 2,
+      "edge": 0,
+      "exactEndpointsOutside": false,
+      "witnesses": []
+    },
+    {
+      "label": "cylinder",
+      "fin": 12,
+      "face": 3,
+      "edge": 9,
+      "exactEndpointsOutside": false,
+      "witnesses": []
+    },
+    {
+      "label": "cylinder",
+      "fin": 14,
+      "face": 3,
+      "edge": 1,
+      "exactEndpointsOutside": false,
+      "witnesses": []
+    },
+    {
+      "label": "cylinder",
+      "fin": 16,
+      "face": 4,
+      "edge": 10,
+      "exactEndpointsOutside": false,
+      "witnesses": []
+    },
+    {
+      "label": "cylinder",
+      "fin": 18,
+      "face": 4,
+      "edge": 2,
+      "exactEndpointsOutside": false,
+      "witnesses": []
+    },
+    {
+      "label": "cylinder",
+      "fin": 20,
+      "face": 5,
+      "edge": 11,
+      "exactEndpointsOutside": false,
+      "witnesses": []
+    },
+    {
+      "label": "cylinder",
+      "fin": 22,
+      "face": 5,
+      "edge": 3,
+      "exactEndpointsOutside": false,
+      "witnesses": []
+    },
+    {
+      "label": "nurbs",
+      "fin": 8,
+      "face": 2,
+      "edge": 8,
+      "exactEndpointsOutside": false,
+      "witnesses": []
+    },
+    {
+      "label": "nurbs",
+      "fin": 10,
+      "face": 2,
+      "edge": 0,
+      "exactEndpointsOutside": false,
+      "witnesses": []
+    },
+    {
+      "label": "nurbs",
+      "fin": 12,
+      "face": 3,
+      "edge": 9,
+      "exactEndpointsOutside": false,
+      "witnesses": []
+    },
+    {
+      "label": "nurbs",
+      "fin": 14,
+      "face": 3,
+      "edge": 1,
+      "exactEndpointsOutside": false,
+      "witnesses": []
+    },
+    {
+      "label": "nurbs",
+      "fin": 16,
+      "face": 4,
+      "edge": 10,
+      "exactEndpointsOutside": false,
+      "witnesses": []
+    },
+    {
+      "label": "nurbs",
+      "fin": 18,
+      "face": 4,
+      "edge": 2,
+      "exactEndpointsOutside": false,
+      "witnesses": []
+    },
+    {
+      "label": "nurbs",
+      "fin": 20,
+      "face": 5,
+      "edge": 11,
+      "exactEndpointsOutside": false,
+      "witnesses": []
+    },
+    {
+      "label": "nurbs",
+      "fin": 22,
+      "face": 5,
+      "edge": 3,
+      "exactEndpointsOutside": false,
+      "witnesses": []
+    }
+  ],
+  "count": 16,
+  "not_claimed": [
+    "Residual geometry over-budget",
+    "Need for larger physical cap",
+    "Sampled range domain proof"
+  ]
+}

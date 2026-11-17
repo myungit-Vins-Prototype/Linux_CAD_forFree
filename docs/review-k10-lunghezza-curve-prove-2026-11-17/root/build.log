@@ -1,0 +1,133 @@
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_math.cpp.o
+[  4%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_predicates.cpp.o
+[  4%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_bernstein.cpp.o
+[  4%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve.cpp.o
+[  4%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve_ops.cpp.o
+[  4%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_bspline_basis.cpp.o
+[  4%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_bspline.cpp.o
+[  4%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface.cpp.o
+[  4%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_bspline_surface.cpp.o
+[  4%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve_algo.cpp.o
+[  4%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_algo.cpp.o
+[  8%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_face_normal_bounds.cpp.o
+[  8%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sketch_projection.cpp.o
+[  8%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_distance.cpp.o
+[  8%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_topology.cpp.o
+[  8%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_body_check.cpp.o
+[  8%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_profile.cpp.o
+[  8%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_extrude.cpp.o
+[  8%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_primitives.cpp.o
+[  8%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_pcurve.cpp.o
+[  8%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_micro.cpp.o
+[ 13%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_mass.cpp.o
+[ 13%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_bspline_isoline.cpp.o
+[ 13%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_intersect.cpp.o
+[ 13%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_marching.cpp.o
+[ 13%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_apparent_contour.cpp.o
+[ 13%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_classify.cpp.o
+[ 13%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_body_io.cpp.o
+[ 13%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_boolean.cpp.o
+[ 13%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_boolean_boundary.cpp.o
+[ 13%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_solid_trim.cpp.o
+[ 13%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_unify.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_history.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_tessellate.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_nurbs.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_nurbs_join.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve_surface.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_revolve.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_paths.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_loop.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_polar.cpp.o
+[ 21%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_surface.cpp.o
+[ 21%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_contour.cpp.o
+[ 21%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_mitre.cpp.o
+[ 21%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_section_curve.cpp.o
+[ 21%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_contact_breaks.cpp.o
+[ 21%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_tools.cpp.o
+[ 21%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_poles.cpp.o
+[ 21%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_poles_influence.cpp.o
+[ 21%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_poles_constraints.cpp.o
+[ 21%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_poles_jets.cpp.o
+[ 26%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_poles_conversion.cpp.o
+[ 26%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_refit.cpp.o
+[ 26%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_body_collection.cpp.o
+[ 26%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_mapping.cpp.o
+[ 26%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_curve_bounds.cpp.o
+[ 26%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sheet_join_validation.cpp.o
+[ 26%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_affine_surface_fit.cpp.o
+[ 26%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_mapping_carrier.cpp.o
+[ 26%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_mapping_fit.cpp.o
+[ 26%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_planar_flatten.cpp.o
+[ 30%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_quilt_mapping.cpp.o
+[ 30%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sheet.cpp.o
+[ 30%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_offset.cpp.o
+/home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp: In function ‘ForgeCad::Kernel::SurfacePtr ForgeCad::Kernel::{anonymous}::offsetBSplineC2(const ForgeCad::Kernel::Surface&, double, const ForgeCad::Kernel::Interval&, const ForgeCad::Kernel::Interval&, double, bool, bool)’:
+/home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:294:151: warning: unused parameter ‘checkCurvature’ [-Wunused-parameter]
+  294 | SurfacePtr offsetBSplineC2(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
+      |                                                                                                                                                  ~~~~~^~~~~~~~~~~~~~~~~~~~~
+/home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp: In function ‘ForgeCad::Kernel::SurfacePtr ForgeCad::Kernel::{anonymous}::offsetBSpline(const ForgeCad::Kernel::Surface&, double, const ForgeCad::Kernel::Interval&, const ForgeCad::Kernel::Interval&, double, bool, bool)’:
+/home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:521:149: warning: unused parameter ‘checkCurvature’ [-Wunused-parameter]
+  521 | SurfacePtr offsetBSpline(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
+      |                                                                                                                                                ~~~~~^~~~~~~~~~~~~~~~~~~~~
+[ 30%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve_fit_bounds.cpp.o
+[ 30%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve_projection.cpp.o
+[ 30%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_open_offset.cpp.o
+[ 30%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_offset_support.cpp.o
+[ 30%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sew.cpp.o
+[ 30%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_planar.cpp.o
+[ 30%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_boundary.cpp.o
+[ 30%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_fill.cpp.o
+[ 34%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_project.cpp.o
+[ 34%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_thicken.cpp.o
+[ 34%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_shell.cpp.o
+[ 34%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_transform.cpp.o
+[ 34%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_draft.cpp.o
+[ 34%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_hermite.cpp.o
+[ 34%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_helix.cpp.o
+[ 34%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_helix_projection.cpp.o
+[ 34%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sweep.cpp.o
+[ 34%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sweep_atlas.cpp.o
+[ 39%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sweep_surface_validation.cpp.o
+[ 39%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sweep_caps.cpp.o
+[ 39%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sweep_analytic_bridge.cpp.o
+[ 39%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_knots.cpp.o
+[ 39%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_merge.cpp.o
+[ 39%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft.cpp.o
+[ 39%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_guide_constraints.cpp.o
+[ 39%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_profiles.cpp.o
+[ 39%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_sections.cpp.o
+[ 39%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_exchange.cpp.o
+[ 43%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_step.cpp.o
+[ 43%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_iges.cpp.o
+[ 43%] Linking CXX static library libforgekernel.a
+[ 43%] Built target forgekernel
+[ 43%] Built target forgecad_compute_autogen_timestamp_deps
+[ 43%] Automatic MOC and UIC for target forgecad_compute
+[ 43%] Built target forgecad_compute_autogen
+[ 43%] Built target forgecad_compute
+[ 43%] Impronta dei sorgenti della geometria
+[ 43%] Built target forgecad_autogen_timestamp_deps
+[ 43%] Automatic MOC and UIC for target forgecad
+[ 43%] Built target forgecad_autogen
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_document_io.cpp.o
+[ 43%] Linking CXX executable forgecad
+[100%] Built target forgecad
+[100%] Built target forgekernel
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_arc_length_validation_tests.dir/tests/fk_test_main.cpp.o
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_arc_length_validation_tests.dir/tests/test_arc_length_validation.cpp.o
+[100%] Linking CXX executable forgekernel_arc_length_validation_tests
+[100%] Built target forgekernel_arc_length_validation_tests
+[100%] Built target forgekernel
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_bspline_derivative_tests.dir/tests/test_bspline_derivatives.cpp.o
+[100%] Linking CXX executable forgekernel_bspline_derivative_tests
+[100%] Built target forgekernel_bspline_derivative_tests
+[ 90%] Built target forgekernel
+[ 90%] Linking CXX executable forgekernel_sheet_arc_validation_tests
+[100%] Built target forgekernel_sheet_arc_validation_tests
+[ 66%] Built target forgekernel
+[ 66%] Built target forgekernel_occt
+[ 66%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_curve_algo.cpp.o
+[ 66%] Linking CXX executable ../forgekernel_tests
+[100%] Built target forgekernel_tests

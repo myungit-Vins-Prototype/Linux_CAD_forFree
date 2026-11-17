@@ -1,0 +1,4 @@
+{'fin': 0, 'edge': 0, 'face': 0, 'budget': 8e-08, 'pass': True, 'upper_mm': 5.841103241770124e-11, 'cells': 1, 'leaves': 1, 'branches': 1, 'max_depth': 0, 'label': None, 'runtimeStatus': 'Certified', 'runtimeUpper': '0x1.b87b00b50e762p-34'}
+{'fin': 1, 'edge': 1, 'face': 0, 'budget': 8e-08, 'pass': True, 'upper_mm': 6.862651582546281e-11, 'cells': 1, 'leaves': 1, 'branches': 1, 'max_depth': 0, 'label': None, 'runtimeStatus': 'Certified', 'runtimeUpper': '0x1.a23ca818cfcf9p-34'}
+{'fin': 2, 'edge': 2, 'face': 0, 'budget': 8e-08, 'pass': True, 'upper_mm': 8.665476095512873e-11, 'cells': 1, 'leaves': 1, 'branches': 1, 'max_depth': 0, 'label': None, 'runtimeStatus': 'Certified', 'runtimeUpper': '0x1.3bd21d0e509d5p-33'}
+{'fin': 3, 'edge': 3, 'face': 0, 'budget': 8e-08, 'pass': True, 'upper_mm': 1.1633061947451104e-10, 'cells': 1, 'leaves': 1, 'branches': 1, 'max_depth': 0, 'label': None, 'runtimeStatus': 'Certified', 'runtimeUpper': '0x1.a9f8686647164p-33'}

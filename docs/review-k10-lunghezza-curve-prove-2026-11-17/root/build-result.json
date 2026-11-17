@@ -1,0 +1,18 @@
+{
+  "command": [
+    "cmake",
+    "--build",
+    "forgecad-release",
+    "--target",
+    "forgecad",
+    "forgekernel_arc_length_validation_tests",
+    "forgekernel_bspline_derivative_tests",
+    "forgekernel_sheet_arc_validation_tests",
+    "forgekernel_tests",
+    "--parallel",
+    "1"
+  ],
+  "exit": 0,
+  "seconds": 317.26054344100703,
+  "watchdog_seconds": 600
+}

@@ -1,0 +1,54 @@
+K10 quadrature validation — frozen test-only staging
+
+Final TU: test_quadrature_validation.cpp
+SHA256 88f9718de56f1488f24e0aa637c03f563d67868894437fc6af9f18c4f6f60e29
+Production candidate header:
+048c8007849e807c2721a20e90387c855a2076ba3e56bcc90cf55320e3a804b7
+
+Six groups; existing fk_test_main.cpp. Baseline ONLY substring SafeControls;
+root owns external watchdog probes for cases which can traverse the original
+quadrature depth30 tree. Candidate all six. No compilation, integrator call,
+problematic loop, repository edit, UI or archive copy by this agent.
+
+SafeControls: scalar polynomial and reversed orientation; constant tolerance
+0/-1 compatibility; vector polynomial/signed values with independently smooth
+magnitude components. Magnitudes are deliberately polynomial/constant: their
+true integral is a valid single-panel oracle, unlike abs(t) across a kink.
+Root separately owns ordinary baseline/candidate bit preservation golden.
+
+Scalar extremes: constant2^1023 over2^-1023 and inverse scaling, sign and
+reversed bounds; finite integral1/-1 despite overflowing old intermediate
+sums. Direct GK also requires finite result/error/absolute and exactly15
+callback invocations. Recovery must reuse the already sampled values.
+
+Vector extremes: big positive/negative, signed-cancelling and tiny value
+components with independently large magnitudes. Tests physical value and
+magnitude integrals, both directions, inverse scaling and direct GK finite
+outputs with exactly15 callbacks. Tiny expected components use a representable
+16denorm_min comparison allowance; no production tolerance change.
+
+Public native case: BSplineCurve3 degree1, ordinary poles0/1, exact dyadic
+knots2^-1023. Derivative2^1023 stays finite, physical length1. Exercises
+arcLength AND the private CurveLengthCache path used by loft; second get is
+also checked. These are real native classes, not hooks/fabricated subclasses.
+
+Nonfinite callback cases: NaN/+Inf/-Inf scalar and vector value/magnitude.
+std::domain_error required at ordinary entry and at adaptiveIntegral depth30,
+preventing depth exhaustion from publishing an invalid panel. No new callback
+error type or sampling budget is invented by the tests.
+
+Large endpoints: positive/negative finite endpoints whose naive sum overflows;
+callbacks assert every sample stays finite and in the requested interval,
+scalar/vector integrals stay1. Unrepresentable actual integrals are rejected.
+The oscillating finite callback has representable half-integrals but a full
+integral exceeding double range. This is a semantic rejection test; without
+private root instrumentation it does NOT assert a specific children-sum branch
+was reached. The denorm_min width case has finite exact integral2^-51 but an
+unrepresentable half-span: conservative domain_error prevents spurious0.
+
+No universal-scale or global quadrature-error certificate is claimed. Generic
+algorithm ownership and caller regression breadth remain with root/core.
+Rules/current CLAUDE/graph descriptions and typed incoming/outgoing edges were
+read before writing. graph-consult.json is a small scoped summary. Parent owns
+CMake integration, actual runtime/SAN/bit golden verification, mandatory memory
+update and architecture regeneration; no previous sealed package was changed.

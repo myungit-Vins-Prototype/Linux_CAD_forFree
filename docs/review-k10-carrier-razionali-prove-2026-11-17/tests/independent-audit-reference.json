@@ -1,0 +1,17 @@
+{
+  "source": "independent auditor message, separately executed",
+  "package": "/tmp/k10-next-review/audit/final-proof",
+  "seal": "65b85e5a4c0179850032e82c64cbf1b21e6d2e274bd9d83ffbfe57e6e3f6bf8a",
+  "reportedResults": {
+    "publicCases": 6,
+    "postUnifyFins": 18,
+    "rationalNoUserHistory": "byte-identical output",
+    "source": "immutable",
+    "fraction": "18/18 PASS",
+    "ourDiagnosticVsIndependentPublicActual": "18/18 original IEEE coefficients/range/cap/runtimeUpper identical",
+    "rationalMaxExactBoundMm": 2.73778917e-11,
+    "rationalFixedCapMm": 1e-07,
+    "largestScaleExactBoundMm": 1.474654696e-07,
+    "largestScaleFixedCapMm": 2.3314373249e-06
+  }
+}

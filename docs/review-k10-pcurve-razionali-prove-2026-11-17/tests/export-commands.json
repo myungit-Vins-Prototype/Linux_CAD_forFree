@@ -1,0 +1,23 @@
+[
+  [
+    "/usr/bin/c++",
+    "-std=c++17",
+    "-O2",
+    "-g",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-I/tmp/k10-rational-pcurve-review/core/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "/tmp/k10-rational-pcurve-review/tests/export_originals.cpp",
+    "/tmp/k10-rational-pcurve-review/core/provider.o",
+    "/tmp/k10-rational-pcurve-review/root/libforgekernel-baseline.a",
+    "-lpthread",
+    "-o",
+    "/tmp/k10-rational-pcurve-review/tests/export-originals"
+  ],
+  [
+    "/tmp/k10-rational-pcurve-review/tests/export-originals",
+    "/tmp/k10-rational-pcurve-review/tests/candidate-originals.jsonl"
+  ]
+]

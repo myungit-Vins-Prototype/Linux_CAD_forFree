@@ -1,0 +1,59 @@
+cylinder issues=0 immutable=1 deviation=1.84385e-09
+cylinder face=0 edge=11 fin=0 S=7 E=3 Q=0 status=1 upper=7.9418358947641223e-11 cap=8.0000000000000002e-08 finTol=2.6705482270017456e-11
+cylinder face=0 edge=8 fin=1 S=7 E=3 Q=0 status=1 upper=1.853113922400271e-08 cap=8.0000000000000002e-08 finTol=6.0672502286741506e-11
+cylinder face=0 edge=9 fin=2 S=7 E=3 Q=0 status=1 upper=7.9422204873013981e-11 cap=8.0000000000000002e-08 finTol=2.6705482273784084e-11
+cylinder face=0 edge=10 fin=3 S=7 E=3 Q=0 status=1 upper=1.8531145425557372e-08 cap=8.0000000000000002e-08 finTol=6.0672502286741506e-11
+cylinder face=1 edge=3 fin=4 S=7 E=3 Q=0 status=1 upper=7.9418358947641223e-11 cap=8.0000000000000002e-08 finTol=3.3470967303838152e-11
+cylinder face=1 edge=2 fin=5 S=7 E=3 Q=0 status=1 upper=1.7644474998679623e-08 cap=8.0000000000000002e-08 finTol=5.8561617944659051e-11
+cylinder face=1 edge=1 fin=6 S=7 E=3 Q=0 status=1 upper=1.1537764580525288e-10 cap=8.0000000000000002e-08 finTol=5.6066262743570405e-11
+cylinder face=1 edge=0 fin=7 S=7 E=3 Q=0 status=1 upper=1.7644467595273281e-08 cap=8.0000000000000002e-08 finTol=5.8563779697489258e-11
+cylinder face=2 edge=8 fin=8 S=7 E=3 Q=0 status=2 upper=inf cap=8.0000000000000002e-08 finTol=5.8645802221601369e-11
+cylinder face=2 edge=4 fin=9 S=7 E=3 Q=0 status=1 upper=2.5734240446796692e-10 cap=8.0000000000000002e-08 finTol=8.7875357962809126e-11
+cylinder face=2 edge=0 fin=10 S=7 E=3 Q=0 status=2 upper=inf cap=8.0000000000000002e-08 finTol=5.6647857013510273e-11
+cylinder face=2 edge=5 fin=11 S=7 E=3 Q=0 status=1 upper=2.5734240446796692e-10 cap=8.0000000000000002e-08 finTol=9.165979873578731e-11
+cylinder face=3 edge=9 fin=12 S=7 E=3 Q=0 status=2 upper=inf cap=8.0000000000000002e-08 finTol=2.6705482273784084e-11
+cylinder face=3 edge=5 fin=13 S=7 E=3 Q=0 status=1 upper=2.5734240446796692e-10 cap=8.0000000000000002e-08 finTol=9.165979873578731e-11
+cylinder face=3 edge=1 fin=14 S=7 E=3 Q=0 status=2 upper=inf cap=8.0000000000000002e-08 finTol=5.6066262743570405e-11
+cylinder face=3 edge=6 fin=15 S=7 E=3 Q=0 status=1 upper=2.5734240446796692e-10 cap=8.0000000000000002e-08 finTol=9.165979873578731e-11
+cylinder face=4 edge=10 fin=16 S=7 E=3 Q=0 status=2 upper=inf cap=8.0000000000000002e-08 finTol=5.8645802221601369e-11
+cylinder face=4 edge=6 fin=17 S=7 E=3 Q=0 status=1 upper=2.5734240446796692e-10 cap=8.0000000000000002e-08 finTol=9.165979873578731e-11
+cylinder face=4 edge=2 fin=18 S=7 E=3 Q=0 status=2 upper=inf cap=8.0000000000000002e-08 finTol=5.6645622143844995e-11
+cylinder face=4 edge=7 fin=19 S=7 E=3 Q=0 status=1 upper=2.5734240446796692e-10 cap=8.0000000000000002e-08 finTol=8.7875357962809126e-11
+cylinder face=5 edge=11 fin=20 S=7 E=3 Q=0 status=2 upper=inf cap=8.0000000000000002e-08 finTol=2.6705482270017456e-11
+cylinder face=5 edge=7 fin=21 S=7 E=3 Q=0 status=1 upper=2.5734240446796692e-10 cap=8.0000000000000002e-08 finTol=8.7875357962809126e-11
+cylinder face=5 edge=3 fin=22 S=7 E=3 Q=0 status=2 upper=inf cap=8.0000000000000002e-08 finTol=3.3470967303838152e-11
+cylinder face=5 edge=4 fin=23 S=7 E=3 Q=0 status=1 upper=2.5734240446796692e-10 cap=8.0000000000000002e-08 finTol=8.7875357962809126e-11
+nurbs issues=0 deviation=7.1412183567626401e-10
+nurbs face=0 edge=11 fin=0 S=7 E=3 Q=0 status=1 upper=6.5707422506350451e-10 cap=8.0000000000000002e-08 finTol=2.9837800580938218e-10
+nurbs face=0 edge=8 fin=1 S=7 E=3 Q=0 status=1 upper=6.0535079777695027e-10 cap=8.0000000000000002e-08 finTol=2.7943975001545472e-10
+nurbs face=0 edge=9 fin=2 S=7 E=3 Q=0 status=1 upper=1.1045656795749493e-09 cap=8.0000000000000002e-08 finTol=7.2126304410191447e-10
+nurbs face=0 edge=10 fin=3 S=7 E=3 Q=0 status=1 upper=1.2596320445310395e-09 cap=8.0000000000000002e-08 finTol=6.6352346682550896e-10
+nurbs face=1 edge=3 fin=4 S=7 E=3 Q=0 status=1 upper=6.6694329262180815e-10 cap=8.0000000000000002e-08 finTol=3.0342253518174455e-10
+nurbs face=1 edge=2 fin=5 S=7 E=3 Q=0 status=1 upper=1.2576353602626667e-09 cap=8.0000000000000002e-08 finTol=6.6074124663934366e-10
+nurbs face=1 edge=1 fin=6 S=7 E=3 Q=0 status=1 upper=1.1025689231954758e-09 cap=8.0000000000000002e-08 finTol=7.1738797316511655e-10
+nurbs face=1 edge=0 fin=7 S=7 E=3 Q=0 status=1 upper=6.1521986533525402e-10 cap=8.0000000000000002e-08 finTol=2.8389314748796297e-10
+nurbs face=2 edge=8 fin=8 S=7 E=3 Q=0 status=2 upper=inf cap=8.0000000000000002e-08 finTol=2.7943975001545472e-10
+nurbs face=2 edge=4 fin=9 S=7 E=3 Q=0 status=1 upper=3.1815779962244697e-12 cap=8.0000000000000002e-08 finTol=1.5745925260752143e-12
+nurbs face=2 edge=0 fin=10 S=7 E=3 Q=0 status=2 upper=inf cap=8.0000000000000002e-08 finTol=2.8389314748398315e-10
+nurbs face=2 edge=5 fin=11 S=7 E=3 Q=0 status=1 upper=3.1815779962244697e-12 cap=8.0000000000000002e-08 finTol=1.5746019625702923e-12
+nurbs face=3 edge=9 fin=12 S=7 E=3 Q=0 status=2 upper=inf cap=8.0000000000000002e-08 finTol=7.212630540330267e-10
+nurbs face=3 edge=5 fin=13 S=7 E=3 Q=0 status=1 upper=3.1815779962244697e-12 cap=8.0000000000000002e-08 finTol=1.5746019625702923e-12
+nurbs face=3 edge=1 fin=14 S=7 E=3 Q=0 status=2 upper=inf cap=8.0000000000000002e-08 finTol=7.1738796341193283e-10
+nurbs face=3 edge=6 fin=15 S=7 E=3 Q=0 status=1 upper=3.1815779962244697e-12 cap=8.0000000000000002e-08 finTol=1.5746113990088182e-12
+nurbs face=4 edge=10 fin=16 S=7 E=3 Q=0 status=2 upper=inf cap=8.0000000000000002e-08 finTol=6.6352349215964568e-10
+nurbs face=4 edge=6 fin=17 S=7 E=3 Q=0 status=1 upper=3.1815779962244697e-12 cap=8.0000000000000002e-08 finTol=1.5746113990088182e-12
+nurbs face=4 edge=2 fin=18 S=7 E=3 Q=0 status=2 upper=inf cap=8.0000000000000002e-08 finTol=6.6074124664100009e-10
+nurbs face=4 edge=7 fin=19 S=7 E=3 Q=0 status=1 upper=3.1815779962244697e-12 cap=8.0000000000000002e-08 finTol=1.5746019625702923e-12
+nurbs face=5 edge=11 fin=20 S=7 E=3 Q=0 status=2 upper=inf cap=8.0000000000000002e-08 finTol=2.983780049208609e-10
+nurbs face=5 edge=7 fin=21 S=7 E=3 Q=0 status=1 upper=3.1815779962244697e-12 cap=8.0000000000000002e-08 finTol=1.5746019625702923e-12
+nurbs face=5 edge=3 fin=22 S=7 E=3 Q=0 status=2 upper=inf cap=8.0000000000000002e-08 finTol=3.0342253518174455e-10
+nurbs face=5 edge=4 fin=23 S=7 E=3 Q=0 status=1 upper=3.1815779962244697e-12 cap=8.0000000000000002e-08 finTol=1.5745925260752143e-12
+narrow ACCEPTED issues=0 immutable=1 deviation=1.1850076475639071e-11
+narrow face=0 edge=0 fin=0 S=7 E=3 Q=3 status=2 upper=inf cap=8.0000000000000002e-08 finTol=1e-14
+narrow face=0 edge=1 fin=1 S=7 E=3 Q=3 status=1 upper=2.3460144773879488e-14 cap=8.0000000000000002e-08 finTol=1e-14
+narrow face=0 edge=2 fin=2 S=7 E=3 Q=3 status=2 upper=inf cap=8.0000000000000002e-08 finTol=1e-14
+narrow face=0 edge=3 fin=3 S=7 E=3 Q=3 status=1 upper=2.4421626117071271e-14 cap=8.0000000000000002e-08 finTol=1e-14
+witness fin=0 residual=0.00075000000000000002
+witness fin=1 residual=1.3877787807814457e-17
+witness fin=2 residual=2.4825341532472731e-16
+witness fin=3 residual=0

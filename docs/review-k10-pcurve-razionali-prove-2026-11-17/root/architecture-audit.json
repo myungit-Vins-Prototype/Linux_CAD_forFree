@@ -1,0 +1,140 @@
+{
+  "nodes": 790,
+  "edges": 11599,
+  "units": 400,
+  "errors": [],
+  "hashes_configuration_html_verified": true,
+  "new_helper_and_residual_calls_verified": true,
+  "focus": {
+    "kernel/fk_bspline_surface.cpp": {
+      "description": "Superfici NURBS con jet locali double e istanze immutabili: estensione periodica opzionale del dominio clamped, isoparametriche e breakpoints coerenti, estremi distinti per la chiusura; copie atomiche delle cache Bezier/proiezione/isoparametriche e pubblicazione unica del risultato concorrente.",
+      "incoming": {
+        "call": 85,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 8,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "kernel/fk_bspline_surface.h": {
+      "description": "Superfici B-spline e NURBS a prodotto tensoriale con nodi espansi (come BSplineCurve).",
+      "incoming": {
+        "call": 76,
+        "include": 103,
+        "reference": 3
+      },
+      "outgoing": {
+        "call": 5,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "kernel/fk_sheet_join_validation.cpp": {
+      "description": "Usa la costruzione UV condivisa per le sole fin Newton pianificate; mantiene E/S/parametro e cap prefit, certifica prima di assegnare Q e ricontrolla i discendenti dopo unify anche senza history utente. Niente epsilon UV o recupero campionato dopo Failed; Unsupported conserva la via legacy.",
+      "incoming": {
+        "call": 5,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 6,
+        "include": 3,
+        "reference": 0
+      }
+    },
+    "kernel/fk_surface_curve_bounds.cpp": {
+      "description": "Costruzione UV preproof e residuo continuo E(t)-S(Q(t)): E cubica e Q1/3 razionali positive su carrier NURBS2/3 nativi o istanziati a pesi positivi. Composizione Cox omogenea con denominatore Q anche per S polinomiale, immagini UV nel dominio e numeratori/denominatori originali; budget prefissato. Snapshot dei poli base e matrici IEEE originali in intervalli outward, traversal finito/cancellabile prima degli accessori ricorsivi; nessun flatten dei poli arrotondati, cap invariati e Failed terminale.",
+      "incoming": {
+        "call": 9,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 8,
+        "include": 4,
+        "reference": 0
+      }
+    },
+    "kernel/fk_surface_curve_bounds.h": {
+      "description": "Contratti della candidata UV e del residuo continuo: E cubica e Q Line/BSpline1/3 anche razionali positive, S NURBS native o istanze condivise con coefficienti e placement originali; budget fisico prefissato e unsupported/certificato/fallito distinti.",
+      "incoming": {
+        "call": 1,
+        "include": 9,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "kernel/fk_surface_mapping.cpp": {
+      "description": "Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: conserva i carrier supportati; fin Plane e NURBS2/3 native o istanziate certificate nel continuo al cap prefit. Candidata UV prima della prova, Failed terminale; genealogia, E/S/Q, parametri, versi e budget delle fin dopo assemblaggio anche senza history utente. Bordi3D, carrier rispetto alla mappa e altre famiglie restano campionati; nessuna mesh di calcolo.",
+      "incoming": {
+        "call": 10,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 29,
+        "include": 20,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_mapping_nonplane_validation.cpp": {
+      "description": "Regressioni mapping nonPlane: picco del carrier invisibile ai campioni rifiutato, fin finali dei box e carrier razionale effettivo certificate, cap prefit, genealogia anche senza history, input/target immutati, fallimenti atomici e cancellazione.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 24,
+        "include": 12,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_surface_curve_instances.cpp": {
+      "description": "Residuo continuo su istanze NURBS: originali base e matrici, pose composte/simmetrie/scale, picchi nascosti e perdita da flatten arrotondato, Quilt razionale pubblico con history nulla/codec, scope E/Q e cancellazione.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 25,
+        "include": 13,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_surface_curve_rational_edges.cpp": {
+      "description": "Bordi cubici razionali sul carrier originale: pesi positivi, dominio/trim e verso correlato, pose e scale dei pesi, scarti nascosti e registro delle fin; gap parametrici, wrapper e cancellazione.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 14,
+        "include": 7,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_surface_curve_rational_pcurves.cpp": {
+      "description": "Pcurve razionali lineari/cubiche: parametro originale, denominatore tensoriale su S polinomiale e razionale, pose/gauge, celle/trim/versi, picchi fra campioni, singola fin prima di assegnare e cancellazione.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 14,
+        "include": 7,
+        "reference": 0
+      }
+    }
+  }
+}

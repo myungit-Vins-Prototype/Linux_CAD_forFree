@@ -1,0 +1,34 @@
+[
+  {
+    "source": "/tmp/k10-mapping-nonplane-review/root/candidate/kernel/fk_surface_curve_bounds.cpp",
+    "exit": 0
+  },
+  {
+    "source": "/tmp/k10-mapping-nonplane-review/root/candidate/kernel/fk_sheet_join_validation.cpp",
+    "exit": 0
+  },
+  {
+    "source": "/tmp/k10-mapping-nonplane-review/root/candidate/kernel/fk_surface_mapping.cpp",
+    "exit": 0
+  },
+  {
+    "source": "/tmp/k10-mapping-nonplane-review/tests/test_mapping_nonplane_validation.cpp",
+    "exit": 0
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/tests/test_surface_curve_bounds.cpp",
+    "exit": 0
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/tests/test_surface_curve_rational.cpp",
+    "exit": 0
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/tests/test_sheet_join_ledger.cpp",
+    "exit": 0
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+    "exit": 0
+  }
+]

@@ -1,0 +1,65 @@
+#include "fk_body_io.h"
+#include "fk_body_check.h"
+#include "fk_boolean.h"
+#include "fk_history.h"
+#include "fk_mass.h"
+#include "fk_curve.h"
+#include "fk_surface.h"
+#include <map>
+#include <chrono>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <iterator>
+using namespace ForgeCad::Kernel;
+Body read(const char *path) {
+    std::ifstream f(path,std::ios::binary);
+    if(!f) throw std::runtime_error("missing operand");
+    return readBodyBinary(std::string(std::istreambuf_iterator<char>(f),{}));
+}
+void metadata(const Body &body,const char *name) {
+    double v=0,e=0,p=0;int missing=0;
+    std::map<int,int> curves,surfaces,pcurves;
+    for(auto id:body.vertices())v=std::max(v,body.vertex(id).tolerance);
+    for(auto id:body.edges()){const auto &x=body.edge(id);e=std::max(e,x.tolerance);if(x.curve)++curves[int(x.curve->type())];}
+    for(auto id:body.faces())if(body.face(id).surface)++surfaces[int(body.face(id).surface->type())];
+    for(auto id:body.fins()){const auto &x=body.fin(id);p=std::max(p,x.pcurveTolerance);if(x.pcurve)++pcurves[int(x.pcurve->type())];else++missing;}
+    std::cout<<"metadata="<<name<<" maxVertexTolerance="<<v<<" maxEdgeTolerance="<<e<<" maxPCurveTolerance="<<p<<" missingPCurves="<<missing;
+    for(auto x:curves)std::cout<<" Etype"<<x.first<<"="<<x.second;
+    for(auto x:surfaces)std::cout<<" Stype"<<x.first<<"="<<x.second;
+    for(auto x:pcurves)std::cout<<" Qtype"<<x.first<<"="<<x.second;
+    std::cout<<std::endl;
+}
+int main(int argc,char **argv) {
+    if(argc!=4) return 2;
+    Body a=read(argv[1]),b=read(argv[2]);
+    const auto olda=writeBodyBinary(a),oldb=writeBodyBinary(b);
+    CheckOptions check;check.loopCrossings=true;
+    std::cout<<std::setprecision(17)<<"input_faces="<<a.faces().size()<<","<<b.faces().size()<<" issues="<<checkBody(a,check).size()<<","<<checkBody(b,check).size()<<" volumes="<<massProperties(a).volume<<","<<massProperties(b).volume<<std::endl;
+    metadata(a,"A");metadata(b,"B");
+    BooleanOptions options;
+    std::cout<<"booleanTolerance="<<options.tolerance<<" linearResolution="<<linearResolution()<<" threads="<<options.threads<<" unify="<<options.unifySameDomain<<std::endl;
+    BodyHistory history;
+    const auto begin=std::chrono::steady_clock::now();
+    bool success=false;
+    try {
+        Body out=booleanOperation(a,b,BooleanOperation::Unite,options,&history);
+        const auto issues=checkBody(out,check);
+        metadata(out,"result");
+        int declared=0,origins=0,badOrigins=0;
+        for(FaceId id:out.faces()) {
+            declared+=history.isDeclared(EntityKind::Face,id.index);
+            for(const auto &link:history.origins(EntityKind::Face,id.index)) {
+                ++origins;
+                if(link.operand<0||link.operand>1||link.kind!=EntityKind::Face||link.index<0||link.index>=history.operandSize(link.operand,EntityKind::Face)) ++badOrigins;
+            }
+        }
+        std::ofstream result(argv[3],std::ios::binary);const auto bytes=writeBodyBinary(out);result.write(bytes.data(),bytes.size());
+        std::cout<<"success=1 faces="<<out.faces().size()<<" shells="<<out.shells().size()<<" issues="<<issues.size()<<" volume="<<massProperties(out).volume<<" historyOperands="<<history.operandCount()<<" declared="<<declared<<" origins="<<origins<<" badOrigins="<<badOrigins<<std::endl;
+        for(const auto &issue:issues) std::cout<<"issue="<<issue.message<<std::endl;
+        success=issues.empty()&&badOrigins==0;
+    } catch(const std::exception &e) { std::cout<<"success=0 error="<<e.what()<<" historyOperands="<<history.operandCount()<<std::endl; }
+    const bool immutable=olda==writeBodyBinary(a)&&oldb==writeBodyBinary(b);
+    std::cout<<"immutable="<<immutable<<" seconds="<<std::chrono::duration<double>(std::chrono::steady_clock::now()-begin).count()<<std::endl;
+    return success&&immutable?0:1;
+}

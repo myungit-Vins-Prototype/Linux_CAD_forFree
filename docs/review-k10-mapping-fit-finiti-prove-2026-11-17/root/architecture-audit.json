@@ -1,0 +1,99 @@
+{
+  "nodes": 792,
+  "edges": 11636,
+  "units": 402,
+  "errors": [],
+  "hashes_config_HTML_verified": true,
+  "focus": {
+    "kernel/fk_mapping_fit.cpp": {
+      "description": "Fit Hermite cubico/quintico adattivo condiviso dalle mappature: celle NURBS con derivate comuni, stencil locali espliciti, controlli dello scarto e budget geometrici prefissati; griglie/tolleranze valide, callback/jet/poli/residui finiti prima dei massimi e deviazione pubblicata solo dopo costruzione riuscita. Fit campionato, nessuna prova globale o mesh di calcolo.",
+      "relations": {
+        "incoming": {
+          "call": 4,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 4,
+          "include": 3,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_mapping_fit.h": {
+      "description": "Contratti interni del fit parametrico e della trasformazione B-rep tramite corrispondenza analitica; immagine di faccia a carrier conservato e trasferimento UV esplicito, con ricostruzione Plane sul bordo effettivo e metrica fisica.",
+      "relations": {
+        "incoming": {
+          "call": 4,
+          "include": 9,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 0,
+          "include": 3,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_quilt_mapping.cpp": {
+      "description": "Appiattimento B-rep con bordo topologico comune; una faccia Plane conserva i coefficienti dei contorni tramite mappa affine e limite di arrotondamento, altri casi usano fit;  Jacobiani e deformazione campionata; origine suggerita e genealogia esplicita. Mappa comune e reversibile piano/quilt tramite coordinate di lunghezza d arco sulle isocurve esatte; una faccia o due facce tangenti con giunzione U, trim e piegatura solida lungo le normali. Monotonia dai poli, origine/metrica esatte sulla giunzione, cache per piegatura e nodi espliciti del fit; offset Plane analitico senza fit di contorni UV superfluo, fin Plane delegate al controllo continuo. Nessuna proiezione per raggi o isometria generale promessa.",
+      "relations": {
+        "incoming": {
+          "call": 9,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 28,
+          "include": 12,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_surface_mapping.cpp": {
+      "description": "Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: conserva i carrier supportati; fin Plane e NURBS2/3 native o istanziate certificate nel continuo al cap prefit. Candidata UV prima della prova, Failed terminale; genealogia, E/S/Q, parametri, versi e budget delle fin dopo assemblaggio anche senza history utente. Bordi3D, carrier rispetto alla mappa e altre famiglie restano campionati; nessuna mesh di calcolo.",
+      "relations": {
+        "incoming": {
+          "call": 10,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 29,
+          "include": 20,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/tests/test_mapping_fit_validation.cpp": {
+      "description": "Contratto del fit Hermite: controllo finito cubico/quintico, NaN/Inf nelle sonde interne con e senza jet analitico, corner/stencil e tutti i vettori del jet; griglie/tolleranze invalide prima delle callback, accumulatori pubblicati solo al successo, eccezioni e cancellazione.",
+      "relations": {
+        "incoming": {
+          "call": 1,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 10,
+          "include": 4,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/tests/test_mapping_nonplane_validation.cpp": {
+      "description": "Regressioni mapping nonPlane: picco del carrier invisibile ai campioni rifiutato, fin finali dei box e carrier razionale effettivo certificate, cap prefit, genealogia anche senza history, input/target immutati, fallimenti atomici e cancellazione.",
+      "relations": {
+        "incoming": {
+          "call": 1,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 24,
+          "include": 12,
+          "reference": 0
+        }
+      }
+    }
+  }
+}

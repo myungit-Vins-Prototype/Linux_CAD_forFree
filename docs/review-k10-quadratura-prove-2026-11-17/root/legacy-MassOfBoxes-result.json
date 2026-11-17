@@ -1,0 +1,9 @@
+{
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "MassOfBoxes"
+  ],
+  "exit": 0,
+  "seconds": 0.026824968997971155,
+  "watchdog_seconds": 600
+}

@@ -1,0 +1,142 @@
+[
+  {
+    "seal": "docs/curve-fit-k10-sketch-offset-prove-2026-11-16/SHA256SUMS",
+    "sha256": "0cdb48f75954e1995575eda298cd792c02472b717fd6682e4266141e241c4ce4",
+    "files": 112
+  },
+  {
+    "seal": "docs/curve-fit-k10-projection-prove-2026-11-16/SHA256SUMS",
+    "sha256": "fb6489aeba1319b43a32b49459f2196291ce7282702fe7c4f68db73261733e54",
+    "files": 83
+  },
+  {
+    "seal": "docs/ellisse-estremi-prove-2026-11-16/SHA256SUMS",
+    "sha256": "50fc44ae938545976f585b1ae35546737612f41777f0a75362f1d020143dd2df",
+    "files": 95
+  },
+  {
+    "seal": "docs/curve-fit-k10-edge-offset-prove-2026-11-16/SHA256SUMS",
+    "sha256": "a6515aa86e4217f52b638c146f10a3c450f83fe2582da4d88dc55c15cc7196b9",
+    "files": 146
+  },
+  {
+    "seal": "docs/review-preview-unification-prove-2026-11-16/SHA256SUMS",
+    "sha256": "8b9a6e39ee38f81ad88312e6c53570dbfeec76965524353a618c163207934c42",
+    "files": 172
+  },
+  {
+    "seal": "docs/supporto-booleana-prove-2026-11-16/SHA256SUMS",
+    "sha256": "b6e3dd022fa826eb3e5db49990615f42bf4b92d5408338559a02b923a6f51cc7",
+    "files": 267
+  },
+  {
+    "seal": "docs/review-k10-uv-preview-prove-2026-11-16/SHA256SUMS",
+    "sha256": "e978b78a0e84eba718a46cce8500d899eaddea6e5ef014ae15757f435ef8d944",
+    "files": 126
+  },
+  {
+    "seal": "docs/review-k10-sew-preview-prove-2026-11-16/SHA256SUMS",
+    "sha256": "6f43af61d6c960305804eb8fb7878bddc6e17a73a4c5dadb03d1f3df6ce616bc",
+    "files": 152
+  },
+  {
+    "seal": "docs/review-k10-helix-orphans-prove-2026-11-16/SHA256SUMS",
+    "sha256": "5d069edeba9a291675a00e70b84cb8c5aea57f0767857326955e30f3b4555f2e",
+    "files": 208
+  },
+  {
+    "seal": "docs/review-blend-cavity-prove-2026-11-16/SHA256SUMS",
+    "sha256": "973de8e8934dab7e4618620500d16ce2a6b41f8ec09c981476a5aeab3af4f846",
+    "files": 182
+  },
+  {
+    "seal": "docs/review-theme-tabs-prove-2026-11-16/SHA256SUMS",
+    "sha256": "f0fc6f370239fc2586b357d985c4e222c1ffbc43be0da93281afe597cc8c1746",
+    "files": 152
+  },
+  {
+    "seal": "docs/review-k10-mapping-uv-prove-2026-11-16/SHA256SUMS",
+    "sha256": "e1d0b1519a4bcb513dbcbb7c52bbbca8c6c5afe693a1ed3e99b33cc3bc92d5f2",
+    "files": 131
+  },
+  {
+    "seal": "docs/review-k10-sheet-join-prove-2026-11-16/SHA256SUMS",
+    "sha256": "4f1f6e51861d90a09354022fe95b9941932fa305bb25c7c1075bbba22932e3e5",
+    "files": 177
+  },
+  {
+    "seal": "docs/review-k10-mitre-prove-2026-11-16/SHA256SUMS",
+    "sha256": "b2bab724a60177ddaa0adf4d5f10c3848e99456f9f68528ac92fd29b3f4d0b2e",
+    "files": 203
+  },
+  {
+    "seal": "docs/review-k10-boundary-prove-2026-11-16/SHA256SUMS",
+    "sha256": "58eb4487359cc20e0b2178f7d697c7c37ba291256bfb39e8472f1b939d4d2232",
+    "files": 206
+  },
+  {
+    "seal": "docs/ci-verifica-prove-2026-11-16/SHA256SUMS",
+    "sha256": "6bf9a4d7d7eb8ccab347a0cef99d1d8a418bd70e3f50451fdb6e9c733e5709f6",
+    "files": 36
+  },
+  {
+    "seal": "docs/ci-sheet-join-prove-2026-11-16/SHA256SUMS",
+    "sha256": "919b924de4d85342f552b6945567be49604e5857897f71607c90488f53240cb7",
+    "files": 141
+  },
+  {
+    "seal": "docs/review-prossimi-punti-prove-2026-11-16/SHA256SUMS",
+    "sha256": "3b9be54f000bca417a21f4c39f20d479c66880965914b293a062e107c38e870a",
+    "files": 12
+  },
+  {
+    "seal": "docs/ci-sheet-join-github-prove-2026-11-16/SHA256SUMS",
+    "sha256": "e606ebdf63324864bea60d97248de9dd1f7a0a411d187f13bcda5d50cfed6293",
+    "files": 13
+  },
+  {
+    "seal": "docs/review-ui-colori-api-prove-2026-11-16/SHA256SUMS",
+    "sha256": "13e62015cc3a8d154c27e561696e7699804ddea01075eeac516a3f001d38365e",
+    "files": 314
+  },
+  {
+    "seal": "docs/review-ui-raccordo-prove-2026-11-16/SHA256SUMS",
+    "sha256": "b701917cc1fca43525de55907dcf886658523009ac4d227687edc6d4652056d8",
+    "files": 56
+  },
+  {
+    "seal": "docs/review-ui-colori-api-github-prove-2026-11-16/SHA256SUMS",
+    "sha256": "3eab1c4554c7fa8554643d773679a49b03ff8d94f9bd8c0e1440a32d85285d96",
+    "files": 14
+  },
+  {
+    "seal": "docs/review-legacy-api-prove-2026-11-16/SHA256SUMS",
+    "sha256": "25f79c60536730935ec22cad925a6cfeeb6ae725b3ea7b9b4532e351319c2e85",
+    "files": 109
+  },
+  {
+    "seal": "docs/review-k10-noniso-prove-2026-11-17/SHA256SUMS",
+    "sha256": "21f6caf3752a29a4496f823ed79f218650c7059831cd0af0965a92e34f133701",
+    "files": 110
+  },
+  {
+    "seal": "docs/review-k10-carrier-razionali-prove-2026-11-17/SHA256SUMS",
+    "sha256": "86fceb5ee9265685c78173c34203c2f4b429c0d38179aac75a4e6765b5c0261e",
+    "files": 177
+  },
+  {
+    "seal": "docs/review-k10-offset-pose-prove-2026-11-17/SHA256SUMS",
+    "sha256": "d4f901695da401ad956b40f163687529cf4acee204125ce7bf4011219d15b959",
+    "files": 132
+  },
+  {
+    "seal": "docs/review-boolean-order-tabs-prove-2026-11-17/SHA256SUMS",
+    "sha256": "020ffa91658d880757b1d6c2cea463ef3677e90d071261ca660d0f873d507735",
+    "files": 102
+  },
+  {
+    "seal": "docs/review-k10-mapping-nonplane-prove-2026-11-17/SHA256SUMS",
+    "sha256": "de10b8304274bbee84ca09718c75d76fd9a491c3a652ef242ffa6ed888ceef06",
+    "files": 176
+  }
+]

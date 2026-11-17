@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "g++",
+    "/tmp/k10-rational-edge-review/audit/export-actual-ledger.o",
+    "/tmp/k10-rational-edge-review/root/libforgekernel-baseline.a",
+    "-lpthread",
+    "-o",
+    "/tmp/k10-rational-edge-review/audit/baseline-actual-ledger"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "exit": 0,
+  "elapsed": 0.4019317630009027,
+  "sourceSHA256": "9d6a3bb7921ce41eedaf45f8542222a2c8878c0ff21831ff5441b6c7abde8978",
+  "librarySHA256": "57c11033779f33893b07d166c682a0c5e8e3d24c14c98abfee43c7253ca62fa7"
+}

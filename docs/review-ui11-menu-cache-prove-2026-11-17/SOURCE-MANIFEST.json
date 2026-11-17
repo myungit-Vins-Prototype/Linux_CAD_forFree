@@ -1,0 +1,302 @@
+[
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/architecture-after.json",
+    "archive": "architecture-after.json",
+    "sha256": "fcee9b81707bb559d2b23e19839bb6d232e6f81b6f7dad6efdc6678f91fe1017"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/architecture-before.json",
+    "archive": "architecture-before.json",
+    "sha256": "38f81ded062216d6e9a869c19d591af1d09fdba8e82f91e940070e906d51a78b"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/architecture-check.log",
+    "archive": "architecture-check.log",
+    "sha256": "e79300a5a296fe1c7074baa944afaac1d37632a2c8120c43a05254b14e3944e9"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/architecture-extra-before.json",
+    "archive": "architecture-extra-before.json",
+    "sha256": "51a0a30843e72e08daca54ff0218d5cc2ad09bb4e305e90cdf9aadc5786b571c"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/architecture-result.json",
+    "archive": "architecture-result.json",
+    "sha256": "1bfd832dfa5d51947af420cfcf7698b108a2ff8cafaf5497e159c8d3c93aeecc"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/architecture-time.txt",
+    "archive": "architecture-time.txt",
+    "sha256": "af33144da0d5fd129f92b6d12f4efecb41911a03a5a76bafa9e9733e301117a2"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/architecture.log",
+    "archive": "architecture.log",
+    "sha256": "1678cdc810689d57dc537a5ca06a251802f94a608be912ad0d53b01e9c701671"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/baseline-images/cache-0.png",
+    "archive": "baseline-images/cache-0.png",
+    "sha256": "4fd15c00973e636ece075129a2350b890fd81aaa69a434157c2dde985acf81c2"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/baseline-images/cache-1.png",
+    "archive": "baseline-images/cache-1.png",
+    "sha256": "ad15b1c8e83b848be3f4b3ea8ae1a5209b81d2f82ac595b3ccd0761194a62cee"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/baseline-images/cache-2.png",
+    "archive": "baseline-images/cache-2.png",
+    "sha256": "4fd15c00973e636ece075129a2350b890fd81aaa69a434157c2dde985acf81c2"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/baseline.json",
+    "archive": "baseline.json",
+    "sha256": "b7409c9006fe0321f4036bfe25629f4b8c00d0dafbc6d21da24939d1bc304be2"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/binaries-after.json",
+    "archive": "binaries-after.json",
+    "sha256": "d672ad1fba660faf7564bc752adf82f60b86993174a337c1fa61b2473afc2746"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/binaries-before.json",
+    "archive": "binaries-before.json",
+    "sha256": "c07722aeaf34a83af0536d1c4d58b57b4a504c772c5d55946e68ee01caf40595"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/build-result.json",
+    "archive": "build-result.json",
+    "sha256": "dec356b471ffbaa0f2268e5501425a74405c39258438b067aee67b8fcfbaf206"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/build-time.txt",
+    "archive": "build-time.txt",
+    "sha256": "e4581e7c62638321ed2668bf0c78b853eadc23c4908c2846fc4ea632321eb51f"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/build.log",
+    "archive": "build.log",
+    "sha256": "81f0edcd2981fd63ef7c59d8e8959e20fbca120a1fce9c4130e57d1b4eb6c6ef"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/candidate-images/cache-0.png",
+    "archive": "candidate-images/cache-0.png",
+    "sha256": "a564599d935847341e4977249c1849f266ad4276aaa04036f2e050ee3f4985ad"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/candidate-images/cache-1.png",
+    "archive": "candidate-images/cache-1.png",
+    "sha256": "79dd6c0efc3a49830d7cdf360214b55e967853597a48104b32f9e29971864428"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/candidate-images/cache-2.png",
+    "archive": "candidate-images/cache-2.png",
+    "sha256": "a564599d935847341e4977249c1849f266ad4276aaa04036f2e050ee3f4985ad"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/cleanup.json",
+    "archive": "cleanup.json",
+    "sha256": "3eb4d605f42ba4bdf69803173837d9d09828e3d560e3d97216276c8093874233"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/compile-probe-result.json",
+    "archive": "compile-probe-result.json",
+    "sha256": "4ccca412b5b392883ea3b7635fce04716fb0722eb963a226b012d1eed5068509"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/compile-probe-time.txt",
+    "archive": "compile-probe-time.txt",
+    "sha256": "07c71838cabee8e70bc30957a12ba4d9748c08bf34f8e0301cf7914f1315519b"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/compile-probe.log",
+    "archive": "compile-probe.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/ctest-result.json",
+    "archive": "ctest-result.json",
+    "sha256": "399a7c2ab14e44284deeabb087c6d442f1599db0fc686a4ca73eabac833eb725"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/ctest-time.txt",
+    "archive": "ctest-time.txt",
+    "sha256": "39468b89417787fc738c5f84738dcc34920b0c304cda8c79617312e38da967c3"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/ctest.log",
+    "archive": "ctest.log",
+    "sha256": "519532834ec0e734460cfc9c5dcd609463fffd213f64e43048c7acf79b879ad6"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/finalize.py",
+    "archive": "finalize.py.txt",
+    "sha256": "105cbd0759ac235e6ebd1edf1d8662c710d01e97beaab33d9e960b40dc536dec"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/forgeCad2026_gui.cpp.before.txt",
+    "archive": "forgeCad2026_gui.cpp.before.txt",
+    "sha256": "12afcc0d8088eb99ea2475e1d9eb6ec0c6bf8a21de60c92e549a997fb1afba37"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/forgeCad2026_gui.cpp.delta.patch",
+    "archive": "forgeCad2026_gui.cpp.delta.patch",
+    "sha256": "0167506ae825d646660556fd1218b669a1e23a575df6097dafe9ee85a0e40af2"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/forgeCad2026_ribbon_preview.cpp.before.txt",
+    "archive": "forgeCad2026_ribbon_preview.cpp.before.txt",
+    "sha256": "7b89b2685382ee69bb195289c1cf11bce2b10ee5f02b35dae346ee519ddb3e24"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/forgeCad2026_ribbon_preview.cpp.delta.patch",
+    "archive": "forgeCad2026_ribbon_preview.cpp.delta.patch",
+    "sha256": "9a3fd1957d9f3da423a37e1bca3711fa1df249115283f7ced7c87adf0781c3d7"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/integrated-sources.json",
+    "archive": "integrated-sources.json",
+    "sha256": "800dd514ce3abdd660057da0a1fd9987f4ee69be86ee428c47696dca801edbce"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/link-baseline-result.json",
+    "archive": "link-baseline-result.json",
+    "sha256": "e14044a7b7e68e382de94fbc5da65b5ca5236b7e013bf51e9a07b6aab038063d"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/link-baseline-time.txt",
+    "archive": "link-baseline-time.txt",
+    "sha256": "5c8c43e4fde678832c05372a08160433094dabbe7db7d9ed3e3c26f2fcdf2f74"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/link-baseline.log",
+    "archive": "link-baseline.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/link-candidate-result.json",
+    "archive": "link-candidate-result.json",
+    "sha256": "e7ad1ae6108bbb77e37d74c60e565facabb3281bb8be30a7622c5ad48f231766"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/link-candidate-time.txt",
+    "archive": "link-candidate-time.txt",
+    "sha256": "404e0761eb6fbccf8d4668c445af84b7cfed4afa937f559710e1c281cf1e2226"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/link-candidate.log",
+    "archive": "link-candidate.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/menu-probe.cpp",
+    "archive": "menu-probe.cpp.txt",
+    "sha256": "b00da7d2470495a94f9970a2102d953d2c438fcf8097bd39da236493605e8da3"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/preservation-audit.json",
+    "archive": "preservation-audit.json",
+    "sha256": "079cf879c408d0189af34fe6aa14c4af06e8894affe1159f319db4a94a54e941"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/previous-seals.json",
+    "archive": "previous-seals.json",
+    "sha256": "d0d2b11ca3ca62a0a02eafdbf8b2e5795fae61c0ce1cd3540e3636b581255b39"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/ribbon-architecture-before.json",
+    "archive": "ribbon-architecture-before.json",
+    "sha256": "0b6a7c98348c6b56b9da314e19c15fd8e98e359b9e83ac2563a5e3c670767f88"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/run-baseline-result.json",
+    "archive": "run-baseline-result.json",
+    "sha256": "dc065bbac708d382c0148c9b0d22f823698362500fa10745c41e273f22c1c2db"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/run-baseline-time.txt",
+    "archive": "run-baseline-time.txt",
+    "sha256": "7acc958e9dd0543165117f8a192a9c90548f0f475371039514bc17b021e133b8"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/run-baseline.log",
+    "archive": "run-baseline.log",
+    "sha256": "11889f8cbc5bebd03d4886241914fb44716e83a7768c9e80b6cac013973256b6"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/run-candidate-result.json",
+    "archive": "run-candidate-result.json",
+    "sha256": "0e45058bd6a7b1f82d32dc5245411bf63bae1a85541657f3789d940bd0a72e7f"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/run-candidate-time.txt",
+    "archive": "run-candidate-time.txt",
+    "sha256": "b1fb9e43abd5651ae3513b96caa9eaf49e3a9aaead171ce4344736e73ff05757"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/run-candidate.log",
+    "archive": "run-candidate.log",
+    "sha256": "a2a7a466076a02854b6e7892d391cba161fb9f8590f9f7683a96e2c8b9fb625f"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/run.py",
+    "archive": "run.py.txt",
+    "sha256": "978f9e9c08c50518e4e94ca7aa47af7a8b80f820eeb4285f0ef3c04c1947ea39"
+  },
+  {
+    "source": "/tmp/review-menu-style-2026-11-17/verify-archive.py",
+    "archive": "verify-archive.py.txt",
+    "sha256": "b1c3a88e8133fd3f7f960ffacebc332731daf33dd7cfb10354c42baaae788cf0"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/AGENTS.md",
+    "archive": "workspace/AGENTS.md",
+    "sha256": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/CLAUDE.md",
+    "archive": "workspace/CLAUDE.md",
+    "sha256": "b57d901c2ed4329984657b982bfbf804789d1d10d070795759cba6b086c86f12"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/code-review-2026-11-15.md",
+    "archive": "workspace/docs/code-review-2026-11-15.md",
+    "sha256": "18416aa77b1d9b1a0c1e4b907cc8e91f44158c28337286f2fee17245302db515"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/history/claude-prima-menu-cache-stato-review-2026-11-17.md",
+    "archive": "workspace/docs/history/claude-prima-menu-cache-stato-review-2026-11-17.md",
+    "sha256": "9d1b2a7cb18d72e35fee692d0c2cf3370c86b7327ef9b7f8d854c3c95c1dd48b"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/review-punti-aperti-2026-11-17.md",
+    "archive": "workspace/docs/review-punti-aperti-2026-11-17.md",
+    "sha256": "3ca975dc7acdcd772e277dc613e32d7cf83151b7645a8a8876d8b0cc37d7c00f"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/review-ui11-menu-cache-2026-11-17.md",
+    "archive": "workspace/docs/review-ui11-menu-cache-2026-11-17.md",
+    "sha256": "e65e8a842a35242ddc0647e3f8d247d661d34085043f9f7d5240114007d1065a"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/roadmap.md",
+    "archive": "workspace/docs/roadmap.md",
+    "sha256": "769fc555198c98330ad5a9137a94f5f3c552d82d6ce3dc3615babaa57e9fb7b5"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp",
+    "archive": "workspace/forgeCad2026_gui.cpp.txt",
+    "sha256": "1340e4dc0a667d7006c7185943862480235f1ae03ccf03a1f1e39eca2e9af346"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/forgeCad2026_ribbon_preview.cpp",
+    "archive": "workspace/forgeCad2026_ribbon_preview.cpp.txt",
+    "sha256": "02c7ac253cb3a881ccce1f2a059d08880531d56fe22b1fcf8e59483edb5ac4da"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/tools/generate_architecture.py",
+    "archive": "workspace/tools/generate_architecture.py.txt",
+    "sha256": "bf84297cf2df1e052ec1d7eb44653933b7836746d769f4335355b5ce5670f497"
+  }
+]

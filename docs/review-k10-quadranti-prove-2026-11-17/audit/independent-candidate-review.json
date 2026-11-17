@@ -1,0 +1,17 @@
+{
+  "candidateSha256": "7f47f426d3d19182cc2261741beb4fc6efb94ac72994946c2009863219b98011",
+  "staticDecision": "No blocker found in this limited change",
+  "checks": [
+    "Range finite/nonreversed before ceil/loop; equal endpoints retain{lo,lo}.",
+    "Original ceil, halfpi multiplication, tolerance, condition, push and endpoint formulas retained. No phase normalization, tolerance change or geometric fallback.",
+    "Next index must be finite and strictly greater before reassignment. Fixed-state infinite loop now throws domain_error.",
+    "Cancellation checked on entry and each iteration, including direct native curve and inline surface callers.",
+    "No returned partial vector on throw; original local vector lifetime ends. Geometric exception propagation remains explicit. computePCurves job errors rethrow before fin publication."
+  ],
+  "limits": [
+    "No new workload/resource cap: enormous finite ranges with progressive indices remain large but cancellable.",
+    "Strictly progressive index does not certify accurate quarter-phase partitioning for every huge IEEE parameter.",
+    "Native Curve/Surface breakpoint API finding at enormous angular phases or invalid ranges; no ordinary CAD-body failure reproduced.",
+    "Root runtime results are root-owned; this audit executed only scalar Python oracle and packaging."
+  ]
+}

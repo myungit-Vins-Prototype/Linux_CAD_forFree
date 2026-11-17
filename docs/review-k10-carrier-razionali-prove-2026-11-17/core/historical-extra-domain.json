@@ -1,0 +1,16 @@
+{
+  "scope": "historic original export, not current output; diagnostic no budget widening",
+  "source": "/home/myungit/Linux_CAD_forFree/docs/review-k10-sheet-join-prove-2026-11-16/independent/exports-final/rational.json",
+  "source_sha256": "33e711161f1d8aadfe3ffd718446c99a33c2ed02473c6214438f7f1bba8d42d8",
+  "face": 0,
+  "fin": 3,
+  "edge": 3,
+  "originV": "0x1.00000000000c7p+0",
+  "directionV": "0x1p+0",
+  "rangeHi": "0x1.f1db68123d6ep-3",
+  "surfaceVHi": "0x1.3e3b6d0247adcp+0",
+  "exact_excess_numerator": 199,
+  "exact_excess_denominator": 4503599627370496,
+  "excess_mm_or_uv": "UV parameter, not physical mm",
+  "excess_double": 4.418687638008123e-14
+}

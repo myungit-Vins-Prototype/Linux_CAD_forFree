@@ -1,0 +1,219 @@
+#include "fk_quadrature.h"
+#include "fk_curve_algo.h"
+#include "fk_bspline.h"
+#include "fk_curve_length_cache.h"
+#include "fk_test.h"
+#include <cmath>
+#include <cstring>
+#include <limits>
+#include <stdexcept>
+#include <vector>
+
+using namespace ForgeCad::Kernel;
+namespace {
+constexpr double roundoff = 50 * std::numeric_limits<double>::epsilon();
+void finiteNear(double actual, double expected, double tolerance = 1e-12) {
+    FK_CHECK(std::isfinite(actual));
+    FK_CHECK_NEAR(actual, expected, tolerance);
+}
+template <class F>
+void domainFailure(const F &operation) {
+    bool rejected = false;
+    try { operation(); } catch (const std::domain_error &) { rejected = true; }
+    FK_CHECK(rejected);
+}
+}
+
+// BASELINE: run ONLY filter SafeControls. Other groups may hang its old
+// quadrature tree; a separate parent-owned watchdog demonstrates that failure.
+FK_TEST(QuadratureSafeControls) {
+    const auto polynomial = [](double t) { return 3 * t * t + 2; };
+    finiteNear(detail::integrate(polynomial, -1., 2., 1e-12), 15);
+    finiteNear(detail::integrate(polynomial, 2., -1., 1e-12), -15);
+    for (double tolerance : {1e-12, 0., -1.})
+        finiteNear(detail::integrate([](double) { return 3.; }, -2., 1., tolerance), 9);
+    const auto vector = [](double t) {
+        detail::Evaluation<3> r;
+        r.value = {3 * t * t + 2, t, -2};
+        r.magnitude = {3 * t * t + 2, 3, 5};
+        return r;
+    };
+    const auto result = detail::integrateVector<3>(vector, -1., 2., 1e-11, roundoff);
+    finiteNear(result.value[0], 15);
+    finiteNear(result.value[1], 1.5);
+    finiteNear(result.value[2], -6);
+    finiteNear(result.magnitude[0], 15);
+    finiteNear(result.magnitude[1], 9);
+    finiteNear(result.magnitude[2], 15);
+    const auto reverse = detail::integrateVector<3>(vector, 2., -1., 1e-11, roundoff);
+    for (std::size_t i = 0; i < 3; ++i) {
+        finiteNear(reverse.value[i], -result.value[i]);
+        finiteNear(reverse.magnitude[i], result.magnitude[i], 1e-10);
+    }
+}
+FK_TEST(QuadratureScalarExtremeFiniteIntegral) {
+    const double large = std::ldexp(1., 1023), tiny = std::ldexp(1., -1023);
+    // Every callback value and the true integral are finite. Only old
+    // intermediate pair sums overflow, before multiplication by the tiny span.
+    finiteNear(detail::integrate([large](double) { return large; }, 0., tiny, 1e-12), 1);
+    finiteNear(detail::integrate([large](double) { return -large; }, 0., tiny, 1e-12), -1);
+    finiteNear(detail::integrate([large](double) { return large; }, tiny, 0., 1e-12), -1);
+    finiteNear(detail::integrate([tiny](double) { return tiny; }, 0., large, 1e-12), 1);
+    double error = 0, absolute = 0;
+    int calls = 0;
+    const double direct = detail::gaussKronrod([large, &calls](double) { ++calls; return large; }, 0., tiny, error, absolute);
+    FK_CHECK(calls == 15); // Recovery reuses samples: no callback replay.
+    finiteNear(direct, 1);
+    finiteNear(absolute, 1);
+    FK_CHECK(std::isfinite(error) && error >= 0);
+}
+FK_TEST(QuadratureVectorExtremeFiniteValuesAndMagnitudes) {
+    const double large = std::ldexp(1., 1023), tiny = std::ldexp(1., -1023);
+    const auto callback = [large, tiny](double t) {
+        detail::Evaluation<4> r;
+        r.value = {large, -large, large * (2 * (t / tiny) - 1), 1};
+        // Independent magnitude overestimates remain meaningful even for
+        // the signed-cancelling and much smaller value components.
+        r.magnitude = {large, large, large, large};
+        return r;
+    };
+    for (bool reversed : {false, true}) {
+        const auto r = detail::integrateVector<4>(callback, reversed ? tiny : 0., reversed ? 0. : tiny, 1e-12, roundoff);
+        const double sign = reversed ? -1 : 1;
+        finiteNear(r.value[0], sign);
+        finiteNear(r.value[1], -sign);
+        finiteNear(r.value[2], 0);
+        finiteNear(r.value[3], sign * tiny, 16 * std::numeric_limits<double>::denorm_min());
+        for (double m : r.magnitude) finiteNear(m, 1);
+    }
+    int calls = 0;
+    detail::Evaluation<4> panel;
+    detail::Values<4> error{}, absolute{};
+    detail::gaussKronrod<4>([&](double t) { ++calls; return callback(t); }, 0., tiny, panel, error, absolute);
+    FK_CHECK(calls == 15);
+    finiteNear(panel.value[0], 1);
+    finiteNear(panel.value[1], -1);
+    finiteNear(panel.value[2], 0);
+    finiteNear(panel.value[3], tiny, 16 * std::numeric_limits<double>::denorm_min());
+    for (std::size_t i = 0; i < 4; ++i) {
+        finiteNear(panel.magnitude[i], 1);
+        FK_CHECK(std::isfinite(error[i]) && error[i] >= 0);
+        FK_CHECK(std::isfinite(absolute[i]) && absolute[i] >= 0);
+    }
+    const auto inverse = [tiny](double) {
+        detail::Evaluation<2> r;
+        r.value = {tiny, -tiny};
+        r.magnitude = {tiny, tiny};
+        return r;
+    };
+    const auto r = detail::integrateVector<2>(inverse, 0., large, 1e-12, roundoff);
+    finiteNear(r.value[0], 1);
+    finiteNear(r.value[1], -1);
+    finiteNear(r.magnitude[0], 1);
+    finiteNear(r.magnitude[1], 1);
+
+    // Only the active first component controls refinement. The finite last
+    // two components are carried by the same panel, as mass winding terms.
+    const auto passive = [](double t) {
+        detail::Evaluation<3> result;
+        result.value = {2, std::sin(37 * t), std::cos(23 * t) + .1 * t};
+        result.magnitude = {2, 0, 0};
+        return result;
+    };
+    detail::Evaluation<3> raw;
+    detail::Values<3> rawError{}, rawAbsolute{};
+    detail::gaussKronrod<3>(passive, 0., 1., raw, rawError, rawAbsolute);
+    int passiveCalls = 0;
+    const auto selected = detail::integrateVector<3>([&](double t) { ++passiveCalls; return passive(t); },
+        0., 1., 1e-12, roundoff, 1);
+    FK_CHECK(passiveCalls == 15);
+    for (std::size_t i = 0; i < 3; ++i) {
+        FK_CHECK(std::isfinite(selected.value[i]) && std::isfinite(selected.magnitude[i]));
+        FK_CHECK(std::memcmp(&selected.value[i], &raw.value[i], sizeof(double)) == 0);
+        FK_CHECK(std::memcmp(&selected.magnitude[i], &raw.magnitude[i], sizeof(double)) == 0);
+    }
+    // This oracle is the unchanged single GK rule, not the true integral of
+    // either passive oscillating function. Default-N controls remain above.
+    domainFailure([&] { (void)detail::integrateVector<3>(passive, 0., 1., 1e-12, roundoff, 4); });
+    for (bool badMagnitude : {false, true}) {
+        const auto invalidPassive = [&](double t) {
+            auto result = passive(t);
+            const double nan = std::numeric_limits<double>::quiet_NaN();
+            if (badMagnitude) result.magnitude[2] = nan;
+            else result.value[2] = nan;
+            return result;
+        };
+        domainFailure([&] { (void)detail::integrateVector<3>(invalidPassive, 0., 1., 1e-12, roundoff, 1); });
+    }
+}
+FK_TEST(QuadratureNativeArcLengthAtTinyParameterSpan) {
+    const double width = std::ldexp(1., -1023);
+    const BSplineCurve<3> curve(1, {0, 0, width, width}, {{0, 0, 0}, {1, 0, 0}});
+    // Source coordinates stay ordinary; derivative2^1023 is finite. This
+    // exercises the real arcLength callback, not just an internal lambda.
+    FK_CHECK(isFinite(curve.derivative(.5 * width)));
+    finiteNear(distance(curve.point(0), curve.point(width)), 1, 0);
+    finiteNear(arcLength(curve, curve.domain()), 1);
+    detail::CurveLengthCache cache;
+    finiteNear(cache.get(curve, curve.domain(), 1e-10), 1);
+    finiteNear(cache.get(curve, curve.domain(), 1e-10), 1);
+}
+FK_TEST(QuadratureNonfiniteCallbacksAreRejected) {
+    const double nan = std::numeric_limits<double>::quiet_NaN(), inf = std::numeric_limits<double>::infinity();
+    for (double bad : {nan, inf, -inf}) {
+        const auto scalar = [bad](double) { return bad; };
+        domainFailure([&] { (void)detail::integrate(scalar, 0., 1., 1e-12); });
+        // Even depth exhaustion must not publish a nonfinite panel value.
+        domainFailure([&] { (void)detail::adaptiveIntegral(scalar, 0., 1., 1e-12, 30); });
+        for (bool badMagnitude : {false, true}) {
+            const auto callback = [bad, badMagnitude](double) {
+                detail::Evaluation<2> r;
+                r.value = {1, badMagnitude ? 1 : bad};
+                r.magnitude = {1, badMagnitude ? bad : 1};
+                return r;
+            };
+            domainFailure([&] { (void)detail::integrateVector<2>(callback, 0., 1., 1e-12, roundoff); });
+            domainFailure([&] { (void)detail::adaptiveIntegral<2>(callback, 0., 1., detail::Values<2>{1e-12, 1e-12}, roundoff, 30); });
+        }
+    }
+}
+FK_TEST(QuadratureLargeMidpointsAndUnrepresentableIntegrals) {
+    const double large = std::ldexp(1., 1023), width = std::ldexp(1., 1022);
+    for (bool negative : {false, true}) {
+        const double a = negative ? -1.5 * large : large;
+        const double b = negative ? -large : 1.5 * large;
+        const auto callback = [a, b, width](double t) {
+            FK_CHECK(std::isfinite(t) && t >= a && t <= b);
+            return 1 / width;
+        };
+        finiteNear(detail::integrate(callback, a, b, 1e-12), 1);
+        const auto vector = [&](double t) {
+            detail::Evaluation<1> r;
+            r.value[0] = r.magnitude[0] = callback(t);
+            return r;
+        };
+        const auto r = detail::integrateVector<1>(vector, a, b, 1e-12, roundoff);
+        finiteNear(r.value[0], 1);
+        finiteNear(r.magnitude[0], 1);
+    }
+    domainFailure([&] { (void)detail::integrate([large](double) { return large; }, 0., 4., 1e-12); });
+    const auto vector = [large](double) {
+        detail::Evaluation<1> r;
+        r.value[0] = r.magnitude[0] = large;
+        return r;
+    };
+    domainFailure([&] { (void)detail::integrateVector<1>(vector, 0., 4., 1e-12, roundoff); });
+    // The true integral is finite (2^-51), but its nonzero half-span is
+    // unrepresentable. Conservative rejection prevents a spurious zero.
+    const double smallest = std::numeric_limits<double>::denorm_min();
+    domainFailure([&] { (void)detail::integrate([large](double) { return large; }, 0., smallest, 1e-12); });
+    domainFailure([&] { (void)detail::integrateVector<1>(vector, 0., smallest, 1e-12, roundoff); });
+    // A finite oscillating callback has two finite half-interval integrals,
+    // but their full integral is unrepresentable (2.02*2^1023). The check
+    // is semantic; it does not prescribe which adaptive panel detects it.
+    const auto oscillating = [large](double t) {
+        const double s = std::sin(16 * kPi * t);
+        return 1.01 * large * s * s;
+    };
+    domainFailure([&] { (void)detail::integrate(oscillating, 0., 4., 1e-12); });
+}

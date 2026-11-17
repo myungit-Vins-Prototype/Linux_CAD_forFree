@@ -1,0 +1,79 @@
+{
+  "pass": true,
+  "baselineSHA256": "dd0756e5d7a209392b31a33fe7f9327b310f44eb15116442c4340e282262b093",
+  "finalSHA256": "beb724c4743b4255688745185e49989f3884a93b659f12fdac127c58710dda9e",
+  "records": [
+    {
+      "fin": 0,
+      "rationalE": true,
+      "unchanged": {
+        "curve": true,
+        "surface": true,
+        "range": true,
+        "edgeTolerance": true,
+        "sense": true,
+        "sourceEdge": true,
+        "sourceFin": true
+      },
+      "pcurveIdentical": false,
+      "baselineStatus": "Unsupported",
+      "finalStatus": "Certified",
+      "baselineFinTolerance": "0x0p+0",
+      "finalFinTolerance": "0x1.ad7f29abcaf48p-24"
+    },
+    {
+      "fin": 1,
+      "rationalE": false,
+      "unchanged": {
+        "curve": true,
+        "surface": true,
+        "range": true,
+        "edgeTolerance": true,
+        "sense": true,
+        "sourceEdge": true,
+        "sourceFin": true
+      },
+      "pcurveIdentical": true,
+      "baselineStatus": "Certified",
+      "finalStatus": "Certified",
+      "baselineFinTolerance": "0x1.ad7f29abcaf48p-24",
+      "finalFinTolerance": "0x1.ad7f29abcaf48p-24"
+    },
+    {
+      "fin": 2,
+      "rationalE": true,
+      "unchanged": {
+        "curve": true,
+        "surface": true,
+        "range": true,
+        "edgeTolerance": true,
+        "sense": true,
+        "sourceEdge": true,
+        "sourceFin": true
+      },
+      "pcurveIdentical": false,
+      "baselineStatus": "Unsupported",
+      "finalStatus": "Certified",
+      "baselineFinTolerance": "0x0p+0",
+      "finalFinTolerance": "0x1.ad7f29abcaf48p-24"
+    },
+    {
+      "fin": 3,
+      "rationalE": false,
+      "unchanged": {
+        "curve": true,
+        "surface": true,
+        "range": true,
+        "edgeTolerance": true,
+        "sense": true,
+        "sourceEdge": true,
+        "sourceFin": true
+      },
+      "pcurveIdentical": true,
+      "baselineStatus": "Certified",
+      "finalStatus": "Certified",
+      "baselineFinTolerance": "0x1.ad7f29abcaf48p-24",
+      "finalFinTolerance": "0x1.ad7f29abcaf48p-24"
+    }
+  ]
+}

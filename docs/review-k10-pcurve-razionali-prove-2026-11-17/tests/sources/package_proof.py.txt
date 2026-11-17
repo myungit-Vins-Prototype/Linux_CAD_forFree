@@ -1,0 +1,55 @@
+from pathlib import Path
+import hashlib,json,shutil,difflib
+s=Path('/tmp/k10-rational-pcurve-review/tests');r=Path('/home/myungit/Linux_CAD_forFree');o=s/'final-proof';assert not o.exists();o.mkdir()
+def copy(src,rel):
+ dst=o/rel;dst.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(src,dst)
+for name in ['test_surface_curve_rational_pcurves.cpp','test_surface_curve_rational_edges.cpp','test_surface_curve_bounds.cpp','test_surface_curve_instances.cpp','export_originals.cpp','leak_calibration.cpp','build_overlay.py','package_proof.py']:
+ copy(s/name,'sources/'+name+'.txt')
+for name in ['test_surface_curve_rational.cpp','test_sheet_join_ledger.cpp','test_mapping_nonplane_validation.cpp','fk_test_main.cpp']:
+ copy(r/'kernel/tests'/name,'sources/'+name+'.txt')
+for name in ['test_surface_curve_bounds.cpp','test_surface_curve_instances.cpp','test_surface_curve_rational_edges.cpp']:
+ copy(s/('baseline-'+name),'baseline/'+name+'.txt')
+for name in ['fk_surface_curve_bounds.cpp','fk_surface_curve_bounds.h']:
+ copy(s.parent/'core/kernel'/name,'production/'+name+'.txt')
+for name in ['graph-consult.json','candidate-originals.jsonl','export-originals.log','export-commands.json','peak-witness-parameter.json','baseline-commands.json','baseline-source-hashes.json','baseline-new-tests.log','baseline-run-result.json','candidate-new-tests.log','candidate-new-run-result.json','removed-recreatable-duplicates.json']:
+ copy(s/name,name)
+for mode in ['release','asan']:
+ for f in(s/mode).iterdir():
+  if f.suffix in ['.json','.log']:copy(f,mode+'/'+f.name)
+copy(s.parent/'root/library-freeze.json','library-freeze.json');copy(s.parent/'core/SOURCE-FREEZE.json','production-freeze.json')
+patch=[]
+for name in ['test_surface_curve_bounds.cpp','test_surface_curve_instances.cpp','test_surface_curve_rational_edges.cpp']:
+ patch+=list(difflib.unified_diff((s/('baseline-'+name)).read_text().splitlines(True),(s/name).read_text().splitlines(True),fromfile='a/kernel/tests/'+name,tofile='b/kernel/tests/'+name))
+name='test_surface_curve_rational_pcurves.cpp';patch+=list(difflib.unified_diff([], (s/name).read_text().splitlines(True),fromfile='/dev/null',tofile='b/kernel/tests/'+name))
+(o/'tests.patch').write_text(''.join(patch))
+(o/'HANDOFF.txt').write_text('''K10 — pcurve Q NURBS di grado1/3 a pesi positivi variabili
+
+Freeze e risultati
+Provider5d85a734bf8ed6ee638843797cac8f2907c68427c1dafcd7e37268691fdd1ede; header647415920b7cd246ce307614aad2cb725292e3ad58f8407ef77b4a591dec7320.
+Nuova TU test_surface_curve_rational_pcurves.cpp SHA9e3612e5ca27d7ce448dba6da6609f1875b494ce9eac0f0bc4fd3e00112ede62:7 test semantici.
+Baseline nuovaTU:0/7, exit1. Candidato:59/59 Release, exit0,0.4399s; ASan/UBSan/LSan:59/59,exit0,4.8773s. Nessun warning compilazione né diagnostic sanitizer.
+Tre TU precedenti cambiano ciascuna SOLO una aspettativa Qweights variabili Unsupported→Failed, più il nome coerente del test bounds. Tutti sono gap reali nello stesso parametro. Qrational è nuovo requisito; il vecchio Unsupported non è descritto come bug pubblico precedente. Le altre condizioni rimangono invariate.
+
+Sette casi
+1. Q1 e Q3 genuinamente razionali su carrier polinomiale piano; E3 ottenuta dai controlli omogenei della fixture tramite elevazione di grado, stesso parametro originale. I poli IEEE finali sono gli input originali del provider, non estrazioni interne.
+2. S(u,v)=(u,v,u²),Q_u=t/(2−t),E=(Q_u,.25,Q_u²) razionalequadratica elevata3. Campanello separato: Sidentity2×2,Qu=1/(2−t),D=2−t,U=1. Hsbar_x=D³ maWsbar=D⁴, anche se S è polinomiale. Ewrong polinomiale con controlliX{8,4,2,1}=D³ deveFailed; Ecorrect=Q elevata3 Certified. Questo negativo ha già endpoint errati (gap7.5t0), è guard contro omissioneD^p e non è una regressione CAD/ledger o un picco nascosto.
+3. Srazionale S_u=u/(2−u),Q_u=t/(2−t),E_x=t/(4−3t), carrier nativo2×3 istanziato con posa/mirror/scala. GaugeQ2^±100 e gaugeS opposto conservano denominatori originali positivi.
+4. Q/E reverse correlato e non correlato, dominio parametro[-2,3], trim reale[-1.75,2.125], attraversamento delle celle carrier con nodoU=.5.
+5. Picco diretto Q_v: W={1,1,1e8,1e8},Qpolesu=i/3,v={0,.01,0,0}. E segue la stessa u(t) conY0; Sidentity polinomiale. Qflat Certified; QpeakFailed. La griglia33 documenta soloaliasing e il witness t=0x1.e45106b6b3b93p-15 documenta il gap reale>10cap; non vengono dichiarati bound continui dai campioni. Q è interamente nel rettangolo naturale per positività dei pesi e hull dei poli originali.
+6. Ledger di dettaglio con UNA fin pianificata: primo proof fallito primaassignment; bodycodec e pointerE/S restano invariati. Positivo actualfinTolerance=cap8e-8. Non è dichiarata transazionalità su piani multipli.
+7. QoutsideDomain Failed; TrimmedQ Unsupported; cancellation propagata distintamente da geometryerror.
+
+Esportazioni e audit
+candidate-originals.jsonl contiene10record con originali E/S/Q e pesi IEEEhex, placement originale ricorsivo senza flatten, range/cap/runtimeStatus/upperBound; il recordQ-ledger-actual ha finTolerance reale dopo certificazione. Otto recordCertified e dueFailed. Le prove Fraction indipendenti appartengono al pacchetto dell'auditor e non sono eseguite né rivendicate da questo agente.
+La review indipendente del diff non ha trovatoP1/P2: Cox omogenea, Wsbar=D^(pu+pv) ancheSpoly, minSW effettivo1 per gauge costante eliminato, lowerD originale positivo e alternativa dal hull del denominatore sono bound distinti validi; ramoQ a pesi uguali conserva residual precedente. I test non sostituiscono la revisione matematica.
+
+Sanitizer e riproduzione
+Strumentate SOLO productionTU fk_surface_curve_bounds.cpp e tutte7TUtest+fk_test_main; resto kernel dalla libreria Release congelata UNICA SHA8641c0a3c65dccd9906a935139669eb64c8e829fdb6bcf20aefcd7c97408c40e. Non è fullkernelSAN.
+Runtime fuori ptrace tramite require_escalated, ASAN_OPTIONSdetect_leaks=1:halt_on_error=1,UBSAN_OPTIONShalt_on_error=1:print_stacktrace=1,LSAN_OPTIONSexitcode=23. La calibrazione worker perde19byte reali, LSan rileva1allocation edexit23; test reali exit0.
+Comandi, hash, tempi e log sono inclusi. L'archive unica non è copiata. Con autorizzazione root sono stati eliminati SOLO tre duplicati ELF privati ricreabili dopo hash e export; le evidenze sono conservate in removed-recreatable-duplicates.json. Nessun binario, .o, .a o CAD nel pacchetto.
+
+Limiti e ownership
+I sette nuovi test esercitano API di dettaglio provider/ledger; nessun nuovo bug APIpubblica viene affermato. I sei testmapping pubblici preesistenti restano coperti, ma non vengono attribuiti a questo nuovo ramoQvar. Gli altri52 test precedenti sono eseguiti con le sole tre aspettative di scope sopra dichiarate.
+Nessun repoedit, UI, CADutente, commit/push, appbuild o suite483 eseguiti da questo agente. Root integra CMake/memoria/grafo e gestisce build app e regressioni applicabili. Nessuna sogliaalzata, fallback dopoFailed o riscrittura di prove precedenti sigillate.
+''')
+manifest={str(p.relative_to(o)):hashlib.sha256(p.read_bytes()).hexdigest()for p in sorted(o.rglob('*'))if p.is_file()};(o/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n');seal=hashlib.sha256((o/'manifest.json').read_bytes()).hexdigest();(s/'final-proof-seal.json').write_text(json.dumps({'path':str(o),'manifestSha256':seal,'files':len(manifest),'bytes':sum(p.stat().st_size for p in o.rglob('*')if p.is_file())},indent=2));print((s/'final-proof-seal.json').read_text())

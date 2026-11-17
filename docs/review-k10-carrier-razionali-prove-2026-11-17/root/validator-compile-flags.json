@@ -1,0 +1,46 @@
+{
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_curve_bounds.cpp": {
+    "args": [
+      "/usr/bin/c++",
+      "-I/home/myungit/Linux_CAD_forFree/kernel",
+      "-O3",
+      "-DNDEBUG",
+      "-std=gnu++17",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-O2",
+      "-g",
+      "-ffp-contract=off",
+      "-fno-fast-math",
+      "-ffp-contract=off",
+      "-o",
+      "CMakeFiles/forgekernel.dir/fk_surface_curve_bounds.cpp.o",
+      "-c",
+      "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_curve_bounds.cpp"
+    ],
+    "flags_verified": true
+  },
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_sheet_join_validation.cpp": {
+    "args": [
+      "/usr/bin/c++",
+      "-I/home/myungit/Linux_CAD_forFree/kernel",
+      "-O3",
+      "-DNDEBUG",
+      "-std=gnu++17",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-O2",
+      "-g",
+      "-ffp-contract=off",
+      "-fno-fast-math",
+      "-ffp-contract=off",
+      "-o",
+      "CMakeFiles/forgekernel.dir/fk_sheet_join_validation.cpp.o",
+      "-c",
+      "/home/myungit/Linux_CAD_forFree/kernel/fk_sheet_join_validation.cpp"
+    ],
+    "flags_verified": true
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "nodes": [
+    {
+      "id": "kernel/fk_bspline.cpp",
+      "group": "kernel",
+      "description": "Curve B-spline/NURBS: basi e derivate, valutazione polinomiale in coordinate locali, inserimento nodi, pezze Bezier e coniche esatte; copie atomiche delle cache e pubblicazione unica del risultato concorrente.",
+      "lines": 297
+    },
+    {
+      "id": "kernel/fk_bspline_surface.cpp",
+      "group": "kernel",
+      "description": "Superfici NURBS con jet locali double e istanze immutabili: estensione periodica opzionale del dominio clamped, isoparametriche e breakpoints coerenti, estremi distinti per la chiusura; copie atomiche delle cache Bezier/proiezione/isoparametriche e pubblicazione unica del risultato concorrente.",
+      "lines": 484
+    },
+    {
+      "id": "kernel/fk_sheet.cpp",
+      "group": "kernel",
+      "description": "Taglio, rifilo ed estensione di lamine; offset NURBS planari certificati. Famiglia ISO scelta dalle pcurve sorgenti originali con limite fisico continuo e ancore per incidenza; giunti ISO verificati sui due supporti a cap fisso e fin ricontrollate dopo build/unify. Newton resta una costruzione campionata; fin nonISO native bicubiche sono verificate continuamente con budget prefit dopo build/unify tramite mappa edge esplicita, con fallimenti riconosciuti terminali e famiglie unsupported legacy.",
+      "lines": 1033
+    },
+    {
+      "id": "kernel/fk_sheet_join_validation.cpp",
+      "group": "kernel",
+      "description": "Certifica le fin Newton effettivamente emesse usando indici modello e mappa edge, fissa il cap prefit sulle fin verificate e ricontrolla gli univoci discendenti dopo unify, anche senza history utente. Unsupported conserva la via legacy; fallimento riconosciuto terminale.",
+      "lines": 87
+    },
+    {
+      "id": "kernel/fk_surface_curve_bounds.cpp",
+      "group": "kernel",
+      "description": "Verifica continua del residuo E(t)-S(Q(t)) per cubiche e SP-curve lineari/cubiche non razionali su carrier bicubico nativo. Coefficienti originali, intervalli outward, partizione comune, tutte le celle nodali intersecate, budget e cancellazione.",
+      "lines": 410
+    },
+    {
+      "id": "kernel/tests/test_sheet_join_validation.cpp",
+      "group": "tests",
+      "description": "Giunti ISO NURBS: prove continue, cap fisso e negativi per picchi/gap; ancore e genealogia, codec e cancellazione. Offset loft con pcurve nonISO quasi tangenti: quattro varianti pubbliche, pose/scale, doppia estensione e taglio reciproco, sorgente immutabile.",
+      "lines": 660
+    },
+    {
+      "id": "kernel/tests/test_surface_curve_bounds.cpp",
+      "group": "tests",
+      "description": "Residuo continuo su superfici bicubiche: positivi e negativi fra campioni, dominio e celle nodali, trim, budget e cancellazione; contratti delle fin Newton prima e dopo unificazione.",
+      "lines": 181
+    }
+  ],
+  "incidentEdgesRead": 270,
+  "edgeKinds": [
+    "call",
+    "include"
+  ],
+  "graphSha256": "80eb72d36e17f1ebaf363dc914e8203efb9b668413ee7cdacfd113a054991ed1"
+}

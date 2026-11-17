@@ -1,0 +1,12 @@
+[  OK  ] TolerancePCurveBudget
+[  OK  ] PCurvesOfExtrusions
+[  OK  ] PCurveTypes
+[  OK  ] ExactPCurvesOnAnalyticSurfaces
+[  OK  ] FittedPCurves
+[  OK  ] FittedPCurvesFromDegenerateSide
+[  OK  ] FittedPCurveNearCollapsedSplineSide
+[  OK  ] PCurvesSurviveEdgeOperations
+[  OK  ] MassWithAndWithoutPCurves
+[  OK  ] PCurveExtendedPoleNeighbourhood
+[  OK  ] SewPreservesDensePCurveRegardlessOfOperandOrder
+11/11 test superati

@@ -1,0 +1,27 @@
+[  OK  ] PCurveDeviationFiniteControlsAndSampledKnotPeaks
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:12: FK_CHECK(std::isinf(value) && value > 0)
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:12: FK_CHECK(std::isinf(value) && value > 0)
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:12: FK_CHECK(std::isinf(value) && value > 0)
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:12: FK_CHECK(std::isinf(value) && value > 0)
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:12: FK_CHECK(std::isinf(value) && value > 0)
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:12: FK_CHECK(std::isinf(value) && value > 0)
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:12: FK_CHECK(std::isinf(value) && value > 0)
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:12: FK_CHECK(std::isinf(value) && value > 0)
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:12: FK_CHECK(std::isinf(value) && value > 0)
+[ FAIL ] PCurveDeviationInvalidSamplesAndRangesReturnInfinity (9 controlli falliti)
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:12: FK_CHECK(std::isinf(value) && value > 0)
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:12: FK_CHECK(std::isinf(value) && value > 0)
+[ FAIL ] PCurveDeviationNonFiniteNativeEvaluationsNeverLookExact (2 controlli falliti)
+[  OK  ] PCurveDeviationOverflowGapFromFinitePointsIsInfinity
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:92: FK_CHECK(!exactPCurve(plane, overflow, {0, .1}, budget))
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:93: FK_CHECK(!exactPCurve(plane, pole, {0, 1}, budget))
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:95: FK_CHECK(!fitPCurve(plane, pole, {0, 1}, budget, &deviation))
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:96: FK_CHECK(deviation == -123)
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:92: FK_CHECK(!exactPCurve(plane, overflow, {0, .1}, budget))
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:93: FK_CHECK(!exactPCurve(plane, pole, {0, 1}, budget))
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:95: FK_CHECK(!fitPCurve(plane, pole, {0, 1}, budget, &deviation))
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:96: FK_CHECK(deviation == -123)
+    /tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp:106: FK_CHECK(!exactPCurve(plane, finitePointsOverflowGap, {0, 1}, inf))
+[ FAIL ] PCurveAcceptanceNeedsFiniteDeviationEvenWithInfiniteTolerance (9 controlli falliti)
+[  OK  ] PCurveDeviationAndAcceptancePropagateCancellation
+3/6 test superati

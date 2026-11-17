@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="10"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="6"
+	timestamp="2026-11-16T22:26:38"
+	>
+	<testcase name="forgecad_chamfer_preview_state_tests" classname="forgecad_chamfer_preview_state_tests" time="1.83761" status="run">
+		<properties/>
+		<system-out>CASE mode=0 pending=0
+PASS Enter refreshes typed field without closing dialog
+PASS Up arrow preserves immediate preview update
+PASS Down arrow restores field and preview definition
+PASS typed value committed by real Tab focus lifecycle
+PASS Tab refreshes key and generation
+PASS old geometry invalidated after Tab
+PASS label stops declaring old preview ready
+VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+PASS ready preview matches field after Tab
+PASS new result becomes ready
+PASS real confirmation creates chamfer
+PASS confirmation uses updated numeric value
+COMMIT matches_shown=1 shown_volume=472.188 actual_volume=472.188 pointer_same=1
+PASS confirmed geometry matches updated preview volume
+PASS single confirmation applies once and returns
+PASS dialog cleanup releases preview callback and lock
+CASE mode=0 pending=1
+PASS Enter refreshes typed field without closing dialog
+PASS Up arrow preserves immediate preview update
+PASS Down arrow restores field and preview definition
+PASS real uncancelled...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgecad_linked_drawing_tests" classname="forgecad_linked_drawing_tests" time="1.35915" status="run">
+		<properties/>
+		<system-out>PASS tavola da modello valutato: riuso B-rep senza cache, errori conservati, viste e provenienza
+PASS tavole collegate: una/più, anteprima e UUID; toolbar 2D gruppi/blocco/persistenza/aggiornamento; nessuna modifica file
+PASS linked lightweight drawings and GUI
+</system-out>
+	</testcase>
+	<testcase name="forgecad_surface_tools_tests" classname="forgecad_surface_tools_tests" time="0.755415" status="run">
+		<properties/>
+		<system-out>PASS individual fill influence, picking identity and persistence
+PASS superfici: rete/estensione/poli, dipendenze, rigenerazione, Undo/Redo, UI/mouse, formato53, errori atomici, revisioni e sola lettura
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_multisheet_tests" classname="forgecad_drawing_multisheet_tests" time="1.21751" status="run">
+		<properties/>
+		<system-out>PASS pattern cache identity: selective migration, geometry/names invariant, cache16 and archived snapshots
+PASS drawing identity: visibility, exact legacy verification, geometry/precision rejection and native reopen with dimensions
+PASS multisheet preparation: two calculations instead of five, cancellation atomic, presentation/history preserved
+PASS multifoglio: codec1/2, UUID, isolamento datum/quote, schede/riordino, Undo globale, PDF3/1, modello10-&gt;16, revisioni A/B e Salva con nome
+</system-out>
+	</testcase>
+	<testcase name="forgecad_extension_panel_tests" classname="forgecad_extension_panel_tests" time="0.720178" status="run">
+		<properties/>
+		<system-out>PASS Estendi: comando reale, pannello prima dei bordi, mouse, contorni, anteprima, Invio/Esc/chiusura e Undo/Redo
+Estensione: scelta del contorno completo OK
+</system-out>
+	</testcase>
+	<testcase name="forgecad_body_sketch_reference_cache_tests" classname="forgecad_body_sketch_reference_cache_tests" time="0.0163047" status="run">
+		<properties/>
+		<system-out>PASS body sketch reference cache
+</system-out>
+	</testcase>
+	<testcase name="forgecad_linked_sketch_reference_tests" classname="forgecad_linked_sketch_reference_tests" time="0.0758754" status="run">
+		<properties/>
+		<system-out>PASS linked sketch references (solver, quote, snap, Pierce, datum, storia, IO, mouse, Undo)
+</system-out>
+	</testcase>
+	<testcase name="forgecad_display_mesh_tests" classname="forgecad_display_mesh_tests" time="0.0188843" status="run">
+		<properties/>
+		<system-out>PASS display float, anteprime, cache precedenti e picking
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_editor_tests" classname="forgecad_drawing_editor_tests" time="0.144439" status="run">
+		<properties/>
+		<system-out>PASS drawing sheet GUI, metadata bytes=957
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_layout_history_tests" classname="forgecad_drawing_layout_history_tests" time="0.318622" status="run">
+		<properties/>
+		<system-out>PASS layout alignment, atomic deletion, local history, drag and source barriers
+</system-out>
+	</testcase>
+</testsuite>

@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "g++",
+    "/tmp/k10-mapping-nonplane-review/audit/export-public-final.o",
+    "/tmp/k10-mapping-nonplane-review/audit/libforgekernel-final.a",
+    "-lpthread",
+    "-o",
+    "/tmp/k10-mapping-nonplane-review/audit/export-public-final"
+  ],
+  "exit": 0,
+  "elapsed": 0.4092641139868647,
+  "objectSHA256": "1996741a82e73680983d9d89a53d69ffdc23b72b16b654fcfe058bec2bed6873",
+  "librarySHA256": "a0c5530e331c08d86fc5c4fa29e4477e66fa1ff4c6c646df15d959f211e9531c"
+}

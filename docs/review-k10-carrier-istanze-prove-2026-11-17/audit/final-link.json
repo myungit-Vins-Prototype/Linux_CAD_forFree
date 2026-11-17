@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "g++",
+    "/tmp/k10-instance-carrier-review/audit/export-public-instance.o",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+    "-lpthread",
+    "-o",
+    "/tmp/k10-instance-carrier-review/audit/export-public-instance"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "exit": 0,
+  "elapsed": 0.5279005009942921,
+  "librarySHA256": "57c11033779f33893b07d166c682a0c5e8e3d24c14c98abfee43c7253ca62fa7",
+  "libraryBytes": 181246180,
+  "objectSHA256": "491236907301590f1245c6b09182e55b02a93f8592f6ae41ccaac32c91991225"
+}

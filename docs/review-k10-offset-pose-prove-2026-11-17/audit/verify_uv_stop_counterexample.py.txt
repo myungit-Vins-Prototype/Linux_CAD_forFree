@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Exact finite counterexample to origin-dependent UV stopping, not shell proof.
+Plane S(u,v)=(u,v-200,0), P=(2^-33,0,0), UVseed=(0,200).
+Every GN matrix/step/point operation here is exact on these IEEE inputs.
+"""
+from fractions import Fraction as F
+from pathlib import Path
+import json,math
+ex=lambda x:F.from_float(float(x))
+delta=F(1,2**33);coefficient=ex(1e-12);budget=ex(6.5811132330971078e-11)
+# a=(1,0,0),b=(0,1,0),r=(delta,0,0): aa=bb=det=1,ab=0.
+step=(delta,F(0));matrix={'aa':F(1),'ab':F(0),'bb':F(1),'det':F(1)}
+# Norms are exact: seed length200 and step length2^-33.
+old_stop_shifted=ex(float(coefficient)*201.0)
+old_stop_anchored=coefficient
+assert delta<=old_stop_shifted and delta>old_stop_anchored
+assert delta>budget and delta**2>budget**2
+assert step[0]!=0 or step[1]!=0
+# Line search after applying step has strictly smaller 3D distance: zero.
+assert F(0)<delta
+# Rounding of coefficient*201 cannot change the decision: margin is huge in ULPs.
+ulp=ex(math.ulp(float(old_stop_shifted)))
+assert coefficient*201-ulp>delta
+result={'pass':True,'scope':'Exact counterexample to a stopping predicate in projectLocal; not a whole-shell error certificate',
+ 'unit_note':'This synthetic plane has identity metric1mm/UV. Its assigned physical budget is chosen numerically equal to the actual diagnostic UV fit tolerance; the actual model UV tolerance is NOT asserted to be millimetres.','surface':'S(u,v)=(u,v-200,0)','target':['2^-33','0','0'],'seed':['0','200'],
+ 'matrix':{k:str(v) for k,v in matrix.items()},'gauss_newton_step':[str(x) for x in step],
+ 'delta_hex':float(delta).hex(),'delta_mm':float(delta),'delta_exact':str(delta),
+ 'synthetic_budget_hex':float(budget).hex(),'synthetic_budget_exact':str(budget),'synthetic_budget_mm':float(budget),
+ 'shifted_old_threshold_hex':float(old_stop_shifted).hex(),'shifted_old_threshold_exact':str(old_stop_shifted),
+ 'anchored_old_threshold_hex':float(old_stop_anchored).hex(),
+ 'old_shifted_behavior':'Stops before applying nonzero step; 3D residual delta exceeds stated downstream fit budget',
+ 'old_anchored_behavior':'Same geometric map reparametrized by v_prime=v-200 applies identical GN step; residual becomes exactly zero',
+ 'new_behavior':'Both parameter origins apply the nonzero step; existing 3D line search improves residual to zero, then zero component step stops',
+ 'not_claimed':['general convergence of Gauss-Newton','global nearest point','continuous shell accuracy','same cause for every failed CAD']}
+Path(__file__).with_name('uv-stop-counterexample-result.json').write_text(json.dumps(result,indent=2)+'\n')
+print(json.dumps(result,indent=2))

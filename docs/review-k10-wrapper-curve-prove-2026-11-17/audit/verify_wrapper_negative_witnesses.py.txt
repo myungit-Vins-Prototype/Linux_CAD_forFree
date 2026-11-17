@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+"""Original IEEE wrapper witnesses; samples are never continuous acceptance."""
+from pathlib import Path
+import json,types,sys,hashlib,copy
+root=Path(__file__).parent
+for name in ['fraction_common','verify_tensor_fraction']:
+ m=types.ModuleType(name);m.__file__=str(root/(name+'.py.txt'));sys.modules[name]=m
+ exec(compile(Path(m.__file__).read_text(),m.__file__,'exec'),m.__dict__)
+from verify_tensor_fraction import *
+p=Path(sys.argv[1]);records={r['label']:r for r in map(json.loads,p.read_text().splitlines())}
+def leaf(c):
+ links=0
+ while c['type'] in ('trimmed','transformed'):
+  links+=1;assert links<=32;c=c['basis']
+ return c
+
+def source(r):
+ lo,hi=map(exact,r['range']);return source_spans(normalize(r['curve']),(lo,hi)),source_spans(normalize(r['pcurve']),(lo,hi)),surface_data(r['surface'])
+
+def at(r,t):
+ E,Q,S=source(r);e=next(a for a in E if a['lo']<=t<=a['hi']);q=next(a for a in Q if a['lo']<=t<=a['hi']);e=subspan(e,t,t);q=subspan(q,t,t)
+ uv=[x[0]/q['w'][0] for x in q['h']];pu,pv,U,V,nu,nv,_,_=S
+ ku=next(i for i in range(pu,nu) if U[i]<U[i+1] and U[i]<=uv[0]<=U[i+1]);kv=next(i for i in range(pv,nv) if V[i]<V[i+1] and V[i]<=uv[1]<=V[i+1])
+ sh,sw=compose(S,q,ku,kv);delta=[sh[i][0]/sw[0]-e['h'][i][0]/e['w'][0] for i in range(3)];return uv,delta
+
+# Anti-rounded-flattening: the ORIGINAL X discrepancy is constant on the WHOLE range.
+r=records['original-affine-gap'];rounded=records['rounded-affine-surrogate'];assert r['runtimeStatus']==2 and rounded['runtimeStatus']==1
+for k in ['surface','pcurve','range','budget']:assert r[k]==rounded[k]
+E,Q,S=source(r);assert len(E)==len(Q)==1;pu,pv,U,V,nu,nv,_,_=S
+sh,sw=compose(S,Q[0],pu,pv);weight=mul(sw,E[0]['w']);residual=add(mul(sh[0],E[0]['w']),mul(E[0]['h'][0],sw),-1)
+delta=F(1,2**36);budget=exact(r['budget']);assert delta==16*budget and min(weight)>0 and not any(add(residual,scale(weight,delta)))
+roundedProof=verify(rounded);assert roundedProof['pass'] and roundedProof['upper_mm']<=float(budget)
+anti={'label':r['label'],'pass':True,'originalXResidualFraction':str(-delta),'originalXResidualOverBudget':str(delta/budget),'originalXResidualConstantOverWholeRange':True,'roundedSurrogate':roundedProof,'scope':'A rounded native surrogate would hide original transformed coefficients; actual original wrapper returns Failed'}
+
+# Wrapped hidden Q peak: exact point residual and original positive pole hull domain.
+r=records['wrapped-peak'];flat=records['wrapped-peak-flat'];assert r['runtimeStatus']==2 and flat['runtimeStatus']==1
+for k in ['surface','curve','range','budget']:assert r[k]==flat[k]
+base=leaf(r['pcurve']);baseFlat=leaf(flat['pcurve']);assert base['type']=='bspline' and base['weights']==baseFlat['weights'] and len(set(base['weights']))>1
+assert min(map(exact,base['weights']))>0
+E,Q,S=source(r);pu,pv,U,V,nu,nv,_,_=S
+assert all(U[pu]<=exact(a[0])<=U[nu] and V[pv]<=exact(a[1])<=V[nv] for a in base['poles'])
+t=exact('0x1.e45106b6b3b93p-15');uv,gap=at(r,t);budget=exact(r['budget']);assert abs(gap[1])>10*budget
+lo,hi=map(exact,r['range']);sampled=[sum(x*x for x in at(r,lo+(hi-lo)*F(i,32))[1]) for i in range(33)];assert max(sampled)<budget*budget
+peak={'label':r['label'],'pass':True,'parameterIEEE':float(t).hex(),'sameParameterResidualFractions':list(map(str,gap)),'absYMM':float(abs(gap[1])),'absYOverBudget':float(abs(gap[1])/budget),'qOriginalPoleHullProvesWholeImageInDomain':True,'flatControl':verify(flat),'legacy33MaxSquaredFraction':str(max(sampled)),'legacy33MaxMMUpper':outward(sqrt_hi(max(sampled))),'legacyGridIsNotContinuousCertificate':True}
+
+# Paired exact inner-trim queries. Removing ONLY trim restrictions makes the
+# ENTIRE geometry certify, so these rejections are not surface-domain confounds.
+trim=[]
+for label,key in [('exact-trim-Q-invalid','pcurve'),('exact-trim-E-invalid','curve')]:
+ r=records[label];assert r['runtimeStatus']==2
+ try:verify(r)
+ except AssertionError as error:assert 'ORIGINAL trim' in str(error);message=str(error)
+ else:raise AssertionError('Invalid original trim query was silently clipped')
+ lo,hi=map(exact,r['range']);c=r[key];links=0;violations=[]
+ while c['type']=='trimmed':
+  links+=1;a,b=map(exact,c['range'])
+  if not a<=lo<hi<=b:violations.append({'link':links,'trimFractions':[str(a),str(b)],'queryFractions':[str(lo),str(hi)]})
+  c=c['basis']
+ assert len(violations)==1 and violations[0]['link']==2 and lo==-F(1,2**54)
+ stripped=copy.deepcopy(r);stripped[key]=c;nativeProof=verify(stripped);assert nativeProof['pass'] and nativeProof['upper_mm']==0
+ trim.append({'label':label,'pass':True,'strictOriginalTrimRejection':message,'violations':violations,'unwrappedGeometryControl':nativeProof,'scope':'Exact query is outside inner trim by2^-54; native E/Q and S domains remain valid and residual zero on the whole requested range'})
+out={'pass':True,'inputSHA256':hashlib.sha256(p.read_bytes()).hexdigest(),'negativeRecordCount':4,'antiFlatten':anti,'wrappedPeak':peak,'exactTrimQueries':trim,'notClaimed':['Rounded surrogate is original geometry','Public CAD failure or new global mapping bug','Samples as continuous proof','Whole-range upper bound for the peak failing curve','Multi-plan ledger transaction atomicity']}
+Path(sys.argv[2]).write_text(json.dumps(out,indent=2)+'\n');print(json.dumps(out,indent=2))

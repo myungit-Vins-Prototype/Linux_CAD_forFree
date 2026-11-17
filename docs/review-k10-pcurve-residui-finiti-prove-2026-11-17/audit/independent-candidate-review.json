@@ -1,0 +1,31 @@
+{
+  "candidateSha256": "7d7574589225ba9e35899aab76285d824ee7f0bbbe3be48139d212775e1df85b",
+  "staticResult": "No blocker found",
+  "cppRuntimeByThisObserver": false,
+  "checks": [
+    {
+      "lines": [
+        317,
+        332
+      ],
+      "result": "Invalid samplecount, nonfinite/reversed/zero-width range and overflowing range length fail closed to+Inf. Breakpoint values are finite/inrange before sort; combined partition covers exact query endpoints."
+    },
+    {
+      "lines": [
+        333,
+        354
+      ],
+      "result": "Each evaluated parameter, UV, point and physical gap is finite before accumulation. INT_MAX cannot increment beyond max because final iteration breaks explicitly; ordinary arithmetic/probe coordinates retained. Cancellation checked before/through/after work."
+    },
+    {
+      "location": "exactPCurve,fitHermitePCurve,fitLinearPCurve final acceptance",
+      "result": "All three require finite measured value before tolerance comparison, so undefined+Inf cannot pass even toleranceInf. Final fit publication of deviation follows acceptance only."
+    },
+    {
+      "location": "private node/refine/linear compatibility",
+      "result": "nearPole/manual shifts and50xlegacy policy unchanged. This does not claim continuous pcurve error or a public nearPole defect."
+    }
+  ],
+  "firstStaticDelimitationSeal": "cde57e8ae9ee16cb6ab7c08f5abf303bbe6fd8f9e706cb7fb29316051c302c29",
+  "scope": "Public native-data/API metric failure, including deliberately invalid-range/overflowing evaluation cases. No valid-scale user CAD failure claimed; root runtime is separately attributed."
+}

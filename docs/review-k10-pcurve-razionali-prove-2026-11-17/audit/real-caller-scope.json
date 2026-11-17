@@ -1,0 +1,156 @@
+{
+  "scope": "Static real caller reachability only; no added public API execution or CAD failure claim",
+  "conclusions": [
+    "mapBody initially retains original fin.pcurve; only Plane/image.surface branches refit Q.",
+    "wrapBodyOnSurface fallback supplies empty faceImage and fit degree3, once optional carrier fastpath does not return.",
+    "wrapBodyOnFaces deforming path supplies empty faceImage and degree3 default, so native rational Q can reach provider on fitted cubic S.",
+    "QuiltMap bend can supply empty image but requests fit degree5, outside current S2/3 provider; its supported nonempty-image transfer refits Q polynomial."
+  ],
+  "sourceExcerpts": [
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_mapping.cpp",
+      "sha256": "019423a02a6504b3d6e1d659ba9b3b0707397878d5b8bad3340efd52f2b45d3a",
+      "excerpts": [
+        {
+          "firstLine": 118,
+          "lastLine": 125,
+          "lines": [
+            "Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,double tolerance,",
+            "             BodyHistory *history,double *deviation,const std::function<Vec3(const Vec3 &)> &carrierMap={},const std::vector<Plane> &cuts={},double derivativeFraction=.001,int degree=3,const detail::MappingFaceFunction &faceImage={},",
+            "             const std::function<std::optional<Body>()> &carrierBody={}) {",
+            "    // Guardie locali sul volume sorgente; le degenerazioni non diventano",
+            "    // corpi validi soltanto perche' il fit riesce.",
+            "    Box box;for(auto e:source.edges())box.add(curveBox(*source.edge(e).curve,source.edge(e).range));",
+            "    require(!box.isEmpty(),\"Deformazione: corpo vuoto.\");",
+            "    const auto &differentialMap=carrierMap?carrierMap:map;"
+          ]
+        },
+        {
+          "firstLine": 182,
+          "lastLine": 228,
+          "lines": [
+            "    for(auto id:source.faces()) {",
+            "        const auto &face=source.face(id);const auto window=faceWindow(source,id);",
+            "        Body::BuildFace mapped;mapped.sense=face.sense;",
+            "        const auto image=faceImage?faceImage(id):detail::MappingFaceImage{};",
+            "        const bool planeImage = image.surface && image.surface->type() == SurfaceType::Plane;",
+            "        if(image.surface){mapped.surface=image.surface;mapped.sense=image.sense;}",
+            "        else {",
+            "            try {mapped.surface=fitMappedSurface(*face.surface,window.first,window.second,differentialMap,fitBudget,worst,cuts,derivativeFraction,degree);}",
+            "            catch(const std::domain_error &e){throw std::domain_error(\"Faccia F\"+std::to_string(id.index)+\": \"+e.what());}",
+            "        }",
+            "        mappedImages.emplace(id.index, mapped.surface);",
+            "        for(auto loop:face.loops) {",
+            "            std::vector<Body::BuildFin> fins;",
+            "            for(auto use:source.loopFins(loop)) {",
+            "                const auto &fin=source.fin(use);const auto &edge=edges[edgeOf.at(fin.edge.index)];auto pc=fin.pcurve;",
+            "                double planeError = 0;",
+            "                if (planeImage) {",
+            "                    // Parametro originale del bordo effettivamente emesso.",
+            "                    // Il provider conserva coefficienti e supporto originali;",
+            "                    // il residuo fisico continuo include lo scarto normale.",
+            "                    pc = detail::fitPCurveOnPlane(edge.curve, mapped.surface, edge.range,",
+            "                        std::min(1e-10, .05 * fitBudget), pcurveBudget, &planeError);",
+            "                    require(bool(pc), \"Deformazione: trasferimento SP-curve Plane non supportato.\");",
+            "                } else if(image.surface) {",
+            "                    const auto &original=source.edge(fin.edge);",
+            "                    // Fit in UV seguito dalla verifica nello spazio fisico;",
+            "                    // il carrier e i suoi nodi non vengono riapprossimati.",
+            "                    double metric=1.;",
+            "                    for(int i=0;i<=16;++i) {",
+            "                        const auto uv=image.parameters(original.curve->point(original.range.lo+(original.range.hi-original.range.lo)*i/16.));",
+            "                        Vec3 d[4];image.surface->evaluate(uv.x(),uv.y(),1,d);metric=std::max({metric,norm(d[1]),norm(d[2])});",
+            "                    }",
+            "                    double uvError=0;",
+            "                    const auto curve=fitCurve([&](double t){const auto uv=image.parameters(original.curve->point(t));return Vec3(uv.x(),uv.y(),0);},original.range,",
+            "                        original.curve->breakpoints(original.range),std::min(1e-10,.05*fitBudget/metric),&uvError);",
+            "                    const auto planar=planarImage(*curve,original.range,Frame3());pc=planar.curve;",
+            "                    require(bool(pc),\"Deformazione: trasferimento SP-curve non riuscito.\");",
+            "                }",
+            "                FinProof proofKind = planeImage ? FinProof::Plane : FinProof::Legacy;",
+            "                double error = planeError;",
+            "                if (!planeImage) {",
+            "                    // Costruzione privata prima dell'UNICA prova; un Failed",
+            "                    // riconosciuto e' terminale e non torna ai campioni.",
+            "                    const auto candidate = detail::surfaceCurvePCurveCandidate(",
+            "                        edge.curve, mapped.surface, pc, edge.range);",
+            "                    const auto proof = detail::surfaceCurveResidualBound(",
+            "                        edge.curve, mapped.surface, candidate, edge.range, pcurveBudget);"
+          ]
+        },
+        {
+          "firstLine": 430,
+          "lastLine": 450,
+          "lines": [
+            "    const auto map=[&](const Vec3 &point) {",
+            "        cancellationPoint();const Vec3 p=options.sourcePlane.toLocal(point);",
+            "        const double x=c*p.x()-s*p.y()+options.shift.x(),y=s*p.x()+c*p.y()+options.shift.y();",
+            "        const double u=options.anchor.x()+x/scaleU,v=options.anchor.y()+y/scaleV;",
+            "        require((target.isUPeriodic()||target.uDomain().contains(u,1e-12))&&(target.isVPeriodic()||target.vDomain().contains(v,1e-12)),\"Deformazione: corpo oltre il dominio della superficie destinazione.\");",
+            "        return target.point(u,v)+(p.z()+options.normalOffset)*target.normal(u,v);",
+            "    };",
+            "    if(options.rigid)return placeRigidBody(source,options,[&](const Vec2 &center) {",
+            "        const double u=options.anchor.x()+(c*center.x()-s*center.y()+options.shift.x())/scaleU;",
+            "        const double v=options.anchor.y()+(s*center.x()+c*center.y()+options.shift.y())/scaleV;",
+            "        require((target.isUPeriodic()||target.uDomain().contains(u))&&(target.isVPeriodic()||target.vDomain().contains(v)),",
+            "                \"Posizionamento: centro della sorgente oltre il dominio destinazione.\");",
+            "        Vec3 derivatives[4];target.evaluate(u,v,1,derivatives);",
+            "        const auto normal=target.normal(u,v);",
+            "        const auto tangent=(c/scaleU)*derivatives[2]+(s/scaleV)*derivatives[1];",
+            "        return Frame3(derivatives[0]+options.normalOffset*normal,normal,tangent);",
+            "    },history,deviation);",
+            "    return mapBody(source,map,options.tolerance,history,deviation,{}, {},.001,3,{},[&] {",
+            "        return detail::wrapPlanarBodyOnCarrier(source,target,options,scaleU,scaleV,history,deviation);",
+            "    });",
+            "}"
+          ]
+        },
+        {
+          "firstLine": 587,
+          "lastLine": 595,
+          "lines": [
+            "Body wrapBodyOnFaces(const Body &source,const std::vector<SurfaceTargetFace> &targets,",
+            "                     const SurfaceWrapOptions &options,BodyHistory *history,double *deviation) {",
+            "    Body result;",
+            "    Box bounds;for(auto id:source.edges()){const auto &edge=source.edge(id);bounds.add(curveBox(*edge.curve,edge.range));}",
+            "    withFaceMapping(targets,options,[&](const PointMap &map,const PlacementMap &placement,const PointMap &carrierMap) {",
+            "        result=options.rigid?placeRigidBody(source,options,placement,history,deviation)",
+            "                            :mapBody(source,map,options.tolerance,history,deviation,carrierMap);",
+            "    },bounds.isEmpty()?0.:bounds.diagonal());",
+            "    return result;"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_quilt_mapping.cpp",
+      "sha256": "21a41fb7513ba6ca48987956632aa2d2bbdf57c49c4f9681907a4c512668df05",
+      "excerpts": [
+        {
+          "firstLine": 680,
+          "lastLine": 686,
+          "lines": [
+            "    const auto faceImage=[&](FaceId id) {",
+            "        detail::MappingFaceImage image;",
+            "        const auto &face=source.face(id);",
+            "        if(face.surface->type()!=SurfaceType::Plane)return image;",
+            "        const auto &plane=static_cast<const Plane &>(*face.surface).frame();",
+            "        if(norm(cross(plane.zDir(),options.sourcePlane.zDir()))>angularResolution())return image;",
+            "        const double roundoff=64*kMachineEpsilon*std::max(1.,norm(plane.origin())+norm(options.sourcePlane.origin()));"
+          ]
+        },
+        {
+          "firstLine": 728,
+          "lastLine": 732,
+          "lines": [
+            "        return image;",
+            "    };",
+            "    return detail::mapBodyByFunction(",
+            "        source, [&](const Vec3 &p) { return mapped(p, false); }, [&](const Vec3 &p) { return mapped(p, true); },",
+            "        options.tolerance, history, deviation, cuts, .01, 5, faceImage);"
+          ]
+        }
+      ]
+    }
+  ]
+}

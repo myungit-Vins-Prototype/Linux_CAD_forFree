@@ -49,9 +49,27 @@ SurfacePtr fitMappingSurface(std::vector<double> us, std::vector<double> vs,
     const std::function<Vec3(double, double)> &f, const MappingJetFunction &analyticJet, double tolerance,
     double &deviation, double derivativeFraction, int degree) {
     require(us.size() >= 2 && vs.size() >= 2, "Deformazione: dominio senza campate.");
+    require(std::isfinite(tolerance) && tolerance > 0, "Deformazione: tolleranza di fit non valida.");
+    const auto validGrid = [](const std::vector<double> &grid) {
+        for (std::size_t i = 0; i < grid.size(); ++i)
+            if (!std::isfinite(grid[i]) || (i && (!(grid[i] > grid[i - 1])
+                    || !std::isfinite(grid[i] - grid[i - 1])))) return false;
+        return true;
+    };
+    require(validGrid(us) && validGrid(vs), "Deformazione: griglia di fit non valida.");
     require(std::isfinite(derivativeFraction) && derivativeFraction > 0 && derivativeFraction <= .05,
         "Deformazione: passo delle derivate non valido.");
     require(degree == 3 || degree == 5, "Deformazione: grado di fit non supportato.");
+    const auto value = [&](double u, double v) {
+        const auto point = f(u, v);
+        require(isFinite(point), "Deformazione: valore della mappa non finito.");
+        return point;
+    };
+    const auto finiteDistance = [](const Vec3 &a, const Vec3 &b) {
+        const double error = distance(a, b);
+        require(std::isfinite(error), "Deformazione: residuo di fit non finito.");
+        return error;
+    };
     using Jet = MappingJet;
     using Key = std::tuple<double, double, int, int>;
     std::map<Key, Jet> jets;
@@ -94,17 +112,19 @@ SurfacePtr fitMappingSurface(std::vector<double> us, std::vector<double> vs,
             return found->second;
         if (analyticJet) {
             auto result = analyticJet(u, v, su, sv);
+            require(isFinite(result.p) && isFinite(result.pu) && isFinite(result.pv) && isFinite(result.puv),
+                "Deformazione: jet analitico non finito.");
             jets.emplace(key, result);
             return result;
         }
         const auto a = stencil(u, su, us), b = stencil(v, sv, vs);
         Jet result;
-        result.p = f(u, v);
+        result.p = value(u, v);
         long double pu[3] = { }, pv[3] = { }, puv[3] = { };
         std::array<Vec3, 5> x, y;
         for (int i = 0; i < 5; ++i) {
-            x[i] = f(a.positions[i], v);
-            y[i] = f(u, b.positions[i]);
+            x[i] = value(a.positions[i], v);
+            y[i] = value(u, b.positions[i]);
         }
         for (int i = 0; i < 5; ++i) {
             for (int k = 0; k < 3; ++k) {
@@ -112,7 +132,7 @@ SurfacePtr fitMappingSurface(std::vector<double> us, std::vector<double> vs,
                 pv[k] += static_cast<long double>(b.weights[i]) * (y[i][k] - result.p[k]);
             }
             for (int j = 0; j < 5; ++j) {
-                const Vec3 q = f(a.positions[i], b.positions[j]);
+                const Vec3 q = value(a.positions[i], b.positions[j]);
                 for (int k = 0; k < 3; ++k)
                     puv[k] += static_cast<long double>(a.weights[i]) * b.weights[j]
                         * ((static_cast<long double>(q[k]) - x[i][k])
@@ -160,7 +180,7 @@ SurfacePtr fitMappingSurface(std::vector<double> us, std::vector<double> vs,
                             const double v = b <= 1 ? vs[j] : b >= 4 ? vs[j + 1] : vs[j] + at[b] * hv;
                             const bool du = a == 1 || a == 4, dv = b == 1 || b == 4;
                             if (!du && !dv)
-                                functional[a][b] = f(u, v);
+                                functional[a][b] = value(u, v);
                             else if (du && dv)
                                 functional[a][b] = (hu * hv) * jet(u, v, a == 1 ? 1 : -1, b == 1 ? 1 : -1).puv;
                             else {
@@ -172,11 +192,11 @@ SurfacePtr fitMappingSurface(std::vector<double> us, std::vector<double> vs,
                                 if (!std::binary_search(original.begin(), original.end(), t))
                                     side = 0;
                                 const auto weights = stencil(t, side, grid);
-                                const auto origin = f(u, v);
+                                const auto origin = value(u, v);
                                 long double sum[3] = { };
                                 for (int k = 0; k < 5; ++k) {
                                     const auto p
-                                        = derivativeU ? f(weights.positions[k], v) : f(u, weights.positions[k]);
+                                        = derivativeU ? value(weights.positions[k], v) : value(u, weights.positions[k]);
                                     for (int axis = 0; axis < 3; ++axis)
                                         sum[axis]
                                             += static_cast<long double>(weights.weights[k]) * (p[axis] - origin[axis]);
@@ -211,17 +231,20 @@ SurfacePtr fitMappingSurface(std::vector<double> us, std::vector<double> vs,
                             cell[a2][b2] = data.p + (su * hu / 3.) * data.pu + (sv * hv / 3.) * data.pv
                                 + (su * sv * hu * hv / 9.) * data.puv;
                         }
+                for (int a = 0; a <= degree; ++a)
+                    for (int b = 0; b <= degree; ++b)
+                        require(isFinite(cell[a][b]), "Deformazione: polo del fit non finito.");
                 double alongU = 0, alongV = 0, inside = 0;
                 for (double q : probes) {
                     for (double r : { 0., 1. }) {
                         alongU = std::max(
-                            alongU, distance(cellPoint(cell, q, r, degree), f(us[i] + hu * q, vs[j] + hv * r)));
+                            alongU, finiteDistance(cellPoint(cell, q, r, degree), value(us[i] + hu * q, vs[j] + hv * r)));
                         alongV = std::max(
-                            alongV, distance(cellPoint(cell, r, q, degree), f(us[i] + hu * r, vs[j] + hv * q)));
+                            alongV, finiteDistance(cellPoint(cell, r, q, degree), value(us[i] + hu * r, vs[j] + hv * q)));
                     }
                     for (double r : probes)
                         inside = std::max(
-                            inside, distance(cellPoint(cell, q, r, degree), f(us[i] + hu * q, vs[j] + hv * r)));
+                            inside, finiteDistance(cellPoint(cell, q, r, degree), value(us[i] + hu * q, vs[j] + hv * r)));
                 }
                 worst = std::max({ worst, alongU, alongV, inside });
                 if (std::max({ alongU, alongV, inside }) > tolerance) {
@@ -249,8 +272,9 @@ SurfacePtr fitMappingSurface(std::vector<double> us, std::vector<double> vs,
                     for (int a = 0; a <= degree; ++a)
                         for (int b = 0; b <= degree; ++b)
                             poles[(degree * i + a) * npv + degree * j + b] = cells[i * nv + j][a][b];
+            const auto surface = std::make_shared<BSplineSurface>(degree, degree, knots(us), knots(vs), npu, npv, poles);
             deviation = std::max(deviation, worst);
-            return std::make_shared<BSplineSurface>(degree, degree, knots(us), knots(vs), npu, npv, poles);
+            return surface;
         }
         const auto refine = [](std::vector<double> &grid, const std::vector<bool> &split) {
             std::vector<double> next;

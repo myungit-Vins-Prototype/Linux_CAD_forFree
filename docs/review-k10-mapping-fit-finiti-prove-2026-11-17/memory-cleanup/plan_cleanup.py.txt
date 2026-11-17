@@ -1,0 +1,40 @@
+from pathlib import Path
+import os,json,hashlib,stat,collections,time
+T=Path('/tmp/review-ram-2026-11-17');R=Path('/home/myungit/Linux_CAD_forFree')
+roots=['boolean-order-review','k10-uv-review','k10-noniso-review','k10-rational-pcurve-review','k10-sew-review','k10-curve-wrapper-review','ci-sheet-fix','k10-sketch-review','k10-mapping-nonplane-review','mapping-uv-review','preview-next-review','theme-tabs-review','blend-cavity-review','ui-residual-fix','helix-independent-audit','k10-helix-review','boundary-review','k10-instance-carrier-review','sheet-join-review','mitre-review']
+protected=set();scan_errors=0
+for proc in Path('/proc').iterdir():
+ if not proc.name.isdigit():continue
+ for p in [proc/'exe',*(proc/'fd').glob('*')]:
+  try:protected.add(os.readlink(p).removesuffix(' (deleted)'))
+  except (OSError,PermissionError):pass
+ try:
+  for line in (proc/'maps').read_text().splitlines():
+   fields=line.split(maxsplit=5)
+   if len(fields)==6 and fields[5].startswith('/'):protected.add(fields[5].removesuffix(' (deleted)'))
+ except (OSError,PermissionError):scan_errors+=1
+entries=[];skipped=[];summary=collections.Counter()
+for name in roots:
+ d=Path('/tmp')/name
+ if not d.exists():continue
+ for p in d.rglob('*'):
+  if p.is_symlink() or not p.is_file():continue
+  s=p.stat()
+  if s.st_size<1024*1024:continue
+  with p.open('rb') as f:magic=f.read(8)
+  kind='ELF' if magic.startswith(b'\x7fELF') else 'archive' if magic==b'!<arch>\n' else None
+  if not kind:continue
+  if str(p) in protected:skipped.append(str(p));continue
+  h=hashlib.sha256()
+  with p.open('rb') as f:
+   for b in iter(lambda:f.read(1024*1024),b''):h.update(b)
+  entries.append({'path':str(p),'bytes':s.st_size,'sha256':h.hexdigest(),'kind':kind,'inode':s.st_ino,'mtime_ns':s.st_mtime_ns});summary[name]+=s.st_size
+j={'created':time.time(),'scope':'Only recreatable ELF/archive >=1MiB in explicitly listed completed review staging; no symlinks, sources, logs, JSON, CAD, repository files or sealed evidence','process_map_scan_errors':scan_errors,'protected_matches':skipped,'files':entries,'total_bytes':sum(e['bytes'] for e in entries),'by_stage':dict(summary)};(T/'cleanup-plan.json').write_text(json.dumps(j,indent=2)+'\n');print(json.dumps({k:v for k,v in j.items() if k!='files'},indent=2));print('files',len(entries))
+(T/'meminfo-before.txt').write_text(Path('/proc/meminfo').read_text())
+(T/'memory-before.md').write_bytes((R/'CLAUDE.md').read_bytes())
+B={};paths=__import__('subprocess').check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=R).split(b'\0')
+for f in paths:
+ if not f:continue
+ p=R/os.fsdecode(f)
+ if p.is_file():B[os.fsdecode(f)]=hashlib.sha256(p.read_bytes()).hexdigest()
+(T/'baseline.json').write_text(json.dumps(B,indent=2)+'\n')

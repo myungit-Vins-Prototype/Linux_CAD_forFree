@@ -1,0 +1,9 @@
+[
+  "/usr/bin/c++",
+  "/tmp/k10-rational-edge-review/tests/release/test_surface_curve_rational_edges.o",
+  "/tmp/k10-rational-edge-review/tests/release/fk_test_main.o",
+  "/tmp/k10-rational-edge-review/root/libforgekernel-baseline.a",
+  "-lpthread",
+  "-o",
+  "/tmp/k10-rational-edge-review/tests/release/baseline-final-tests"
+]

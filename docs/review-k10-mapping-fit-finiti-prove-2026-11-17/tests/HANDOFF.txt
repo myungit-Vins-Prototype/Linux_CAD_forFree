@@ -1,0 +1,21 @@
+K10 — validazione input e callback di fitMappingSurface
+
+Sorgente congelata
+/tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp
+SHA256821b8930879f26a03ac496178ed5ed71839a85e9bd991440f6d63f76e97f9dad,7056byte.
+Nessuna modifica successiva al freeze inviato a root. Solo testi in staging: nessun repoedit, compilazione, esecuzione, copia di archive, UI o nuova suite ampia da questo agente. Root gestisce CMake per aggiungere la TU al target esistente forgekernel_mapping_nonplane_validation_tests, esecuzioni seriali baseline/candidate/SAN, buildapp e memoria/grafo.
+
+Ricognizione
+Letti AGENTS.md, CLAUDE.md, fk_mapping_fit.h/.cpp, harness e test mapping esistente. Consultate descrizioni e archi call/include/ref in entrambi i versi, conservati in graph-consult.json. I due chiamanti produzione attuali sono fk_quilt_mapping.cpp167 e fk_surface_mapping.cpp97; entrambi passano analyticJet vuoto. Per questo il repro del probe testa sia jetvuoto sia jetanalitico planare finito.
+
+Sei test semantici
+1.MappingFitFiniteCubicQuinticGridsAndDeviation: gradi3/5 e jetnumerico/analitico, griglie nonunità con coordinate negative valide, S emessa/domìni/gradi e regressioni puntuali su piano, inputgrids invariati. Dev iniziale-1 deve diventare finita>=0 e<=1e-8; dev accumulata.25 rimane.25 nel fit successivo. Questi controlli puntuali non sono una prova continua globale.
+2.MappingFitNonFiniteInteriorProbeCannotPublishSurface: unico valoreNaN/±Inf in(.125,.125)grado3 o(.1,.1)grado5, corner/stencil finiti. Ogni variante usa entrambi jetvuoto e jetanalitico finito. Il flagreachedProbe assicura che il valore sia stato realmente interrogato. Repro mirato al NaN ignorato da std::max; il risultato runtime deve ancora essere eseguito da root.
+3.MappingFitNonFiniteCornerAndStencilValuesReject: NaN/Inf in corner(0,0) o primo stencil(.001,0), jetnumerico, entrambi i gradi. Non si presume che tutti questi casi fossero accettati prima: alcuni controlli già presenti possono rifiutarli, restano compatibilità significativa dei guard nuovi.
+4.MappingFitEveryAnalyticJetVectorMustBeFinite: nonfinitezza in ciascuno di p,pu,pv,puv, su gradi3/5. Tutti i vettori del callback sono parte del contratto anche se un particolare percorso ne consuma solo alcuni.
+5.MappingFitToleranceAndGridPreflightBeforeCallbacks: tol0,negativa,NaN,Inf; griglie corte,duplicate,decrescenti/nonordinate,NaN/Inf,span nonfinita pur con endpoint finiti. Valori UV negativi sono validi se finiti/ordinati, come mostra il controllo positivo. Rifiuto prima di qualsiasi callback. La baseline non ha tutti i preflight e viene eseguita solo da root.
+6.MappingFitCallbackErrorsAndCancellationDoNotPublish: eccezione callback preservata, OperationCancelled distinta e prima dei callback quando già richiesta.
+
+Pubblicazione output e limiti
+I rifiuti attendono std::domain_error, nessuna superficie restituita e dev sentinella-17 invariata. Il valore negativo è un accumulatore già ammesso nei fit riusciti, non un nuovo input invalido; non vengono imposti requisiti aggiuntivi a deviation in ingresso. Errore del callback e OperationCancelled hanno test distinti e non devono essere convertiti in errore geometrico.
+Sono API di dettaglio reali, con callback fornite tramite fitMappingSurface e nessun hookproduzione. Non si rivendica un nuovo bug di comando CAD pubblico. Nessun esito baseline/candidate/SAN è dichiarato da questo agente, che ha scritto soltanto test e note. Le prove sigillate precedenti non sono modificate. Produzione mappingfit staging e sue verifiche appartengono a core/root.

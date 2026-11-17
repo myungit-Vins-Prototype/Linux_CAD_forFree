@@ -1,0 +1,8 @@
+{
+  "command": "c++ -O3 -DNDEBUG -std=c++17 -ffp-contract=off -Wall -Wextra -Wpedantic -I/home/myungit/Linux_CAD_forFree/kernel -c /tmp/k10-rational-edge-review/core/kernel/fk_surface_curve_bounds.cpp -o /tmp/k10-rational-edge-review/core/provider.o",
+  "exitCode": 0,
+  "output": "",
+  "warningsObserved": 0,
+  "candidateSourceSha256": "32b161a97903c5ca746a87b3bde59fb3c79566316d0f274a189127cc396f62e6",
+  "headerSha256": "b6ccad5f246b08c9e69523e485f978600b51ae46104d64d12b18c53dbd487d00"
+}

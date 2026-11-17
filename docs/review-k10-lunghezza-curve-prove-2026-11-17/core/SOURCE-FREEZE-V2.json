@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "files": [
+    {
+      "path": "kernel/fk_curve_algo.cpp",
+      "baseline_sha256": "4055c830965fb2c0741ca9292e18166dcec0c2528f3228bc33fa2f297fa2e60e",
+      "candidate_sha256": "8ceb22befce610f835a9271ca88b497470a5ba2497210d94cbb8867bccfa3400",
+      "v1_sha256": "41127334e69524d42abcf9e05a35c1600eea6e7155b56a03d7061199e40f059e"
+    },
+    {
+      "path": "kernel/fk_curve_length_cache.h",
+      "baseline_sha256": "a5b3135fc97fecf492ca7bcfabc8aeb3290c00de85ded0729cb22f7d2897734a",
+      "candidate_sha256": "d9f5a424ffc931bae46b818b6bcff644ca06376dabbb9c301ba8ce423f9aa1e0",
+      "v1_sha256": "b827d01e72e9852471868a565f9397f85b836f7cc400065cf33e2b9baa075173"
+    }
+  ],
+  "patch_baseline_to_v2_sha256": "a52c3909befa296d03e901a0276e38768f3144076023ca01ad02b5e329724740",
+  "patch_v1_to_v2_sha256": "ef31dd6cbafedb186c9b769e8f82a5941304d77c6714ec29520f991a887d604a",
+  "v1_manifest_unchanged_sha256": "2387ea943d35662da4901c3f0ef816aa304314b733dcc83559b3bdf970381f79",
+  "core_cpp_runtime_performed": false,
+  "tolerance_contract_changed": false,
+  "candidate_runtime_status": "PENDING root/tests"
+}

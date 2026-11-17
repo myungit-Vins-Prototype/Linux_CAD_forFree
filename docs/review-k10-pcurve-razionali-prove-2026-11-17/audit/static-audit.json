@@ -1,0 +1,41 @@
+{
+  "outcome": "No actionable P1/P2 in scoped Q-rational freeze",
+  "sources": [
+    {
+      "path": "kernel/fk_surface_curve_bounds.cpp",
+      "sha256": "5d85a734bf8ed6ee638843797cac8f2907c68427c1dafcd7e37268691fdd1ede"
+    },
+    {
+      "path": "kernel/fk_surface_curve_bounds.h",
+      "sha256": "647415920b7cd246ce307614aad2cb725292e3ad58f8407ef77b4a591dec7320"
+    }
+  ],
+  "functionsUnchanged": {
+    "std::vector<P> basis(": {
+      "byteIdentical": true,
+      "sha256": "9dc494b82b36f49831007742d2fb6d4b5100e47897d32843a6b8496ff94e9fd4"
+    },
+    "double residual(": {
+      "byteIdentical": true,
+      "sha256": "ea68c14602454d9388d589f1dcfee79c5169c0e505bb4007cdfdaebfe9442e50"
+    },
+    "template<int N> VP<N> onRange(": {
+      "byteIdentical": true,
+      "sha256": "6a88dcd1289483507e7f4abaa6d163248c3caa200c24ca10842c759c8421f616"
+    }
+  },
+  "review": [
+    "Homogeneous Cox recurrence encloses (U-aD)/(b-a), (dD-U)/(d-c); tensor degree<=18 and E-products<=21.",
+    "Polynomial S explicitly uses D^(pu+pv) denominator. Constant S weights normalized away use effective lower1. Variable S uses original positive minimum.",
+    "Each active closed surface cell has Wsbar>=effectiveMinSW*D^p. Sequential positive divisions and independently positive hullWsbar give two valid upper bounds; taking their minimum remains safe.",
+    "Q domain enclosure intersects hullU/[max(min originalQweights,hullD.lo),hullD.hi] with independent original Euclidean pole convex hull. Invalid intervals fail, no domain epsilon/clamp acceptance.",
+    "Source1 Q denominator extra3nq+degree+3 allocated only after scalar cap check; shared coefficients preserved, bounded/cancellable snapshot and existing refinement retained.",
+    "qwconstant retains original basis/residual/onRange arithmetic and branch; no normalization of original variable weights.",
+    "Candidate Q keeps degree/knots/weights and only bounds Euclidean control coordinates before mandatory single acceptance proof. Failed remains terminal."
+  ],
+  "limits": [
+    "Only native positive-weight Q degree1/3 added; wrappers, degree expansion and full mapping/fit intent are not certified.",
+    "Arbitrary homogeneous gauges may exhaust representable intervals and Failed conservatively; no claim of scale-free completeness.",
+    "Public mapBody image.surface branches refit Q polynomial, but empty image retains original Q; wrapBodyOnSurface fallback and wrapBodyOnFaces can reach the new family statically. No new public runtime failure is claimed here."
+  ]
+}

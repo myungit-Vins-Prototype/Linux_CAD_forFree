@@ -1,0 +1,13 @@
+{
+  "tests/test_invert_point_validation.cpp": "tests/test_invert_point_validation.cpp.txt",
+  "root/archive.py": "root/archive.py.txt",
+  "root/finalize-docs.py": "root/finalize-docs.py.txt",
+  "root/finish_checks.py": "root/finish_checks.py.txt",
+  "root/verify.py": "root/verify.py.txt",
+  "root/integrate.py": "root/integrate.py.txt",
+  "root/run.py": "root/run.py.txt",
+  "root/milestone.py": "root/milestone.py.txt",
+  "root/fk_surface_algo.cpp": "root/fk_surface_algo.cpp.txt",
+  "root/probe.cpp": "root/probe.cpp.txt",
+  "root/candidate/tools/generate_architecture.py": "root/candidate/tools/generate_architecture.py.txt"
+}

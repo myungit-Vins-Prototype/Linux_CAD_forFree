@@ -1,0 +1,7 @@
+[  OK  ] InvertPointCylinderValidatesFinalUnwrappedResidual
+[  OK  ] InvertPointConeSphereValidateFinalUnwrappedResidual
+[  OK  ] InvertPointTorusValidatesBothFinalPeriodicCoordinates
+[  OK  ] InvertPointModeratePeriodicSeedsKeepNearbyBranch
+[  OK  ] InvertPointPlaneAndClosedNonPeriodicSplineControls
+[  OK  ] InvertPointNonFinitePeriodicSeedsCannotReturnSuccess
+6/6 test superati

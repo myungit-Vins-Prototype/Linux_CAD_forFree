@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "/tmp/k10-instance-carrier-review/audit/verify_public_fins.py.txt",
+    "/tmp/k10-instance-carrier-review/audit/actual-public-instance-final.json",
+    "/tmp/k10-instance-carrier-review/audit/final-instance-fraction-result.json"
+  ],
+  "exit": 0,
+  "elapsed": 0.09572417700837832
+}

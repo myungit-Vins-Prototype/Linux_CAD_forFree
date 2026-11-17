@@ -1,0 +1,99 @@
+{
+  "nodes": 795,
+  "edges": 11651,
+  "units": 403,
+  "errors": [],
+  "hashes_config_HTML_verified": true,
+  "focus": {
+    "kernel/fk_pcurve.cpp": {
+      "description": "SP-curve (Parasolid) / pcurve (OCCT): la curva di un edge nello spazio dei parametri (u, v) di una faccia, con lo stesso parametro dell'edge: S(p(t)) = C(t) per t nel range dell'edge.",
+      "relations": {
+        "incoming": {
+          "call": 56,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 15,
+          "include": 5,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_sheet.cpp": {
+      "description": "Taglio, rifilo ed estensione di lamine; offset NURBS planari certificati. Famiglia ISO scelta dalle pcurve sorgenti originali con limite fisico continuo e ancore per incidenza; giunti ISO verificati sui due supporti a cap fisso e fin ricontrollate dopo build/unify. Newton resta una costruzione campionata; fin Newton su supporti nativi quadratici/bicubici anche razionali positivi sono verificate continuamente con budget prefit e candidate UV nel dominio, dopo build/unify tramite mappa edge esplicita, con fallimenti riconosciuti terminali e famiglie unsupported legacy.",
+      "relations": {
+        "incoming": {
+          "call": 41,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 32,
+          "include": 17,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_surface_algo.cpp": {
+      "description": "Proiezioni globali NURBS: ricerca Bezier del minimo prima dei bordi del dominio; inviluppi conservativi delle isoparametriche escludono solo minimi impossibili. Bordi, nodi C0 e finestre limitate restano candidati. invertPoint ricontrolla UV e residuo fisico finiti dopo riporto periodico e scelta del seam, conserva ramo e cap e rifiuta fasi non rappresentabili entro tolleranza.",
+      "relations": {
+        "incoming": {
+          "call": 93,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 18,
+          "include": 8,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_surface_algo.h": {
+      "description": "Algoritmi sulle superfici: coincidenza delle estrusioni certificata e identita stretta della parametrizzazione UV da dati esatti, per riutilizzare SP-curve senza riproiezione.",
+      "relations": {
+        "incoming": {
+          "call": 2,
+          "include": 100,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 0,
+          "include": 1,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_surface_mapping.cpp": {
+      "description": "Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: conserva i carrier supportati; fin Plane e NURBS2/3 native o istanziate certificate nel continuo al cap prefit. Candidata UV prima della prova, Failed terminale; genealogia, E/S/Q, parametri, versi e budget delle fin dopo assemblaggio anche senza history utente. Bordi3D, carrier rispetto alla mappa e altre famiglie restano campionati; nessuna mesh di calcolo.",
+      "relations": {
+        "incoming": {
+          "call": 10,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 29,
+          "include": 20,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/tests/test_invert_point_validation.cpp": {
+      "description": "Inversione UV indipendente da OCCT: residuo finale di cilindro/cono/sfera/toro con grandi fasi U/V, stime moderate vicine al ramo, Plane e seam BSpline chiusi non periodici, rifiuto di stime periodiche non finite.",
+      "relations": {
+        "incoming": {
+          "call": 1,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 11,
+          "include": 4,
+          "reference": 0
+        }
+      }
+    }
+  }
+}

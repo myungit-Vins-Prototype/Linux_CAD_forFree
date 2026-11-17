@@ -1,0 +1,7 @@
+{
+  "kernel/fk_curve_algo.cpp": "8ceb22befce610f835a9271ca88b497470a5ba2497210d94cbb8867bccfa3400",
+  "kernel/fk_curve_length_cache.h": "d9f5a424ffc931bae46b818b6bcff644ca06376dabbb9c301ba8ce423f9aa1e0",
+  "kernel/CMakeLists.txt": "6c648091e80ab20c33c7f28ddd9c47309ac0c08c1424e380c30e41555e1a3b84",
+  "tools/generate_architecture.py": "88ae74384b00d9c01d94da6f6af6cf24b045658e92b9d87a3cc90e85d6b106ee",
+  "kernel/tests/test_arc_length_validation.cpp": "cc1703a3b4c927858ff9f4e409b31168d638b3075d3e962061957380322ed738"
+}

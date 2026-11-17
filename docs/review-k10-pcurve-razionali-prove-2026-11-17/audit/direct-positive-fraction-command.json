@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "python3",
+    "/tmp/k10-rational-pcurve-review/audit/verify_public_fins.py.txt",
+    "/tmp/k10-rational-pcurve-review/tests/candidate-originals.jsonl",
+    "/tmp/k10-rational-pcurve-review/audit/direct-positive-fraction-result.json",
+    "Q-linear,Q-cubic,Q-nonlinear-polynomial-S,Q-reciprocal-correct,Q-rational-S-placed,Q-reverse-trim-cells,Q-peak-flat,Q-ledger-actual"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "observedExit": 0
+}

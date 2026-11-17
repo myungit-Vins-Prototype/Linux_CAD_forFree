@@ -1,0 +1,17 @@
+FAIL cache uses CadMenu
+FAIL opaque glass interior
+FAIL cache background follows light/dark
+FAIL cache has shared glass settings
+phase 0 color=#000000 alpha=0
+FAIL opaque glass interior
+FAIL cache background follows light/dark
+FAIL cache has shared glass settings
+phase 1 color=#000000 alpha=0
+FAIL opaque glass interior
+FAIL cache background follows light/dark
+FAIL cache has shared glass settings
+phase 2 color=#000000 alpha=0
+FAIL overflow group uses CadMenu
+FAIL overflow group uses CadMenu
+FAIL overflow group uses CadMenu
+RESULT checks=17 failures=13 overflowGroups=3

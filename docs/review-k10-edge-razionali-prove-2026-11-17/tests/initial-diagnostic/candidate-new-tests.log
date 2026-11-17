@@ -1,0 +1,7 @@
+[  OK  ] RationalEdgeNativeTensorSameParameterTrimAndReverse
+[  OK  ] RationalEdgeIndependentWeightGaugesAndPhysicalPlacement
+[  OK  ] RationalEdgeHiddenPeakBetweenLegacySamplesIsRecognized
+[  OK  ] RationalEdgeLedgerRecognizedPeakIsTerminalAndAtomic
+[  OK  ] RationalEdgeChangedWeightsAndDomainDoNotBecomeUnsupported
+[  OK  ] RationalEdgeCancellationRemainsDistinct
+6/6 test superati

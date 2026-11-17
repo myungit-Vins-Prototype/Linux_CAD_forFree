@@ -1,0 +1,18 @@
+#!/usr/bin/env python3
+"""Link stable root archive directly, observe actual final ledger fins, verify Fraction."""
+from pathlib import Path
+import hashlib,json,subprocess,sys,time
+p=Path(__file__).parent;repo=Path('/home/myungit/Linux_CAD_forFree');lib=Path(sys.argv[1]);expected=sys.argv[2]
+def sha(f):return hashlib.sha256(f.read_bytes()).hexdigest()
+assert sha(lib)==expected
+meta=json.loads((p/'compile.json').read_text());assert meta['exit']==0 and sha(p/'export_actual_ledger.cpp.txt')==meta['sourceSHA256']
+commands=[('final-link',['g++',str(p/'export-actual-ledger.o'),str(lib),'-lpthread','-o',str(p/'final-actual-ledger')]),('final-run',[str(p/'final-actual-ledger'),str(p/'final-actual-ledger.json'),'final']),('final-fraction',['python3',str(p/'verify_actual_ledger.py.txt'),str(p/'final-actual-ledger.json'),str(p/'final-fraction-result.json')])]
+for name,cmd in commands:
+ assert sha(lib)==expected;t=time.monotonic();r=subprocess.run(cmd,cwd=repo,text=True,capture_output=True);(p/(name+'.log')).write_text(r.stdout+r.stderr);(p/(name+'-command.json')).write_text(json.dumps({'argv':cmd,'cwd':str(repo),'exit':r.returncode,'elapsed':time.monotonic()-t,'librarySHA256':expected,'libraryBytes':lib.stat().st_size,'sourceSHA256':meta['sourceSHA256']},indent=2)+'\n');print(name,r.returncode,r.stdout+r.stderr,flush=True);assert r.returncode==0
+assert sha(lib)==expected
+b=json.loads((p/'baseline-actual-ledger.json').read_text());a=json.loads((p/'final-actual-ledger.json').read_text());assert len(b['records'])==len(a['records'])==4
+comparison=[]
+for x,y in zip(sorted(b['records'],key=lambda x:x['fin']),sorted(a['records'],key=lambda x:x['fin'])):
+ r={'fin':y['fin'],'rationalE':y['rationalE'],'rationalQ':y['rationalQ'],'unchanged':{k:x[k]==y[k] for k in ['curve','surface','pcurve','range','edgeTolerance','sense','sourceEdge','sourceFin']},'pcurveIdentical':x['pcurve']==y['pcurve'],'baselineStatus':x['runtimeStatus'],'finalStatus':y['runtimeStatus'],'baselineFinTolerance':x['pcurveTolerance'],'finalFinTolerance':y['pcurveTolerance']};assert all(r['unchanged'].values());comparison.append(r)
+(p/'baseline-final-coefficients.json').write_text(json.dumps({'pass':True,'baselineSHA256':sha(p/'baseline-actual-ledger.json'),'finalSHA256':sha(p/'final-actual-ledger.json'),'records':comparison},indent=2)+'\n')
+print('Final4 ledger fins + exact Fraction +4mixedWrapperE/doubleTrimQ PASS; E/S/Q/range/sense unchanged',flush=True)

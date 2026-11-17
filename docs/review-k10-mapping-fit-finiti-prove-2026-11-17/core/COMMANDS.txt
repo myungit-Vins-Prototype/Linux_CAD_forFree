@@ -1,0 +1,8 @@
+# Commands performed by core: only read/search and Python text transformations.
+# No c++/cmake/build/test/UI executable commands were run. No archive copied.
+# Source references:
+# docs/architecture/graph.json (791 nodes/11622 edges)
+# kernel/fk_mapping_fit.cpp, kernel/fk_mapping_fit.h
+# kernel/fk_surface_mapping.cpp, kernel/fk_quilt_mapping.cpp, cad_surface_mapping.cpp
+# Candidate/source audit results in static-source-check.json.
+# Reproducer.cpp.txt is INERT and awaits root/test-agent compilation/execution.

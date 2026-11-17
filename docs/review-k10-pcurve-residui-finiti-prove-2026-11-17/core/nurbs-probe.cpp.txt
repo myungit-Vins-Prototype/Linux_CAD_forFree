@@ -1,0 +1,21 @@
+// Inert proposed reproduction: NOT COMPILED OR EXECUTED by this audit.
+#include "fk_bspline.h"
+#include "fk_pcurve.h"
+#include <cmath>
+#include <iomanip>
+#include <iostream>
+using namespace ForgeCad::Kernel;
+int main(){
+    Plane s{Frame3()};
+    auto e=std::make_shared<BSplineCurve<3>>(3,
+        std::vector<double>{1,1,1,1,2,2,2,2},std::vector<Vec3>(4),
+        std::vector<double>{21,29,37,45});
+    // Deliberately OUTSIDE the natural domain: API must not silently accept NaN.
+    const Interval range{0,1};
+    const Vec3 bad=e->point(.125);
+    double deviation=-123;
+    auto q=fitPCurve(s,e,range,1e-8,&deviation);
+    std::cout<<std::setprecision(17)<<"sourcePointFinite="<<isFinite(bad)
+             <<" returned="<<bool(q)<<" deviation="<<deviation<<'\n';
+    if(q) std::cout<<"witnessFinite="<<std::isfinite(distance(s.point(q->point(.125).x(),q->point(.125).y()),bad))<<'\n';
+}

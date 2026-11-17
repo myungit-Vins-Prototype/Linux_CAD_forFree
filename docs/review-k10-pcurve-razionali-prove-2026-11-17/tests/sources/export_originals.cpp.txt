@@ -1,0 +1,216 @@
+#include "fk_surface_curve_bounds.h"
+#include "fk_sheet_join_validation.h"
+#include "fk_bspline.h"
+#include "fk_bspline_surface.h"
+#include "fk_body_io.h"
+#include "fk_cancel.h"
+#include "fk_test.h"
+#include <algorithm>
+#include <cmath>
+#include <memory>
+#include <stdexcept>
+#include <vector>
+
+using namespace ForgeCad::Kernel;
+namespace {
+using detail::SurfaceCurveBoundStatus;
+constexpr double cap = 8e-8;
+const std::vector<double> cubicKnots{0, 0, 0, 0, 1, 1, 1, 1};
+const std::vector<double> peakWeights{1, 1, 1e8, 1e8};
+std::vector<double> knots(int degree, Interval domain = {0, 1}) {
+    std::vector<double> result(degree + 1, domain.lo);
+    result.insert(result.end(), degree + 1, domain.hi);
+    return result;
+}
+// Degree elevation of the fixture's homogeneous Bernstein controls, before
+// conversion back to original Euclidean IEEE controls. No production extractor.
+std::shared_ptr<BSplineCurve<3>> cubicEdge(std::vector<Vec3> poles, std::vector<double> weights,
+    Interval domain = {0, 1}, Transform3 pose = Transform3()) {
+    for (size_t i = 0; i < poles.size(); ++i) poles[i] *= weights[i];
+    while (poles.size() < 4) {
+        std::vector<Vec3> elevated(poles.size() + 1);
+        std::vector<double> w(weights.size() + 1);
+        elevated.front() = poles.front(); elevated.back() = poles.back();
+        w.front() = weights.front(); w.back() = weights.back();
+        for (size_t i = 1; i < poles.size(); ++i) {
+            const double a = double(i) / poles.size();
+            elevated[i] = a * poles[i - 1] + (1 - a) * poles[i];
+            w[i] = a * weights[i - 1] + (1 - a) * weights[i];
+        }
+        poles = std::move(elevated); weights = std::move(w);
+    }
+    for (size_t i = 0; i < poles.size(); ++i) poles[i] = pose.applyToPoint(poles[i] / weights[i]);
+    return std::make_shared<BSplineCurve<3>>(3, knots(3, domain), poles, weights);
+}
+std::shared_ptr<BSplineCurve<3>> embedded(const BSplineCurve<2> &q, Transform3 pose = Transform3()) {
+    std::vector<Vec3> poles; std::vector<double> weights;
+    for (int i = 0; i < q.poleCount(); ++i) {
+        poles.emplace_back(q.poles()[i].x(), q.poles()[i].y(), 0);
+        weights.push_back(q.weight(i));
+    }
+    return cubicEdge(poles, weights, q.domain(), pose);
+}
+std::shared_ptr<BSplineSurface> carrier(bool nonlinear = false, bool rational = false,
+    bool split = false, int degreeV = 2, double weightGauge = 1) {
+    const std::vector<double> ku = split ? std::vector<double>{0, 0, 0, .5, .5, 1, 1, 1} : knots(2);
+    const int nu = split ? 5 : 3;
+    const double x[]{0, 1. / 3, 1}, w[]{2, 1.5, 1};
+    std::vector<Vec3> poles; std::vector<double> weights;
+    for (int i = 0; i < nu; ++i) for (int j = 0; j <= degreeV; ++j) {
+        poles.emplace_back(rational ? x[i] : double(i) / (nu - 1), double(j) / degreeV,
+            nonlinear && i == 2 ? 1 : 0);
+        weights.push_back(weightGauge * (rational ? w[i] : 1));
+    }
+    return std::make_shared<BSplineSurface>(2, degreeV, ku, knots(degreeV), nu, degreeV + 1, poles, weights);
+}
+std::shared_ptr<BSplineCurve<2>> cubicUV(bool reverse = false, Interval domain = {0, 1}) {
+    std::vector<Vec2> poles{{0, .1}, {.2, .6}, {.8, .3}, {1, .9}};
+    std::vector<double> weights{1, 2, 1, 4};
+    if (reverse) { std::reverse(poles.begin(), poles.end()); std::reverse(weights.begin(), weights.end()); }
+    return std::make_shared<BSplineCurve<2>>(3, knots(3, domain), poles, weights);
+}
+std::shared_ptr<BSplineCurve<2>> peakUV(bool peak) {
+    return std::make_shared<BSplineCurve<2>>(3, cubicKnots,
+        std::vector<Vec2>{{0, 0}, {1. / 3, peak ? .01 : 0}, {2. / 3, 0}, {1, 0}}, peakWeights);
+}
+void expect(const CurvePtr<3> &e, const SurfacePtr &s, const CurvePtr<2> &q,
+    SurfaceCurveBoundStatus status, Interval range = {0, 1}) {
+    const auto result = detail::surfaceCurveResidualBound(e, s, q, range, cap);
+    FK_CHECK(result.status == status);
+    if (status == SurfaceCurveBoundStatus::Certified)
+        FK_CHECK(std::isfinite(result.upperBound) && result.upperBound >= 0 && result.upperBound <= cap);
+}
+Body sheet(bool peak) {
+    const std::vector<Vec3> points{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}};
+    const auto bottom = embedded(*peakUV(false));
+    const std::vector<Body::BuildEdge> edges{{0, 1, bottom, {0, 1}, cap},
+        {1, 2, std::make_shared<Line<3>>(points[1], Vec3(0, 1, 0)), {0, 1}, cap},
+        {3, 2, std::make_shared<Line<3>>(points[3], Vec3(1, 0, 0)), {0, 1}, cap},
+        {0, 3, std::make_shared<Line<3>>(points[0], Vec3(0, 1, 0)), {0, 1}, cap}};
+    Body::BuildFace face; face.surface = carrier();
+    face.loops = {{{0, true, peakUV(peak), 3e-10},
+                   {1, true, std::make_shared<Line<2>>(Vec2(1, 0), Vec2(0, 1)), 0},
+                   {2, false, std::make_shared<Line<2>>(Vec2(0, 1), Vec2(1, 0)), 0},
+                   {3, false, std::make_shared<Line<2>>(Vec2(0, 0), Vec2(0, 1)), 0}}};
+    return Body::buildSheet(points, edges, {face});
+}
+}
+
+#include <fstream>
+#include <iomanip>
+#include <sstream>
+#include <iostream>
+namespace {
+std::string number(double d) {
+    std::ostringstream o;
+    o << '"' << std::hexfloat << d << '"';
+    return o.str();
+}
+template <class T> void array(std::ostream &o, const T &v) {
+    o << '[';
+    bool sep = false;
+    for (auto x : v) {
+        if (sep)
+            o << ',';
+        sep = true;
+        o << number(x);
+    }
+    o << ']';
+}
+template <int N> void vector(std::ostream &o, const Vec<N> &v) {
+    o << '[';
+    for (int i = 0; i < N; ++i) {
+        if (i)
+            o << ',';
+        o << number(v[i]);
+    }
+    o << ']';
+}
+template <int N> void curveJson(std::ostream &o, const CurvePtr<N> &c) {
+    if (auto s = std::dynamic_pointer_cast<const BSplineCurve<N>>(c)) {
+        o << "{\"type\":\"bspline\",\"degree\":" << s->degree()
+          << ",\"knots\":";
+        array(o, s->knots());
+        o << ",\"poles\":[";
+        for (int i = 0; i < s->poleCount(); ++i) {
+            if (i)
+                o << ',';
+            vector(o, s->poles()[i]);
+        }
+        o << "],\"weights\":[";
+        for (int i = 0; i < s->poleCount(); ++i) {
+            if (i)
+                o << ',';
+            o << number(s->weight(i));
+        }
+        o << "]}";
+    } else if (auto l = std::dynamic_pointer_cast<const Line<N>>(c)) {
+        o << "{\"type\":\"line\",\"origin\":";
+        vector(o, l->origin());
+        o << ",\"direction\":";
+        vector(o, l->direction());
+        o << '}';
+    } else if (auto t = std::dynamic_pointer_cast<const TrimmedCurve<N>>(c)) {
+        o << "{\"type\":\"trimmed\",\"basis\":";
+        curveJson(o, t->basis());
+        o << '}';
+    } else
+        throw std::runtime_error("test export: unsupported curve wrapper");
+}
+void surfaceJson(std::ostream &o, const BSplineSurface &s) {
+    if (s.basis())
+        throw std::runtime_error(
+            "test export: instance would lose placement rounding");
+    o << "{\"uDegree\":" << s.uDegree() << ",\"vDegree\":" << s.vDegree()
+      << ",\"uKnots\":";
+    array(o, s.uKnots());
+    o << ",\"vKnots\":";
+    array(o, s.vKnots());
+    o << ",\"uPoleCount\":" << s.uPoleCount()
+      << ",\"vPoleCount\":" << s.vPoleCount() << ",\"poles\":[";
+    for (int i = 0; i < s.uPoleCount(); ++i)
+        for (int j = 0; j < s.vPoleCount(); ++j) {
+            if (i || j)
+                o << ',';
+            vector(o, s.pole(i, j));
+        }
+    o << "],\"weights\":[";
+    for (int i = 0; i < s.uPoleCount(); ++i)
+        for (int j = 0; j < s.vPoleCount(); ++j) {
+            if (i || j)
+                o << ',';
+            o << number(s.weight(i, j));
+        }
+    o << "]}";
+}
+void surfaceTree(std::ostream &out, const BSplineSurface &surface) {
+    if (!surface.basis()) { surfaceJson(out, surface); return; }
+    out << "{\"type\":\"instance\",\"placement\":{\"matrix\":[";
+    for (int i=0;i<3;++i) { if(i)out<<',';out<<'[';for(int j=0;j<3;++j){if(j)out<<',';out<<number(surface.placement().matrix(i,j));}out<<']'; }
+    out << "],\"translation\":";vector(out,surface.placement().translationPart());out<<"},\"basis\":";surfaceTree(out,*surface.basis());out<<'}';
+}
+void record(std::ostream &out, const char *label, const CurvePtr<3> &e, const SurfacePtr &s, const CurvePtr<2> &q, Interval range={0,1}, double finTolerance=-1) {
+    auto r=detail::surfaceCurveResidualBound(e,s,q,range,cap);
+    out<<"{\"label\":\""<<label<<"\",\"range\":["<<number(range.lo)<<','<<number(range.hi)<<"],\"budget\":"<<number(cap)<<",\"runtimeStatus\":"<<int(r.status)<<",\"upperBound\":"<<number(r.upperBound)<<",\"pcurveTolerance\":"<<number(finTolerance)<<",\"curve\":";curveJson(out,e);out<<",\"pcurve\":";curveJson(out,q);out<<",\"surface\":";surfaceTree(out,*std::dynamic_pointer_cast<const BSplineSurface>(s));out<<"}\n";
+    std::cout<<label<<" status="<<int(r.status)<<" upper="<<std::setprecision(17)<<r.upperBound<<std::endl;
+}
+}
+int main(int argc,char**argv) {
+    if(argc!=2)return 2; std::ofstream out(argv[1]);
+    auto linear=std::make_shared<BSplineCurve<2>>(1,knots(1),std::vector<Vec2>{{.1,.2},{.9,.8}},std::vector<double>{1,4});
+    record(out,"Q-linear",embedded(*linear),carrier(),linear);
+    auto cubic=cubicUV();record(out,"Q-cubic",embedded(*cubic),carrier(),cubic);
+    auto q=std::make_shared<BSplineCurve<2>>(1,knots(1),std::vector<Vec2>{{0,.25},{1,.25}},std::vector<double>{2,1});
+    record(out,"Q-nonlinear-polynomial-S",cubicEdge({{0,.25,0},{.5,.25,0},{1,.25,1}},{4,2,1}),carrier(true),q);
+    auto reciprocal=std::make_shared<BSplineCurve<2>>(1,knots(1),std::vector<Vec2>{{.5,0},{1,0}},std::vector<double>{2,1});
+    record(out,"Q-reciprocal-correct",embedded(*reciprocal),carrier(),reciprocal);
+    auto wrong=std::make_shared<BSplineCurve<3>>(3,cubicKnots,std::vector<Vec3>{{8,0,0},{4,0,0},{2,0,0},{1,0,0}});
+    record(out,"Q-reciprocal-wrong-numerator",wrong,carrier(),reciprocal);
+    auto pose=Transform3::translation(Vec3(2,-3,4))*Transform3::scaling(Vec3(),-1.25);
+    record(out,"Q-rational-S-placed",cubicEdge({{0,.25,0},{1,.25,0}},{4,1},{0,1},pose),std::make_shared<BSplineSurface>(carrier(false,true,false,3),pose),q);
+    auto reversed=cubicUV(true,{-2,3});record(out,"Q-reverse-trim-cells",embedded(*reversed),carrier(false,false,true),reversed,{-1.75,2.125});
+    auto flat=peakUV(false),peak=peakUV(true);record(out,"Q-peak-flat",embedded(*flat),carrier(),flat);record(out,"Q-peak",embedded(*flat),carrier(),peak);
+    auto body=sheet(false);auto id=body.edges().front();auto &e=body.edge(id);auto certificates=detail::certifySheetJoins(body,{{0,0,cap,e.curve,e.range}},{id});
+    auto fin=body.loopFins(body.face(body.faces().front()).loops.front()).front();
+    record(out,"Q-ledger-actual",e.curve,body.face(body.faces().front()).surface,body.fin(fin).pcurve,e.range,body.fin(fin).pcurveTolerance);
+}

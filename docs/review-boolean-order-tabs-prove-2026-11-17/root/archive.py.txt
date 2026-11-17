@@ -1,0 +1,36 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/boolean-order-review');P=R/'docs/review-boolean-order-tabs-prove-2026-11-17';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+assert not P.exists(),'Do not overwrite sealed evidence'
+for label in ['tests','audit']:
+ d=T/label/'final-proof';m=json.loads((d/('manifest.json' if label=='tests' else 'MANIFEST.json')).read_text())
+ for e in m['files']:assert sha(d/e.get('path',e.get('file')))==e['sha256']
+ for p in d.rglob('*'):
+  if p.is_file():p.read_text();assert p.suffix not in {'.prt','.body','.o','.a','.cpp','.h','.py'};q=P/label/p.relative_to(d);q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes())
+for p in (T/'tests/audit-ui').rglob('*'):
+ if p.is_file():p.read_text();q=P/'tests-ui-readonly'/p.relative_to(T/'tests/audit-ui');q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes())
+core=T/'core/graph-source-evidence.json';q=P/'core-initial/graph-source-evidence.json';q.parent.mkdir(parents=True);q.write_bytes(core.read_bytes())
+(q.parent/'NOTE.txt').write_text('Initial static source/architecture consultation only. This Sol branch later stopped because selected model was at capacity. No finished patch, independent dynamic proof or final review is attributed to it. Root read current source and audited the completed tester/auditor results.\n')
+for p in (T/'root').iterdir():
+ if p.is_file() and p.name not in {'milestone.py','package-result.json'}:
+  p.read_text();q=P/'root'/(p.name+'.txt' if p.suffix=='.py' else p.name);q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes())
+files=['CLAUDE.md','docs/code-review-2026-11-15.md','docs/review-boolean-order-tabs-2026-11-17.md','docs/history/claude-prima-boolean-order-2026-11-17.md','AGENTS.md','kernel/fk_boolean.cpp','kernel/fk_body_check.cpp','cad_forge.cpp','tests/test_document_theme_tabs.h','tests/test_document_tabs.h'];manifest={}
+for name in files:
+ p=R/name;q=P/'workspace'/(name+'.txt');q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes());manifest[name]=sha(p)
+(P/'source-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+(P/'README.txt').write_text('''Read-only follow-up: RAW Boolean order and document tabs,17November2026.
+No production code or permanent test changed, no new software fix counted,33 functional findings unchanged. User clarified that future tests must target changed area: UI only for UI edits, affected dependencies or concrete regressions, not every kernel task. Recorded in CLAUDE. No commit/push. HEAD/origin47c7c19 and empty index preserved. Existing app/kernel/view-runner hashes unchanged, no redundant full build/general483/sanitizer/CI.
+Exact saved BRep records f13/f14 match1Nov historical a033476f.../514106be... although whole current document SHA differs. Private diagnostic decoder extracts saved caches with only old-Loft/Sew stale-cache invalidation disabled; no production edit/current history regeneration claimed. Current RAW both orders PASS with input immutability,13faces/1shell/check0,2history operands and13valid declared face origins. See tester HANDOFF/recipe/provenance. Tester performed Boolean calls; independent auditor compiled fresh metadata/witness readers, not a third Boolean reproduction.
+Reverse has larger local connection budgets1.4746097656701118e-7 vs forward9.302144405615402e-8. Reverse E1 endpoint-vertex gap1.4600096689803086e-7 and tolerance exactly1.01*gap under existing operation connection1e-6. Old support gap is not observed on9check points E1/Face2(project3.55e-15,SP7.16e-15);72finite witnesses maxproject1.59e-14. Not a continuous certificate. Volumes differ1.16e-4mm3; no exact equality/accuracy proof. Failure historically recorded is not reproduced at current contract, not a new repair and not a claim that inverse achieves uniform1e-7 geometry. Current source has later representative-selection improvements; no bisect/causal attribution.
+Wayland/Fusion isolated profiles, own temporary documents/windows/processes: document-tabs PASS7.10s; final plain theme-tabs PASS1569checks17.33s and only2dPASS898checks7.04s. Initial two35s-timeout failures preserved separately with exit-15; sibling debugger attach denied ptrace, no useful stack. Later parent debugger only2d exited normally898checks, and final plain repetitions used suite90s budget. Timeout cause/session lock not established. No compositor/framebuffer certificate or native macOS verification. No additional UI execution after user correction.
+Architecture786nodes/11488edges/396TU, all source hashes/configuration/HTML and focus incident relations verified; no structural edit/regeneration.6113existing files checked,26previous sealed packages fully preserved, user CAD unchanged. K10 global remains open (unsupported E/Q, wrappers, other families, Newton/trim/topology and carrier intent). Mapping alternative is static planning only, not implemented/proven.
+Three Sol branches started: tester/auditor completed; source-reading branch stopped for model capacity, its initial evidence labelled core-initial only. Root current-source review and native test results are separately identified.
+All artifacts UTF8 JSON/text/inert source. No CAD/BRep/object/archive/ELF. Diagnostic sources carry extra.txt; component manifests retain their unchanged internal paths. Top SHA256SUMS verifies actual archived files. source-manifest.json binds snapshots to workspace. Historical proof packages are not altered.
+''')
+entries=[]
+for p in sorted(P.rglob('*')):
+ if p.is_file():p.read_text();entries.append((str(p.relative_to(P)),sha(p)))
+seal=P/'SHA256SUMS';seal.write_text(''.join(h+'  '+f+'\n' for f,h in entries))
+for f,h in entries:assert sha(P/f)==h
+for f,h in manifest.items():assert sha(R/f)==h
+result={'path':str(P),'files_without_seal':len(entries),'bytes_without_seal':sum((P/f).stat().st_size for f,h in entries),'seal_sha256':sha(seal)};(T/'root/package-result.json').write_text(json.dumps(result,indent=2)+'\n');print(result)

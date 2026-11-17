@@ -1,0 +1,10 @@
+from pathlib import Path
+import re
+R=Path('/home/myungit/Linux_CAD_forFree');p=R/'CLAUDE.md';s=p.read_text();a=R/'docs/history/claude-prima-k10-mapping-fit-finiti-2026-11-17.md';assert not a.exists();a.write_bytes(p.read_bytes());start=s.index('**17/11 — K10 wrapper curve verificati;');end=s.index('\nQ razionali17/11:',start)
+s=s[:start]+'''**17/11 — RAM liberata; review K10 fit non finiti in corso, nessun commit/push.**
+Rimossi284ELF/archive temporanei ricreabili:14GiB; nessun processo/CAD/prova toccato.
+CallbackNaN ignorata da std::max nel fit: correzione in staging; build seriali.
+Wrapper curve: app/6CTest/67mirati+SAN/Fraction/mappa PASS. [Prove](docs/review-k10-wrapper-curve-2026-11-17.md).
+''' +s[end:]
+old='''Carrier istanziati17/11: base/matrici originali,cap invariati; app/6CTest/46mirati+SAN/Fraction4/mappa PASS.
+[Rapporto](docs/review-k10-carrier-istanze-2026-11-17.md).''';new='Carrier istanziati17/11: app/6CTest/46mirati+SAN/Fraction/mappa PASS. [Rapporto](docs/review-k10-carrier-istanze-2026-11-17.md).';assert old in s;s=s.replace(old,new);assert len(s.encode())<=16384,len(s.encode());assert len(re.findall(r'^\*\*',s,re.M))<=10;p.write_text(s);print(len(s.encode()))

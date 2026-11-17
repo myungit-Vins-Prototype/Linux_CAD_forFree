@@ -1,0 +1,171 @@
+--- a/kernel/fk_surface_curve_bounds.cpp
++++ b/kernel/fk_surface_curve_bounds.cpp
+@@ -399,6 +399,64 @@
+ // Candidate construction, before the ONE continuous acceptance check.
+ // Source E/S, the edge parameter and the caller's fixed budget are unchanged.
+ // Unsupported families retain their exact original pcurve pointer.
++// Inspect only LOCAL wrapper metadata, before recursive virtual methods.
++// Native-family recognition follows the walk: a valid periodic unsupported
++// base must not be rejected by a nonperiodic native-domain assumption.
++template<int N> struct CurveSource {
++    const Curve<N> *base = nullptr;
++    std::array<const Transform3 *, 32> placements{};
++    std::size_t count = 0, links = 0;
++};
++template<int N> bool curveSource(const Curve<N> *curve, const Interval &range, CurveSource<N> &source) {
++    source.base = curve;
++    while (source.base) {
++        cancellationPoint();
++        if (const auto *trim = dynamic_cast<const TrimmedCurve<N> *>(source.base)) {
++            if (source.links == 32) return false;
++            ++source.links;
++            const Interval domain = trim->domain(); // Stored endpoints, no recursive accessor.
++            if (!domain.isFinite() || !(domain.lo < domain.hi) || !std::isfinite(domain.length())
++                || range.lo < domain.lo || range.hi > domain.hi) return false;
++            source.base = trim->basis().get();
++            continue;
++        }
++        if constexpr (N == 3) {
++            if (const auto *image = dynamic_cast<const TransformedCurve *>(source.base)) {
++                if (source.links == 32) return false;
++                ++source.links;
++                const auto &placement = image->transform();
++                if (!isFinite(placement.translationPart())) return false;
++                for (int row = 0; row < 3; ++row)
++                    for (int column = 0; column < 3; ++column)
++                        if (!std::isfinite(placement.matrix(row, column))) return false;
++                source.placements[source.count++] = &placement;
++                source.base = image->basis().get();
++                continue;
++            }
++        }
++        return true;
++    }
++    return false;
++}
++// Center the OUTERMOST affine expression before its sums. The rounded anchor
++// is only a common origin, never a replacement for original E coefficients.
++bool centeredEdgePoint(const CurveSource<3> &source, const Point<3> &origin, Point<3> &point) {
++    for (std::size_t level = source.count; level > 0; --level) {
++        cancellationPoint();
++        const auto &placement = *source.placements[level - 1];
++        Point<3> transformed;
++        for (int row = 0; row < 3; ++row) {
++            I value(placement.translationPart()[row]);
++            if (level == 1) value = value - origin[std::size_t(row)];
++            for (int column = 0; column < 3; ++column)
++                value = value + I(placement.matrix(row, column)) * point[std::size_t(column)];
++            if (!finite(value)) return false;
++            transformed[std::size_t(row)] = value;
++        }
++        point = transformed;
++    }
++    return true;
++}
+ // Read placement links BEFORE any recursive knot/weight/pole accessor.
+ // The public constructor already canonicalizes to one native base. This
+ // bounded walk also fails closed if a future representation adds links.
+@@ -456,10 +514,17 @@
+ 
+ CurvePtr<2> surfaceCurvePCurveCandidate(const CurvePtr<3> &curve, const SurfacePtr &surface,
+                                          const CurvePtr<2> &original, const Interval &range) {
+-    const auto *e = dynamic_cast<const BSplineCurve<3> *>(curve.get());
++    cancellationPoint();
++    if (!range.isFinite() || !(range.lo < range.hi) || !std::isfinite(range.length())) return original;
++    CurveSource<3> edgeSource;
++    CurveSource<2> uvSource;
++    // Do not let an unwrapped/clamped surrogate bypass ORIGINAL trim limits.
++    // Invalid wrapper data stays original, so the one residual proof fails.
++    if (!curveSource(curve.get(), range, edgeSource) || !curveSource(original.get(), range, uvSource)) return original;
++    const auto *e = dynamic_cast<const BSplineCurve<3> *>(edgeSource.base);
+     const auto *s = dynamic_cast<const BSplineSurface *>(surface.get());
+-    const auto *q = dynamic_cast<const BSplineCurve<2> *>(original.get());
+-    const auto *line = dynamic_cast<const Line<2> *>(original.get());
++    const auto *q = dynamic_cast<const BSplineCurve<2> *>(uvSource.base);
++    const auto *line = dynamic_cast<const Line<2> *>(uvSource.base);
+     if (!e || !s || (!q && !line) || e->degree() != 3
+         || (q && q->degree() != 1 && q->degree() != 3)
+         || (s->uDegree() != 2 && s->uDegree() != 3) || (s->vDegree() != 2 && s->vDegree() != 3)
+@@ -477,6 +542,8 @@
+         || 4 * std::size_t(nu) * std::size_t(nv) + 16 * std::size_t(ne + nq) > maxScalars
+         || !range.isFinite() || !(range.lo < range.hi)
+         || !std::isfinite(range.length())) return original;
++    if (range.lo < e->domain().lo || range.hi > e->domain().hi
++        || (q && (range.lo < q->domain().lo || range.hi > q->domain().hi))) return original;
+     if (weights(ne, [&](int i) { return e->weight(i); }) < 0
+         || (q && weights(nq, [&](int i) { return q->weight(i); }) < 0)) return original;
+     for (int i = 0; i < nu; ++i)
+@@ -518,7 +585,9 @@
+         cancellationPoint();
+         poles.push_back(bounded(pole));
+     }
+-    return std::make_shared<BSplineCurve<2>>(q->degree(), q->knots(), std::move(poles), q->weights());
++    const auto candidate = std::make_shared<BSplineCurve<2>>(q->degree(), q->knots(), std::move(poles), q->weights());
++    if (uvSource.links) return std::make_shared<TrimmedCurve<2>>(candidate, range.lo, range.hi);
++    return candidate;
+ }
+ SurfaceCurveBoundResult surfaceCurveResidualBound(const CurvePtr<3> &edge, const SurfacePtr &surface,
+                                                   const CurvePtr<2> &pcurve, const Interval &range,
+@@ -528,9 +597,12 @@
+     const SurfaceCurveBoundResult unsupported{SurfaceCurveBoundStatus::Unsupported, infinity};
+     if (!edge || !surface || !pcurve || !range.isFinite() || !(range.lo < range.hi)
+         || !std::isfinite(range.length()) || !(budget > 0) || !std::isfinite(budget)) return failed;
+-    const auto *e = dynamic_cast<const BSplineCurve<3> *>(edge.get());
+-    const auto *q = dynamic_cast<const BSplineCurve<2> *>(pcurve.get());
+-    const auto *line = dynamic_cast<const Line<2> *>(pcurve.get());
++    CurveSource<3> edgeSource;
++    CurveSource<2> uvSource;
++    if (!curveSource(edge.get(), range, edgeSource) || !curveSource(pcurve.get(), range, uvSource)) return failed;
++    const auto *e = dynamic_cast<const BSplineCurve<3> *>(edgeSource.base);
++    const auto *q = dynamic_cast<const BSplineCurve<2> *>(uvSource.base);
++    const auto *line = dynamic_cast<const Line<2> *>(uvSource.base);
+     const auto *s = dynamic_cast<const BSplineSurface *>(surface.get());
+     if (!e || !s || (!q && !line) || e->degree() != 3 || (q && q->degree() != 1 && q->degree() != 3)
+         || (s->uDegree() != 2 && s->uDegree() != 3) || (s->vDegree() != 2 && s->vDegree() != 3) || s->isUPeriodic() || s->isVPeriodic()) return unsupported;
+@@ -558,9 +630,17 @@
+     if (carrierScalars + 16 * std::size_t(ne + nq) + edgeWeightScalars + uvWeightScalars > maxScalars) return failed;
+     // Polynomial partition of unity allows one ORIGINAL translation to be
+     // subtracted from both E and S, retaining small residuals at large poses.
+-    const auto anchor = e->poles().front();
++    auto anchor = e->poles().front();
++    for (std::size_t level = edgeSource.count; level > 0; --level) {
++        cancellationPoint();
++        anchor = edgeSource.placements[level - 1]->applyToPoint(anchor);
++        if (!isFinite(anchor)) return failed;
++    }
+     Point<3> origin{I(anchor[0]), I(anchor[1]), I(anchor[2])};
+-    auto edgeData = snapshot<3>(*e, origin);
++    auto edgeData = snapshot<3>(*e, edgeSource.count ? Point<3>{I(0), I(0), I(0)} : origin);
++    if (edgeSource.count)
++        for (auto &point : edgeData.poles)
++            if (!centeredEdgePoint(edgeSource, origin, point)) return failed;
+     Source<1> edgeWeightData;
+     double minimumEdgeWeight = infinity;
+     if (!ew) {
+--- a/kernel/fk_surface_curve_bounds.h
++++ b/kernel/fk_surface_curve_bounds.h
+@@ -24,14 +24,21 @@
+ // Whole-range positional residual |edge(t)-surface(pcurve(t))| in mm,
+ // with the SAME original edge parameter. budget is finite, positive and
+ // fixed by the caller.
+-// E: native cubic BSpline; Q: native Line2 or degree-one/cubic BSpline2;
++// E: cubic BSpline with optional TrimmedCurve3/TransformedCurve wrappers;
++// Q: Line2 or degree-one/cubic BSpline2 with optional TrimmedCurve2 wrappers;
+ // S: nonperiodic BSplineSurface with each degree two or three and strictly
+ // positive finite original weights, native or a shared similarity instance.
+ // Instance bounds use native base poles and stored IEEE placements with
+ // outward intervals, never rounded transformed pole() data. Traversal is
+ // bounded/cancellable; exhaustion or inconclusive data return Failed.
+-// E/Q support empty or arbitrary strictly positive finite original weights;
+-// E/Q wrappers return Unsupported. Rational Q uses homogeneous local Cox
++// E/Q support empty or arbitrary strictly positive finite original weights.
++// E/Q wrapper walks are bounded to 32 links EACH and checked before recursive
++// accessors. The same range must be exactly inside EVERY trim and the native
++// supported base domain, with no constructor epsilon. E's finite affine
++// matrices (including shear/singular) are applied separately in outward
++// intervals, never flattened to rounded world poles. Invalid wrapper/range
++// or exhausted traversal returns Failed; other base families are Unsupported.
++// Rational Q uses homogeneous local Cox
+ // polynomials and its original positive denominator, including D^(pu+pv)
+ // for a polynomial carrier. Original homogeneous E/Q/S coefficients and
+ // positive denominator bounds retain the caller's physical budget.

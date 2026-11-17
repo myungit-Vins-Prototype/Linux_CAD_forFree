@@ -1,0 +1,26 @@
+#include "/home/myungit/Linux_CAD_forFree/kernel/tests/test_sheet_join_validation.cpp"
+#include "/tmp/k10-noniso-review/tests/test_surface_curve_bounds.cpp"
+FK_TEST(ProviderOriginalExports) {
+    const char *path = std::getenv("K10_PROVIDER_EXPORT");
+    if (!path) return;
+    std::ofstream out(path);
+    out << "{\"scope\":\"detail-provider-original-coefficients\",\"records\":[";
+    bool first = true;
+    const auto emit = [&](const char *label, const CurvePtr<3> &e, const SurfacePtr &s, const CurvePtr<2> &q, Interval range) {
+        const auto result = detail::surfaceCurveResidualBound(e, s, q, range, 1e-8);
+        if (result.status != detail::SurfaceCurveBoundStatus::Certified) throw std::runtime_error("export fixture not certified");
+        if (!first) out << ',';
+        first = false;
+        out << "{\"label\":\"" << label << "\",\"range\":[" << number(range.lo) << ',' << number(range.hi)
+            << "],\"budget\":" << number(1e-8) << ",\"runtimeUpper\":" << number(result.upperBound) << ",\"curve\":";
+        curveJson(out, e); out << ",\"pcurve\":"; curveJson(out, q); out << ",\"surface\":";
+        surfaceJson(out, dynamic_cast<const BSplineSurface &>(*s)); out << '}';
+    };
+    auto q = cubicUV(); emit("cubic-uv", planarEdge(*q), tensor(), q, {0, 1});
+    auto unclamped = std::make_shared<BSplineCurve<2>>(3, std::vector<double>{-3,-2,-1,0,.375,.75,1,2,3,4},
+        std::vector<Vec2>{{.1,.2},{.2,.1},{.3,.4},{.5,.7},{.7,.6},{.9,.8}});
+    emit("unclamped", planarEdge(*unclamped), tensor(), unclamped, {0,1});
+    emit("partitioned-trim",diagonalEdge({0,.3,1}),tensor({0,.5,1},{0,.5,1}),
+        std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,.7,1,1},std::vector<Vec2>{{0,0},{.7,.7},{1,1}}),{.125,.875});
+    out << "]}";
+}

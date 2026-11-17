@@ -1,0 +1,29 @@
+{
+  "candidateSha256": "d584e6cf0622bcb59f8a4f57b19230279ab7fd7b7509a48b39a2b3e28ff8df76",
+  "staticResult": "No blocker found for the scoped fail-closed fix",
+  "contract": {
+    "api": "extendSheet(sheet,edges,distance,bool linear=false,history)",
+    "modeNote": "No symbol extendSheetMode in current source. Current bool false continues original support/terminal polynomial; true uses tangent strip where supported.",
+    "physicalDistance": "kernel/fk_sheet.h32\u201342 expressly measures distance along surface, along midpoint transverse iso for BSpline. UI forgeCad2026_dialogs_surfaces.cpp2162 says Distanza lungo la superficie.",
+    "publicNumericalCap": "No separate final-distance tolerance parameter or quantified accuracy is exposed by that API/header.",
+    "patchBudget": "Uses existing operation tolerance=1e-9*scale, computed from input bounds, as a new final physical residual acceptance gate. No numeric budget enlarged. arcLength accuracy1e-13 is an integration request/estimate, not a prior final residual success cap."
+  },
+  "checks": [
+    "Finite positive length/tolerance, finite start and initial speed, sign exactly\u00b11; computed parameter/step/length/speed finite.",
+    "Same Newton update formula, initial clamp1e-300, iteration limit60, UV step stopping test and quadrature accuracy1e-13 retained.",
+    "Before each quadrature, interval width must be finite. After final update/exhaustion/speed0/stepsmall, delta finite and outward strictly positive precede final quadrature.",
+    "Actual final-u achieved length must be finite and abs(achieved-requested)<=operation tolerance before success. Both native BSpline and native Extrusion callers pass the same precomputed budget.",
+    "Cancellation before/through/after helper; underlying quadrature inner nonfinite/cancellation behavior is not changed by this patch."
+  ],
+  "atomicity": {
+    "input": "Body input is const; Body/body/model topology vectors are copied by value, geometric pointers are const shared objects; no explicit input geometry/topology mutation introduced. This observer does not claim a runtime input-byte comparison.",
+    "history": "Existing extendSheet clears *history={} at ENTRY. Failure therefore leaves history empty, not previous sentinel preserved. New history is composed/published only after build/unify/checkBody and final cancellation. No new partial history publication introduced."
+  },
+  "limits": [
+    "ArcLength uses adaptive Gauss-Kronrod with estimated error/depth limit, not outward interval certificate.",
+    "Final guard measures helper reach curve; it does not separately prove all subsequent reextension/rebuild/unify coefficient drift on emitted carrier.",
+    "Fix may conservatively reject a requested extension rather than solve a difficult valid continuation; no new root solver/bracketing/fallback.",
+    "SS/Q fin certificates and checkBody do not establish the operation distance or global construction intent.",
+    "Root baseline native fixtures have ordinary geometry and actual public success; broader CAD applicability remains limited to verified tests."
+  ]
+}

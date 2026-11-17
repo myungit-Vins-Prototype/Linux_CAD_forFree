@@ -1,0 +1,450 @@
+[
+  {
+    "case": "source13",
+    "faces": 12,
+    "vertices": {
+      "count": 12,
+      "positive": 4,
+      "max": 5.229763884125472e-14,
+      "unique": [
+        {
+          "hex": "0x1.02927e209bec1p-45",
+          "count": 1
+        },
+        {
+          "hex": "0x0p+0",
+          "count": 8
+        },
+        {
+          "hex": "0x1.d70e2519825cp-45",
+          "count": 1
+        },
+        {
+          "hex": "0x1.3cf9755b2ff8dp-45",
+          "count": 1
+        },
+        {
+          "hex": "0x1.96633ee7a9cefp-45",
+          "count": 1
+        }
+      ]
+    },
+    "edges": {
+      "count": 22,
+      "positive": 4,
+      "max": 5.1779840436885866e-14,
+      "unique": [
+        {
+          "hex": "0x0p+0",
+          "count": 18
+        },
+        {
+          "hex": "0x1.d2642edef5a9bp-45",
+          "count": 2
+        },
+        {
+          "hex": "0x1.925d319bdd5adp-45",
+          "count": 2
+        }
+      ]
+    },
+    "fins": {
+      "count": 44,
+      "positive": 12,
+      "max": 9.210043965955843e-08,
+      "unique": [
+        {
+          "hex": "0x0p+0",
+          "count": 32
+        },
+        {
+          "hex": "0x1.97f2386df3116p-25",
+          "count": 1
+        },
+        {
+          "hex": "0x1.4d6480980f57ap-27",
+          "count": 1
+        },
+        {
+          "hex": "0x1.97f234572d5c6p-25",
+          "count": 1
+        },
+        {
+          "hex": "0x1.4d647bf9d232dp-27",
+          "count": 1
+        },
+        {
+          "hex": "0x1.2dde9cc36b37ap-25",
+          "count": 1
+        },
+        {
+          "hex": "0x1.2dde9cc1190c2p-25",
+          "count": 1
+        },
+        {
+          "hex": "0x1.8b91811bb400fp-24",
+          "count": 1
+        },
+        {
+          "hex": "0x1.548586d684c0ap-26",
+          "count": 1
+        },
+        {
+          "hex": "0x1.8b917e74e16edp-24",
+          "count": 1
+        },
+        {
+          "hex": "0x1.54858d70ea259p-26",
+          "count": 1
+        },
+        {
+          "hex": "0x1.59b528830e2e1p-25",
+          "count": 1
+        },
+        {
+          "hex": "0x1.59b52c1098a5ep-25",
+          "count": 1
+        }
+      ]
+    }
+  },
+  {
+    "case": "source14",
+    "faces": 3,
+    "vertices": {
+      "count": 2,
+      "positive": 0,
+      "max": 0.0,
+      "unique": [
+        {
+          "hex": "0x0p+0",
+          "count": 2
+        }
+      ]
+    },
+    "edges": {
+      "count": 2,
+      "positive": 0,
+      "max": 0.0,
+      "unique": [
+        {
+          "hex": "0x0p+0",
+          "count": 2
+        }
+      ]
+    },
+    "fins": {
+      "count": 4,
+      "positive": 0,
+      "max": 0.0,
+      "unique": [
+        {
+          "hex": "0x0p+0",
+          "count": 4
+        }
+      ]
+    }
+  },
+  {
+    "case": "forward",
+    "faces": 13,
+    "vertices": {
+      "count": 13,
+      "positive": 0,
+      "max": 0.0,
+      "unique": [
+        {
+          "hex": "0x0p+0",
+          "count": 13
+        }
+      ]
+    },
+    "edges": {
+      "count": 23,
+      "positive": 18,
+      "max": 9.302144405615402e-08,
+      "unique": [
+        {
+          "hex": "0x0p+0",
+          "count": 5
+        },
+        {
+          "hex": "0x1.50ba171ca22e9p-27",
+          "count": 1
+        },
+        {
+          "hex": "0x1.e30b2daa3d70ap-50",
+          "count": 1
+        },
+        {
+          "hex": "0x1.50ba2c344ecc5p-27",
+          "count": 1
+        },
+        {
+          "hex": "0x1.6f35646045fd7p-27",
+          "count": 1
+        },
+        {
+          "hex": "0x1.8f8628cc9ec38p-24",
+          "count": 2
+        },
+        {
+          "hex": "0x1.8f862839244f5p-24",
+          "count": 1
+        },
+        {
+          "hex": "0x1.57ee3e939c3ddp-26",
+          "count": 1
+        },
+        {
+          "hex": "0x1.8f8628a1e6a0bp-24",
+          "count": 1
+        },
+        {
+          "hex": "0x1.57ee494a1058cp-26",
+          "count": 1
+        },
+        {
+          "hex": "0x1.75297985b188cp-47",
+          "count": 1
+        },
+        {
+          "hex": "0x1.e5f68b6998a4dp-27",
+          "count": 2
+        },
+        {
+          "hex": "0x1.2e8557da677d3p-28",
+          "count": 2
+        },
+        {
+          "hex": "0x1.57ed43110c007p-26",
+          "count": 1
+        },
+        {
+          "hex": "0x1.57ed49bc52fc9p-26",
+          "count": 1
+        },
+        {
+          "hex": "0x1.9112f0e261deap-49",
+          "count": 1
+        }
+      ]
+    },
+    "fins": {
+      "count": 46,
+      "positive": 12,
+      "max": 9.210043965955843e-08,
+      "unique": [
+        {
+          "hex": "0x0p+0",
+          "count": 34
+        },
+        {
+          "hex": "0x1.97f2386df3116p-25",
+          "count": 1
+        },
+        {
+          "hex": "0x1.4d6480980f57ap-27",
+          "count": 1
+        },
+        {
+          "hex": "0x1.97f234572d5c6p-25",
+          "count": 1
+        },
+        {
+          "hex": "0x1.4d647bf9d232dp-27",
+          "count": 1
+        },
+        {
+          "hex": "0x1.2dde9cc36b37ap-25",
+          "count": 1
+        },
+        {
+          "hex": "0x1.2dde9cc1190c2p-25",
+          "count": 1
+        },
+        {
+          "hex": "0x1.8b91811bb400fp-24",
+          "count": 1
+        },
+        {
+          "hex": "0x1.548586d684c0ap-26",
+          "count": 1
+        },
+        {
+          "hex": "0x1.8b917e74e16edp-24",
+          "count": 1
+        },
+        {
+          "hex": "0x1.54858d70ea259p-26",
+          "count": 1
+        },
+        {
+          "hex": "0x1.59b528830e2e1p-25",
+          "count": 1
+        },
+        {
+          "hex": "0x1.59b52c1098a5ep-25",
+          "count": 1
+        }
+      ]
+    }
+  },
+  {
+    "case": "reverse",
+    "faces": 13,
+    "vertices": {
+      "count": 13,
+      "positive": 2,
+      "max": 1.4746097656701118e-07,
+      "unique": [
+        {
+          "hex": "0x0p+0",
+          "count": 11
+        },
+        {
+          "hex": "0x1.3cab8778f377ep-23",
+          "count": 1
+        },
+        {
+          "hex": "0x1.3cab8763cccccp-23",
+          "count": 1
+        }
+      ]
+    },
+    "edges": {
+      "count": 23,
+      "positive": 21,
+      "max": 1.4746097656701118e-07,
+      "unique": [
+        {
+          "hex": "0x1.9112f0e261deap-49",
+          "count": 1
+        },
+        {
+          "hex": "0x1.3cab8778f377ep-23",
+          "count": 2
+        },
+        {
+          "hex": "0x1.3cab8763cccccp-23",
+          "count": 2
+        },
+        {
+          "hex": "0x1.50ba171ca22e9p-27",
+          "count": 1
+        },
+        {
+          "hex": "0x1.50ba2c344ecc5p-27",
+          "count": 1
+        },
+        {
+          "hex": "0x0p+0",
+          "count": 2
+        },
+        {
+          "hex": "0x1.6f35646045fd7p-27",
+          "count": 1
+        },
+        {
+          "hex": "0x1.8f8628cc9ec38p-24",
+          "count": 2
+        },
+        {
+          "hex": "0x1.8f862839244f5p-24",
+          "count": 1
+        },
+        {
+          "hex": "0x1.57ee3e939c3ddp-26",
+          "count": 1
+        },
+        {
+          "hex": "0x1.8f8628a1e6a0bp-24",
+          "count": 1
+        },
+        {
+          "hex": "0x1.57ee494a1058cp-26",
+          "count": 1
+        },
+        {
+          "hex": "0x1.75297985b188cp-47",
+          "count": 1
+        },
+        {
+          "hex": "0x1.e5f68b6998a4dp-27",
+          "count": 2
+        },
+        {
+          "hex": "0x1.2e8557da677d3p-28",
+          "count": 2
+        },
+        {
+          "hex": "0x1.57ed43110c007p-26",
+          "count": 1
+        },
+        {
+          "hex": "0x1.57ed49bc52fc9p-26",
+          "count": 1
+        }
+      ]
+    },
+    "fins": {
+      "count": 46,
+      "positive": 12,
+      "max": 9.210043965955843e-08,
+      "unique": [
+        {
+          "hex": "0x0p+0",
+          "count": 34
+        },
+        {
+          "hex": "0x1.1e3d745b116f1p-24",
+          "count": 1
+        },
+        {
+          "hex": "0x1.4d6480980f57ap-27",
+          "count": 1
+        },
+        {
+          "hex": "0x1.1e3d73d22233dp-24",
+          "count": 1
+        },
+        {
+          "hex": "0x1.4d647bf9d232dp-27",
+          "count": 1
+        },
+        {
+          "hex": "0x1.2dde9cc36b37ap-25",
+          "count": 1
+        },
+        {
+          "hex": "0x1.2dde9cc1190c2p-25",
+          "count": 1
+        },
+        {
+          "hex": "0x1.8b91811bb400fp-24",
+          "count": 1
+        },
+        {
+          "hex": "0x1.548586d684c0ap-26",
+          "count": 1
+        },
+        {
+          "hex": "0x1.8b917e74e16edp-24",
+          "count": 1
+        },
+        {
+          "hex": "0x1.54858d70ea259p-26",
+          "count": 1
+        },
+        {
+          "hex": "0x1.59b528830e2e1p-25",
+          "count": 1
+        },
+        {
+          "hex": "0x1.59b52c1098a5ep-25",
+          "count": 1
+        }
+      ]
+    }
+  }
+]

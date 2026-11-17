@@ -1,0 +1,43 @@
+{
+  "pass": true,
+  "scope": "Exact counterexample to a stopping predicate in projectLocal; not a whole-shell error certificate",
+  "unit_note": "This synthetic plane has identity metric1mm/UV. Its assigned physical budget is chosen numerically equal to the actual diagnostic UV fit tolerance; the actual model UV tolerance is NOT asserted to be millimetres.",
+  "surface": "S(u,v)=(u,v-200,0)",
+  "target": [
+    "2^-33",
+    "0",
+    "0"
+  ],
+  "seed": [
+    "0",
+    "200"
+  ],
+  "matrix": {
+    "aa": "1",
+    "ab": "0",
+    "bb": "1",
+    "det": "1"
+  },
+  "gauss_newton_step": [
+    "1/8589934592",
+    "0"
+  ],
+  "delta_hex": "0x1.0000000000000p-33",
+  "delta_mm": 1.1641532182693481e-10,
+  "delta_exact": "1/8589934592",
+  "synthetic_budget_hex": "0x1.2170bf6d3de82p-34",
+  "synthetic_budget_exact": "2545944866975553/38685626227668133590597632",
+  "synthetic_budget_mm": 6.581113233097108e-11,
+  "shifted_old_threshold_hex": "0x1.ba00f0cda198fp-33",
+  "shifted_old_threshold_exact": "7775810871761295/38685626227668133590597632",
+  "anchored_old_threshold_hex": "0x1.19799812dea11p-40",
+  "old_shifted_behavior": "Stops before applying nonzero step; 3D residual delta exceeds stated downstream fit budget",
+  "old_anchored_behavior": "Same geometric map reparametrized by v_prime=v-200 applies identical GN step; residual becomes exactly zero",
+  "new_behavior": "Both parameter origins apply the nonzero step; existing 3D line search improves residual to zero, then zero component step stops",
+  "not_claimed": [
+    "general convergence of Gauss-Newton",
+    "global nearest point",
+    "continuous shell accuracy",
+    "same cause for every failed CAD"
+  ]
+}

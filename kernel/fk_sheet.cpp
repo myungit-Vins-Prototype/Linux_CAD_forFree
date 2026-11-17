@@ -1,4 +1,5 @@
 #include "fk_sheet.h"
+#include "fk_sheet_join_validation.h"
 #include "fk_history_tools.h"
 
 #include <algorithm>
@@ -46,16 +47,39 @@ double distanceToSheet(const Body &body, const Vec3 &p) {
 }
 
 // Parametro u1 con lunghezza d'arco |u1 - u0| = length sulla curva (verso `sign`).
-double arcParameter(const Curve<3> &curve, double u0, double length, double sign) {
-    double u1 = u0 + sign * length / std::max(norm(curve.derivative(u0)), 1e-300);
+double arcParameter(const Curve<3> &curve, double u0, double length, double sign, double tolerance) {
+    cancellationPoint();
+    if (!std::isfinite(u0) || !std::isfinite(length) || !(length > 0.0)
+        || (sign != -1.0 && sign != 1.0) || !std::isfinite(tolerance) || !(tolerance > 0.0))
+        throw std::domain_error("extendSheet: dati della lunghezza d'arco non validi");
+    const double initialSpeed = norm(curve.derivative(u0));
+    if (!std::isfinite(initialSpeed) || !(initialSpeed > 0.0))
+        throw std::domain_error("extendSheet: velocita' iniziale non valida");
+    double u1 = u0 + sign * length / std::max(initialSpeed, 1e-300);
+    if (!std::isfinite(u1)) throw std::domain_error("extendSheet: parametro d'arco non finito");
     for (int iteration = 0; iteration < 60; ++iteration) {
+        cancellationPoint();
+        if (!std::isfinite(u1 - u0)) throw std::domain_error("extendSheet: intervallo d'arco non finito");
         const double s = arcLength(curve, {std::min(u0, u1), std::max(u0, u1)}, 1e-13);
         const double speed = norm(curve.derivative(u1));
+        if (!std::isfinite(s) || !std::isfinite(speed))
+            throw std::domain_error("extendSheet: lunghezza o velocita' d'arco non finita");
         if (!(speed > 0.0)) break;
         const double step = sign * (length - s) / speed;
+        if (!std::isfinite(step)) throw std::domain_error("extendSheet: passo d'arco non finito");
         u1 += step;
+        if (!std::isfinite(u1)) throw std::domain_error("extendSheet: parametro d'arco non finito");
         if (std::fabs(step) <= 1e-15 * (1.0 + std::fabs(u1))) break;
     }
+    // Verifica il parametro effettivamente restituito, dopo l'ultimo passo.
+    cancellationPoint();
+    const double delta = u1 - u0;
+    if (!std::isfinite(delta) || !(sign * delta > 0.0))
+        throw std::domain_error("extendSheet: direzione o intervallo d'arco non valido");
+    const double achieved = arcLength(curve, {std::min(u0, u1), std::max(u0, u1)}, 1e-13);
+    if (!std::isfinite(achieved) || std::fabs(achieved - length) > tolerance)
+        throw std::domain_error("extendSheet: lunghezza d'arco richiesta non raggiunta");
+    cancellationPoint();
     return u1;
 }
 
@@ -505,7 +529,8 @@ void requireUnifiedSplineJoins(const Body &body, const BodyHistory &history,
 }
 
 void joinSplineExtensions(Model &model, const Body &body, const std::vector<SplineExtensionSide> &sides,
-                          double scale, std::vector<SplineJoinCertificate> &certificates) {
+                          double scale, std::vector<SplineJoinCertificate> &certificates,
+                          std::vector<detail::SheetJoinPlan> &newtonPlans) {
     const double tolerance = std::max(1e-7, 1e-9 * scale);
     for (std::size_t i = 0; i < sides.size(); ++i)
         for (std::size_t j = i + 1; j < sides.size(); ++j) {
@@ -763,12 +788,17 @@ void joinSplineExtensions(Model &model, const Body &body, const std::vector<Spli
             int usesA = 0, usesB = 0;
             for (const auto *side : {&a, &b}) {
                 const bool fromBase = model.edges[side->edge].start == a.vertex;
-                for (auto &face : model.faces)
-                    for (auto &loop : face.loops) {
+                for (std::size_t faceIndex = 0; faceIndex < model.faces.size(); ++faceIndex)
+                    for (auto &loop : model.faces[faceIndex].loops) {
                         std::vector<Body::BuildFin> rebuilt;
                         for (const auto &fin : loop) {
                             if (fin.edge != side->edge) { rebuilt.push_back(fin); continue; }
                             const bool forward = fin.sense == fromBase;
+                            if (!followSeam) {
+                                newtonPlans.push_back({int(faceIndex), common, joinTolerance, curve, {0.0, shortEnd}});
+                                if (side == &longer && extra >= 0)
+                                    newtonPlans.push_back({int(faceIndex), extra, joinTolerance, curve, {shortEnd, end}});
+                            }
                             const CurvePtr<2> pc = followSeam ? (side == &a ? affineA : affineB) : nullptr;
                             const double pcBudget = followSeam ? tolerance : 0.0;
                             if (followSeam) (side == &a ? usesA : usesB) += side == &longer && extra >= 0 ? 2 : 1;
@@ -901,7 +931,7 @@ Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double 
             const double guess = start + outward * 2.0 * length / speed;
             const auto &crossSpline = static_cast<const BSplineCurve<3> &>(*crossCurve);
             const auto reach = extendBSpline(crossSpline, std::min(crossSpline.domain().lo, guess), std::max(crossSpline.domain().hi, guess));
-            const double end = arcParameter(reach, start, length, outward);
+            const double end = arcParameter(reach, start, length, outward, tolerance);
             splineEnd = end;
             Interval ur = surface->uDomain(), vr = surface->vDomain();
             Interval &range = vIso ? vr : ur;
@@ -974,7 +1004,7 @@ Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double 
                     const double guess = u0 + outward * 2.0 * length / std::max(norm(curve->derivative(u0)), 1e-300);
                     reach = std::make_shared<BSplineCurve<3>>(extendBSpline(spline, std::min(domain.lo, guess), std::max(domain.hi, guess)));
                 }
-                u1 = arcParameter(*reach, u0, length, outward);
+                u1 = arcParameter(*reach, u0, length, outward, tolerance);
                 if (!extrusion.isUPeriodic() && !domain.contains(u1)) {
                     if (curve->type() != CurveType::BSpline) throw std::domain_error("extendSheet: la curva base non si prolunga");
                     const auto &spline = static_cast<const BSplineCurve<3> &>(*curve);
@@ -1005,13 +1035,17 @@ Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double 
         }
     }
     std::vector<SplineJoinCertificate> certificates;
-    joinSplineExtensions(model, body, splineSides, scale, certificates);
+    std::vector<detail::SheetJoinPlan> newtonPlans;
+    joinSplineExtensions(model, body, splineSides, scale, certificates, newtonPlans);
     BodyHistory built,unified;
-    Body result = model.build(history?&built:nullptr);
+    std::vector<EdgeId> modelEdges;
+    Body result = model.build(history?&built:nullptr, &modelEdges);
     computePCurves(result);
+    const auto newtonEmitted = detail::certifySheetJoins(result, newtonPlans, modelEdges);
     const auto emitted = emittedSplineJoins(result, certificates);
-    result = unifySameDomain(result,1e-6,(history || !emitted.empty())?&unified:nullptr);
+    result = unifySameDomain(result,1e-6,(history || !emitted.empty() || !newtonEmitted.empty())?&unified:nullptr);
     requireUnifiedSplineJoins(result, unified, emitted);
+    detail::requireUnifiedSheetJoins(result, unified, newtonEmitted);
     const std::vector<CheckIssue> issues = checkBody(result);
     if (!issues.empty()) throw std::domain_error("extendSheet: superficie estesa non valida (" + describe(issues.front().code) + ": " + issues.front().message + ")");
     cancellationPoint();

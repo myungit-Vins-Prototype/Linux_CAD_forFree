@@ -1,0 +1,58 @@
+{
+  "graphSha256": "bc4b76518f737d7a73bda4bd40a9004bcfa554198efad9d28700901c24f14728",
+  "graphNodes": 785,
+  "graphEdges": 11461,
+  "nodes": [
+    {
+      "id": "kernel/fk_curve_fit_bounds.h",
+      "group": "kernel",
+      "description": "Contratti del fit continuo, provider di posizione/offset/composizione superficie-SP-curve e limiti delle derivate U/V del supporto; distingue famiglie supportate, intervalli affini espliciti e rifiuto quando il controllo non conclude. Include il provider della proiezione originale su Plane con dati copiati e durate indipendenti dai chiamanti. Contratto offset edge di estrusione con dati originali posseduti e normale nel parametro del generatore. Contratto duale Plane/SP-curve e distinzione fra dati non supportati, factory invalida e query inconclusiva. API interne mirate fitPCurveOnPlane/requirePCurveOnPlane: costruzione e ricontrollo del residuo fisico con pubblicazione transazionale.",
+      "lines": 105
+    },
+    {
+      "id": "kernel/fk_offset.cpp",
+      "group": "kernel",
+      "description": "Superfici e bordi a distanza; divisione esatta delle sole pieghe C0, nodi lisci conservati, solve uniforme regolarizzato sui bordi quasi tangenti, intersezioni stabilizzate per bordo con pesi distinti per precisione e arresto sul residuo 3D verificato, budget locali, domini derivati dalle SP-curve esatte senza celle terminali artificiali, sezioni circolari analitiche e vertici di cucitura conservati nei supporti sostitutivi dello sformo, rifilatura e provenienza. Costruzioni analitiche autorizzate dai supporti e da bounds geometrici uniformi, regolarita toroidale sul dominio periodico e raffinamento curve con cancellazione cooperativa e fallimenti atomici; offset di estrusioni/rivoluzioni NURBS con limite continuo, callback generiche ancora campionate. Offset di singola faccia estrusa e SP-curve affine certificato dagli originali separati; provenienza esplicita e ricontrollo delle cubiche realmente emesse. Ricostruzioni UV Plane con metrica certificata in mm, ricontrollo delle fin effettive da AssemblyMap e budget/conteggi invariati. Helper interni Plane per costruzione e verifica delle pcurve con metrica fisica, budget transazionali e ricontrollo dei coefficienti effettivi.",
+      "lines": 2630
+    },
+    {
+      "id": "kernel/fk_shell.cpp",
+      "group": "kernel",
+      "description": "Svuotamento: offset interno, giunzioni tolleranti, gusci annidati con aperture planari e chiusura tramite piano di appoggio; controlli geometrici e genealogia.",
+      "lines": 335
+    },
+    {
+      "id": "kernel/fk_surface_curve_bounds.cpp",
+      "group": "kernel",
+      "description": "Verifica continua del residuo E(t)-S(Q(t)) per E/Q polynomiali su carrier nativo quadratico/bicubico anche razionale a pesi positivi. Coefficienti omogenei originali, denominatore positivo sulle celle attive, intervalli outward, partizione comune, tutte le celle intersecate, budget e cancellazione.",
+      "lines": 439
+    },
+    {
+      "id": "kernel/fk_transform.cpp",
+      "group": "kernel",
+      "description": "Trasformazioni esatte, specchi e scala uniforme: topologia e genealogia distinte, griglie NURBS condivise tramite istanze e trasformazioni successive composte, trim singolari conservati nelle pose senza cambio del parametro.",
+      "lines": 319
+    },
+    {
+      "id": "kernel/tests/test_curve_fit_validation.cpp",
+      "group": "tests",
+      "description": "Regressioni del fit con limite continuo: spline27 avversa, NURBS, pose e scale, offset di estrusione/rivoluzione, fallimenti atomici e cancellazione; runner indipendente da Qt/OCCT.",
+      "lines": 348
+    },
+    {
+      "id": "kernel/tests/test_offset_validation.cpp",
+      "group": "tests",
+      "description": "Offset: variazioni locali delle spline, domini toroidali completi/rifilati/periodici, costruzioni circolari ruotate e scalate, ripiego per estrusione obliqua e cancellazione prima, durante e alla fine del fit; eseguibile senza Qt o OCCT.",
+      "lines": 176
+    },
+    {
+      "id": "kernel/tests/test_shell.cpp",
+      "group": "tests",
+      "description": "Svuotamento analitico e da superfici cucite quasi tangenti: aperto/chiuso a due spessori, misura esatta delle pareti, topologia, mesh, volumi, storia e input immutato.",
+      "lines": 312
+    }
+  ],
+  "edgesRead": 303,
+  "incoming": 105,
+  "outgoing": 213
+}

@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/usr/bin/c++",
+    "-std=c++17",
+    "-O2",
+    "-g",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "-c",
+    "/tmp/k10-arclength-review/core/kernel/fk_curve_algo.cpp",
+    "-o",
+    "/tmp/k10-arclength-review/root/candidate.o"
+  ],
+  "exit": 0,
+  "seconds": 1.8255253649986116,
+  "watchdog_seconds": 600
+}

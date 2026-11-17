@@ -1,0 +1,12 @@
+{
+  "tests": {
+    "files": 67,
+    "manifest_sha256": "8afe4275a3f01aef28f725bc47a357093644d40775515c64e7545b49a4533291",
+    "all_manifest_hashes_verified": true
+  },
+  "audit": {
+    "files": 63,
+    "manifest_sha256": "0cca2d8f451a8848b8c32eb5b1f8cb63e711ed079f7c9205d0fc6099fcf5ea80",
+    "all_manifest_hashes_verified": true
+  }
+}

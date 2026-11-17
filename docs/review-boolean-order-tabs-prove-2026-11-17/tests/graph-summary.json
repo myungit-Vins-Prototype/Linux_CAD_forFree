@@ -1,0 +1,5080 @@
+{
+  "totalGraphNodes": 786,
+  "totalGraphEdges": 11488,
+  "consultedNodes": [
+    {
+      "id": "cad_document_io.cpp",
+      "group": "documents",
+      "description": "Budget interattivo di cache proporzionato alla RAM e alla preferenza utente; Codec nativo70 con ellissi definite da quattro estremi, identita dei contorni apparenti, nomi sorgenti associative e precisione persistenti; pool di lettura di superfici identiche fra snapshot. Zstandard/legacy, leggi di raggio con zero terminale; cache16 migra selettivamente la genealogia delle ripetizioni di funzione e i derivati delle vecchie copie di lavoro (15: loft guidati); pose e cuciture singolari, check-in immutabili, altre cache portabili, genealogia e definizioni associative preservati. Lettura e scrittura rifiutano atomicamente definizioni di schizzo con numeri non finiti tramite finiteSketchNumbers.",
+      "lines": 1837,
+      "symbols": [
+        "ForgeCad::DocumentFileLock::DocumentFileLock",
+        "ForgeCad::DocumentFileLock::acquire",
+        "ForgeCad::DocumentFileLock::owns",
+        "ForgeCad::applyBodyCache",
+        "ForgeCad::bodyCache",
+        "ForgeCad::canonicalDocumentPath",
+        "ForgeCad::decodeDocument",
+        "ForgeCad::definitionHash",
+        "ForgeCad::documentFileFingerprint",
+        "ForgeCad::documentOpenReadLimits",
+        "ForgeCad::encodeDocument",
+        "ForgeCad::encodeDocumentDefinition53ForHash",
+        "ForgeCad::encodeDocumentDefinition60ForHash",
+        "ForgeCad::encodeDocumentDefinition61ForHash",
+        "ForgeCad::encodeDocumentDefinition62ForHash",
+        "ForgeCad::encodeDocumentDefinition63ForHash",
+        "ForgeCad::encodeDocumentDefinition64ForHash",
+        "ForgeCad::encodeDocumentDefinition65ForHash",
+        "ForgeCad::encodeDocumentDefinition66ForHash",
+        "ForgeCad::encodeDocumentDefinition69ForHash",
+        "ForgeCad::encodeDocumentVersion",
+        "ForgeCad::forEachEdgePoint",
+        "ForgeCad::forkDocumentIdentity",
+        "ForgeCad::hasDisplaySnapshot",
+        "ForgeCad::loadDocumentFile",
+        "ForgeCad::parsePayload",
+        "ForgeCad::read",
+        "ForgeCad::readCount",
+        "ForgeCad::readDeclaredHistory",
+        "ForgeCad::readDisplay",
+        "ForgeCad::readPathRef",
+        "ForgeCad::readPattern",
+        "ForgeCad::readRef",
+        "ForgeCad::readRefs",
+        "ForgeCad::reasonableDisplay",
+        "ForgeCad::saveDocumentFile",
+        "ForgeCad::validFilletRadii",
+        "ForgeCad::validStoredEllipse",
+        "ForgeCad::write",
+        "ForgeCad::writeDeclaredHistory",
+        "ForgeCad::writeDisplay",
+        "ForgeCad::writePathRef",
+        "ForgeCad::writePattern",
+        "ForgeCad::writeRef",
+        "ForgeCad::writeRefs"
+      ]
+    },
+    {
+      "id": "cad_document_io.h",
+      "group": "documents",
+      "description": "Budget interattivo di cache proporzionato alla RAM e alla preferenza utente; Codec nativo70 con ellissi definite da quattro estremi, identita dei contorni apparenti, nomi sorgenti associative e precisione persistenti; pool di lettura di superfici identiche fra snapshot. Zstandard/legacy, leggi di raggio con zero terminale; cache16 migra selettivamente la genealogia delle ripetizioni di funzione e i derivati delle vecchie copie di lavoro (15: loft guidati); pose e cuciture singolari, check-in immutabili, altre cache portabili, genealogia e definizioni associative preservati. Lettura e scrittura rifiutano atomicamente definizioni di schizzo con numeri non finiti tramite finiteSketchNumbers.",
+      "lines": 131,
+      "symbols": [
+        "ForgeCad::DocumentFileLock::path"
+      ]
+    },
+    {
+      "id": "cad_document_read.cpp",
+      "group": "documents",
+      "description": "Compressione Zstandard con checksum e finestra limitata; decompressione streaming zlib/Zstd con budget/output atomico e decodifica mesh/indici a blocchi con endian e precisione Qt preservati.",
+      "lines": 146,
+      "symbols": [
+        "ForgeCad::DocumentReadDetail::DataStream::operator>>",
+        "ForgeCad::DocumentReadDetail::compress",
+        "ForgeCad::DocumentReadDetail::readFixedList",
+        "ForgeCad::DocumentReadDetail::readFloating",
+        "ForgeCad::DocumentReadDetail::uncompress",
+        "ForgeCad::DocumentReadDetail::uncompress::End::~End"
+      ]
+    },
+    {
+      "id": "cad_document_read.h",
+      "group": "documents",
+      "description": "Compressione Zstandard con checksum e finestra limitata; decompressione streaming zlib/Zstd con budget/output atomico e decodifica mesh/indici a blocchi con endian e precisione Qt preservati.",
+      "lines": 115,
+      "symbols": [
+        "ForgeCad::DocumentReadDetail::DataStream::checkBytes",
+        "ForgeCad::DocumentReadDetail::DataStream::operator>>",
+        "ForgeCad::DocumentReadDetail::DataStream::readCount",
+        "ForgeCad::DocumentReadDetail::DataStream::readList",
+        "ForgeCad::DocumentReadDetail::DataStream::readRecords"
+      ]
+    },
+    {
+      "id": "cad_forge.cpp",
+      "group": "features",
+      "description": "Adatta sketch e parametri al kernel; booleane con genealogia ricondotta agli operandi e recupero dell\u2019unione commutativa nell\u2019ordine inverso dopo un errore geometrico; conversione mesh float con filtro comune dei triangoli degeneri per scena e anteprime, ID topologici coerenti. Il riepilogo delle curve proiettate usa lo scarto della catena finale dopo le giunte.",
+      "lines": 2406,
+      "symbols": [
+        "ForgeCad::appendDisplayTriangle",
+        "ForgeCad::declaredConstruction",
+        "ForgeCad::declaredExtrusionRoot",
+        "ForgeCad::declaredModification",
+        "ForgeCad::declaredRevolutionRoot",
+        "ForgeCad::declaredRoot",
+        "ForgeCad::declaredSheet",
+        "ForgeCad::forgeBlend",
+        "ForgeCad::forgeBlendHasEffect",
+        "ForgeCad::forgeBlendPreviewDisplay",
+        "ForgeCad::forgeBoolean",
+        "ForgeCad::forgeBooleanWithHistory",
+        "ForgeCad::forgeBoundarySurface",
+        "ForgeCad::forgeClosestSheetPiece",
+        "ForgeCad::forgeDeleteFaces",
+        "ForgeCad::forgeDeleteFacesSeparated",
+        "ForgeCad::forgeDraft",
+        "ForgeCad::forgeExtendSheet",
+        "ForgeCad::forgeExtrusion",
+        "ForgeCad::forgeExtrusionPreviewDisplay",
+        "ForgeCad::forgeFillContactFaces",
+        "ForgeCad::forgeFillSurface",
+        "ForgeCad::forgeHelixBase",
+        "ForgeCad::forgeImported",
+        "ForgeCad::forgeLocalPreviewDisplay",
+        "ForgeCad::forgeLoft",
+        "ForgeCad::forgeOffsetFaces",
+        "ForgeCad::forgePickFace",
+        "ForgeCad::forgePlanarCurves",
+        "ForgeCad::forgePlanarSketch",
+        "ForgeCad::forgePrimitive",
+        "ForgeCad::forgeProjectedCurves",
+        "ForgeCad::forgeProjectedCut",
+        "ForgeCad::forgeProjectionDirection",
+        "ForgeCad::forgeReferencedLoft",
+        "ForgeCad::forgeRevolution",
+        "ForgeCad::forgeRuledSurface",
+        "ForgeCad::forgeScale",
+        "ForgeCad::forgeSew",
+        "ForgeCad::forgeSheetPieces",
+        "ForgeCad::forgeShell",
+        "ForgeCad::forgeSketchFrame",
+        "ForgeCad::forgeSketchSegments",
+        "ForgeCad::forgeSurfaceConstructionCurves",
+        "ForgeCad::forgeSweep",
+        "ForgeCad::forgeTessellate",
+        "ForgeCad::forgeThicken",
+        "ForgeCad::forgeThread",
+        "ForgeCad::forgeThreadFaceInfo",
+        "ForgeCad::forgeTrimBoth",
+        "ForgeCad::forgeTrimPlaneTool",
+        "ForgeCad::forgeTrimSheet",
+        "ForgeCad::forgeTrimSketchTool",
+        "ForgeCad::forgeWarmPickCaches",
+        "ForgeCad::lineSegment",
+        "ForgeCad::loftContacts",
+        "ForgeCad::loftEndConditions",
+        "ForgeCad::loftGuideSequence",
+        "ForgeCad::microFeatureHint",
+        "ForgeCad::setError",
+        "ForgeCad::sketchLineFromWorld",
+        "ForgeCad::sketchSegmentsWithSources",
+        "ForgeCad::surfaceConstructionCurvesSerial",
+        "ForgeCad::sweptHelicalTool",
+        "ForgeCad::toDisplay",
+        "ForgeCad::toVec",
+        "ForgeCad::trimTool",
+        "ForgeCad::trimToolReach"
+      ]
+    },
+    {
+      "id": "cad_forge.h",
+      "group": "features",
+      "description": "Adatta sketch e parametri al kernel; booleane con genealogia ricondotta agli operandi e recupero dell\u2019unione commutativa nell\u2019ordine inverso dopo un errore geometrico; conversione mesh float con filtro comune dei triangoli degeneri per scena e anteprime, ID topologici coerenti.",
+      "lines": 246,
+      "symbols": [
+        "ForgeCad::forgeLoft"
+      ]
+    },
+    {
+      "id": "cad_types.h",
+      "group": "model",
+      "description": "Tipi applicativi condivisi: sketch, entit\u00e0, feature, display, riferimenti e stato del documento; EllipseExtremes aggiunto in coda ai valori persistenti, quattro estremi referenziabili.",
+      "lines": 989,
+      "symbols": [
+        "ConstraintRef::isPoint",
+        "ConstraintRef::operator!=",
+        "ConstraintRef::operator==",
+        "DocumentState::DocumentState",
+        "SketchObject::isConstructionSegment",
+        "SketchPathRef::empty",
+        "SketchPathRef::operator==",
+        "SketchPatternData::instances",
+        "handlePoint",
+        "isHandlePoint",
+        "isHiddenSketchReference",
+        "isLinkedSketchEntity",
+        "isSketchEntityVisible"
+      ]
+    },
+    {
+      "id": "kernel/fk_boolean.cpp",
+      "group": "kernel",
+      "description": "Booleane B-rep: dispatch esatto delle sezioni meridiane di rivoluzione; filtri conservativi sui ritagli e sugli spigoli; classificazione UV sui carrier identici, tagli, ritaglio prima della validazione degli archi e riuso dei soli agganci necessari; riclassificazione di ogni sottoarco nei ritagli, scelta della curva condivisa compatibile con tutte le facce, indice UV dei vertici per i fori e diagnostica delle facce; taglio di solidi su un lato di una faccia finita e chiusure orientate. Contatti Line/trim ellittico: eventi e catena sorgente espliciti, limiti continui e UV affine certificata, mapping dal montaggio e ricontrollo dopo unify; retry transazionale conservativo.",
+      "lines": 3105,
+      "symbols": [
+        "ForgeCad::Kernel::BooleanBuilder::BooleanBuilder",
+        "ForgeCad::Kernel::BooleanBuilder::addArcs",
+        "ForgeCad::Kernel::BooleanBuilder::adjacentRun",
+        "ForgeCad::Kernel::BooleanBuilder::assemble",
+        "ForgeCad::Kernel::BooleanBuilder::boundaryChain",
+        "ForgeCad::Kernel::BooleanBuilder::buildSubFaces",
+        "ForgeCad::Kernel::BooleanBuilder::buildSubFacesOnce",
+        "ForgeCad::Kernel::BooleanBuilder::classify",
+        "ForgeCad::Kernel::BooleanBuilder::clipFace",
+        "ForgeCad::Kernel::BooleanBuilder::coincident",
+        "ForgeCad::Kernel::BooleanBuilder::coincidentArcs",
+        "ForgeCad::Kernel::BooleanBuilder::coincidentRanges",
+        "ForgeCad::Kernel::BooleanBuilder::collectCuts",
+        "ForgeCad::Kernel::BooleanBuilder::commonBounds",
+        "ForgeCad::Kernel::BooleanBuilder::computeCuts",
+        "ForgeCad::Kernel::BooleanBuilder::finishCycle",
+        "ForgeCad::Kernel::BooleanBuilder::imprint",
+        "ForgeCad::Kernel::BooleanBuilder::insideSubFace",
+        "ForgeCad::Kernel::BooleanBuilder::interiorPoint",
+        "ForgeCad::Kernel::BooleanBuilder::keep",
+        "ForgeCad::Kernel::BooleanBuilder::pairArcs",
+        "ForgeCad::Kernel::BooleanBuilder::pairRadially",
+        "ForgeCad::Kernel::BooleanBuilder::run",
+        "ForgeCad::Kernel::BooleanBuilder::section",
+        "ForgeCad::Kernel::BooleanBuilder::snapNearEnds",
+        "ForgeCad::Kernel::BooleanBuilder::split",
+        "ForgeCad::Kernel::BooleanBuilder::splitAtPoints",
+        "ForgeCad::Kernel::BooleanBuilder::splitRange",
+        "ForgeCad::Kernel::BooleanBuilder::splitVertices",
+        "ForgeCad::Kernel::BooleanBuilder::surfaceArcs",
+        "ForgeCad::Kernel::BooleanBuilder::touchesBoth",
+        "ForgeCad::Kernel::BooleanBuilder::usedBoundarySubstitution",
+        "ForgeCad::Kernel::BooleanBuilder::workers",
+        "ForgeCad::Kernel::FaceBoxIndex::build",
+        "ForgeCad::Kernel::FaceBoxIndex::buildNode",
+        "ForgeCad::Kernel::FaceBoxIndex::query",
+        "ForgeCad::Kernel::FaceBoxIndex::queryNode",
+        "ForgeCad::Kernel::Piece::end",
+        "ForgeCad::Kernel::Piece::endNode",
+        "ForgeCad::Kernel::Piece::endTangent",
+        "ForgeCad::Kernel::Piece::endTolerance",
+        "ForgeCad::Kernel::Piece::middle",
+        "ForgeCad::Kernel::Piece::middleParameter",
+        "ForgeCad::Kernel::Piece::pointAt",
+        "ForgeCad::Kernel::Piece::reversed",
+        "ForgeCad::Kernel::Piece::start",
+        "ForgeCad::Kernel::Piece::startNode",
+        "ForgeCad::Kernel::Piece::startTangent",
+        "ForgeCad::Kernel::Piece::startTolerance",
+        "ForgeCad::Kernel::Piece::tangentAt",
+        "ForgeCad::Kernel::bodySectionCurves",
+        "ForgeCad::Kernel::bodySectionCurvesWithOrigins",
+        "ForgeCad::Kernel::booleanOperation",
+        "ForgeCad::Kernel::boundedCurve",
+        "ForgeCad::Kernel::clipSolidByFace",
+        "ForgeCad::Kernel::faceNormal",
+        "ForgeCad::Kernel::imprintCurves",
+        "ForgeCad::Kernel::isPlane",
+        "ForgeCad::Kernel::poleAt",
+        "ForgeCad::Kernel::rayInside",
+        "ForgeCad::Kernel::splitSheet",
+        "ForgeCad::Kernel::uniteDisjointBodies"
+      ]
+    },
+    {
+      "id": "kernel/fk_intersect.cpp",
+      "group": "kernel",
+      "description": "Sezioni meridiane esatte delle rivoluzioni NURBS, con riconoscimento del piano dai poli e rotazione parametrica; raggi sui coni con quadratica centrata e sin/cos, senza perdere le falde quasi coincidenti; intersezioni esatte: gerarchie Bezier2D e scarto conservativo dei candidati; box B-spline limitati esattamente al tratto richiesto. Newton, budget e tolleranze invariati.",
+      "lines": 1370,
+      "symbols": [
+        "ForgeCad::Kernel::Box2::add",
+        "ForgeCad::Kernel::Box2::diagonal",
+        "ForgeCad::Kernel::Box2::overlaps",
+        "ForgeCad::Kernel::Box::add",
+        "ForgeCad::Kernel::Box::overlaps",
+        "ForgeCad::Kernel::Box::padded",
+        "ForgeCad::Kernel::PieceBoxTree::PieceBoxTree",
+        "ForgeCad::Kernel::PieceBoxTree::build",
+        "ForgeCad::Kernel::PieceBoxTree::empty",
+        "ForgeCad::Kernel::PieceBoxTree::overlapping",
+        "ForgeCad::Kernel::PieceBoxTree::query",
+        "ForgeCad::Kernel::addInRange",
+        "ForgeCad::Kernel::addLine",
+        "ForgeCad::Kernel::addPoint",
+        "ForgeCad::Kernel::angleIn",
+        "ForgeCad::Kernel::bezierPieces",
+        "ForgeCad::Kernel::clipLineToBox",
+        "ForgeCad::Kernel::conicCase",
+        "ForgeCad::Kernel::conicData",
+        "ForgeCad::Kernel::crossesPlane",
+        "ForgeCad::Kernel::curveBox",
+        "ForgeCad::Kernel::generalizedCylinder",
+        "ForgeCad::Kernel::halves",
+        "ForgeCad::Kernel::intersectCurveSurface",
+        "ForgeCad::Kernel::intersectCurves",
+        "ForgeCad::Kernel::intersectLineSurface",
+        "ForgeCad::Kernel::intersectPlaneSurface",
+        "ForgeCad::Kernel::isConic",
+        "ForgeCad::Kernel::lineCase",
+        "ForgeCad::Kernel::newtonIntersection",
+        "ForgeCad::Kernel::normalFrame",
+        "ForgeCad::Kernel::obliqueImage",
+        "ForgeCad::Kernel::outsideBernsteinHull",
+        "ForgeCad::Kernel::parameterOn",
+        "ForgeCad::Kernel::planarImage",
+        "ForgeCad::Kernel::planeRoots",
+        "ForgeCad::Kernel::polesBox",
+        "ForgeCad::Kernel::rationalPieces",
+        "ForgeCad::Kernel::revolutionMeridianAngle",
+        "ForgeCad::Kernel::rootsAndTouchings",
+        "ForgeCad::Kernel::rootsOf",
+        "ForgeCad::Kernel::subdivide",
+        "ForgeCad::Kernel::trigRoots",
+        "ForgeCad::Kernel::unwrap"
+      ]
+    },
+    {
+      "id": "kernel/tests/test_boolean.cpp",
+      "group": "tests",
+      "description": "Booleane contro OCCT, contatti e sweep elicoidali; volumi analitici delle lamelle spline sottili fino a 1e-4 mm, topologia e concordanza parallela.",
+      "lines": 1409,
+      "symbols": [
+        "BooleanBoxAndCylinder",
+        "BooleanBoxesGeneralPosition",
+        "BooleanChained",
+        "BooleanCoaxialRevolutions",
+        "BooleanCoincidentSurfaces",
+        "BooleanCoplanarBoxes",
+        "BooleanCoplanarClosedCircleWithTangentTorus",
+        "BooleanCurvedExtrusions",
+        "BooleanCylinderCylinder",
+        "BooleanCylinderFourthOrderCapContact",
+        "BooleanDisjointValidationAndUnification",
+        "BooleanExtrusionAndBox",
+        "BooleanHigherOrderContacts",
+        "BooleanNestedAndDisjoint",
+        "BooleanParallelMatchesSequential",
+        "BooleanPartialClosedSplineRevolution",
+        "BooleanPartialCoincidence",
+        "BooleanPartialSplineCoincidence",
+        "BooleanRevolvedSolids",
+        "BooleanSheets",
+        "BooleanShellSlabsThroughHoleVertex",
+        "BooleanStressCylinderGrid",
+        "BooleanStressCylinders",
+        "BooleanStressGeneral",
+        "BooleanStressGrid",
+        "BooleanTangentContacts",
+        "BooleanTangentCurves",
+        "BooleanThinSplineSlivers",
+        "BooleanThroughPoles",
+        "BooleanTolerantVertices",
+        "BooleanVillarceau",
+        "SplineHeight::nu",
+        "SplineHeight::nv",
+        "SplineHeight::surface",
+        "SplineHeight::volume",
+        "blossom",
+        "box",
+        "checkIdentical",
+        "checkVolumes",
+        "compare",
+        "compareAll",
+        "crossedCylinderVolume",
+        "crossedCylindersVolume",
+        "cylinder",
+        "discDiscArea",
+        "discRectangleArea",
+        "expectedVolume",
+        "extrusion",
+        "integratePieces",
+        "meshProperties",
+        "name",
+        "occtBoolean",
+        "overlap",
+        "reparametrized",
+        "revolved",
+        "rotatedFrame",
+        "slab",
+        "splineCylinderCommonVolume",
+        "sqrtLevels",
+        "stressCase",
+        "toAx2"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "source": "cad_circular_pattern_fit.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_constraints.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 66
+    },
+    {
+      "source": "cad_constraints.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_curve_extract.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_curve_extract.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_curve_solver.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_curve_solver.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_datum.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_datum.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_datum.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_display_cache.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_display_cache.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_constraints.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_constraints.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 153
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_document_io.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_document_read.cpp",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_document_read.h",
+      "kind": "call",
+      "count": 141
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_document_read.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_document_version.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_element_names.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_element_names.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_element_names.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_ellipse.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_ellipse.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_memory.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_memory.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_model_history.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_model_history.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_sketch_apparent.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_sketch_apparent.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_snapshot_chunks.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_snapshot_chunks.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_snapshot_chunks.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_surface_tools.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_surface_tools.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_topology_ref.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_topology_ref.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 31
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_workspace.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_workspace.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_workspace.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "kernel/fk_body_io.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "kernel/fk_body_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "kernel/fk_classify.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "kernel/fk_history.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "kernel/fk_history.h",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "kernel/fk_parallel.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "kernel/fk_parallel.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_document_io.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_document_io.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_read.cpp",
+      "target": "cad_document_read.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "cad_document_read.cpp",
+      "target": "cad_document_read.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_document_read.cpp",
+      "target": "cad_document_read.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_read.h",
+      "target": "cad_document_read.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_document_recovery.cpp",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_document_recovery.cpp",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_recovery.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_document_recovery.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_document_tabs.cpp",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "cad_drawing_axes.h",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_browser.cpp",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_browser.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_curve_recognition.h",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_derived.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_drawing_dimension.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_file.cpp",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "cad_drawing_file.cpp",
+      "target": "cad_document_io.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_drawing_file.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "cad_drawing_file.h",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_local_section_snap.h",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_release.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_restore.cpp",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_restore.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_revision_ui.cpp",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_drawing_revision_ui.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_drawing_revisions.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_drawing_silhouette.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_visibility.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_document_io.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_drawing_window.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "cad_element_names.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_element_names.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_ellipse.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "cad_ellipse.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_export.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_export.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_expression.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_extrude.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "cad_extrude.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_extrude.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_extrude.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_extrude.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_feature_build.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 38
+    },
+    {
+      "source": "cad_feature_build.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_feature_build.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_feature_build.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_feature_dependencies.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_feature_faces.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_feature_faces.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_features.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_features.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_features.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "cad_features.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_fill_pattern.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_fill_pattern.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_fill_pattern.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_fill_pattern.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_fill_pattern.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_fillet_paths.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_cuda_tessellation.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_cuda_tessellation.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_curve_solver.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_curve_solver.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_datum.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_datum.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_datum.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_element_names.cpp",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_element_names.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_features.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_features.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_features.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 271
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_forge.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_kernel.cpp",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_kernel.h",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_kernel.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_loft_correspondence.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_loft_correspondence.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_loft_diagnostics.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_loft_diagnostics.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_topology_ref.cpp",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_topology_ref.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_blend.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_blend.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_blend.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_blend_paths.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_boolean.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_boundary.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_boundary.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_classify.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_classify.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 27
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_curve_ops.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_curve_ops.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_draft.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_draft.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_extrude.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_extrude.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_extrude.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_fill.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_fill.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_fill.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_helix.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_helix.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_history.cpp",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_history.h",
+      "kind": "call",
+      "count": 22
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_history_tools.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_history_tools.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 27
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "call",
+      "count": 36
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_loft.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_loft.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_loft.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_math.cpp",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 261
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_micro.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_micro.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_nurbs.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_nurbs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_offset.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_offset.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_parallel.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_parallel.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_planar.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_planar.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "call",
+      "count": 13
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_primitives.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_primitives.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_profile.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_profile.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_project.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_project.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_project.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_revolve.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_revolve.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_revolve.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_sew.cpp",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_sew.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_sheet.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_sheet.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_shell.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_shell.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_step.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_step.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_stored_surface.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_stored_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_surface_algo.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_sweep.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_sweep.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_tessellate.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_tessellate.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_tessellate.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_thicken.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_thicken.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_thicken.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 129
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 180
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_transform.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_unify.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_unify.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.h",
+      "target": "cad_features.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.h",
+      "target": "kernel/fk_loft.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.h",
+      "target": "kernel/fk_math.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.h",
+      "target": "kernel/fk_profile.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_forge.h",
+      "target": "kernel/fk_sweep.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_geometry_refs.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_history.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_history.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_history_chain.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_history_graph.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_history_graph.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_history_graph.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_history_graph.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_import.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_kernel.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_kernel.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_loft_correspondence.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_loft_correspondence.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_loft_correspondence.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "cad_loft_correspondence.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_loft_correspondence_editor.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_loft_correspondence_editor.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_loft_correspondence_editor.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "cad_loft_diagnostics.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_loft_diagnostics.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_loft_diagnostics.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_loft_diagnostics.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_mass.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_measure.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_model_history.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_model_history.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_native_revisions.cpp",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "cad_native_revisions.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "cad_native_revisions.h",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_pattern.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_pattern.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_pattern.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_pattern_variation.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_pattern_variation.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_pattern_variation.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 13
+    },
+    {
+      "source": "cad_pattern_variation.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_projected_curve.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_projected_curve.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_projected_curve.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_projected_curve.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_revision_client.cpp",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_revision_client.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_revision_client_internal.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_shape_analysis.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_shape_analysis.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_apparent.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 67
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_edit.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "cad_sketch_offset.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_reference_usage.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 39
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_sketch_refs.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_refs.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_sketch_section_selection.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_snap.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_solid_trim.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_spatial_sketch.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_storyboard_selection.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_surface_mapping.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "cad_surface_mapping.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "cad_surface_mapping.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_surface_poles_interaction.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_surface_poles_model.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_surface_poles_model.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_surface_poles_session.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_surface_poles_visibility.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_surface_tools.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "cad_surface_tools.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_surface_tools.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_topology_ref.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 21
+    },
+    {
+      "source": "cad_topology_ref.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "cad_topology_ref.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_types.h",
+      "target": "cad_document_version.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "cad_types.h",
+      "target": "cad_document_version.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "cad_types.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "forgeCad2026_camera.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_camera.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_analysis.cpp",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_analysis.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_dialogs_analysis.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_analysis.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "forgeCad2026_dialogs_common.cpp",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_common.cpp",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_common.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_common.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "forgeCad2026_dialogs_mapping.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "forgeCad2026_dialogs_mapping.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "forgeCad2026_dialogs_projection.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "forgeCad2026_dialogs_sketch.cpp",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_sketch.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_sketch.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 41
+    },
+    {
+      "source": "forgeCad2026_dialogs_solids.cpp",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_solids.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_solids.cpp",
+      "target": "cad_forge.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_solids.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_solids.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 57
+    },
+    {
+      "source": "forgeCad2026_dialogs_surface_tools.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "forgeCad2026_dialogs_surfaces.cpp",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_surfaces.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_dialogs_surfaces.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_surfaces.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 49
+    },
+    {
+      "source": "forgeCad2026_dialogs_surfaces.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_trim.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_dialogs_trim.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_dialogs_trim.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 16
+    },
+    {
+      "source": "forgeCad2026_feature_preview.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "forgeCad2026_feature_preview.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_feature_preview.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "forgeCad2026_feature_preview.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_fillet_handles.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 26
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "cad_document_io.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 142
+    },
+    {
+      "source": "forgeCad2026_gui.h",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_gui_common.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_ribbon_preview.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "forgeCad2026_sketch_curvature.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "forgeCad2026_sketch_curvature.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "forgeCad2026_viewport.h",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_document.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "forgeCad2026_viewport_document.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 77
+    },
+    {
+      "source": "forgeCad2026_viewport_document.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_document_lifetime.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "forgeCad2026_viewport_interaction.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 39
+    },
+    {
+      "source": "forgeCad2026_viewport_internal.h",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_internal.h",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_preview.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 36
+    },
+    {
+      "source": "forgeCad2026_viewport_render.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "forgeCad2026_viewport_scene.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "forgeCad2026_viewport_selection.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "forgeCad2026_viewport_selection.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 66
+    },
+    {
+      "source": "forgeCad2026_viewport_selection.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "forgeCad2026_viewport_sketch.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 147
+    },
+    {
+      "source": "forgeCad2026_viewport_sketch_reference.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 30
+    },
+    {
+      "source": "forgeCad2026_viewport_storyboard.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 28
+    },
+    {
+      "source": "kernel/fk_apparent_contour.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_blend.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "kernel/fk_blend.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_blend_contour.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_blend_loop.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_body_check.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_body_check.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_body_check.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 272
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_boolean.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_boolean_boundary.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_boolean_boundary.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_box_batch.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_box_batch.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "call",
+      "count": 75
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_classify.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_classify.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_classify_uv.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 81
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_curve_ops.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_curve_ops.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_curve_surface.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_curve_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_cycle_point_index.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_cycle_point_index.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_history.cpp",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_history.h",
+      "kind": "call",
+      "count": 21
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_history.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 27
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_marching.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_marching.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_marching.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_math.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 276
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_parallel.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_parallel.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_pcurve.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_solid_trim.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_surface.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 52
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 26
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_surface_algo.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_surface_distance.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_surface_distance.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 156
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 263
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_unify.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_unify.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_classify.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 22
+    },
+    {
+      "source": "kernel/fk_curve_surface.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "kernel/fk_draft.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_history.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "kernel/fk_iges.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_bernstein.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_bernstein.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_bernstein.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "call",
+      "count": 48
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 111
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_curve_surface.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_curve_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 139
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "call",
+      "count": 53
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_math.cpp",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 315
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_nurbs.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_nurbs.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_sketch_projection.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_surface.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 59
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_surface_algo.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_transform.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_transform.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_loft.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_marching.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 21
+    },
+    {
+      "source": "kernel/fk_nurbs_join.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_offset.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_offset.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_planar.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_project.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/fk_revolve.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_revolve.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/fk_sew.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/fk_sheet.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_sheet.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_shell.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_shell.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_sketch_projection.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_solid_trim.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_step.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_surface_algo.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "kernel/fk_surface_poles_constraints.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/fk_surface_poles_conversion.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_surface_tools.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/fk_surface_tools.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/fk_sweep.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/tests/test_blend.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "kernel/tests/test_body_io.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_body_check.cpp",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_body_check.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_body_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_body_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 46
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_boolean.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_boolean.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_bspline.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_classify.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_classify.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_extrude.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_extrude.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_helix.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_helix.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_marching.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_mass.cpp",
+      "kind": "call",
+      "count": 39
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_mass.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_math.cpp",
+      "kind": "call",
+      "count": 136
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 367
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_pcurve.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_primitives.cpp",
+      "kind": "call",
+      "count": 37
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_primitives.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_profile.cpp",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_profile.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_revolve.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_revolve.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_surface.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_sweep.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_sweep.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_tessellate.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_tessellate.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_tessellate.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 28
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/tests/fk_test.h",
+      "kind": "call",
+      "count": 31
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/tests/fk_test_main.cpp",
+      "kind": "call",
+      "count": 78
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/tests/fk_test_profiles.h",
+      "kind": "call",
+      "count": 49
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/tests/fk_test_profiles.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/tests/fk_test_util.h",
+      "kind": "call",
+      "count": 32
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/tests/test_boolean.cpp",
+      "kind": "call",
+      "count": 341
+    },
+    {
+      "source": "kernel/tests/test_boolean_seams.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_bspline_isoline.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_cone_rays.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_cone_rays.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/tests/test_curve_surface.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "kernel/tests/test_disjoint_union.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "kernel/tests/test_draft.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_history.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "kernel/tests/test_iges.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_intersect.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 19
+    },
+    {
+      "source": "kernel/tests/test_marching.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/tests/test_offset.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_sheet.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "kernel/tests/test_sheet.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "kernel/tests/test_sheet_fit_validation.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_sheet_join_validation.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_sheet_join_validation.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_shell.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_sketch_projection.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "kernel/tests/test_solid_trim.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "kernel/tests/test_step.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_tessellate.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 19
+    },
+    {
+      "source": "kernel/tests/test_transform.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "kernel/tests/test_trimmed_face_bounds.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_trimmed_face_bounds.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "kernel/tests/test_unify.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/document_regression.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/document_regression.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_advanced_fillets.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_advanced_fillets.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "tests/test_all_history.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_all_history.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_all_history.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 25
+    },
+    {
+      "source": "tests/test_blend_history.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_blend_history.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_blend_history.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_boolean_box.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_boolean_box.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "tests/test_boolean_history.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_boolean_history.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_boolean_history.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 23
+    },
+    {
+      "source": "tests/test_boolean_history.h",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_catalog_recovery_gui.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_catalog_recovery_gui.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_chamfer_preview_editing.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_circular_pattern_fit.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_circular_pattern_fit.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "tests/test_declared_history_cache.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "tests/test_declared_history_cache.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_declared_history_cache.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 34
+    },
+    {
+      "source": "tests/test_display_cache_memory.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_display_mesh.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_display_mesh.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_document_compression.cpp",
+      "target": "cad_document_read.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_document_compression.cpp",
+      "target": "cad_document_read.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_document_consultation.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_document_consultation.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_document_lifetime.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_document_lifetime.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_document_read.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 47
+    },
+    {
+      "source": "tests/test_document_read.h",
+      "target": "cad_document_io.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_document_read.h",
+      "target": "cad_document_read.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_document_read.h",
+      "target": "cad_document_read.h",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "tests/test_document_read.h",
+      "target": "cad_document_read.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_document_read.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_document_read.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 30
+    },
+    {
+      "source": "tests/test_document_recovery.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "tests/test_document_tabs.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_document_units.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_drawing.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_drawing_complete_sections.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_local_tools.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_model_update.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_model_update.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_drawing_mouse.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_mouse.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_multisheet.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "tests/test_drawing_multisheet.h",
+      "target": "cad_document_read.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_drawing_multisheet.h",
+      "target": "cad_document_read.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_multisheet.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 28
+    },
+    {
+      "source": "tests/test_drawing_performance.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_release.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_release.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_drawing_revision_restore.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_drawing_revision_restore.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_drawing_revisions.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_drawing_revisions.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_drawing_section_model.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_section_model.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_section_model.h",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_drawing_workflow.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_drawing_workflow.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_edit_preview_reuse.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_edit_preview_reuse.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 26
+    },
+    {
+      "source": "tests/test_ellipse_extremes.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "tests/test_ellipse_extremes.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 32
+    },
+    {
+      "source": "tests/test_extrusion_history.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_extrusion_history.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_extrusion_history.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 27
+    },
+    {
+      "source": "tests/test_extrusion_next_body.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_extrusion_next_body.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 25
+    },
+    {
+      "source": "tests/test_extrusion_next_body_gui.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_feature_dependencies.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 22
+    },
+    {
+      "source": "tests/test_feature_faces.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_feature_faces.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_fillet_refinements.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_fillet_refinements.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_fillet_selection_review.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "tests/test_function_panels.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "tests/test_function_panels.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 61
+    },
+    {
+      "source": "tests/test_geometry_refs.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "tests/test_gpu_broad_phase.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_gpu_broad_phase.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_gui_3d_review.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_helix_start_angle.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_helix_start_angle.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "tests/test_history_graph_next_body.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_history_graph_next_body.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "tests/test_history_preview_mesh.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_history_preview_mesh.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "tests/test_history_suppression.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_lazy_mesh.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_lazy_mesh.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 22
+    },
+    {
+      "source": "tests/test_linked_drawing.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_linked_drawing.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_loft_correspondence.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "tests/test_loft_correspondence.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_loft_correspondence.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 13
+    },
+    {
+      "source": "tests/test_loft_points.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 5
+    },
+    {
+      "source": "tests/test_loft_points.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 31
+    },
+    {
+      "source": "tests/test_loft_projected_sections.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_loft_projected_sections.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "tests/test_mesh_memory.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_mesh_memory.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_native_revisions.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 19
+    },
+    {
+      "source": "tests/test_native_revisions.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 33
+    },
+    {
+      "source": "tests/test_next_body_union.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_next_body_union.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_next_body_union_cache.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 12
+    },
+    {
+      "source": "tests/test_pattern_history_repair.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_pattern_history_repair.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 40
+    },
+    {
+      "source": "tests/test_pattern_placements.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 10
+    },
+    {
+      "source": "tests/test_pattern_placements.h",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_pattern_placements.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_pattern_placements.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 85
+    },
+    {
+      "source": "tests/test_pattern_variation.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_pattern_variation.h",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_pattern_variation.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 51
+    },
+    {
+      "source": "tests/test_preview_selection_state.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "tests/test_projected_curve_references.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_projected_curve_references.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 39
+    },
+    {
+      "source": "tests/test_projected_drawing_file.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "tests/test_projected_drawing_file.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_revision_access_gui.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_revision_access_gui.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_revolution_history.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_revolution_history.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_revolution_history.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "tests/test_shape_analysis.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_sketch_apparent.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_sketch_apparent.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "tests/test_sketch_construction.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_sketch_construction.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_sketch_construction.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 32
+    },
+    {
+      "source": "tests/test_sketch_interaction.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_sketch_interaction.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 16
+    },
+    {
+      "source": "tests/test_sketch_intersections.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_sketch_intersections.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "tests/test_sketch_linked_refs.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 13
+    },
+    {
+      "source": "tests/test_sketch_linked_refs.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_sketch_linked_refs.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 131
+    },
+    {
+      "source": "tests/test_sketch_menu_cancel.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_sketch_offset_validation.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "tests/test_sketch_projection_fit_validation.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_sketch_projection_fit_validation.h",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_sketch_projection_fit_validation.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_sketch_projection_gui.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_sketch_projection_gui.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 17
+    },
+    {
+      "source": "tests/test_sketch_reference_hover.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_sketch_reference_hover.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_sketch_slot_point.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_sketch_slot_point.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_sketch_support.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_sketch_support.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 13
+    },
+    {
+      "source": "tests/test_sketch_tools_refs.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_sketch_tools_refs.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 19
+    },
+    {
+      "source": "tests/test_solver_partition.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 7
+    },
+    {
+      "source": "tests/test_solver_partition.h",
+      "target": "cad_document_read.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_solver_partition.h",
+      "target": "cad_document_read.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_solver_partition.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 42
+    },
+    {
+      "source": "tests/test_storyboard_merge_chain.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_storyboard_merge_chain.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 23
+    },
+    {
+      "source": "tests/test_storyboard_panel_selection.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 29
+    },
+    {
+      "source": "tests/test_storyboard_review.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 6
+    },
+    {
+      "source": "tests/test_storyboard_review.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 57
+    },
+    {
+      "source": "tests/test_surface_mapping.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 20
+    },
+    {
+      "source": "tests/test_surface_mapping.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 136
+    },
+    {
+      "source": "tests/test_surface_poles_analytic.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_surface_poles_analytic.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_surface_poles_continuity.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_surface_poles_continuity.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 14
+    },
+    {
+      "source": "tests/test_surface_poles_multi.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_surface_poles_multi.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 18
+    },
+    {
+      "source": "tests/test_surface_poles_soft.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_surface_poles_soft.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 11
+    },
+    {
+      "source": "tests/test_surface_tools_gui.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 15
+    },
+    {
+      "source": "tests/test_surface_tools_gui.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 70
+    },
+    {
+      "source": "tests/test_tangent_contacts.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_tangent_contacts.h",
+      "target": "cad_document_io.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_tangent_contacts.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 9
+    },
+    {
+      "source": "tests/test_thread_edges.h",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 4
+    },
+    {
+      "source": "tests/test_thread_edges.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_thread_edges.h",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 206
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_document_read.cpp",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_document_read.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 87
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_forge.h",
+      "kind": "call",
+      "count": 2
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_forge.h",
+      "kind": "include",
+      "count": 1
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 1031
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_boolean.cpp",
+      "kind": "call",
+      "count": 3
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1
+    },
+    {
+      "source": "tests/test_workspace_revisions.h",
+      "target": "cad_document_io.cpp",
+      "kind": "call",
+      "count": 8
+    },
+    {
+      "source": "tests/test_workspace_revisions.h",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 10
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+K10 — E cubica NURBS a pesi variabili positivi, Q polinomiale
+
+Sorgenti e risultati finali
+- Provider source 32b161a97903c5ca746a87b3bde59fb3c79566316d0f274a189127cc396f62e6.
+- Nuova TU test_surface_curve_rational_edges.cpp: 6 test semantici, SHA02f46f1e958939c040b396eae43a5b02fddb92babb78a8f74aa0c88bae865796.
+- Due TU preesistenti cambiano ciascuna SOLO una aspettativa Eweights variabili Unsupported→Failed, più nome semantico; Qweights/wrapper inalterati. Il requisito Evar è nuovo: il vecchio Unsupported non è descritto come vecchio bug.
+- Baseline finale nuovaTU: 1/6 PASS, exit1, 0.0016s. Candidato 52/52 PASS, exit0, 0.457s.
+- I log iniziali separati precedono il positivo unclamped e i nomi/catch finali; non sono attribuiti allo SHA finale. Restano conservati come diagnostica iniziale.
+
+Copertura
+- Matching E/S razionali originali, S3×2 e3×3, E genuinamente diversa dalla stessa cubica a pesiunitari; range trim effettivo, nonunit parameter, reverse E/Q correlato e mismatch negativo; positivo E nativeunclamped con sei poli e stesso carrier; gauge E/S indipendenti2^±200 e posa/mirror/scale con Sinstance.
+- Picco DIRETTO di E: W={1,1,1e8,1e8}, soloZpole1=.01, carrierZ0 constessa razionalitàU, Qpoly(t,.25). VersioneEflat Certified alcap8e-8; piccoFailed terminale. I33campioni grigliati documentano soloaliasing, non costituiscono prova continua. AuditFraction indipendente separato.
+- Ledger di dettaglio: UNA fin pianificata, prima provaFailed primaassignment; bodycodec/pointerE/S invariati. Non si afferma transazionalità multi-plan; certifySheetJoins può pubblicare finprecedenti prima di successivi fallimenti. Positivoactual finTol=cap8e-8. Questo nuovo branch non è attribuito a mappingAPIpubblica, che rifitta Epoly.
+- Gap da Eweight cambiato, QoutofdomainFailed, Qrational e TrimmedEUnsupported; cancelpropagato distintamente da geometryerror.
+- Preesistenti provider13+Srazionale9+instances6+ledger12+mapping6 rimangono coperti, salvo le due aspettative di scope sopra dichiarate.
+
+Sanitizer
+- 52/52 ASan+UBSan PASSexit0,5.086s, LSanattivo.
+- Strumentate SOLO productionTU fk_surface_curve_bounds.cpp + tutte6TUtest e fk_test_main.cpp; resto kernel dalla libreria Release congelata UNICA SHA57c11033779f33893b07d166c682a0c5e8e3d24c14c98abfee43c7253ca62fa7. Non è fullkernelSAN.
+- Esecuzione fuori ptrace viarequire_escalated. ASAN_OPTIONSdetect_leaks=1:halt_on_error=1; UBSAN_OPTIONS halt_on_error=1:print_stacktrace=1; LSAN_OPTIONSexitcode=23.
+- Calibrazione worker separato perde19byte reali, LSanriporta1allocation edexit23. Testveri exit0 e nessun diagnostic; compilewarningclean.
+- Comandi/hash/log/tempi nei sottodirectory Release easan. L'archivebaseline non è copiata né inclusa.
+
+Limiti e ownership
+- Nessun nuovo bug pubblico affermato. I6nuovi test sono provider/ledger di dettaglio. Preesistenti6mappingtest esercitano APIpubbliche ma Epoly.
+- NessunCADutente, UI, appbuild, suite483, commit/push o repoedit da questo agente. Root integraCMake/memoria/grafo ed esegue le suite applicabili. I sigilli precedenti sono immutati.
+- Ewrapper e Qrazionale restano Unsupported; nessun limitechainforzato né proof da mesh/campioni. Nessuna sogliaalzata o fallback dopoFailed.
+- Reviewindipendente deldiff provider: nessunP1/P2 trovato; HsWe−HeWs conanchorcomune e lowerdenominatori positivi outward separati conservaoriginaliIEEE. I test non sostituiscono l'audit matematico indipendente.

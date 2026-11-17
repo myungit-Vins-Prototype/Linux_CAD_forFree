@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "files": [
+    {
+      "path": "HANDOFF.md",
+      "bytes": 2442,
+      "sha256": "336b89f7f0694f81d2ffb9402be738a70920874b2428503160338c753ba83046"
+    },
+    {
+      "path": "SOURCE-FREEZE.json",
+      "bytes": 835,
+      "sha256": "08dfdea44f5435bad03fae837012bacc6f1726f4030c538cdbc417c5b38563af"
+    },
+    {
+      "path": "fk_mass.cpp.baseline.txt",
+      "bytes": 35865,
+      "sha256": "29d7223df812f3747d51fd07c5e966b798b6d488d3c77e4207fe32312f45621c"
+    },
+    {
+      "path": "fk_mass.cpp.candidate.txt",
+      "bytes": 35868,
+      "sha256": "8248392ee0b7be25dd2b4217bc0ad29eeaf04c939e4e4940a12d328be45c66aa"
+    },
+    {
+      "path": "fk_quadrature.h.baseline.txt",
+      "bytes": 15563,
+      "sha256": "048c8007849e807c2721a20e90387c855a2076ba3e56bcc90cf55320e3a804b7"
+    },
+    {
+      "path": "fk_quadrature.h.candidate.txt",
+      "bytes": 16202,
+      "sha256": "f1ec31f8673d753192d7d9646448f30a78f16fb9ec0bac514f74680dc663d3d6"
+    },
+    {
+      "path": "mass-graph-focus.json",
+      "bytes": 32938,
+      "sha256": "b49de4436fac5e5d87baa8d6f2873d73c8ca901db23956b33f07d39fe7ef7192"
+    },
+    {
+      "path": "v1-to-v2.patch.txt",
+      "bytes": 5624,
+      "sha256": "ae170470036fd64fad7b36b3987f21240446cac55bcc1af7bf14e8db6b4e8e2d"
+    }
+  ],
+  "core_cpp_runtime_performed": false
+}

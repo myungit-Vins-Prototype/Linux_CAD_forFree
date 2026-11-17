@@ -1,0 +1,52 @@
+{
+  "pass": true,
+  "baselineSHA256": "a423ee2e6f8030c5a7fc0843dbdfec9bf8bb4c7612f1ce552f19981ab8b154ce",
+  "stagedSHA256": "73387d8a6c8199ef3e40399157b9c48fa18651a594f92d00d31c5644d08be0bb",
+  "scope": "Coefficient comparison only; staged overlay is not final library observation",
+  "records": [
+    {
+      "fin": 0,
+      "originalCurveIdentical": true,
+      "originalCarrierBaseAndStoredPlacementIdentical": true,
+      "actualPCurveIdentical": true,
+      "rangeIdentical": true,
+      "baselineStatus": 0,
+      "candidateStatus": 1,
+      "baselineFinTolerance": "0x1.17c32ea73337bp-34",
+      "candidateFinTolerance": "0x1.5798ee2308c3ap-24"
+    },
+    {
+      "fin": 1,
+      "originalCurveIdentical": true,
+      "originalCarrierBaseAndStoredPlacementIdentical": true,
+      "actualPCurveIdentical": true,
+      "rangeIdentical": true,
+      "baselineStatus": 0,
+      "candidateStatus": 1,
+      "baselineFinTolerance": "0x1.45f5d5bae72d9p-34",
+      "candidateFinTolerance": "0x1.5798ee2308c3ap-24"
+    },
+    {
+      "fin": 2,
+      "originalCurveIdentical": true,
+      "originalCarrierBaseAndStoredPlacementIdentical": true,
+      "actualPCurveIdentical": true,
+      "rangeIdentical": true,
+      "baselineStatus": 0,
+      "candidateStatus": 1,
+      "baselineFinTolerance": "0x1.a0f6aac4ad971p-35",
+      "candidateFinTolerance": "0x1.5798ee2308c3ap-24"
+    },
+    {
+      "fin": 3,
+      "originalCurveIdentical": true,
+      "originalCarrierBaseAndStoredPlacementIdentical": true,
+      "actualPCurveIdentical": true,
+      "rangeIdentical": true,
+      "baselineStatus": 0,
+      "candidateStatus": 1,
+      "baselineFinTolerance": "0x1.4ccb8265c946fp-34",
+      "candidateFinTolerance": "0x1.5798ee2308c3ap-24"
+    }
+  ]
+}

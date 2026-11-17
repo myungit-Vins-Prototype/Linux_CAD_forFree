@@ -1,0 +1,12 @@
+{
+  "CLAUDE.md": "1b223cdcd6d8163736c194c9a54392911edaa8266d62f4367dde6e3f17ba0b1d",
+  "docs/code-review-2026-11-15.md": "416cdf9609734bad13a70b7878b5cc27d19502f3a60c70edc1617b6895dc7026",
+  "docs/review-boolean-order-tabs-2026-11-17.md": "b0dfcde2d4cf3ecea0ab45c640f7fb0803b4b86475fa8a6262e3a4694be3ea45",
+  "docs/history/claude-prima-boolean-order-2026-11-17.md": "a779b6aecc24d4ecde4363580fa254a528350b5a50e5ce6cfb061980a28a9e51",
+  "AGENTS.md": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+  "kernel/fk_boolean.cpp": "3b8e21c9133627c99cf51df712d8b638cc466f7d2d6442f2c43c1ba47f1feda2",
+  "kernel/fk_body_check.cpp": "afd587fa9c3a7314aac4d85b58257a1864602f66fab6b03873378c2a6dd7747f",
+  "cad_forge.cpp": "162ec8234a117fbb24da7b1e0c7bd6047cee35090a93e075d2bf9c3155b28b2f",
+  "tests/test_document_theme_tabs.h": "57fc820e437b1c14ffd514298c84c2639880b5bf610f1092ac7256702ee2f9da",
+  "tests/test_document_tabs.h": "f3f4070a8b26aae50c600a1cbcb05dcd5d9c57e61ab89eac10f6237989f08a55"
+}

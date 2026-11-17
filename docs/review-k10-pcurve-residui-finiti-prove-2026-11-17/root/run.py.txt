@@ -1,0 +1,28 @@
+from pathlib import Path
+import json,subprocess,time,hashlib,os,sys
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-pcurve-pole-review/root');K=R/'kernel';lib=R/'forgecad-release/kernel/libforgekernel.a';N=Path('/tmp/k10-pcurve-pole-review/tests/test_pcurve_deviation_validation.cpp');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+targets=['forgekernel_pcurve_deviation_validation_tests','forgekernel_offset_pcurve_tests','forgekernel_sheet_join_validation_tests','forgekernel_sew_pcurve_tests']
+def run(name,args,allow=(0,),env=None,timeout=600):
+ start=time.monotonic()
+ with (T/(name+'.log')).open('w') as log:
+  try:code=subprocess.run(['/usr/bin/time','-v','-o',str(T/(name+'-time.txt'))]+list(map(str,args)),cwd=R,stdout=log,stderr=subprocess.STDOUT,env=env,timeout=timeout).returncode
+  except subprocess.TimeoutExpired:code=124
+ j={'command':list(map(str,args)),'exit':code,'seconds':time.monotonic()-start};(T/(name+'-result.json')).write_text(json.dumps(j,indent=2)+'\n');print(name,j['exit'],round(j['seconds'],3),flush=True)
+ if code not in allow:print((T/(name+'.log')).read_text()[-6000:]);raise SystemExit(1)
+ return j
+flags=['/usr/bin/c++','-std=c++17','-O2','-g','-ffp-contract=off','-Wall','-Wextra','-Wpedantic','-I'+str(K),'-I'+str(K/'tests')]
+if sys.argv[1]=='staged':
+ assert sha(N)==json.loads((T/'test-freeze.json').read_text())['sha256'];assert sha(Path('/tmp/k10-pcurve-pole-review/core/kernel/fk_pcurve.cpp'))=='7d7574589225ba9e35899aab76285d824ee7f0bbbe3be48139d212775e1df85b';initial=sha(lib);assert initial=='7850bafa41426c779ddf116a399c02f9632a1243462f504cfe6c74819b9298c4'
+ run('compile-test',flags+['-c',N,'-o',T/'test.o']);run('compile-main',flags+['-c',K/'tests/fk_test_main.cpp','-o',T/'main.o']);run('link-baseline',flags+[T/'main.o',T/'test.o',lib,'-o',T/'baseline-tests']);run('baseline-tests',[T/'baseline-tests'],allow=(1,),timeout=120);run('baseline-probe',[T/'probe']);run('baseline-nurbs-probe',[T/'nurbs-probe']);assert sha(lib)==initial
+ run('compile-candidate',flags+['-c',Path('/tmp/k10-pcurve-pole-review/core/kernel/fk_pcurve.cpp'),'-o',T/'candidate.o']);run('link-candidate',flags+[T/'main.o',T/'test.o',T/'candidate.o',lib,'-o',T/'candidate-tests']);run('candidate-tests',[T/'candidate-tests'],timeout=120);run('link-candidate-probe',flags+[T/'probe.cpp',T/'candidate.o',lib,'-o',T/'candidate-probe']);run('candidate-probe',[T/'candidate-probe']);run('link-candidate-nurbs-probe',flags+[T/'nurbs-probe.cpp',T/'candidate.o',lib,'-o',T/'candidate-nurbs-probe']);run('candidate-nurbs-probe',[T/'candidate-nurbs-probe'])
+ (T/'staged-library.json').write_text(json.dumps({'sha256':initial,'bytes':lib.stat().st_size,'path':str(lib),'unchanged_after_runs':sha(lib)==initial,'copied':False},indent=2)+'\n')
+elif sys.argv[1]=='sanitizer':
+ san=flags+['-O1','-fsanitize=address,undefined','-fno-omit-frame-pointer']
+ for name,p in [('san-test',N),('san-main',K/'tests/fk_test_main.cpp'),('san-provider',Path('/tmp/k10-pcurve-pole-review/core/kernel/fk_pcurve.cpp'))]:run(name+'-compile',san+['-c',p,'-o',T/(name+'.o')])
+ run('san-link',san+[T/'san-main.o',T/'san-test.o',T/'san-provider.o',lib,'-o',T/'san-tests']);env=os.environ.copy();env.update(ASAN_OPTIONS='detect_leaks=1:halt_on_error=1',UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1',LSAN_OPTIONS='exitcode=23');run('san-tests',[T/'san-tests'],env=env,timeout=120)
+elif sys.argv[1]=='build':
+ run('configure',['cmake','-S','.','-B','forgecad-release'])
+ run('build',['cmake','--build','forgecad-release','--target','forgecad']+targets+['forgekernel_tests','--parallel','1']);paths=['forgecad-release/forgecad','forgecad-release/kernel/libforgekernel.a']+['forgecad-release/kernel/'+t for t in targets]+['forgecad-release/kernel/forgekernel_tests'];(T/'binaries.json').write_text(json.dumps({p:sha(R/p) for p in paths},indent=2)+'\n')
+elif sys.argv[1]=='legacy':run('legacy-pcurve',['forgecad-release/kernel/forgekernel_tests','PCurve'])
+elif sys.argv[1]=='ctest':run('ctest',['ctest','--test-dir','forgecad-release','--output-on-failure','-V','--parallel','1','--output-junit',T/'ctest.xml','-R','^('+'|'.join(targets)+')$'])
+elif sys.argv[1]=='architecture':run('architecture',['python3','tools/generate_architecture.py','--build-dir','forgecad-release','--jobs','1'],timeout=1200)

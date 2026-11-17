@@ -1,0 +1,15 @@
+--- a/kernel/fk_offset.cpp
++++ b/kernel/fk_offset.cpp
+@@ -855,7 +855,11 @@
+         const double aa = dot(a, a), ab = dot(a, b), bb = dot(b, b), det = aa * bb - ab * ab;
+         if (!(det > 1e-24 * aa * bb)) throw std::domain_error("offset: cucitura su una superficie singolare");
+         const Vec2 step((bb * dot(a, r) - ab * dot(b, r)) / det, (aa * dot(b, r) - ab * dot(a, r)) / det);
+-        if (norm(step) <= 1e-12 * (1.0 + norm(uv))) break;
++        // UV magnitude is not a physical error budget. In particular a
++        // translated/scaled parametrization can need steps much smaller than
++        // 1e-12*|uv| for the downstream pcurve fit. Continue while the existing
++        // 3D distance line search improves; only an exactly zero step is done.
++        if (step.x() == 0.0 && step.y() == 0.0) break;
+         double factor = 1.0;
+         Vec2 next = uv + step;
+         double trial = isFinite(next) ? distanceAt(next) : std::numeric_limits<double>::infinity();

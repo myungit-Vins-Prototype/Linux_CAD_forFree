@@ -1,0 +1,66 @@
+[
+  {
+    "file": "AGENTS.md",
+    "sha256": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac"
+  },
+  {
+    "file": "CLAUDE.md",
+    "sha256": "62fb3dfdb2ba62a9837467fefb09b1d69012139bc8dd82e0dafa25227584d234"
+  },
+  {
+    "file": "docs/tolerance-policy.md",
+    "sha256": "2cf51f1ef37206a596ececffd3ed2365197ea9531e78e723d45e3426dd4b678c"
+  },
+  {
+    "file": "kernel/fk_boolean.cpp",
+    "sha256": "3b8e21c9133627c99cf51df712d8b638cc466f7d2d6442f2c43c1ba47f1feda2"
+  },
+  {
+    "file": "kernel/fk_boolean.h",
+    "sha256": "092984bf6646769eb15648a0a61834a277e293d97f8e9e8ebba1140bb68c80ff"
+  },
+  {
+    "file": "kernel/fk_sew.cpp",
+    "sha256": "d3f35412b91eeef191afb4a205692e950ac6b0f7948d2f7bb81ebdae964b36f5"
+  },
+  {
+    "file": "kernel/fk_exchange.h",
+    "sha256": "38d73c86d49e87a28d9508c9b5db55894e80427fe32da1c8e9bb492b954622a8"
+  },
+  {
+    "file": "kernel/fk_exchange.cpp",
+    "sha256": "3bb3f3d3c5c3b7d34124355b5b10c282cc4dc63e79796b04513e0e30397a05e3"
+  },
+  {
+    "file": "kernel/fk_body_check.cpp",
+    "sha256": "afd587fa9c3a7314aac4d85b58257a1864602f66fab6b03873378c2a6dd7747f"
+  },
+  {
+    "file": "cad_forge.cpp",
+    "sha256": "162ec8234a117fbb24da7b1e0c7bd6047cee35090a93e075d2bf9c3155b28b2f"
+  },
+  {
+    "file": "cad_element_names.cpp",
+    "sha256": "2107d1316d9a7bf52fa62cdde8073427c1c2c6cf59cb7c1fa26a54231807b218"
+  },
+  {
+    "file": "kernel/fk_surface_mapping.cpp",
+    "sha256": "c830c1c802657b50dd1cafa223af91263dba185cdf109524a16c602b6986f707"
+  },
+  {
+    "file": "kernel/fk_mapping_carrier.cpp",
+    "sha256": "1c769c5136df3502903afea4771636c939425735a975319e1d68848d0316ab25"
+  },
+  {
+    "file": "kernel/fk_mapping_fit.cpp",
+    "sha256": "f9187aa9903c07096fe029dad8f271cf850d12d6c6a273b9ed538c2afc5a8b27"
+  },
+  {
+    "file": "kernel/fk_surface_curve_bounds.h",
+    "sha256": "b44a33f8842ce44be82674594c48e1a6480ea76d66fb695010dd2885d8f4cfa6"
+  },
+  {
+    "file": "kernel/tests/test_surface_mapping.cpp",
+    "sha256": "252c4fa082c4aa448c463c840bd981dd10f13b10c5685d1199533874db178799"
+  }
+]

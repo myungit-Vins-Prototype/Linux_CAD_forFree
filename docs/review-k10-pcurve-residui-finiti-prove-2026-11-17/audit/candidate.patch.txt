@@ -1,0 +1,75 @@
+--- a/kernel/fk_pcurve.cpp
++++ b/kernel/fk_pcurve.cpp
+@@ -314,18 +314,39 @@
+ 
+ double pcurveDeviation(const Surface &surface, const Curve<3> &curve, const Curve<2> &pcurve, const Interval &range,
+                        int samples) {
++    cancellationPoint();
++    const double invalid = std::numeric_limits<double>::infinity();
++    if (samples <= 0 || !range.isFinite() || !(range.lo < range.hi) || !std::isfinite(range.length()))
++        return invalid;
+     std::vector<double> breaks = curve.breakpoints(range);
+     const std::vector<double> more = pcurve.breakpoints(range);
+     breaks.insert(breaks.end(), more.begin(), more.end());
++    // NaN non deve raggiungere il confronto dell'ordinamento.
++    for (double t : breaks) {
++        cancellationPoint();
++        if (!std::isfinite(t) || t < range.lo || t > range.hi) return invalid;
++    }
+     std::sort(breaks.begin(), breaks.end());
+     breaks.erase(std::unique(breaks.begin(), breaks.end()), breaks.end());
++    if (breaks.size() < 2 || breaks.front() != range.lo || breaks.back() != range.hi) return invalid;
+     double worst = 0.0;
+-    for (std::size_t i = 0; i + 1 < breaks.size(); ++i)
+-        for (int j = 0; j <= samples; ++j) {
++    for (std::size_t i = 0; i + 1 < breaks.size(); ++i) {
++        if (!std::isfinite(breaks[i + 1] - breaks[i])) return invalid;
++        for (int j = 0;; ++j) {
++            cancellationPoint();
+             const double t = breaks[i] + (breaks[i + 1] - breaks[i]) * j / samples;
++            if (!std::isfinite(t)) return invalid;
+             const Vec2 uv = pcurve.point(t);
+-            worst = std::max(worst, distance(surface.point(uv[0], uv[1]), curve.point(t)));
+-        }
++            if (!isFinite(uv)) return invalid;
++            const Vec3 onSurface = surface.point(uv[0], uv[1]), point = curve.point(t);
++            if (!isFinite(onSurface) || !isFinite(point)) return invalid;
++            const double gap = distance(onSurface, point);
++            if (!std::isfinite(gap)) return invalid;
++            worst = std::max(worst, gap);
++            if (j == samples) break; // Non incrementare INT_MAX.
++        }
++    }
++    cancellationPoint();
+     return worst;
+ }
+ 
+@@ -353,7 +374,9 @@
+             candidate = std::make_shared<BSplineCurve<2>>(1, std::vector<double>{range.lo, range.lo, range.hi, range.hi},
+                                                           std::vector<Vec2>{lo, hi});
+     }
+-    if (!candidate || !(pcurveDeviation(surface, *curve, *candidate, range) <= tolerance)) return nullptr;
++    if (!candidate) return nullptr;
++    const double measured = pcurveDeviation(surface, *curve, *candidate, range);
++    if (!std::isfinite(measured) || !(measured <= tolerance)) return nullptr;
+     return candidate;
+ }
+ 
+@@ -397,7 +420,7 @@
+     }
+     auto fitted = std::make_shared<BSplineCurve<2>>(3, std::move(knots), std::move(poles));
+     const double measured = pcurveDeviation(surface, *curve, *fitted, range);
+-    if (!(measured <= tolerance)) return nullptr;
++    if (!std::isfinite(measured) || !(measured <= tolerance)) return nullptr;
+     if (deviation) *deviation = measured;
+     return fitted;
+ }
+@@ -468,7 +491,7 @@
+     if (poles.size() < 2) return nullptr;
+     auto fitted = std::make_shared<BSplineCurve<2>>(1, std::move(knots), std::move(poles));
+     const double measured = pcurveDeviation(surface, *curve, *fitted, range);
+-    if (!(measured <= 50.0 * tolerance)) return nullptr;
++    if (!std::isfinite(measured) || !(measured <= 50.0 * tolerance)) return nullptr;
+     if (deviation) *deviation = measured;
+     return fitted;
+ }

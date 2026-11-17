@@ -1,0 +1,9 @@
+/tmp/k10-quadrature-review/root/ordinary-mass.cpp: In function ‘int main()’:
+/tmp/k10-quadrature-review/root/ordinary-mass.cpp:10:439: error: too few arguments to function ‘ForgeCad::Kernel::Profile ForgeCad::Kernel::buildProfile(const std::vector<ProfileSegment>&, double)’
+   10 | int main(){std::cout<<std::hexfloat;dump("box",makeBox(Frame3(),2,3,4));dump("cylinder",makeCylinder(Frame3(),2,5));std::vector<Vec2> poles;for(int i=0;i<7;++i){double a=kTwoPi*i/7.,r=3*(i%2?.7:1.);poles.push_back({r*std::cos(a),r*std::sin(a)});}poles.push_back(poles.front());auto c=std::make_shared<BSplineCurve<2>>(3,std::vector<double>{0,0,0,0,.2,.4,.6,.8,1,1,1,1},poles,std::vector<double>{1,2,.7,1.5,1,.8,1.7,1});auto p=buildProfile({{c,c->domain()}});dump("rational-extrusion",makeExtrusion(Frame3(),p.regions.at(0),2));}
+      |                                                                                                                                                                                                                                                                                                                                                                                                                                           ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+In file included from /home/myungit/Linux_CAD_forFree/kernel/fk_extrude.h:4,
+                 from /tmp/k10-quadrature-review/root/ordinary-mass.cpp:3:
+/home/myungit/Linux_CAD_forFree/kernel/fk_profile.h:46:9: note: declared here
+   46 | Profile buildProfile(const std::vector<ProfileSegment> &segments, double tolerance);
+      |         ^~~~~~~~~~~~

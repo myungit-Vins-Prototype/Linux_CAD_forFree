@@ -1,0 +1,27 @@
+{
+  "wrapper_pid": 1685208,
+  "timeout_pid": 1685227,
+  "command": [
+    "timeout",
+    "--kill-after=2",
+    "1200",
+    "/usr/bin/time",
+    "-v",
+    "-o",
+    "/tmp/k10-quadrature-review/root/build-time.txt",
+    "cmake",
+    "--build",
+    "forgecad-release",
+    "--target",
+    "forgecad",
+    "forgekernel_quadrature_validation_tests",
+    "forgekernel_arc_length_validation_tests",
+    "forgekernel_bspline_derivative_tests",
+    "forgekernel_sheet_arc_validation_tests",
+    "forgekernel_tests",
+    "--parallel",
+    "1"
+  ],
+  "reason": "intentional Inf magnitude sentinel in mass; build resumed after passive-components V2",
+  "signal": "SIGINT"
+}

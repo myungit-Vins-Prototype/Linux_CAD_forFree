@@ -1,0 +1,22 @@
+Read-only native Wayland theme-tabs triage, 2026-11-17
+
+Scope: source/graph/log inspection only; no new runner, rebuild, launch, source edit or preference access by this agent. The preceding boolean final-proof was not touched.
+
+Graph descriptions and incoming/outgoing include/call/reference edges consulted for test header, main harness, DocumentTabsWindow, application theme, drawing editor/window, viewport render and CMake. Graph has786nodes/11488edges; compact consultation saved alongside this note.
+
+An empty log is expected until failure or final PASS. documentThemeTabsTests check() prints only failures and there is no initial progress marker. Therefore empty35s logs cannot identify the first blocked statement or prove grab() hung.
+
+CMake declares90seconds for BOTH theme-tabs tests. Native launcher overrides this with35seconds; native Qt backend isWayland while CTest usesoffscreen andQT_QPA_OFFSCREEN_NO_GLX=1. Both selectFusion and clearQT_QPA_PLATFORMTHEME, and both isolate QSettings in the main harness. Native can create actual GL/window surfaces; offscreen lacks that compositor path. Main already initializes application theme; header initializeApplicationTheme is idempotent by objectName, not a second controller.
+
+FORGECAD_THEME_TABS_OUTPUT gates ONLY optional PNG saving (icon/window/panel). Toolbar/panel/menu/checkbox/canvas grabs, scene render and pixel scans always run. The output variable was unset in this inspection environment; launcher inherits its environment and does not record that variable. No42-PNG explanation is supported for the reported runs. The complete source has64page-verifications in mixed mode and36inonly2d, including36drawing-verifications in either mode. Each drawing visit has a canvas-ink polling window up to1second; settle repeatedly processes events in20ms slices (eight calls per settle), plus scene and QWidget grabs. Those calls do not unconditionally sleep their full allowance and are not a strict runtime bound. Thus runtime>35s is possible, not an unconditional expected runtime or proof of hang.
+
+First relevant blocks in execution order:
+* tests/test_document_theme_tabs.h53:host.show; mixed branch creates2models/saves/opens panels; only2d creates an unshown CadViewport builder/loadDocument/saves a synthetic box.
+* shared first nontrivial asynchronous step: DrawingWindow::createFromModel atline96; cad_drawing_window.cpp182 delegates to runDrawingComputation, whose worker is awaited through a nested Qt event loop with16ms timer. This can process native window/progress events before any verification log.
+* after both drawings exist, choose(light) invokes real menu QAction and settles; verify activates pages/shows panels/toolbars, processEvents then first dominant(QWidget::grab) atline141.
+* menu.popup({50,50})/settle/menu.grab occurs later at245; a suspected popup/grab hang needs a stack at that point, not inference from the empty log.
+The ordinary --document-tabs test lacks the repeated theme/raster verification matrix, so its7s success does not establish equal expected duration.
+
+Historical same-suite evidence: Nov16 native mixedPASS18.644657s andonly2dPASS7.526914s (docs/review-theme-tabs-prove-2026-11-16/root/wayland-*-result.json). Current parent-gdb launch now completed normally: theme-parent-debug.log endsPASS898checks; result.json exit0/interruptedfalse with launcher25s timeout. This rules out a deterministic only2d hang in that invocation and does not resolve why the earlier35s launches timed out. No causal assertion of compositor/grab deadlock is warranted; no code change is justified from these observations alone.
+
+Closure: parent reports final nativePASS1569mixed/898only2d. No further UI execution, rebuild, patch or test expansion is needed. Earlier35s timeout observations remain historical diagnostics, not an unresolved deterministic defect. Future UI suites should run only for relevant UI/dependency changes or a concrete failure. This agent performed source/graph/log inspection only.

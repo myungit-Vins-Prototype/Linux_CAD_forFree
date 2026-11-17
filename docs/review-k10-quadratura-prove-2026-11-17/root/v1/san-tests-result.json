@@ -1,0 +1,8 @@
+{
+  "command": [
+    "/tmp/k10-quadrature-review/root/san-tests"
+  ],
+  "exit": 0,
+  "seconds": 0.010636840990628116,
+  "watchdog_seconds": 60
+}

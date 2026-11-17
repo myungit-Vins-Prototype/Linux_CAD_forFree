@@ -1,0 +1,57 @@
+[
+  {
+    "path": "/tmp/k10-arc-review/root/baseline-probe",
+    "bytes": 53776144,
+    "sha256": "01c420bb1e642372f455e214d32145de48eeceba9babe507d08b3f167c3238ca"
+  },
+  {
+    "path": "/tmp/k10-arc-review/root/baseline-tests",
+    "bytes": 57353736,
+    "sha256": "f8dda56d80d0dfced832042c6cedae18dabd2414322ec050098d24d5c859be7e"
+  },
+  {
+    "path": "/tmp/k10-arc-review/root/candidate-probe",
+    "bytes": 53781136,
+    "sha256": "fa185e77f01519662d53ae389ecc042f664288109ed58b69076b467348b361c9"
+  },
+  {
+    "path": "/tmp/k10-arc-review/root/candidate-tests",
+    "bytes": 57362824,
+    "sha256": "24e4361818222e6f07133e994e34444edabd27d1fe8c5ea73cccd56063a3e269"
+  },
+  {
+    "path": "/tmp/k10-arc-review/root/candidate.o",
+    "bytes": 4207856,
+    "sha256": "bbf62f5d39c9edb8b001964495eac002eb547b7bfbc9e6924df75c7b67d42e16"
+  },
+  {
+    "path": "/tmp/k10-arc-review/root/main.o",
+    "bytes": 107984,
+    "sha256": "8d8290078f66055dda56b79978a4eeff9e88f1da1aac4dd02fdca0df39284487"
+  },
+  {
+    "path": "/tmp/k10-arc-review/root/san-main.o",
+    "bytes": 219064,
+    "sha256": "9626bf731a276d33172b4f095d0817b6bafac0b5f9c63d92b8e25b26d89397b4"
+  },
+  {
+    "path": "/tmp/k10-arc-review/root/san-provider.o",
+    "bytes": 12721040,
+    "sha256": "8a8e2feaec557ea41b63a76235cff77619198a3e24f3e0c052af1f2951bbdbd9"
+  },
+  {
+    "path": "/tmp/k10-arc-review/root/san-test.o",
+    "bytes": 3720976,
+    "sha256": "cb579b3ff124902e099390c5f434b5e860644e62f63b98bd6479f5c953457553"
+  },
+  {
+    "path": "/tmp/k10-arc-review/root/san-tests",
+    "bytes": 66188680,
+    "sha256": "87efb89654d19d9740d3779845121fbd9b44484fb2b7b0530ef77f1dc9dd6ce3"
+  },
+  {
+    "path": "/tmp/k10-arc-review/root/test.o",
+    "bytes": 1942896,
+    "sha256": "210772674862316830adb6f3da7806060b11798bf49e88762bf24d22ce9cfdc2"
+  }
+]

@@ -1,0 +1,84 @@
+{
+  "nodes": 797,
+  "edges": 11666,
+  "units": 404,
+  "errors": [],
+  "hashes_config_HTML_verified": true,
+  "focus": {
+    "kernel/fk_pcurve.cpp": {
+      "description": "Costruzione e verifica SP-curve esatte/Hermite e ripiego lineare legacy: pcurveDeviation campionato rifiuta misure senza campioni o non finite con +Inf, breakpoints originali e cancellazione; accettazioni esigono measured finito anche con tolleranza infinita. Soglie e ripiego50x invariati, nessun certificato continuo; nearPole resta ricontrollato dal fit finale.",
+      "relations": {
+        "incoming": {
+          "call": 57,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 15,
+          "include": 5,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_pcurve.h": {
+      "description": "SP-curve (Parasolid) / pcurve (OCCT): la curva di un edge nello spazio dei parametri (u, v) di una faccia, con lo stesso parametro dell'edge: S(p(t)) = C(t) per t nel range dell'edge.",
+      "relations": {
+        "incoming": {
+          "call": 0,
+          "include": 61,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 1,
+          "include": 2,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_surface_algo.cpp": {
+      "description": "Proiezioni globali NURBS: ricerca Bezier del minimo prima dei bordi del dominio; inviluppi conservativi delle isoparametriche escludono solo minimi impossibili. Bordi, nodi C0 e finestre limitate restano candidati. invertPoint ricontrolla UV e residuo fisico finiti dopo riporto periodico e scelta del seam, conserva ramo e cap e rifiuta fasi non rappresentabili entro tolleranza.",
+      "relations": {
+        "incoming": {
+          "call": 93,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 18,
+          "include": 8,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/fk_surface_algo.h": {
+      "description": "Algoritmi sulle superfici: coincidenza delle estrusioni certificata e identita stretta della parametrizzazione UV da dati esatti, per riutilizzare SP-curve senza riproiezione.",
+      "relations": {
+        "incoming": {
+          "call": 2,
+          "include": 100,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 0,
+          "include": 1,
+          "reference": 0
+        }
+      }
+    },
+    "kernel/tests/test_pcurve_deviation_validation.cpp": {
+      "description": "Metrica SP-curve: gap finiti e picchi ai nodi originali, conteggi/range invalidi, overflow nativo UV/curve/superficie/norma, NURBS fuori dominio con denominatore nullo e controlli nel dominio, accettazioni e deviazione pubblicata solo al successo, cancellazione.",
+      "relations": {
+        "incoming": {
+          "call": 1,
+          "include": 0,
+          "reference": 0
+        },
+        "outgoing": {
+          "call": 11,
+          "include": 4,
+          "reference": 0
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+from pathlib import Path
+import hashlib,json,re,subprocess
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/boolean-order-review/root');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def architecture():
+ g=json.loads((R/'docs/architecture/graph.json').read_text());assert not g['analysis']['errors'];assert g['analysis']['configurationDigest']==sha(R/'forgecad-release/compile_commands.json')
+ for f,h in g['hashes'].items():assert sha(R/f)==h,f
+ h=(R/'docs/architecture/index.html').read_text();assert json.loads(re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',h,re.S).group(1))==g
+ b=json.loads((T/'architecture-before.json').read_text());nodes={n['id']:n for n in g['nodes']};focus=set(b['focus']);incident=[e for e in g['edges'] if e['source'] in focus or e['target'] in focus]
+ result={'nodes':len(nodes),'edges':len(g['edges']),'units':len(g['analysis']['units']),'all_source_hashes_verified':True,'configuration_html_verified':True,'no_structural_change':True,'focus':{f:{'description':nodes[f]['description'],'incoming':{k:sum(e['target']==f and e['kind']==k for e in incident) for k in ['call','include','reference']},'outgoing':{k:sum(e['source']==f and e['kind']==k for e in incident) for k in ['call','include','reference']}} for f in sorted(focus)}}
+ (T/'architecture-audit.json').write_text(json.dumps(result,indent=2)+'\n')
+ with (T/'architecture-check.log').open('w') as out:subprocess.run(['python3','tools/generate_architecture.py','--check'],cwd=R,stdout=out,stderr=subprocess.STDOUT,check=True)
+ print('architecture',result['nodes'],result['edges'],result['units'])
+def preservation():
+ b=json.loads((T/'baseline.json').read_text());changed=sorted(f for f,h in b.items() if not (R/f).is_file() or sha(R/f)!=h);assert set(changed)=={'CLAUDE.md','docs/code-review-2026-11-15.md'},changed
+ seals=json.loads((T/'seals-before.json').read_text())
+ for seal in seals:
+  p=R/seal['seal'];assert sha(p)==seal['sha256']
+  for line in p.read_text().splitlines():
+   if line.strip():h,f=line.split('  ',1);assert sha(p.parent/f)==h,(p,f)
+ assert sha(R/'docs/history/claude-prima-boolean-order-2026-11-17.md')==b['CLAUDE.md']
+ head=subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip();assert head=='47c7c19c4faf490995e8ff64f10d83d8a6abb077';assert subprocess.check_output(['git','rev-parse','origin/main'],cwd=R,text=True).strip()==head;assert not subprocess.check_output(['git','diff','--cached','--name-only'],cwd=R,text=True).strip()
+ mem=(R/'CLAUDE.md').read_text();assert len(mem.encode())<=16384 and len(re.findall(r'^\*\*',mem,re.M))<=10;assert 'nessun commit o push fino a nuova richiesta' in mem;assert 'test mirati all’area modificata' in mem
+ subprocess.run(['git','diff','--check'],cwd=R,check=True)
+ bins={'forgecad-release/forgecad':'99eb77fc779b028cf85fb86a6d1839d44893f248f2af95e883e3ff0f96f1732e','forgecad-release/forgecad_view_tests':'52c77cc2435c2024aa37cc853ecd035facc0e0c37958c369882c52e9b572440f','forgecad-release/kernel/libforgekernel.a':'ea1825d26334bd83b1169859a425fa1efb451ceab9136ea8c4e388542857960b','forgecad-release/kernel/forgekernel_tests':'6642e6b9116e3200604062e031c080124feab3f6714c8dc41b157a09a4e82721','forgecad-release/kernel/forgekernel_shell_pose_tests':'882310c8ca7dda2cb71ec1a712168e86ffb9ee7153381674bdca684d0d18db07'}
+ for f,h in bins.items():assert sha(R/f)==h,f
+ frozen=json.loads(Path('/tmp/boolean-order-review/tests/document-freeze.json').read_text());assert sha(Path(frozen['source']))==frozen['sha256'];assert sha(Path(frozen['copy']))==frozen['sha256']
+ assert sha(Path('/tmp/boolean-order-review/tests/snapshot-record-13.body'))=='a033476fb8c411a1f9bf38c50e187b13dac04daaf2441d3f4152ff13b078da68';assert sha(Path('/tmp/boolean-order-review/tests/snapshot-record-14.body'))=='514106beb1d5888bde272e641e08ae1b5b1fccc6e54e4edb9966481422ad9e93'
+ for name,needle in [('native-tabs','PASS document tabs:'),('repeat-theme-tabs','PASS document theme tabs: 1569 checks'),('repeat-theme-tabs-only-2d','PASS document theme tabs: 898 checks')]:
+  j=json.loads((T/(name+'-result.json')).read_text());assert j['exit']==0 and not j['timed_out'];assert needle in (T/(name+'.log')).read_text()
+ result={'HEAD_origin_main_unchanged':head,'index_empty':True,'no_commit_or_push':True,'baseline_files':len(b),'preserved_existing':len(b)-len(changed),'changed_existing':changed,'all_software_sources_unchanged':True,'previous_proof_packages_preserved':len(seals),'previous_proof_artifacts':sum(s['files'] for s in seals),'CLAUDE_bytes':len(mem.encode()),'binary_hashes_verified_unchanged':bins,'original_document_unchanged_sha256':frozen['sha256'],'raw_saved_record_identity_verified':True,'no_new_software_build_or_CI':True}
+ (T/'preservation-audit.json').write_text(json.dumps(result,indent=2)+'\n');print(result)
+if __name__=='__main__':architecture();preservation()

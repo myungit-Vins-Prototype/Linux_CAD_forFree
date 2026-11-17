@@ -1,0 +1,106 @@
+{
+  "format": "sha256-text-inert-v1",
+  "package": "independent-arclength-static-audit-v2",
+  "files": [
+    {
+      "path": "README.txt",
+      "bytes": 2280,
+      "sha256": "2f6453e808401b34f2f01cc87341b63ffe7bcb1c64d9381a502a01f685fc609c"
+    },
+    {
+      "path": "candidate.patch.txt",
+      "bytes": 4973,
+      "sha256": "c46dceac9429127125628b171642a405b9e6e8698582bf61f877ae0b38992dd0"
+    },
+    {
+      "path": "fk_curve_algo.cpp.txt",
+      "bytes": 19269,
+      "sha256": "8ceb22befce610f835a9271ca88b497470a5ba2497210d94cbb8867bccfa3400"
+    },
+    {
+      "path": "fk_curve_length_cache.h.txt",
+      "bytes": 5953,
+      "sha256": "d9f5a424ffc931bae46b818b6bcff644ca06376dabbb9c301ba8ce423f9aa1e0"
+    },
+    {
+      "path": "fraction-dyadic-speed-oracle.json",
+      "bytes": 1654,
+      "sha256": "104fc60ec55813023560c4a9530a8cdb595ded3a0a53ab25ee7d3b500aa2ea36"
+    },
+    {
+      "path": "fraction-dyadic-speed-oracle.py.txt",
+      "bytes": 642,
+      "sha256": "345018bbd6e89a88731960e369b9850e85b827166d7238bd90bd3c529b0bdf70"
+    },
+    {
+      "path": "fraction-native-speed-oracle.json",
+      "bytes": 1655,
+      "sha256": "71ff7d9f0e5ebb961737060db261d41c501871c9bf2da27acb5eda5661dd265e"
+    },
+    {
+      "path": "fraction-native-speed-oracle.py.txt",
+      "bytes": 432,
+      "sha256": "fada47a1079a6ead47665e097d116faeb177bb50d3774cb6cd76df36580ef234"
+    },
+    {
+      "path": "graph-consult.json",
+      "bytes": 710571,
+      "sha256": "48f214170694cdf1b80300255cb328f91ba537c3b58e12db4146813d0fb75770"
+    },
+    {
+      "path": "root-baseline-cancel-result.json",
+      "bytes": 163,
+      "sha256": "f565acbc297960269245f53fb8a9056f03b57f8dff7504a8b748562695829144"
+    },
+    {
+      "path": "root-baseline-cancel.log",
+      "bytes": 23,
+      "sha256": "74fac789448e79442e5f2c48986922563a0a8869d48933e8d1558d0d5d9b9248"
+    },
+    {
+      "path": "root-baseline-center-result.json",
+      "bytes": 162,
+      "sha256": "18fdaac63df9316470c00c233fb6140b371984ef30a2fb8d91f6561176d6adb0"
+    },
+    {
+      "path": "root-baseline-center.log",
+      "bytes": 45,
+      "sha256": "2be9ef90fac02e6947021d662d8e9c95100211cb9e5cfaeeca14d3d5b82540cf"
+    },
+    {
+      "path": "root-baseline-underflow-result.json",
+      "bytes": 165,
+      "sha256": "56b5654aa87525f493ceb23f77489d249167d782773a209485fb9f81d7b7191c"
+    },
+    {
+      "path": "root-baseline-underflow.log",
+      "bytes": 68,
+      "sha256": "91421f2a151466a00da1d8a9131bc8a0a749f01d4abc49129382e7a1e07ff790"
+    },
+    {
+      "path": "root-baseline-velocity-result.json",
+      "bytes": 166,
+      "sha256": "0f8f852ab16f9f7308f6f796874f17c5655be343ebda59eb404df48d1ab110d3"
+    },
+    {
+      "path": "root-baseline-velocity.log",
+      "bytes": 34,
+      "sha256": "40e3c2c7dc26735578e08fdb620181dbdc2dc3bda14bb9e89362c217ca305768"
+    },
+    {
+      "path": "root-probe.cpp.txt",
+      "bytes": 2128,
+      "sha256": "7b0c25eebbbbb82fcb9a270e4dd80f4225cde9548bbbbb4a10046d91de782737"
+    },
+    {
+      "path": "static-review.json",
+      "bytes": 1966,
+      "sha256": "3c1d7a184b22b5fdaa80a2b3b2b9e932c7fecf39e52ce72ffc25cd2f0113920f"
+    },
+    {
+      "path": "v1-to-v2.patch.txt",
+      "bytes": 1750,
+      "sha256": "ef31dd6cbafedb186c9b769e8f82a5941304d77c6714ec29520f991a887d604a"
+    }
+  ]
+}

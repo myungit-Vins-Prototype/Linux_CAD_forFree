@@ -1,0 +1,19 @@
+[
+  "c++",
+  "-std=c++17",
+  "-O2",
+  "-g",
+  "-ffp-contract=off",
+  "-I/tmp/k10-next-review/core/kernel",
+  "-I/home/myungit/Linux_CAD_forFree/kernel",
+  "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+  "/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+  "/tmp/k10-next-review/tests/existing33.o",
+  "/tmp/k10-next-review/tests/ledger-diagnostic.o",
+  "/tmp/k10-next-review/tests/trace-export.o",
+  "/tmp/k10-next-review/core/provider.o",
+  "/tmp/k10-next-review/tests/libforgekernel-baseline.a",
+  "-pthread",
+  "-o",
+  "/tmp/k10-next-review/tests/diagnostic-tests"
+]

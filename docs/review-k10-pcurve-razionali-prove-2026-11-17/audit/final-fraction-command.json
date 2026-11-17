@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "python3",
+    "/tmp/k10-rational-pcurve-review/audit/verify_actual_ledger.py.txt",
+    "/tmp/k10-rational-pcurve-review/audit/final-actual-ledger.json",
+    "/tmp/k10-rational-pcurve-review/audit/final-fraction-result.json"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "exit": 0,
+  "elapsed": 0.05983728700084612,
+  "librarySHA256": "6f0a76dfdde164289e0b646843120c1efdcaabcede8eb38446f5aa3459987356",
+  "libraryBytes": 181604788,
+  "sourceSHA256": "d5aba890079651b2c593f1a69aa948257c75cdcd6d176ff021ab86553118338a"
+}

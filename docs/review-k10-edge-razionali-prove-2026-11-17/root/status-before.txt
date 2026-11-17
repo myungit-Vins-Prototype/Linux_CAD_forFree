@@ -1,0 +1,48 @@
+ M CLAUDE.md
+ M cad_drawing_editor.cpp
+ M cad_drawing_editor.h
+ M cad_drawing_window.cpp
+ M cad_forge.cpp
+ M cad_forge.h
+ M cad_sketch_refs.cpp
+ M cad_sketch_refs.h
+ M docs/code-review-2026-11-15.md
+ M forgeCad2026_viewport.h
+ M forgeCad2026_viewport_selection.cpp
+ M kernel/CMakeLists.txt
+ M kernel/fk_blend_model.h
+ M kernel/fk_offset.cpp
+ M kernel/fk_sheet.cpp
+ M kernel/fk_surface_mapping.cpp
+ M tools/generate_architecture.py
+?? docs/history/claude-prima-boolean-order-2026-11-17.md
+?? docs/history/claude-prima-k10-carrier-istanze-2026-11-17.md
+?? docs/history/claude-prima-k10-carrier-razionali-2026-11-17.md
+?? docs/history/claude-prima-k10-mapping-nonplane-2026-11-17.md
+?? docs/history/claude-prima-k10-noniso-2026-11-16.md
+?? docs/history/claude-prima-k10-offset-pose-2026-11-17.md
+?? docs/history/claude-prima-legacy-api-2026-11-16.md
+?? docs/review-boolean-order-tabs-2026-11-17.md
+?? docs/review-boolean-order-tabs-prove-2026-11-17/
+?? docs/review-k10-carrier-istanze-2026-11-17.md
+?? docs/review-k10-carrier-istanze-prove-2026-11-17/
+?? docs/review-k10-carrier-razionali-2026-11-17.md
+?? docs/review-k10-carrier-razionali-prove-2026-11-17/
+?? docs/review-k10-mapping-nonplane-2026-11-17.md
+?? docs/review-k10-mapping-nonplane-prove-2026-11-17/
+?? docs/review-k10-noniso-2026-11-17.md
+?? docs/review-k10-noniso-prove-2026-11-17/
+?? docs/review-k10-offset-pose-2026-11-17.md
+?? docs/review-k10-offset-pose-prove-2026-11-17/
+?? docs/review-legacy-api-2026-11-16.md
+?? docs/review-legacy-api-prove-2026-11-16/
+?? kernel/fk_sheet_join_validation.cpp
+?? kernel/fk_sheet_join_validation.h
+?? kernel/fk_surface_curve_bounds.cpp
+?? kernel/fk_surface_curve_bounds.h
+?? kernel/tests/test_mapping_nonplane_validation.cpp
+?? kernel/tests/test_sheet_join_ledger.cpp
+?? kernel/tests/test_shell_pose.cpp
+?? kernel/tests/test_surface_curve_bounds.cpp
+?? kernel/tests/test_surface_curve_instances.cpp
+?? kernel/tests/test_surface_curve_rational.cpp

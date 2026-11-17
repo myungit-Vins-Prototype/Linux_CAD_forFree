@@ -1,0 +1,35 @@
+{
+  "publicMappingFinRecords": 48,
+  "edgeProbeRecords": 6,
+  "pcurveProbeRecords": 7,
+  "comparisons": [
+    {
+      "baseline": "poly-baseline.log",
+      "candidate": "poly-candidate.log",
+      "byteEqual": true,
+      "sha256": "ba68b0d0c55519c965ab2c4e95905b9494761710f9808754300d29c23315fc48",
+      "cmpExitCode": 0
+    },
+    {
+      "baseline": "poly-baseline.jsonl",
+      "candidate": "poly-candidate.jsonl",
+      "byteEqual": true,
+      "sha256": "47fa8415739cc50816edf303b77d63a8231d236754b136b694edbdb90714f4bb",
+      "cmpExitCode": 0
+    },
+    {
+      "baseline": "edge-baseline.log",
+      "candidate": "edge-candidate.log",
+      "byteEqual": true,
+      "sha256": "1f3eea99f36894b8648728452b85d1dc95a8f6c974626a521e57b84de4bd5440",
+      "cmpExitCode": 0
+    },
+    {
+      "baseline": "pcurve-baseline.log",
+      "candidate": "pcurve-candidate.log",
+      "byteEqual": true,
+      "sha256": "3af7d4f04f905de943c178a040a18d2733e48959e65bb36b1d525b6cb31ada2c",
+      "cmpExitCode": 0
+    }
+  ]
+}

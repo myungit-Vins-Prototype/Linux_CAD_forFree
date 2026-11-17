@@ -1,0 +1,1700 @@
+[
+  {
+    "source": "/tmp/k10-quadrature-review/root/architecture-audit.json",
+    "archive": "root/architecture-audit.json",
+    "sha256": "a16897e39f2723410fbd715ecccaf7cda48d0fcf8e9b6522f4b8b59890c551a9",
+    "bytes": 4440
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/architecture-before.json",
+    "archive": "root/architecture-before.json",
+    "sha256": "235eccc859ffd2d3e560009b7fcd5bdd1949ff22d11fcc017100a0b686a545ab",
+    "bytes": 12710
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/architecture-check.log",
+    "archive": "root/architecture-check.log",
+    "sha256": "db7ec8e1cd30c36e84c497776cc216ced02b8cc8562d1dfe6e217f78ed7df206",
+    "bytes": 63
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/architecture-incident.json",
+    "archive": "root/architecture-incident.json",
+    "sha256": "8577848d4b03214b8402d0e518ee0ce535a73fc798839b0cf0d54c07ecb71eeb",
+    "bytes": 222230
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/architecture-result.json",
+    "archive": "root/architecture-result.json",
+    "sha256": "129baadebb275e27c73a22a428fb14a7b0c4783bae401140024dcfde531f2536",
+    "bytes": 214
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/architecture-time.txt",
+    "archive": "root/architecture-time.txt",
+    "sha256": "4a6d8781ea21d4975a7156efc8673a4044495b23415eebd4d3a0ca953f9f9a68",
+    "bytes": 809
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/architecture.log",
+    "archive": "root/architecture.log",
+    "sha256": "02ae9a7e35efead3c3f9fe7945386e036d7e2c3d394d4d20058c666b2530f861",
+    "bytes": 16611
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/archive.py",
+    "archive": "root/archive.py.txt",
+    "sha256": "2ff5e5921e6a2da81914675e0ee9a66d2dd6ebf6a6fc609735ff8d496510d765",
+    "bytes": 2681
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-length-golden-result.json",
+    "archive": "root/baseline-length-golden-result.json",
+    "sha256": "45149312ca308d08e175410c488589368b21cb06da41b8e0c24e2b515952d607",
+    "bytes": 159
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-length-golden-time.txt",
+    "archive": "root/baseline-length-golden-time.txt",
+    "sha256": "35179f08cd5a078601019582cc24d315d226129408db47760d870bd2fed32c51",
+    "bytes": 768
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-length-golden.log",
+    "archive": "root/baseline-length-golden.log",
+    "sha256": "d75973c1d5b3f10fa37f639e55500ad3cc631ba6e3ebf0679cedcee62d869122",
+    "bytes": 342
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-library.json",
+    "archive": "root/baseline-library.json",
+    "sha256": "d59227a6f1f5a14b02ca7fd3afc47678278fa27072be7e8bff6e66c215831207",
+    "bytes": 102
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-mass-golden-result.json",
+    "archive": "root/baseline-mass-golden-result.json",
+    "sha256": "b53cc335eaf51b5e48492a0f262cc6c971645d9364f077a5578f07fdea57cdfd",
+    "bytes": 156
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-mass-golden-time.txt",
+    "archive": "root/baseline-mass-golden-time.txt",
+    "sha256": "a42e6970ab25228e6de42183bcb0e99e12e4e7d6e3e663b0202cd1923a6a1a40",
+    "bytes": 765
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-mass-golden.log",
+    "archive": "root/baseline-mass-golden.log",
+    "sha256": "4988fc6305671e06d60f377f140870e415dabdcae84de4664d3f9b0c8aaedc8a",
+    "bytes": 810
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-ordinary-result.json",
+    "archive": "root/baseline-ordinary-result.json",
+    "sha256": "8cb811062c5f172a11a6a36d1762a40029b020c81e41f8c5bd4b4fd38c209671",
+    "bytes": 154
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-ordinary-time.txt",
+    "archive": "root/baseline-ordinary-time.txt",
+    "sha256": "dff1276f490d267fc3cc9bbc09533373dbf074b611125d3f9a965d32e0c0056f",
+    "bytes": 763
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-ordinary.log",
+    "archive": "root/baseline-ordinary.log",
+    "sha256": "40d3f1eaf70847906310933e22a194f6e7034f8838f2eb7063bf570cff503993",
+    "bytes": 1356
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-run.py",
+    "archive": "root/baseline-run.py.txt",
+    "sha256": "4f8987f3b248ed37b11a778a32f9200369b695a8b15194826b48e390bca8d41e",
+    "bytes": 1223
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-safe-controls-result.json",
+    "archive": "root/baseline-safe-controls-result.json",
+    "sha256": "c888f64b6cf89c588a0afaf696bd5094b05f999b171d22a43118cd94f4a6b4f7",
+    "bytes": 171
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-safe-controls-time.txt",
+    "archive": "root/baseline-safe-controls-time.txt",
+    "sha256": "eb4545672031b6b8c8ee218d6137dc39f56d5779dbe2fc73f93104f149b677dc",
+    "bytes": 773
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-safe-controls.log",
+    "archive": "root/baseline-safe-controls.log",
+    "sha256": "3efcf3f89965bdf4baf883caf62526b27e251e7ff287666f4ea67f746733e4d6",
+    "bytes": 50
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-safe-source-equality.json",
+    "archive": "root/baseline-safe-source-equality.json",
+    "sha256": "b2d327b74fefa2d9d164f2ee7fe8d94edce96931817640dc0285bafec38b41d8",
+    "bytes": 62
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-velocity-result.json",
+    "archive": "root/baseline-velocity-result.json",
+    "sha256": "137d938a76467b32794cdb50e55d0acb70eda32d382733fa41fdb77b2eec6e8f",
+    "bytes": 168
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-velocity-time.txt",
+    "archive": "root/baseline-velocity-time.txt",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline-velocity.log",
+    "archive": "root/baseline-velocity.log",
+    "sha256": "fa11dcc42682c0946e54bb18c88b80fb70fefc540d1507eb6a9456e7ee7ed36e",
+    "bytes": 58
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/baseline.json",
+    "archive": "root/baseline.json",
+    "sha256": "f23eeab98c5258627d6777eff8451440f48c2cf525c46a996f2f99220f94fd08",
+    "bytes": 1147327
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/binaries.json",
+    "archive": "root/binaries.json",
+    "sha256": "b1dd9b37c610e3feecf72165c70a0c1f2434f26c1bdc618d17cc20983355c4cc",
+    "bytes": 875
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/build-result.json",
+    "archive": "root/build-result.json",
+    "sha256": "da7a82d6b3ac159e929d52012036b844dafde3991c05e1446958ad2a2515e291",
+    "bytes": 415
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/build-time.txt",
+    "archive": "root/build-time.txt",
+    "sha256": "66742f146bf5135a3ea59bbec19f03966c93efa6ba7e3cf3b4d064ef64bba693",
+    "bytes": 980
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/build.log",
+    "archive": "root/build.log",
+    "sha256": "0483edbf015fa376c03813d1f27bf04912603895dffbfa6261880421f47fc840",
+    "bytes": 22090
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/candidate-length-golden-result.json",
+    "archive": "root/candidate-length-golden-result.json",
+    "sha256": "2ad0bff2867c30bae1497647ec025cecf8818437aa40c747c2fc13fa33850efc",
+    "bytes": 159
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/candidate-length-golden-time.txt",
+    "archive": "root/candidate-length-golden-time.txt",
+    "sha256": "62195a994e7b2ff8493522f6c18c62a48ca4b85d5e5c054b7e0ea91c4ce30837",
+    "bytes": 769
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/candidate-length-golden.log",
+    "archive": "root/candidate-length-golden.log",
+    "sha256": "d75973c1d5b3f10fa37f639e55500ad3cc631ba6e3ebf0679cedcee62d869122",
+    "bytes": 342
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/candidate-mass-golden-result.json",
+    "archive": "root/candidate-mass-golden-result.json",
+    "sha256": "cba49faf79962b4fa853b9906dcf9c8b6f00eaa00e0f9011cce9e64d9ba28d43",
+    "bytes": 157
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/candidate-mass-golden-time.txt",
+    "archive": "root/candidate-mass-golden-time.txt",
+    "sha256": "e69d0c470d3a986a69437fdde6763ace08b9f45ffdb20698ead0091742806e0f",
+    "bytes": 766
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/candidate-mass-golden.log",
+    "archive": "root/candidate-mass-golden.log",
+    "sha256": "4988fc6305671e06d60f377f140870e415dabdcae84de4664d3f9b0c8aaedc8a",
+    "bytes": 810
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/candidate-ordinary-result.json",
+    "archive": "root/candidate-ordinary-result.json",
+    "sha256": "766cdda6c9d996450f4ab2a7be08566b9f272c29412c0ec28c0a4b3973b2dc0d",
+    "bytes": 155
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/candidate-ordinary-time.txt",
+    "archive": "root/candidate-ordinary-time.txt",
+    "sha256": "d9780f58eb3ef4834df6a6ff115f7bd10d669bbf82b43a00c45e303f507063f2",
+    "bytes": 764
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/candidate-ordinary.log",
+    "archive": "root/candidate-ordinary.log",
+    "sha256": "40d3f1eaf70847906310933e22a194f6e7034f8838f2eb7063bf570cff503993",
+    "bytes": 1356
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/candidate-velocity-result.json",
+    "archive": "root/candidate-velocity-result.json",
+    "sha256": "31a45d7d265436b9e1044059d60b7d2e221a7321cf303084afa08bd0356cba4f",
+    "bytes": 167
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/candidate-velocity-time.txt",
+    "archive": "root/candidate-velocity-time.txt",
+    "sha256": "7193cbd5af715aa41cfe7fc85ba1912b9d6ec0a67a62eb4092a88d5033b2e202",
+    "bytes": 770
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/candidate-velocity.log",
+    "archive": "root/candidate-velocity.log",
+    "sha256": "36efa1c2a3aafa8404e503cedaba14b5981cadc5b444fd8a25b058d46d61babe",
+    "bytes": 69
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/cleanup.json",
+    "archive": "root/cleanup.json",
+    "sha256": "ff4ed33cbbba705ae3e2e6f1b38824cd4faa220b358e099cca743002a0685b28",
+    "bytes": 4674
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/cleanup.py",
+    "archive": "root/cleanup.py.txt",
+    "sha256": "ac58f8aa9afbbc1f915db863344f4cc205665dbfba15e885a71d5b62d9c82247",
+    "bytes": 802
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-baseline-ordinary-result.json",
+    "archive": "root/compile-baseline-ordinary-result.json",
+    "sha256": "f0c449b8b7076ce8962eb199ec0cf7c140f6709f84c630285d39f5db1eae634d",
+    "bytes": 480
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-baseline-ordinary-time.txt",
+    "archive": "root/compile-baseline-ordinary-time.txt",
+    "sha256": "c02a522127eb86d191c19fe763c3a8ca9118d64c68ac9715b941e345cbc4542f",
+    "bytes": 1003
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-baseline-ordinary.log",
+    "archive": "root/compile-baseline-ordinary.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-baseline-probe-result.json",
+    "archive": "root/compile-baseline-probe-result.json",
+    "sha256": "a6019bbd927ac8101f046e534b0b77e3cc9fe5e3b142c9b45a550c0a318e5886",
+    "bytes": 558
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-baseline-probe-time.txt",
+    "archive": "root/compile-baseline-probe-time.txt",
+    "sha256": "49a465e6d918d700df4956db7e746d03bfa9b6bcee5b62af9cf222f9ca27b10c",
+    "bytes": 1069
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-baseline-probe.log",
+    "archive": "root/compile-baseline-probe.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-baseline-tests-result.json",
+    "archive": "root/compile-baseline-tests-result.json",
+    "sha256": "7706e27cc10d860341e1ada817cad674bd6cb42fe8d1a9de01eec70def70f578",
+    "bytes": 649
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-baseline-tests-time.txt",
+    "archive": "root/compile-baseline-tests-time.txt",
+    "sha256": "fba46f34dfd293925090fb49ce89db2dd68b1fa707313589b1f78bd46d408403",
+    "bytes": 1154
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-baseline-tests.log",
+    "archive": "root/compile-baseline-tests.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-candidate-mass-result.json",
+    "archive": "root/compile-candidate-mass-result.json",
+    "sha256": "33d692196477463d29595a38ee98e1b9a84d4719fdbaa1910e65abba5a6899c5",
+    "bytes": 526
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-candidate-mass-time.txt",
+    "archive": "root/compile-candidate-mass-time.txt",
+    "sha256": "c750fa5a2812416994b87e1ef0160967f64cd400b0b65e8f39f70d01a6497a8a",
+    "bytes": 1037
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-candidate-mass.log",
+    "archive": "root/compile-candidate-mass.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-candidate-ordinary-result.json",
+    "archive": "root/compile-candidate-ordinary-result.json",
+    "sha256": "a90594bcc403b190561af9b74f231f6936cdbad12fc996e23c116cc3bffe4fd1",
+    "bytes": 531
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-candidate-ordinary-time.txt",
+    "archive": "root/compile-candidate-ordinary-time.txt",
+    "sha256": "e4fcfb501680d2bb4d07e210a6c7c90a37ca046c4756374775fb9add1e5da207",
+    "bytes": 1048
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-candidate-ordinary.log",
+    "archive": "root/compile-candidate-ordinary.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-candidate-provider-result.json",
+    "archive": "root/compile-candidate-provider-result.json",
+    "sha256": "01c11cdbbc18f430eb4e71a22424b6dd733cf1a623aa3101590d58bbf82b0c0d",
+    "bytes": 538
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-candidate-provider-time.txt",
+    "archive": "root/compile-candidate-provider-time.txt",
+    "sha256": "639831d7255e135917cff1c7f1665876dec53f2c0f5e9af12f81f49e03afcdec",
+    "bytes": 1048
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-candidate-provider.log",
+    "archive": "root/compile-candidate-provider.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-staged-tests-result.json",
+    "archive": "root/compile-staged-tests-result.json",
+    "sha256": "51e5db8715275889ba4d623f7b634a96cb3e0a10a65b3a41bfc24224b9ab17d8",
+    "bytes": 755
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-staged-tests-time.txt",
+    "archive": "root/compile-staged-tests-time.txt",
+    "sha256": "ca570b3868447deb25b7d2d771ef6703dbecd6e1630bfdf1a50968260f784d94",
+    "bytes": 1245
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/compile-staged-tests.log",
+    "archive": "root/compile-staged-tests.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/configure-result.json",
+    "archive": "root/configure-result.json",
+    "sha256": "a626a921f212c1cb53cd5794e410af87c90447ce4bc662e6a34c1edb3b00ff8a",
+    "bytes": 161
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/configure-time.txt",
+    "archive": "root/configure-time.txt",
+    "sha256": "0ce30013b5651689873a5446e802eb1eeb6a51a893a0c333dc22688cfaebba77",
+    "bytes": 758
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/configure.log",
+    "archive": "root/configure.log",
+    "sha256": "4c968652f0d135d8cef02f7e64388be95e243522b4684793da60ac53299219de",
+    "bytes": 139
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/ctest-result.json",
+    "archive": "root/ctest-result.json",
+    "sha256": "84b8f0b936132fe80e8b3d2e492792c3332dc353716ecee6ddc563b69c7c95a0",
+    "bytes": 463
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/ctest-time.txt",
+    "archive": "root/ctest-time.txt",
+    "sha256": "5cdf71fd00ae1b6d487d09211ecb469fdadeb274b056d09e409d8d6f22a1461f",
+    "bytes": 1011
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/ctest.log",
+    "archive": "root/ctest.log",
+    "sha256": "c1979f10103384a2923daea3aed6eb75a34a8e586b556c6bc52ed96aeb5b242e",
+    "bytes": 3461
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/ctest.xml",
+    "archive": "root/ctest.xml",
+    "sha256": "930176763e637c27e7a9e50dd517a142b4068d824e28419164435b0f854bc7df",
+    "bytes": 2186
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/finalize-docs.py",
+    "archive": "root/finalize-docs.py.txt",
+    "sha256": "adaa61e6161911b404b737f592da0d755469cd54a57e8fa2b414f5fd5d3f65c2",
+    "bytes": 5456
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/freeze.json",
+    "archive": "root/freeze.json",
+    "sha256": "fb1b83fd1a198d494c38e9f1a4426177d48bed2f2924862cc82d64fb090443de",
+    "bytes": 530
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/golden-run.py",
+    "archive": "root/golden-run.py.txt",
+    "sha256": "cb8d6d0bbe10535ebd1b6c99631a1828db7238e45005bd6ecfc8a18b67f69269",
+    "bytes": 1768
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/integrate-v2.py",
+    "archive": "root/integrate-v2.py.txt",
+    "sha256": "6480e044380ab7cb548eeb1523dfa842c1badff21e26d3051656aa82b780376d",
+    "bytes": 2487
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/integrate.py",
+    "archive": "root/integrate.py.txt",
+    "sha256": "d6ec18faa4f5842a3024e562ab148eee56efa7885e408082dfefb4e4ceb6a8b6",
+    "bytes": 4430
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/integrated-sources.json",
+    "archive": "root/integrated-sources.json",
+    "sha256": "e35f81be5d6a6d92fc9628c0d7ce8874ef700080dd320b2a3c27fa0aac25075c",
+    "bytes": 595
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-ArcLength-result.json",
+    "archive": "root/legacy-ArcLength-result.json",
+    "sha256": "d3968471584c0aa37b03c51bea984d28ce39959f1d5647e2ded7981d937fb656",
+    "bytes": 162
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-ArcLength-time.txt",
+    "archive": "root/legacy-ArcLength-time.txt",
+    "sha256": "ce0f6573868ec7fe154f2469dedb10f1b0208d07676b071a42a1dd657c64afa7",
+    "bytes": 772
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-ArcLength.log",
+    "archive": "root/legacy-ArcLength.log",
+    "sha256": "5aacb6c5522861ccd5e0b062a844dc48682e0fa8dca09ab00d7210e1b6382c41",
+    "bytes": 72
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-CurveLengthCachePreservesQuadratureAndIdentity-result.json",
+    "archive": "root/legacy-CurveLengthCachePreservesQuadratureAndIdentity-result.json",
+    "sha256": "029286f385f73bf8b8d42be657f52a3c18452b8038fd2b21cd21b92bd5e983aa",
+    "bytes": 199
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-CurveLengthCachePreservesQuadratureAndIdentity-time.txt",
+    "archive": "root/legacy-CurveLengthCachePreservesQuadratureAndIdentity-time.txt",
+    "sha256": "70d9b6ff7d1542854e394d476ca7ed6e1ea7a8c21c8a5ac3c93f6fd46cf72109",
+    "bytes": 805
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-CurveLengthCachePreservesQuadratureAndIdentity.log",
+    "archive": "root/legacy-CurveLengthCachePreservesQuadratureAndIdentity.log",
+    "sha256": "58da79cf6646cc487309df963b92595241feeba9ca3cd6ad760007a2660df991",
+    "bytes": 74
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-LoftSmoothThroughCircles-result.json",
+    "archive": "root/legacy-LoftSmoothThroughCircles-result.json",
+    "sha256": "cbff8824e9d5a45d7c546b5a14f6f09903a643569b8efb670d3dbb9fb61b1f45",
+    "bytes": 177
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-LoftSmoothThroughCircles-time.txt",
+    "archive": "root/legacy-LoftSmoothThroughCircles-time.txt",
+    "sha256": "383c9ed5cce9ede0eeb3e505f98720069e69bfc1e0616360dec2e3ad696ec2b3",
+    "bytes": 782
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-LoftSmoothThroughCircles.log",
+    "archive": "root/legacy-LoftSmoothThroughCircles.log",
+    "sha256": "8ff2e845b9d5c301188f437f1747b4de352575fce2ce91b58c9a666a51fb8abe",
+    "bytes": 52
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-MassOfBoxes-result.json",
+    "archive": "root/legacy-MassOfBoxes-result.json",
+    "sha256": "6fe3d5649cd3114651762e13b7ac528bca4a753d51b707280951dc5be03ec0dc",
+    "bytes": 165
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-MassOfBoxes-time.txt",
+    "archive": "root/legacy-MassOfBoxes-time.txt",
+    "sha256": "fce3a1ff841a88cdf5afaa83b00918d93630b262ce91a33c6515437bee8be79c",
+    "bytes": 768
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-MassOfBoxes.log",
+    "archive": "root/legacy-MassOfBoxes.log",
+    "sha256": "3537ae8f2b41d83f676a48cd52cd3b8ab225e2867fe8856898b57bd0c69d32ce",
+    "bytes": 39
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-MassOfExtrusions-result.json",
+    "archive": "root/legacy-MassOfExtrusions-result.json",
+    "sha256": "a743309b238ec08e1622fe9c8018b9871662b31cce38b7abacaaf47d42020888",
+    "bytes": 169
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-MassOfExtrusions-time.txt",
+    "archive": "root/legacy-MassOfExtrusions-time.txt",
+    "sha256": "d17bc4c50a200a4c491baaeebd465ebfce0a6533c6736f2e479d1e8fc3ce7f08",
+    "bytes": 775
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-MassOfExtrusions.log",
+    "archive": "root/legacy-MassOfExtrusions.log",
+    "sha256": "142794e978bb9e463f4c49e211d589053e4e069720e9114a08fad110d256eddc",
+    "bytes": 44
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-MassParallelPreservesFirstFailureAndCancellation-result.json",
+    "archive": "root/legacy-MassParallelPreservesFirstFailureAndCancellation-result.json",
+    "sha256": "2ed9fb9e23cf8aef6e08d0231d3a784b4918d3d40be66ffec0d0e9c20a26f159",
+    "bytes": 202
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-MassParallelPreservesFirstFailureAndCancellation-time.txt",
+    "archive": "root/legacy-MassParallelPreservesFirstFailureAndCancellation-time.txt",
+    "sha256": "9a69f2f0ecee8919f506e62eaf5fb62a98999d0afee60a0ff5cee8b2447cfbb6",
+    "bytes": 807
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-MassParallelPreservesFirstFailureAndCancellation.log",
+    "archive": "root/legacy-MassParallelPreservesFirstFailureAndCancellation.log",
+    "sha256": "6cd073446f1d1a7c7b672667122724e3bae8354263bd3be0e0978536f118506a",
+    "bytes": 76
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-MassParallelPreservesResultsAndInput-result.json",
+    "archive": "root/legacy-MassParallelPreservesResultsAndInput-result.json",
+    "sha256": "5de59959c16d3cf0ad21d40a7b4a74ec38a62e9824d60ee645576a9966fef571",
+    "bytes": 189
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-MassParallelPreservesResultsAndInput-time.txt",
+    "archive": "root/legacy-MassParallelPreservesResultsAndInput-time.txt",
+    "sha256": "dca4f39cfe4a0eb6e74c7d4bfbb785a7e246f1c485113eb860f3165e6b69cd26",
+    "bytes": 797
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-MassParallelPreservesResultsAndInput.log",
+    "archive": "root/legacy-MassParallelPreservesResultsAndInput.log",
+    "sha256": "40188a8b63301317ca757c57f86e82ebfdedbec876bacaedc5cf88120146de39",
+    "bytes": 64
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-MassVerticalSplineSkipsNullFlux-result.json",
+    "archive": "root/legacy-MassVerticalSplineSkipsNullFlux-result.json",
+    "sha256": "369b5459b149b3330671b6f8e37a3ceed8697ef07b436255504cd95cdf4407f5",
+    "bytes": 185
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-MassVerticalSplineSkipsNullFlux-time.txt",
+    "archive": "root/legacy-MassVerticalSplineSkipsNullFlux-time.txt",
+    "sha256": "d4c75128720c44ac34bbe69181319a1c0af5aa071b32c2778eafdc0f37e21ff7",
+    "bytes": 788
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-MassVerticalSplineSkipsNullFlux.log",
+    "archive": "root/legacy-MassVerticalSplineSkipsNullFlux.log",
+    "sha256": "c13d8ea820ccdaed937bff225299d1661044b9dcb8b7df29d0a08995eb357b79",
+    "bytes": 59
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-QuadratureStopsOnIntegrandNoise-result.json",
+    "archive": "root/legacy-QuadratureStopsOnIntegrandNoise-result.json",
+    "sha256": "58f2127bacb9ac13f6476abc53415fd27b199b4edf126d26573c825471dc40d8",
+    "bytes": 185
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-QuadratureStopsOnIntegrandNoise-time.txt",
+    "archive": "root/legacy-QuadratureStopsOnIntegrandNoise-time.txt",
+    "sha256": "3c004e357a215e098d64ca989e0d48cde1f2cdb64d4b88b39f815464b66cf97a",
+    "bytes": 788
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/legacy-QuadratureStopsOnIntegrandNoise.log",
+    "archive": "root/legacy-QuadratureStopsOnIntegrandNoise.log",
+    "sha256": "0a8442e9c7b3ab19ee78f0b638d14ed932479d99dbd29332c3bcf1ddbc775691",
+    "bytes": 59
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-baseline-length-golden-result.json",
+    "archive": "root/link-baseline-length-golden-result.json",
+    "sha256": "8e62e9e9c1753e9743422ed08e6acba34adbb18ba198a02d04c5619b04667499",
+    "bytes": 575
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-baseline-length-golden-time.txt",
+    "archive": "root/link-baseline-length-golden-time.txt",
+    "sha256": "27b4482bf7e94437f003bdcd3331e3b76b1c7bbf499ed9d8454f6762cf5572d5",
+    "bytes": 1087
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-baseline-length-golden.log",
+    "archive": "root/link-baseline-length-golden.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-baseline-mass-golden-attempt1.log",
+    "archive": "root/link-baseline-mass-golden-attempt1.log",
+    "sha256": "54c6198f6d026a2fbf5d9d52faec1b4069d89849f668cc6906707d962f3d63c2",
+    "bytes": 1638
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-baseline-mass-golden-result-attempt1.json",
+    "archive": "root/link-baseline-mass-golden-result-attempt1.json",
+    "sha256": "e1af8a8e9e767486d8bfaec181335a68d6a5b0c5d6881d8114e01ed333474ca5",
+    "bytes": 572
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-baseline-mass-golden-result.json",
+    "archive": "root/link-baseline-mass-golden-result.json",
+    "sha256": "513d3f90873bd83698178fc3d640ed2ac5aa61ecc58dd36a57da5494e10f80de",
+    "bytes": 572
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-baseline-mass-golden-time-attempt1.txt",
+    "archive": "root/link-baseline-mass-golden-time-attempt1.txt",
+    "sha256": "1191f929b113b58781c6f97769cf6d1211b28dd88de80fe78341841bbeb8ce86",
+    "bytes": 1119
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-baseline-mass-golden-time.txt",
+    "archive": "root/link-baseline-mass-golden-time.txt",
+    "sha256": "965dd311b470dea2a87317d650aca1f8889b5179d9122010c27cfb20e603aecf",
+    "bytes": 1083
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-baseline-mass-golden.log",
+    "archive": "root/link-baseline-mass-golden.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-candidate-length-golden-result.json",
+    "archive": "root/link-candidate-length-golden-result.json",
+    "sha256": "a8cfec68efd7dc38b3850ed70f2967aac1a53a9e04d6ce3bf4ae3124c54e6477",
+    "bytes": 679
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-candidate-length-golden-time.txt",
+    "archive": "root/link-candidate-length-golden-time.txt",
+    "sha256": "3577fd34d20e5636e908acb42c4b321ef211a7afd15cdb116a32834d8dac67e4",
+    "bytes": 1176
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-candidate-length-golden.log",
+    "archive": "root/link-candidate-length-golden.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-candidate-mass-golden-result.json",
+    "archive": "root/link-candidate-mass-golden-result.json",
+    "sha256": "85a7dddbcc0e4308e3f1624c64901d382caaad2de48db10e0616cf7e7e0e3ae5",
+    "bytes": 721
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-candidate-mass-golden-time.txt",
+    "archive": "root/link-candidate-mass-golden-time.txt",
+    "sha256": "a5c6e017ef34bfc6f66131422de5b0881c6ce0b37a57b67c420fb55e949b8c0f",
+    "bytes": 1211
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-candidate-mass-golden.log",
+    "archive": "root/link-candidate-mass-golden.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-candidate-probe-result.json",
+    "archive": "root/link-candidate-probe-result.json",
+    "sha256": "91eb8f4f9cc7132def0c673c25966810ecaca56a8c0386b88e9c1221a005e358",
+    "bytes": 660
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-candidate-probe-time.txt",
+    "archive": "root/link-candidate-probe-time.txt",
+    "sha256": "00b301e878e97de1b394e3005babda30dc728f4d8dbf2a633f36868a573cc6af",
+    "bytes": 1157
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/link-candidate-probe.log",
+    "archive": "root/link-candidate-probe.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/mass-architecture-before.json",
+    "archive": "root/mass-architecture-before.json",
+    "sha256": "6d30ec545c8494f8d3c73831ebb00c596dcbf43af2f6bad968e0fc3301d6b96f",
+    "bytes": 130196
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/mass-golden-run.py",
+    "archive": "root/mass-golden-run.py.txt",
+    "sha256": "13c6b6c2cc1d483df7ead1a1edb63e3b51829255fe35438ef31b5b9c98d9f6bc",
+    "bytes": 1962
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/ordinary-baseline-run.py",
+    "archive": "root/ordinary-baseline-run.py.txt",
+    "sha256": "bc2cabe0877150224772dbbfbf4b046a4556e91c335199745024dd520593ed8c",
+    "bytes": 1208
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/ordinary-length.cpp",
+    "archive": "root/ordinary-length.cpp.txt",
+    "sha256": "3a8ab8e9d57414f6391fcfd7bc959c902b153e836e9efe1b3b27331b399573d6",
+    "bytes": 1136
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/ordinary-mass-attempt1.cpp.txt",
+    "archive": "root/ordinary-mass-attempt1.cpp.txt",
+    "sha256": "47802b7f55f72b649a600b08ba0c1a9ecb61499c836a03104e8e63040188a520",
+    "bytes": 964
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/ordinary-mass.cpp",
+    "archive": "root/ordinary-mass.cpp.txt",
+    "sha256": "33b50c6a82b986c0ff80295984293719e2e2c26301bf973b13a9f4c1cdfb9a39",
+    "bytes": 969
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/ordinary-quadrature.cpp",
+    "archive": "root/ordinary-quadrature.cpp.txt",
+    "sha256": "21897e25b95314b3d4c24cf4063e17b93400026a32df061f6d8261b7ffde5d7c",
+    "bytes": 1035
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/preservation-audit.json",
+    "archive": "root/preservation-audit.json",
+    "sha256": "717743572042138cc0ea6c8415c93e2309934cb54426f1f951d4d3de038111ae",
+    "bytes": 1497
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/previous-seals.json",
+    "archive": "root/previous-seals.json",
+    "sha256": "b54a1ee7b9a00685fdd6bbb971e5520e63c20b3c57ed72d05bf9bafb45e2587c",
+    "bytes": 6813
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/probe.cpp",
+    "archive": "root/probe.cpp.txt",
+    "sha256": "9117c8867d231d01208a73a18e628cad0caadba1d40b5606ac1ef0abfe150eae",
+    "bytes": 2177
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/progress.py",
+    "archive": "root/progress.py.txt",
+    "sha256": "df772bf1ff9c3032fe804930f7147979bdee11f5ff88bc8fda5bf2c3913b7581",
+    "bytes": 223
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/protected-compile-commands.json",
+    "archive": "root/protected-compile-commands.json",
+    "sha256": "cd8904cc2400d13550d6d5a164281394640cbf3f2769578cb1f7ad8c7ae73cac",
+    "bytes": 4374
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/run.py",
+    "archive": "root/run.py.txt",
+    "sha256": "b475b710bf600ae60e22c32ea37970bfaa17461ed55df29136b6c9f9387dee3b",
+    "bytes": 3884
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/san-compile-main-result.json",
+    "archive": "root/san-compile-main-result.json",
+    "sha256": "ff7f3a46ea108a16da0a1dabe7b9626a6eb38975d4da2061fbbdd1070553c008",
+    "bytes": 618
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/san-compile-main-time.txt",
+    "archive": "root/san-compile-main-time.txt",
+    "sha256": "66c735adf839d7a8b7f738c4f2ef3d267a8e1b35041b7d1b9d233e4a97286aeb",
+    "bytes": 1105
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/san-compile-main.log",
+    "archive": "root/san-compile-main.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/san-compile-provider-result.json",
+    "archive": "root/san-compile-provider-result.json",
+    "sha256": "f92aef8246da8944f49445a50be92811473b19670c0a967e9162d94d558695ae",
+    "bytes": 619
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/san-compile-provider-time.txt",
+    "archive": "root/san-compile-provider-time.txt",
+    "sha256": "730a47af113d5762a3677beec0e2ba2209f6820b36797e9d1c1209d761eb52b1",
+    "bytes": 1108
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/san-compile-provider.log",
+    "archive": "root/san-compile-provider.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/san-compile-test-result.json",
+    "archive": "root/san-compile-test-result.json",
+    "sha256": "a9c45735aadb91bb79f7269f7f10ed5346265290482a1f43ab62dc5f70be3135",
+    "bytes": 624
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/san-compile-test-time.txt",
+    "archive": "root/san-compile-test-time.txt",
+    "sha256": "fe38ecb4dc4331b825487bca6fdfec275b835e1b24e75b956b13a69f9faa4170",
+    "bytes": 1115
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/san-compile-test.log",
+    "archive": "root/san-compile-test.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/san-link-result.json",
+    "archive": "root/san-link-result.json",
+    "sha256": "99f27d60dac4a77b89927dfe802fc3d37b0d93990224401ba3cb5d0287143beb",
+    "bytes": 788
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/san-link-time.txt",
+    "archive": "root/san-link-time.txt",
+    "sha256": "24d074430cbe3a268ce391865fab82a20b8f1ab6e980b80eb0ba1f0ad312d294",
+    "bytes": 1252
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/san-link.log",
+    "archive": "root/san-link.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/san-tests-result.json",
+    "archive": "root/san-tests-result.json",
+    "sha256": "b42ad82be53892e609230d64cb357b432ee85288a66f3d574f849bc35f9270c1",
+    "bytes": 145
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/san-tests-time.txt",
+    "archive": "root/san-tests-time.txt",
+    "sha256": "3a93a424a0acd0867cfa7536ced25a206d64fdfed376dfe99cc1d99e58777325",
+    "bytes": 756
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/san-tests.log",
+    "archive": "root/san-tests.log",
+    "sha256": "c6ad61c55297daac6870103787030cafc0cde123ac86f055ed3de86c611efe53",
+    "bytes": 319
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/staged-tests-result.json",
+    "archive": "root/staged-tests-result.json",
+    "sha256": "5c5014a7d74b2ffca7859fa86b0fe13acf7fd43b78b9780b2d337ebea1412d8c",
+    "bytes": 149
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/staged-tests-time.txt",
+    "archive": "root/staged-tests-time.txt",
+    "sha256": "0e55bade6703de26c654b5b12be21297c2d7f7e8884ffc46f5ef80764f949731",
+    "bytes": 758
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/staged-tests.log",
+    "archive": "root/staged-tests.log",
+    "sha256": "c6ad61c55297daac6870103787030cafc0cde123ac86f055ed3de86c611efe53",
+    "bytes": 319
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/build-result.json",
+    "archive": "root/v1/build-result.json",
+    "sha256": "e15c8e680105fa40dfdd55db861e5b905126d7a41c5c8926bde6d9eb0913f327",
+    "bytes": 416
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/build-time.txt",
+    "archive": "root/v1/build-time.txt",
+    "sha256": "5db6fe9cc532ab4d50106c452d8f24ba488f3fe621a20fe40aeaf2bd9417ea7b",
+    "bytes": 983
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/build-v1-interruption.json",
+    "archive": "root/v1/build-v1-interruption.json",
+    "sha256": "2e6f271d34f4870f20cfb31050f60feef680bab9da8df2c8406ffcd319089e2e",
+    "bytes": 661
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/build.log",
+    "archive": "root/v1/build.log",
+    "sha256": "2dfc5c2a20ab445dfc221b57c8dfa7a45b2e6ede6695f7d2f833d65894046dfe",
+    "bytes": 9377
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/candidate-length-golden-result.json",
+    "archive": "root/v1/candidate-length-golden-result.json",
+    "sha256": "c56bf64f5e00bfea61d43525bcb3df8b45fdedba6589578188b35223d8015f94",
+    "bytes": 160
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/candidate-length-golden-time.txt",
+    "archive": "root/v1/candidate-length-golden-time.txt",
+    "sha256": "a86f1684cd731a08fddfb5b32b2d10c4357704057b14f97fa2d7319018754187",
+    "bytes": 769
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/candidate-length-golden.log",
+    "archive": "root/v1/candidate-length-golden.log",
+    "sha256": "d75973c1d5b3f10fa37f639e55500ad3cc631ba6e3ebf0679cedcee62d869122",
+    "bytes": 342
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/candidate-ordinary-result.json",
+    "archive": "root/v1/candidate-ordinary-result.json",
+    "sha256": "051e937b7cff5f737a65bbc6171dfb79bd2c884d18716729fbb55736dd5b28f6",
+    "bytes": 155
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/candidate-ordinary-time.txt",
+    "archive": "root/v1/candidate-ordinary-time.txt",
+    "sha256": "4171a2bbcf905d18f03f18229da5e4977d1a29ad92265e7b8f8088bf2104bb25",
+    "bytes": 762
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/candidate-ordinary.log",
+    "archive": "root/v1/candidate-ordinary.log",
+    "sha256": "40d3f1eaf70847906310933e22a194f6e7034f8838f2eb7063bf570cff503993",
+    "bytes": 1356
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/candidate-velocity-result.json",
+    "archive": "root/v1/candidate-velocity-result.json",
+    "sha256": "77c970fc0ec36cf9676eac8a983ac476c2e1d3d2d4ed2f4f404a782a2151200b",
+    "bytes": 166
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/candidate-velocity-time.txt",
+    "archive": "root/v1/candidate-velocity-time.txt",
+    "sha256": "71199b4819469c6ec9c3916871d18fc04de6020162a70c0fd05e36311fb3c025",
+    "bytes": 770
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/candidate-velocity.log",
+    "archive": "root/v1/candidate-velocity.log",
+    "sha256": "36efa1c2a3aafa8404e503cedaba14b5981cadc5b444fd8a25b058d46d61babe",
+    "bytes": 69
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/compile-candidate-ordinary-result.json",
+    "archive": "root/v1/compile-candidate-ordinary-result.json",
+    "sha256": "563c19ec556373a7b7fa4f64405fd838b561261bacec8bee4c281c8f817fb0fd",
+    "bytes": 528
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/compile-candidate-ordinary-time.txt",
+    "archive": "root/v1/compile-candidate-ordinary-time.txt",
+    "sha256": "8e8818e80bc57da6b90ac8bd68f4c107dfaf49befda63556b2e50c4ccf0d7ebe",
+    "bytes": 1046
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/compile-candidate-ordinary.log",
+    "archive": "root/v1/compile-candidate-ordinary.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/compile-candidate-provider-result.json",
+    "archive": "root/v1/compile-candidate-provider-result.json",
+    "sha256": "f1d8e6f7a057d527bcba3e1f7c14828914dc81268c0f5428822e635902871329",
+    "bytes": 532
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/compile-candidate-provider-time.txt",
+    "archive": "root/v1/compile-candidate-provider-time.txt",
+    "sha256": "bb799a0ddb4b72a872a5a3c5823140c6636fa0c1453efdf27701dac765442fe2",
+    "bytes": 1042
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/compile-candidate-provider.log",
+    "archive": "root/v1/compile-candidate-provider.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/compile-staged-tests-result.json",
+    "archive": "root/v1/compile-staged-tests-result.json",
+    "sha256": "b771058eb4797ce73602768532f4b967ac606be62bbebefadbc798aa89d3b2ea",
+    "bytes": 746
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/compile-staged-tests-time.txt",
+    "archive": "root/v1/compile-staged-tests-time.txt",
+    "sha256": "8101f480a303d7f363be15e3374f7100e9228c0352668d64d8f774f7ecec5374",
+    "bytes": 1237
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/compile-staged-tests.log",
+    "archive": "root/v1/compile-staged-tests.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/configure-result.json",
+    "archive": "root/v1/configure-result.json",
+    "sha256": "62a9e991b6c7c440ab95cc9621d1be2c8b731fb37b3deb66ff7b33cc875f91d9",
+    "bytes": 160
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/configure-time.txt",
+    "archive": "root/v1/configure-time.txt",
+    "sha256": "e3be58eaf85817384affb4cc3e54e228d609b75f91dbcd0ea88ad24b6fd9e5d4",
+    "bytes": 757
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/configure.log",
+    "archive": "root/v1/configure.log",
+    "sha256": "7d90ee1efcc3ef5d1d10ec95f70c07cfc4dc3e5f53e934c23eee721066549d0e",
+    "bytes": 139
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/freeze.json",
+    "archive": "root/v1/freeze.json",
+    "sha256": "f0f2c0661dc01e8ba67dc23be778385bb9c66100af44d9e4f1c5256e5f94f945",
+    "bytes": 354
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/integrated-sources.json",
+    "archive": "root/v1/integrated-sources.json",
+    "sha256": "82cb098d75d6ad0aafabd9287b86d10c02fda0c011dc94b9fd7a2fbf48f123b9",
+    "bytes": 503
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/link-candidate-length-golden-result.json",
+    "archive": "root/v1/link-candidate-length-golden-result.json",
+    "sha256": "6490e324d5058e0bf81647cf24b95ff5344dcd04c5952423e37ee74e6382b29c",
+    "bytes": 676
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/link-candidate-length-golden-time.txt",
+    "archive": "root/v1/link-candidate-length-golden-time.txt",
+    "sha256": "4d01234d1e5261180376383567849353d78c764a29abfdf391bc2918a1807ad3",
+    "bytes": 1174
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/link-candidate-length-golden.log",
+    "archive": "root/v1/link-candidate-length-golden.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/link-candidate-probe-result.json",
+    "archive": "root/v1/link-candidate-probe-result.json",
+    "sha256": "17d5c92f10f4c3c48ea065b2bb46b910131bc95e9d8dd2efafbd2f1f112c28cc",
+    "bytes": 658
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/link-candidate-probe-time.txt",
+    "archive": "root/v1/link-candidate-probe-time.txt",
+    "sha256": "a895bd6ddf8048e728f80b675ba991b5f772cb78dab68e3bff2da8d35024ce23",
+    "bytes": 1155
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/link-candidate-probe.log",
+    "archive": "root/v1/link-candidate-probe.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/san-compile-main-result.json",
+    "archive": "root/v1/san-compile-main-result.json",
+    "sha256": "75cf4b9004f724642a89a6b7835b8bebe66c0d3e9864258d912286d8d4eda5b0",
+    "bytes": 615
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/san-compile-main-time.txt",
+    "archive": "root/v1/san-compile-main-time.txt",
+    "sha256": "76cd79bba1445ae594348cfed4efc1e5885659c8ad7058658a6f852bac58b53a",
+    "bytes": 1101
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/san-compile-main.log",
+    "archive": "root/v1/san-compile-main.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/san-compile-provider-result.json",
+    "archive": "root/v1/san-compile-provider-result.json",
+    "sha256": "80b830d6edc58ce6e25a1b505bd10d38c1fdb5f0ad29df2ad46816a7e9dbc49c",
+    "bytes": 613
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/san-compile-provider-time.txt",
+    "archive": "root/v1/san-compile-provider-time.txt",
+    "sha256": "6a14c2ec8e204868bad5c966a3a1617e6347f43f70d0a2531ac05cc02f3035f3",
+    "bytes": 1102
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/san-compile-provider.log",
+    "archive": "root/v1/san-compile-provider.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/san-compile-test-result.json",
+    "archive": "root/v1/san-compile-test-result.json",
+    "sha256": "f6173a0937135a0a796bcf356d9d2f49456e5ac8dfed8760e6a9c2a0bbc1bdee",
+    "bytes": 615
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/san-compile-test-time.txt",
+    "archive": "root/v1/san-compile-test-time.txt",
+    "sha256": "710aaf571650134d189b2e38b243ed45c88d3fb3b83a0e78b8d21c78457c8111",
+    "bytes": 1105
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/san-compile-test.log",
+    "archive": "root/v1/san-compile-test.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/san-link-result.json",
+    "archive": "root/v1/san-link-result.json",
+    "sha256": "2e6bca392719e025b46689806134319a9c3e7dcdb22b3bdb3bc64ef780e40d1c",
+    "bytes": 785
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/san-link-time.txt",
+    "archive": "root/v1/san-link-time.txt",
+    "sha256": "a0e6a801d876c930bf475918cadee266fb721ee940f46e15ce0de2be9a306985",
+    "bytes": 1250
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/san-link.log",
+    "archive": "root/v1/san-link.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/san-tests-result.json",
+    "archive": "root/v1/san-tests-result.json",
+    "sha256": "576b393cf18902c21f9352739fc456bbb1416e4e5ea8efc02407c762f4564303",
+    "bytes": 145
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/san-tests-time.txt",
+    "archive": "root/v1/san-tests-time.txt",
+    "sha256": "a699366be07390dc6de03306be1f5f4d28bcecbcb86899bd5b7686eacd77b73b",
+    "bytes": 756
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/san-tests.log",
+    "archive": "root/v1/san-tests.log",
+    "sha256": "c6ad61c55297daac6870103787030cafc0cde123ac86f055ed3de86c611efe53",
+    "bytes": 319
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/staged-tests-result.json",
+    "archive": "root/v1/staged-tests-result.json",
+    "sha256": "909afe23bdce9b88bbabccbffc2fd7023e8ef964d591d6c621b6f57c380a41b6",
+    "bytes": 148
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/staged-tests-time.txt",
+    "archive": "root/v1/staged-tests-time.txt",
+    "sha256": "fe07c8b85574fc839f46a1fcbc611ce7bb5a727a70234a71396d6a9b675244fa",
+    "bytes": 758
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v1/staged-tests.log",
+    "archive": "root/v1/staged-tests.log",
+    "sha256": "c6ad61c55297daac6870103787030cafc0cde123ac86f055ed3de86c611efe53",
+    "bytes": 319
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/compile-staged-tests-result.json",
+    "archive": "root/v2-initial-tests/compile-staged-tests-result.json",
+    "sha256": "6a706b37e3eb06ecdfac42a5b599837a8da8bd6325d8ae5d1524dd07dac558c2",
+    "bytes": 751
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/compile-staged-tests-time.txt",
+    "archive": "root/v2-initial-tests/compile-staged-tests-time.txt",
+    "sha256": "e2f76d49797a5e3f4eef55e2ae7020e4e83ae86686a5cd0aa11d876d968f8591",
+    "bytes": 1243
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/compile-staged-tests.log",
+    "archive": "root/v2-initial-tests/compile-staged-tests.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/san-compile-main-result.json",
+    "archive": "root/v2-initial-tests/san-compile-main-result.json",
+    "sha256": "eb2acca74a466ea7c8f1a268056c9856a699b82988d2687d55374b56d73548ed",
+    "bytes": 618
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/san-compile-main-time.txt",
+    "archive": "root/v2-initial-tests/san-compile-main-time.txt",
+    "sha256": "2edce38dd48dd300aaa76f16feb103f3904ce3ee8e7c4e383f0d878c9e9919c8",
+    "bytes": 1105
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/san-compile-main.log",
+    "archive": "root/v2-initial-tests/san-compile-main.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/san-compile-provider-result.json",
+    "archive": "root/v2-initial-tests/san-compile-provider-result.json",
+    "sha256": "d922def3ed0648c807507c5e78f6c7c3312718854a2a1ab5e515ba69353c3ce8",
+    "bytes": 619
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/san-compile-provider-time.txt",
+    "archive": "root/v2-initial-tests/san-compile-provider-time.txt",
+    "sha256": "03a5752df960057210ae8035be62604c4d59e19fbe69bd6df878999cbedc47ce",
+    "bytes": 1109
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/san-compile-provider.log",
+    "archive": "root/v2-initial-tests/san-compile-provider.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/san-compile-test-result.json",
+    "archive": "root/v2-initial-tests/san-compile-test-result.json",
+    "sha256": "08daa086fc6e758679e5ba871ad14f9b25397bf01d4e6e46a868c95c3bc5d60d",
+    "bytes": 621
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/san-compile-test-time.txt",
+    "archive": "root/v2-initial-tests/san-compile-test-time.txt",
+    "sha256": "c0a4971337691fbb697873d933ce699447cc5fbdced3beef71ba5a53e4b75e16",
+    "bytes": 1112
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/san-compile-test.log",
+    "archive": "root/v2-initial-tests/san-compile-test.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/san-link-result.json",
+    "archive": "root/v2-initial-tests/san-link-result.json",
+    "sha256": "7cf490ca1d8e2a0058aa6ca9ca525d8172db77564257af3b2425ace07085375c",
+    "bytes": 788
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/san-link-time.txt",
+    "archive": "root/v2-initial-tests/san-link-time.txt",
+    "sha256": "fd1196ed4912a50b4bc581923c0f0c0f052ed1650d1d4ecadc3a4e879cd9a974",
+    "bytes": 1256
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/san-link.log",
+    "archive": "root/v2-initial-tests/san-link.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/san-tests-result.json",
+    "archive": "root/v2-initial-tests/san-tests-result.json",
+    "sha256": "8d659b2b459d0e2ca25f121e2d868c0f144dc569752932aa13f561ec4513e14a",
+    "bytes": 145
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/san-tests-time.txt",
+    "archive": "root/v2-initial-tests/san-tests-time.txt",
+    "sha256": "04f6c122cbead6e8d7bc96b9de93e5b2f06479c2c2f56d858e9f4d9dd7e2d04a",
+    "bytes": 759
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/san-tests.log",
+    "archive": "root/v2-initial-tests/san-tests.log",
+    "sha256": "c6ad61c55297daac6870103787030cafc0cde123ac86f055ed3de86c611efe53",
+    "bytes": 319
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/staged-tests-result.json",
+    "archive": "root/v2-initial-tests/staged-tests-result.json",
+    "sha256": "b6bd32f7fa2aba6da6c4386e9fc4c2bf43f30ee9ee9231b39567f80c5ccceee5",
+    "bytes": 148
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/staged-tests-time.txt",
+    "archive": "root/v2-initial-tests/staged-tests-time.txt",
+    "sha256": "83acddaad5e6935902f72d66e54d209f142fbaf1a18cfbbffff0654b92e06270",
+    "bytes": 758
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/v2-initial-tests/staged-tests.log",
+    "archive": "root/v2-initial-tests/staged-tests.log",
+    "sha256": "c6ad61c55297daac6870103787030cafc0cde123ac86f055ed3de86c611efe53",
+    "bytes": 319
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/root/verify.py",
+    "archive": "root/verify.py.txt",
+    "sha256": "0467554421acf7eb6320a500e7087cf3f6970b378c7a8be663350d687b2293d5",
+    "bytes": 6928
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/final-proof/HANDOFF.md",
+    "archive": "core-v1/HANDOFF.md",
+    "sha256": "d87ca9ffd7da3c63a12b31fc2097b7720ec8369319095cedaae3745ac33b9f01",
+    "bytes": 3696
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/final-proof/MANIFEST.json",
+    "archive": "core-v1/MANIFEST.json",
+    "sha256": "1ee97059c6fafdec456e4aa99030f7ee92d1895f32b66cf589ecbca3ed4dfd65",
+    "bytes": 990
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/final-proof/MANIFEST.sha256.txt",
+    "archive": "core-v1/MANIFEST.sha256.txt",
+    "sha256": "7502366c525a8e42d15eb91c504a64978caa4e9fb245f588c18c581b86d4ee14",
+    "bytes": 80
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/final-proof/SOURCE-FREEZE.json",
+    "archive": "core-v1/SOURCE-FREEZE.json",
+    "sha256": "4bddb2c8ed209d87e5104ff658992d2e797e9a4409321934658a797ccd64ebdf",
+    "bytes": 552
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/final-proof/candidate.patch.txt",
+    "archive": "core-v1/candidate.patch.txt",
+    "sha256": "f7fdd0603f0013308a6c243154f37115fec556c813f9d0760c662dfe7d71f9c1",
+    "bytes": 12109
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/final-proof/fk_quadrature.baseline.h.txt",
+    "archive": "core-v1/fk_quadrature.baseline.h.txt",
+    "sha256": "30964c986ea45e022115223d60ae6277373d844ecced2d75b97a3ecd9b345310",
+    "bytes": 8960
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/final-proof/fk_quadrature.candidate.h.txt",
+    "archive": "core-v1/fk_quadrature.candidate.h.txt",
+    "sha256": "048c8007849e807c2721a20e90387c855a2076ba3e56bcc90cf55320e3a804b7",
+    "bytes": 15563
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/final-proof/graph-focus.json",
+    "archive": "core-v1/graph-focus.json",
+    "sha256": "fc71ffc4ed5e6916a6774b4cb0917cb7a31b08d23b546bd55207022492368385",
+    "bytes": 8375
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/v2/final-proof/HANDOFF.md",
+    "archive": "core-v2/HANDOFF.md",
+    "sha256": "336b89f7f0694f81d2ffb9402be738a70920874b2428503160338c753ba83046",
+    "bytes": 2442
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/v2/final-proof/MANIFEST.json",
+    "archive": "core-v2/MANIFEST.json",
+    "sha256": "c4236e15a580a656608b74f6ef03d408e54bd80d6a6f1adf05ed6c76e2d55659",
+    "bytes": 1332
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/v2/final-proof/MANIFEST.sha256.txt",
+    "archive": "core-v2/MANIFEST.sha256.txt",
+    "sha256": "8fd1c2fdd7aaa43db2e611047a0e146c67a5b77172cb88252f8c955fc9465e25",
+    "bytes": 80
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/v2/final-proof/SOURCE-FREEZE.json",
+    "archive": "core-v2/SOURCE-FREEZE.json",
+    "sha256": "08dfdea44f5435bad03fae837012bacc6f1726f4030c538cdbc417c5b38563af",
+    "bytes": 835
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/v2/final-proof/fk_mass.cpp.baseline.txt",
+    "archive": "core-v2/fk_mass.cpp.baseline.txt",
+    "sha256": "29d7223df812f3747d51fd07c5e966b798b6d488d3c77e4207fe32312f45621c",
+    "bytes": 35865
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/v2/final-proof/fk_mass.cpp.candidate.txt",
+    "archive": "core-v2/fk_mass.cpp.candidate.txt",
+    "sha256": "8248392ee0b7be25dd2b4217bc0ad29eeaf04c939e4e4940a12d328be45c66aa",
+    "bytes": 35868
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/v2/final-proof/fk_quadrature.h.baseline.txt",
+    "archive": "core-v2/fk_quadrature.h.baseline.txt",
+    "sha256": "048c8007849e807c2721a20e90387c855a2076ba3e56bcc90cf55320e3a804b7",
+    "bytes": 15563
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/v2/final-proof/fk_quadrature.h.candidate.txt",
+    "archive": "core-v2/fk_quadrature.h.candidate.txt",
+    "sha256": "f1ec31f8673d753192d7d9646448f30a78f16fb9ec0bac514f74680dc663d3d6",
+    "bytes": 16202
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/v2/final-proof/mass-graph-focus.json",
+    "archive": "core-v2/mass-graph-focus.json",
+    "sha256": "b49de4436fac5e5d87baa8d6f2873d73c8ca901db23956b33f07d39fe7ef7192",
+    "bytes": 32938
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/core/v2/final-proof/v1-to-v2.patch.txt",
+    "archive": "core-v2/v1-to-v2.patch.txt",
+    "sha256": "ae170470036fd64fad7b36b3987f21240446cac55bcc1af7bf14e8db6b4e8e2d",
+    "bytes": 5624
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/tests/COVERAGE.txt",
+    "archive": "tests-v1/COVERAGE.txt",
+    "sha256": "5dc96db45e553154ae595de81c4cffd80d65c9f996c16faf6c4c98e0d88a83b4",
+    "bytes": 3278
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/tests/graph-consult.json",
+    "archive": "tests-v1/graph-consult.json",
+    "sha256": "d1d82e966576142bf177e318a1a834a536847c0cb31f9d496718570a67180444",
+    "bytes": 4247
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/tests/manifest.json",
+    "archive": "tests-v1/manifest.json",
+    "sha256": "638af82ceb1e7014290bbb90aac1ca3aac6f3abe864de12e750d2c1c45ea95bc",
+    "bytes": 733
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/tests/test_quadrature_validation.cpp",
+    "archive": "tests-v1/test_quadrature_validation.cpp.txt",
+    "sha256": "88f9718de56f1488f24e0aa637c03f563d67868894437fc6af9f18c4f6f60e29",
+    "bytes": 8819
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/tests-v2/COVERAGE.txt",
+    "archive": "tests-v2/COVERAGE.txt",
+    "sha256": "984085a7ec07cd81f1bc23b196a9abb8ce7abe71713d57e2e4d0702f3b27c8a3",
+    "bytes": 2251
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/tests-v2/manifest.json",
+    "archive": "tests-v2/manifest.json",
+    "sha256": "3a6e6900cd5d906254df1075620dd941a02e69e572d55399d7a9b3b55126af7e",
+    "bytes": 705
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/tests-v2/test_quadrature_validation.cpp",
+    "archive": "tests-v2/test_quadrature_validation.cpp.txt",
+    "sha256": "451cb83e153566f4dcc280ba304f6766ad27fcb5dce8ce0c04a22265b1ee38a5",
+    "bytes": 10603
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/tests-final/COVERAGE.txt",
+    "archive": "tests-final/COVERAGE.txt",
+    "sha256": "42be0ec74d06576e15157a5295c7d55502bb2454168b9a24f969817ed4547e3a",
+    "bytes": 1118
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/tests-final/manifest.json",
+    "archive": "tests-final/manifest.json",
+    "sha256": "e7dc3612c0f7f0f62a411e0bbdcad63619b6ad89a9c3069bd41173e9dff6ffce",
+    "bytes": 436
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/tests-final/test_quadrature_validation.cpp",
+    "archive": "tests-final/test_quadrature_validation.cpp.txt",
+    "sha256": "fbdf6dde51a2c29b69c88a2d2b53990ff7d88c1c906627035c76f2b58e9ff88b",
+    "bytes": 11849
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/audit/REPORT.md",
+    "archive": "audit/REPORT.md",
+    "sha256": "32be6dafd4dedd0141cfa29102b05509c2589ba01411e8dfb59bc4e4f72266ba",
+    "bytes": 6892
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/audit/candidate-fk_quadrature.h.txt",
+    "archive": "audit/candidate-fk_quadrature.h.txt",
+    "sha256": "048c8007849e807c2721a20e90387c855a2076ba3e56bcc90cf55320e3a804b7",
+    "bytes": 15563
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/audit/candidate-static-review.json",
+    "archive": "audit/candidate-static-review.json",
+    "sha256": "8c8edb04536817a50f17424a7de237de61d6b4f61f6a2a5da063146e085db7ca",
+    "bytes": 1870
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/audit/fk_quadrature.h.txt",
+    "archive": "audit/fk_quadrature.h.txt",
+    "sha256": "30964c986ea45e022115223d60ae6277373d844ecced2d75b97a3ecd9b345310",
+    "bytes": 8960
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/audit/graph-consult.json",
+    "archive": "audit/graph-consult.json",
+    "sha256": "9ba8ad5bddcbb125d8271e778a17161c4af642d0f593fd4311ebd3571d40791f",
+    "bytes": 8380
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/audit/oracle.py.txt",
+    "archive": "audit/oracle.py.txt",
+    "sha256": "b83e47ba6845afc570d49926ade216ea1cac67f28afcd2ca1df4ca2cf602267d",
+    "bytes": 541
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/audit/python-oracles.json",
+    "archive": "audit/python-oracles.json",
+    "sha256": "4c74a5831dbed87549f4ceb89b1a343559b0284932225c8057b90819dd35c25d",
+    "bytes": 1480
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/audit/scaling-loss-oracle.json",
+    "archive": "audit/scaling-loss-oracle.json",
+    "sha256": "1064845faca0d0412089e4ffd4517642fbfd2dac5c6916d8ec2a64a8008ee61c",
+    "bytes": 474
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/audit/summary.json",
+    "archive": "audit/summary.json",
+    "sha256": "c92d388d2b93effd001178a502d3a4d63854439105503c1efb837270969f041e",
+    "bytes": 1038
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/audit/v2/REPORT-V2.md",
+    "archive": "audit/v2/REPORT-V2.md",
+    "sha256": "c2575acbe4ffa17f15cd6919728197e931d8b82c207e17aaefd8555da5befa6f",
+    "bytes": 3627
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/audit/v2/fk_mass.cpp.txt",
+    "archive": "audit/v2/fk_mass.cpp.txt",
+    "sha256": "8248392ee0b7be25dd2b4217bc0ad29eeaf04c939e4e4940a12d328be45c66aa",
+    "bytes": 35868
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/audit/v2/fk_quadrature.h.txt",
+    "archive": "audit/v2/fk_quadrature.h.txt",
+    "sha256": "f1ec31f8673d753192d7d9646448f30a78f16fb9ec0bac514f74680dc663d3d6",
+    "bytes": 16202
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/audit/v2/graph-consult.json",
+    "archive": "audit/v2/graph-consult.json",
+    "sha256": "d34da13775b2992b58a42723dcc28de43d192f35bca8f18265b3d82514254ccd",
+    "bytes": 136526
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/audit/v2/review.json",
+    "archive": "audit/v2/review.json",
+    "sha256": "794136f575fa20c1572bd20b892b223b30c9d24ac0fdefa213f8dfc297dc3305",
+    "bytes": 948
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/audit/v2/source-hashes.json",
+    "archive": "audit/v2/source-hashes.json",
+    "sha256": "300aaabc432e6bd9094dfd359e05aa22bc6e287ef9a4dd0ddf94c3cdf833432f",
+    "bytes": 177
+  },
+  {
+    "source": "/tmp/k10-quadrature-review/audit/v2/v1-to-v2.patch.txt",
+    "archive": "audit/v2/v1-to-v2.patch.txt",
+    "sha256": "ae170470036fd64fad7b36b3987f21240446cac55bcc1af7bf14e8db6b4e8e2d",
+    "bytes": 5624
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/fk_quadrature.h",
+    "archive": "workspace/kernel/fk_quadrature.h.txt",
+    "sha256": "f1ec31f8673d753192d7d9646448f30a78f16fb9ec0bac514f74680dc663d3d6",
+    "bytes": 16202
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/tests/test_quadrature_validation.cpp",
+    "archive": "workspace/kernel/tests/test_quadrature_validation.cpp.txt",
+    "sha256": "fbdf6dde51a2c29b69c88a2d2b53990ff7d88c1c906627035c76f2b58e9ff88b",
+    "bytes": 11849
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/CMakeLists.txt",
+    "archive": "workspace/kernel/CMakeLists.txt",
+    "sha256": "868812c8edd1fd4ddff86301343cae332d1cb232e5492d79858a5989cb0bbfc5",
+    "bytes": 51375
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/CMakeLists.txt",
+    "archive": "workspace/CMakeLists.txt",
+    "sha256": "2a53d89f23fde1c04c9b536800a05a1ec7ade6e85fa1d975017aed3d55107531",
+    "bytes": 63815
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/tools/generate_architecture.py",
+    "archive": "workspace/tools/generate_architecture.py.txt",
+    "sha256": "bf39d8787849a269273d27e6ed50ed18b9dd3a83e6d034ca53e1bcd91310de62",
+    "bytes": 163077
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/fk_mass.cpp",
+    "archive": "workspace/kernel/fk_mass.cpp.txt",
+    "sha256": "8248392ee0b7be25dd2b4217bc0ad29eeaf04c939e4e4940a12d328be45c66aa",
+    "bytes": 35868
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/AGENTS.md",
+    "archive": "workspace/AGENTS.md",
+    "sha256": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+    "bytes": 3985
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/CLAUDE.md",
+    "archive": "workspace/CLAUDE.md",
+    "sha256": "9d1b2a7cb18d72e35fee692d0c2cf3370c86b7327ef9b7f8d854c3c95c1dd48b",
+    "bytes": 16126
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/code-review-2026-11-15.md",
+    "archive": "workspace/docs/code-review-2026-11-15.md",
+    "sha256": "a3b3ebdb28a6b2f3b17a1fcbc2b3834a36abfd740af748f2addde17eb240483b",
+    "bytes": 30158
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/review-k10-quadratura-2026-11-17.md",
+    "archive": "workspace/docs/review-k10-quadratura-2026-11-17.md",
+    "sha256": "b5a56256cd135dba1409cebcdcca783fef515e757d6391787952b4deebba6fed",
+    "bytes": 7667
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/history/claude-prima-k10-quadratura-2026-11-17.md",
+    "archive": "workspace/docs/history/claude-prima-k10-quadratura-2026-11-17.md",
+    "sha256": "bbbf33f2582dd1122443010719bc4dfbfd7d4bca3c048b88c9dfe62acf5e41d2",
+    "bytes": 16315
+  }
+]

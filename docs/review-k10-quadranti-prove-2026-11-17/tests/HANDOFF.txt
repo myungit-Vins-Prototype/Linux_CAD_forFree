@@ -1,0 +1,27 @@
+Quadrant breakpoints validation — frozen test source
+
+Source: test_quadrant_breakpoints_validation.cpp
+SHA256: 06034d0946dcba40af414af67052dd6259b1f6c4bd8bce0818e1afb592f7412c
+Production candidate: fk_curve.cpp 7f47f426d3d19182cc2261741beb4fc6efb94ac72994946c2009863219b98011
+
+Four FK_TEST groups in one TU. Baseline MUST use substring filter SafeControls;
+InvalidRanges includes -Inf and NonProgressRange includes 1e20..1e20+1e9,
+which can hang the original loop. Parent owns external watchdog and runtimes.
+Candidate can run all four groups with separate fk_test_main.cpp.
+No thread and no new sampling cap are prescribed. No Threads dependency.
+
+SafeControls uses explicit legacy golden doubles, byte comparisons, positive /
+negative / multi-period / interior-quarter / point intervals. Signed zero and
+legacy endpoint exclusion are preserved. Fourteen consumers exercise detail,
+Circle2/3, Ellipse2/3, CylinderU, ConeU, SphereU/V, TorusU/V,
+ExtrusionCircleU, RevolutionU and RevolutionCircleV. Geometry is constructed
+before activating cancellation. Errors are checked by their specific types:
+invalid_argument for invalid ranges, domain_error for nonprogress index,
+OperationCancelled for a preactivated token. Live cancellation is deliberately
+left to the parent private probe, avoiding permanent timing/thread assertions.
+
+Rules, descriptions and typed incoming/outgoing graph edges were read before
+writing the TU; graph-consult.json is a small scoped consultation record.
+No compilation, test execution, problematic loop, repository edit or library
+copy was performed by this agent. Existing sealed evidence remains unchanged.
+Parent owns CMake integration, baseline/candidate/SAN execution and memory/docs.

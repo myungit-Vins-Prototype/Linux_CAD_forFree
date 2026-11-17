@@ -1,0 +1,33 @@
+{
+  "pass": true,
+  "scope": "Original IEEE coefficient exports before/after on the three observed public cases; Q may change privately before proof, not a global carrier-fit certificate",
+  "records": [
+    {
+      "label": "cylinder",
+      "fins": 24,
+      "sameEdgeCoefficients": true,
+      "sameCarrierCoefficients": true,
+      "sameRange": true,
+      "samePCurveCoefficients": 0,
+      "samePCurveType": 0
+    },
+    {
+      "label": "nurbs",
+      "fins": 24,
+      "sameEdgeCoefficients": true,
+      "sameCarrierCoefficients": true,
+      "sameRange": true,
+      "samePCurveCoefficients": 0,
+      "samePCurveType": 0
+    },
+    {
+      "label": "quilt-rational",
+      "fins": 4,
+      "sameEdgeCoefficients": true,
+      "sameCarrierCoefficients": true,
+      "sameRange": true,
+      "samePCurveCoefficients": 4,
+      "samePCurveType": 4
+    }
+  ]
+}

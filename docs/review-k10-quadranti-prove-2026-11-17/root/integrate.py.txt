@@ -1,0 +1,17 @@
+from pathlib import Path
+import hashlib,json
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-quadrant-review/root');b=json.loads((T/'baseline.json').read_text());sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();paths=['kernel/fk_curve.cpp','kernel/CMakeLists.txt','tools/generate_architecture.py'];test=Path('/tmp/k10-quadrant-review/tests/test_quadrant_breakpoints_validation.cpp');candidate=Path('/tmp/k10-quadrant-review/core/kernel/fk_curve.cpp');new='kernel/tests/test_quadrant_breakpoints_validation.cpp'
+for f in paths:assert sha(R/f)==b[f],f
+assert sha(candidate)=='7f47f426d3d19182cc2261741beb4fc6efb94ac72994946c2009863219b98011';assert sha(test)==json.loads((T/'test-freeze.json').read_text())['sha256'];assert not (R/new).exists()
+cm=(R/paths[1]).read_text()+'''
+# Quadranti coniche: progresso rappresentabile e cancellazione cooperativa.
+add_executable(forgekernel_quadrant_breakpoints_validation_tests tests/fk_test_main.cpp
+    tests/test_quadrant_breakpoints_validation.cpp)
+target_link_libraries(forgekernel_quadrant_breakpoints_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_quadrant_breakpoints_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_quadrant_breakpoints_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_quadrant_breakpoints_validation_tests COMMAND forgekernel_quadrant_breakpoints_validation_tests)
+set_tests_properties(forgekernel_quadrant_breakpoints_validation_tests PROPERTIES TIMEOUT 30)
+'''
+gen=(R/paths[2]).read_text();anchor=" 'kernel/fk_pcurve.cpp':";assert gen.count(anchor)==1;gen=gen.replace(anchor," 'kernel/fk_curve.cpp': ('kernel', 'Curve esatte Line/Circle/Ellipse, trim e trasformazioni: quadrantBreakpoints condiviso con le superfici conserva formula e tolleranza legacy, richiede intervalli finiti ordinati, rifiuta indici double senza avanzamento e verifica la cancellazione a ogni iterazione. Nessun cap arbitrario o normalizzazione di fase; range puntuali conservati.'),\n 'kernel/tests/test_quadrant_breakpoints_validation.cpp': ('tests', 'Quadranti su 14 consumatori reali: golden bit-identici su range ordinari e puntuali, intervalli NaN/Inf/invertiti rifiutati, indice non rappresentabile a fase1e20 e cancellazione preattiva. Baseline patologica soltanto con watchdog esterno.'),\n"+anchor,1)
+(R/paths[0]).write_bytes(candidate.read_bytes());(R/new).write_bytes(test.read_bytes());(R/paths[1]).write_text(cm);(R/paths[2]).write_text(gen);j={f:sha(R/f) for f in paths+[new]};(T/'integrated-sources.json').write_text(json.dumps(j,indent=2)+'\n');print(j)

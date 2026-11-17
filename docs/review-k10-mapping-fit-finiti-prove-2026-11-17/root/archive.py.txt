@@ -1,0 +1,37 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-global-audit-review');M=Path('/tmp/review-ram-2026-11-17');P=R/'docs/review-k10-mapping-fit-finiti-prove-2026-11-17';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();assert not P.exists()
+components=[('core',T/'core/final-proof','MANIFEST.json','f097b139679fd22d4303eb15e34ec0aaf6dbe1fb63a6c6da5eeedfec93f55082'),('audit',T/'audit/final-proof','MANIFEST.json','31f4f194ad3c394bd72f6c53ab744120732c90e9cdbaaa26b88fc23737fd497a'),('tests',T/'tests','manifest.json','2b661ce9cdba98042a07fd349ae901d8d80bc6ee17c1ee9ec85298cbb2208ce6')]
+for label,d,name,h in components:
+ assert sha(d/name)==h;j=json.loads((d/name).read_text());files=j['files'];entries=files if isinstance(files,list) else [{'path':f,'sha256':x} for f,x in files.items()]
+ for e in entries:assert sha(d/e['path'])==e['sha256']
+renames={}
+def copy(d,label):
+ for p in d.rglob('*'):
+  if not p.is_file() or '__pycache__' in p.parts or p.name=='package-result.json':continue
+  p.read_text();assert p.suffix not in {'.o','.a','.prt','.step','.body'};rel=str(p.relative_to(d));dest=rel+'.txt' if p.suffix in {'.cpp','.h','.py'} else rel;q=P/label/dest;q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes())
+  if rel!=dest:renames[label+'/'+rel]=label+'/'+dest
+for label,d,_,_ in components:copy(d,label)
+copy(T/'root','root');copy(M,'memory-cleanup')
+files=set(json.loads((T/'root/integrated-sources.json').read_text()))|{'AGENTS.md','CLAUDE.md','docs/code-review-2026-11-15.md','docs/review-k10-mapping-fit-finiti-2026-11-17.md','docs/history/claude-prima-k10-mapping-fit-finiti-2026-11-17.md'};source={}
+for f in sorted(files):p=R/f;q=P/'workspace'/(f+'.txt');q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes());source[f]=sha(p)
+(P/'source-manifest.json').write_text(json.dumps(source,indent=2)+'\n');(P/'component-path-map.json').write_text(json.dumps(renames,indent=2)+'\n')
+(P/'README.txt').write_text('''Review K10: fit non finiti e memoria temporanea — 17 novembre 2026
+
+Rimossi284 ELF/archivi ricreabili da staging conclusi in /tmp (tmpfs),15.065.226.318 byte circa14GiB. Piani con hash/inode/dimensioni, misure prima/dopo e risultati in memory-cleanup/. Non sono stati chiusi processi o eliminati CAD, sorgenti, log, JSON, prove sigillate o file della build. Cartelle QA della build solo ispezionate su richiesta utente: cancellabili se non servono più le copie CAD/risultati storici contenuti; nessuna cancellazione eseguita in forgecad-release. A fine lavoro eliminati anche11 ELF/oggetti privati nuovi,28.063.696byte; log/hash/sorgenti conservati. Compilazioni seriali, mappa con un worker, nessuna copia di archivio statico.
+
+Correzione produzione limitata a fk_mapping_fit.cpp, SHA03d21ceab86aead510559aee7101ade9a4aba8b1ef516671943b0bfa823fd001. Vecchio std::max ignorava un NaN nelle sonde interne. API reale con jet numerico predefinito: baseline ACCEPTED con superficie e deviazione1,57009e-16, candidata REJECTED senza pubblicare risultato. Controlli finiti su callback/jet/poli/residui, griglie finite crescenti e tolleranza valida; aggiornamento deviation dopo costruzione riuscita. Formule, sonde, raffinamento, gradi e cap invariati; il fit resta campionato e Newton/globale aperti. Nessun documento CAD pubblico dichiarato risolto e33rilievi invariati.
+
+Baseline nuova TU3/6, candidata6/6 Release e6/6 ASan/UBSan con leak detection attiva. Strumentate una TU produzione, una TU test e main, resto kernel Release; non è prova di memoria dell’intera app. App completa più due target kernel PASS;2/2CTest senza skip, runner nonPlane12/12 include i sei nuovi gruppi. Audit indipendente statico Sol, nessun blocker; nessun runtime attribuito all’auditor/tester/core, che hanno prodotto solo staging testuale. Runtime, integrazione e build root. Nessun test UI, suite generale483, nuovaCI, commit/push o riavvio app aperta.
+
+Architettura792nodi/11636relazioni/402TU, zero errori; hash di tutti i sorgenti e configurazione, JSON incorporato nell’HTML, chiamanti/include/riferimenti nei due versi e --check PASS. Generati ignorati non versionati. Preservati32pacchetti precedenti/4501artefatti e7106dei7111file baseline; solo5modifiche esistenti attese (fit, CMake, generatore, review, memoria), elencate nell’audit. HEAD/origin47c7c19 e indice vuoto invariati. Memoria16333byte con archivio completo precedente.
+
+Tutto il payload è UTF-8, nessun ELF/oggetto/archivio/CAD. Sorgenti/script attivi hanno suffisso aggiuntivo.txt; component-path-map.json conserva le rinomine. I manifest dei componenti descrivono i percorsi di staging originari, verificati prima della copia; SHA256SUMS verifica i percorsi effettivi dell’intero pacchetto, compresi quei manifest. Ricreare in un nuovo staging: non eseguire script mutanti dentro le prove sigillate. Rapporto esterno e root/ contengono comandi, tempi, hash dei binari finali e limiti delle verifiche. La CI storica non certifica queste modifiche locali non committate.
+''')
+entries=[]
+for p in sorted(P.rglob('*')):
+ if p.is_file():p.read_text();entries.append((str(p.relative_to(P)),sha(p)))
+seal=P/'SHA256SUMS';seal.write_text(''.join(h+'  '+f+'\n' for f,h in entries))
+for f,h in entries:assert sha(P/f)==h
+for f,h in source.items():assert sha(R/f)==h
+j={'path':str(P),'files_without_seal':len(entries),'bytes_without_seal':sum((P/f).stat().st_size for f,h in entries),'seal_sha256':sha(seal)};(T/'root/package-result.json').write_text(json.dumps(j,indent=2)+'\n');print(j)

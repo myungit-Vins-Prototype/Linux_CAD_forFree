@@ -1,0 +1,14 @@
+from pathlib import Path
+import hashlib,json
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-offset-pose-review');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();b=json.loads((T/'root/baseline.json').read_text())
+assert sha(T/'core/kernel/fk_offset.cpp')=='07a3f6e60cfd2ed659b6f9ea74b7596c5504130cfe9a78ecd658bbfd901f8aa2'
+assert sha(T/'tests/test_shell_pose.cpp')=='3a0c30574a95bb95cde0b5972ce34a4945da58bb80de719ab48b7a05183e14bf'
+assert '3/3' in (T/'tests/candidate-three-final.log').read_text()
+for f in ['kernel/fk_offset.cpp','kernel/CMakeLists.txt','tools/generate_architecture.py']:assert sha(R/f)==b[f],f
+assert not (R/'kernel/tests/test_shell_pose.cpp').exists()
+c=(R/'kernel/CMakeLists.txt').read_text();needle='# Fit con limite continuo del residuo geometrico e fallimenti atomici, senza Qt/OCCT.';assert c.count(needle)==1;c=c.replace(needle,'# Proiezioni locali: svuotamento libero dopo scala e posa, genealogia e input immutato.\n'+(T/'tests/CMake-block.txt').read_text()+'\n'+needle)
+g=(R/'tools/generate_architecture.py').read_text();needle=" 'kernel/tests/test_shell.cpp':";assert g.count(needle)==1;g=g.replace(needle," 'kernel/tests/test_shell_pose.cpp': ('tests', 'Svuotamento della fixture libera cucita dopo scala e rotazione: tre casi pubblici, topologia, origine esplicita delle facce, misure puntuali dello spessore, codec e input immutato; regressioni senza Qt/OCCT, non certificati globali.'),\n"+needle)
+needle='Helper interni Plane per costruzione e verifica delle pcurve con metrica fisica, budget transazionali e ricontrollo dei coefficienti effettivi.';assert g.count(needle)==1;g=g.replace(needle,needle+' Proiezione locale con ricerca lineare sulla distanza 3D fino a mancato miglioramento o passo esattamente nullo, senza arresto relativo alla grandezza UV; limiti e budget del fit invariati.')
+updates={'kernel/fk_offset.cpp':(T/'core/kernel/fk_offset.cpp').read_text(),'kernel/tests/test_shell_pose.cpp':(T/'tests/test_shell_pose.cpp').read_text(),'kernel/CMakeLists.txt':c,'tools/generate_architecture.py':g}
+for f,s in updates.items():(R/f).write_text(s)
+j={f:sha(R/f) for f in updates};(T/'root/integrated-sources.json').write_text(json.dumps(j,indent=2)+'\n');print(j)

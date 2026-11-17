@@ -1,0 +1,803 @@
+# Kernel geometrico ForgeCAD: C++17 puro, senza Qt e senza OpenCASCADE.
+# OpenCASCADE serve solo ai test di confronto (vedi occt_tests/).
+include(CheckCXXSourceCompiles)
+check_cxx_source_compiles("
+    #include <charconv>
+    int main() {
+        double value = 0;
+        const char text[] = \"1.5\";
+        return int(std::from_chars(text, text + 3, value, std::chars_format::general).ec);
+    }
+" FORGEKERNEL_HAS_FLOAT_FROM_CHARS)
+set_source_files_properties(fk_exchange.cpp PROPERTIES COMPILE_DEFINITIONS
+    FORGEKERNEL_HAS_FLOAT_FROM_CHARS=$<BOOL:${FORGEKERNEL_HAS_FLOAT_FROM_CHARS}>)
+
+add_library(forgekernel STATIC
+    fk_precision.h
+    fk_math.h
+    fk_math.cpp
+    fk_predicates.h
+    fk_predicates.cpp
+    fk_bernstein.h
+    fk_bernstein.cpp
+    fk_curve.h
+    fk_curve.cpp
+    fk_curve_ops.h
+    fk_curve_ops.cpp
+    fk_quadrature.h
+    fk_bspline_basis.h
+    fk_bspline_basis.cpp
+    fk_bspline.h
+    fk_bspline.cpp
+    fk_surface.h
+    fk_surface.cpp
+    fk_bspline_surface.h
+    fk_bspline_surface.cpp
+    fk_curve_algo.h
+    fk_curve_length_cache.h
+    fk_curve_algo.cpp
+    fk_surface_algo.h
+    fk_surface_algo.cpp
+    fk_face_normal_bounds.h
+    fk_face_normal_bounds.cpp
+    fk_sketch_projection.h
+    fk_sketch_projection.cpp
+    fk_surface_distance.h
+    fk_surface_distance.cpp
+    fk_topology.h
+    fk_topology.cpp
+    fk_body_check.h
+    fk_body_check.cpp
+    fk_profile.h
+    fk_profile.cpp
+    fk_extrude.h
+    fk_extrude.cpp
+    fk_primitives.h
+    fk_primitives.cpp
+    fk_pcurve.h
+    fk_pcurve.cpp
+    fk_micro.h
+    fk_micro.cpp
+    fk_mass.h
+    fk_mass.cpp
+    fk_bspline_isoline.h
+    fk_bspline_isoline.cpp
+    fk_intersect.h
+    fk_intersect.cpp
+    fk_marching.h
+    fk_marching.cpp
+    fk_apparent_contour.h
+    fk_apparent_contour.cpp
+    fk_classify.h
+    fk_classify_uv.h
+    fk_classify.cpp
+    fk_cancel.h
+    fk_parallel.h
+    fk_body_io.h
+    fk_body_io.cpp
+    fk_boolean.h
+    fk_boolean.cpp
+    fk_boolean_boundary.h
+    fk_boolean_boundary.cpp
+    fk_solid_trim.cpp
+    fk_solid_trim.h
+    fk_unify.h
+    fk_unify.cpp
+    fk_history.h
+    fk_history.cpp
+    fk_tessellate.h
+    fk_tessellate.cpp
+    fk_nurbs.h
+    fk_nurbs.cpp
+    fk_nurbs_join.cpp
+    fk_curve_surface.h
+    fk_curve_surface.cpp
+    fk_revolve.h
+    fk_revolve.cpp
+    fk_blend_paths.h
+    fk_blend_paths.cpp
+    fk_blend.h
+    fk_blend.cpp
+    fk_blend_loop.h
+    fk_blend_loop.cpp
+    fk_blend_model.h
+    fk_blend_polar.h
+    fk_blend_polar.cpp
+    fk_blend_surface.h
+    fk_blend_surface.cpp
+    fk_blend_contour.h
+    fk_blend_contour.cpp
+    fk_blend_mitre.h
+    fk_blend_mitre.cpp
+    fk_blend_section_curve.h
+    fk_blend_section_curve.cpp
+    fk_blend_contact_breaks.h
+    fk_blend_contact_breaks.cpp
+    fk_sheet.h
+    fk_surface_tools.h
+    fk_surface_tools.cpp
+    fk_surface_poles.cpp
+    fk_surface_poles_influence.h
+    fk_surface_poles_influence.cpp
+    fk_surface_poles_constraints.h
+    fk_surface_poles_constraints.cpp
+    fk_surface_poles_jets.h
+    fk_surface_poles_jets.cpp
+    fk_surface_poles_conversion.h
+    fk_surface_poles_conversion.cpp
+    fk_surface_refit.h
+    fk_surface_refit.cpp
+    fk_body_collection.cpp
+    fk_surface_mapping.cpp
+    fk_surface_curve_bounds.h
+    fk_surface_curve_bounds.cpp
+    fk_sheet_join_validation.h
+    fk_sheet_join_validation.cpp
+    fk_affine_surface_fit.h
+    fk_affine_surface_fit.cpp
+    fk_mapping_carrier.h
+    fk_mapping_carrier.cpp
+    fk_mapping_fit.cpp
+    fk_planar_flatten.h
+    fk_planar_flatten.cpp
+    fk_quilt_mapping.cpp
+    fk_sheet.cpp
+    fk_offset.h
+    fk_offset.cpp
+    fk_curve_fit_bounds.h
+    fk_curve_fit_bounds.cpp
+    fk_curve_projection.h
+    fk_curve_projection.cpp
+    fk_open_offset.h
+    fk_open_offset.cpp
+    fk_offset_support.h
+    fk_offset_support.cpp
+    fk_sew.h
+    fk_sew.cpp
+    fk_planar.h
+    fk_planar.cpp
+    fk_boundary.h
+    fk_boundary.cpp
+    fk_fill.h
+    fk_fill.cpp
+    fk_project.h
+    fk_project.cpp
+    fk_thicken.h
+    fk_thicken.cpp
+    fk_shell.h
+    fk_shell.cpp
+    fk_transform.h
+    fk_transform.cpp
+    fk_draft.h
+    fk_draft.cpp
+    fk_hermite.h
+    fk_hermite.cpp
+    fk_helix.h
+    fk_helix.cpp
+    fk_helix_projection.h
+    fk_helix_projection.cpp
+    fk_sweep.h
+    fk_sweep.cpp
+    fk_sweep_atlas.h
+    fk_sweep_atlas.cpp
+    fk_sweep_surface_validation.h
+    fk_sweep_surface_validation.cpp
+    fk_sweep_caps.h
+    fk_sweep_caps.cpp
+    fk_sweep_analytic_bridge.h
+    fk_sweep_analytic_bridge.cpp
+    fk_loft_knots.h
+    fk_loft_knots.cpp
+    fk_loft.h
+    fk_loft_merge.cpp
+    fk_loft.cpp
+    fk_loft_guide_constraints.h
+    fk_loft_guide_constraints.cpp
+    fk_loft_profiles.h
+    fk_loft_profiles.cpp
+    fk_loft_sections.cpp
+    fk_exchange.h
+    fk_exchange.cpp
+    fk_step.h
+    fk_step.cpp
+    fk_iges.h
+    fk_iges.cpp
+)
+target_include_directories(forgekernel PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+# Le booleane calcolano le intersezioni tra le facce in parallelo (std::thread).
+find_package(Threads REQUIRED)
+target_link_libraries(forgekernel PUBLIC Threads::Threads)
+target_compile_features(forgekernel PUBLIC cxx_std_17)
+# Il kernel e' codice numerico nel percorso caldo (proiezioni, intersezioni):
+# lo si compila ottimizzato anche in Debug, senza perdere i simboli.
+target_compile_options(forgekernel PRIVATE -Wall -Wextra -Wpedantic -O2 -g)
+# Le ricorrenze specializzate e generiche devono arrotondare gli stessi
+# passaggi: la contrazione implicita a FMA cambia i prefissi delle derivate
+# e i segni dei residui geometrici su x86-64-v3. Manteniamo SIMD/O2 e le
+# std::fma esplicite dei predicati esatti. Vale anche per le funzioni inline
+# del kernel compilate nei chiamanti C++/Objective-C++ (non per CUDA).
+target_compile_options(forgekernel PUBLIC
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-ffp-contract=off>"
+    "$<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-ffp-contract=off>"
+)
+# I validatori usano intervalli outward: niente riassociazioni o assunzioni
+# di finitezza implicite, anche se una configurazione esterna abilita fast-math.
+set_source_files_properties(fk_mass.cpp fk_profile.cpp fk_curve_algo.cpp fk_loft.cpp fk_sweep_surface_validation.cpp fk_sweep_caps.cpp
+    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_helix_projection.cpp fk_project.cpp fk_mapping_carrier.cpp fk_surface_mapping.cpp fk_sheet.cpp fk_blend_mitre.cpp fk_blend_surface.cpp fk_blend_section_curve.cpp fk_affine_surface_fit.cpp fk_surface_curve_bounds.cpp fk_sheet_join_validation.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+set_target_properties(forgekernel PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+# Test di confronto con OpenCASCADE (OCCT): OCCT e' solo un riferimento per i
+# test e non entra mai in forgekernel ne' nell'applicazione. Sta in una cartella
+# CMake separata perche' la configurazione di OCCT aggiunge definizioni a livello
+# di cartella (HAVE_TK, OCC_CONVERT_SIGNALS, ...) che cosi' non raggiungono gli
+# altri target. Si escludono con -DFORGECAD_BUILD_OCCT_TESTS=OFF.
+if(FORGECAD_BUILD_OCCT_TESTS)
+    add_subdirectory(occt_tests)
+endif()
+
+# Offset/spessore di lamine e continuazione dei supporti, senza OCCT.
+add_executable(forgekernel_open_offset_tests tests/fk_test_main.cpp tests/test_open_offset.cpp)
+target_link_libraries(forgekernel_open_offset_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_open_offset_tests PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(forgekernel_open_offset_tests PRIVATE FORGEKERNEL_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
+set_target_properties(forgekernel_open_offset_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_open_offset_tests COMMAND forgekernel_open_offset_tests)
+# Le cinque regressioni includono due costruzioni Shower Head con NURBS
+# dense e richiedono circa 600 secondi CPU: sui runner a due core 180 s
+# interrompono un calcolo valido. Stesso budget della suite kernel generale.
+set_tests_properties(forgekernel_open_offset_tests PROPERTIES TIMEOUT 900)
+
+# Nodi quasi coincidenti delle guide e continuita' NURBS, senza OCCT.
+add_executable(forgekernel_loft_knots_tests tests/fk_test_main.cpp tests/test_loft_knots.cpp)
+target_link_libraries(forgekernel_loft_knots_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_loft_knots_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_loft_knots_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_loft_knots_tests COMMAND forgekernel_loft_knots_tests)
+
+# Raccordi simultanei ai poli multipli e cambi di convessita', senza OCCT.
+add_executable(forgekernel_polar_blend_tests tests/fk_test_main.cpp tests/test_polar_blend.cpp)
+target_link_libraries(forgekernel_polar_blend_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_polar_blend_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_polar_blend_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_polar_blend_tests COMMAND forgekernel_polar_blend_tests)
+
+# Istanze esatte NURBS, specchi e persistenza senza duplicare i poli.
+add_executable(forgekernel_surface_instances_tests tests/fk_test_main.cpp tests/test_surface_instances.cpp)
+target_link_libraries(forgekernel_surface_instances_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_surface_instances_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_surface_instances_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_surface_instances_tests COMMAND forgekernel_surface_instances_tests)
+
+# Robustezza dei formati propri, indipendente dalla presenza di OCCT.
+add_executable(forgekernel_exchange_robustness_tests
+    tests/fk_test_main.cpp tests/test_exchange_robustness.cpp)
+target_link_libraries(forgekernel_exchange_robustness_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_exchange_robustness_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_exchange_robustness_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_exchange_robustness_tests COMMAND forgekernel_exchange_robustness_tests)
+set_tests_properties(forgekernel_exchange_robustness_tests PROPERTIES TIMEOUT 30)
+
+# Genealogia delle operazioni: solo il kernel, senza OCCT (eseguibile anche
+# dove le librerie di riferimento non ci sono).
+add_executable(forgekernel_history_tests
+    tests/fk_test.h
+    tests/fk_test_main.cpp
+    tests/test_history.cpp
+)
+target_link_libraries(forgekernel_history_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_history_tests PRIVATE -Wall -Wextra -Wpedantic -O2 -g)
+set_target_properties(forgekernel_history_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_history_tests COMMAND forgekernel_history_tests)
+
+# Diagnostica del raccordo non locale: non e' collegata all'applicazione.
+# Il self-test controlla casi geometrici analitici, senza dipendere da OCCT.
+add_executable(forgekernel_blend_probe
+    tests/probe_blend_candidates.cpp
+    tests/probe_trimmed_sphere.h
+)
+target_link_libraries(forgekernel_blend_probe PRIVATE forgekernel)
+target_compile_options(forgekernel_blend_probe PRIVATE -Wall -Wextra -Wpedantic -O2 -g)
+set_target_properties(forgekernel_blend_probe PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_blend_probe_self_test COMMAND forgekernel_blend_probe --self-test)
+
+# Politica delle tolleranze: collegamento al solo kernel proprio.
+add_executable(forgekernel_tolerance_tests
+    tests/fk_test_main.cpp
+    tests/test_tolerance.cpp
+)
+target_link_libraries(forgekernel_tolerance_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_tolerance_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_tolerance_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_tolerance_tests COMMAND forgekernel_tolerance_tests)
+
+# Geometria delle nuove funzioni, eseguibile anche senza il riferimento OCCT.
+add_executable(forgekernel_surface_tools_tests tests/fk_test_main.cpp tests/test_surface_tools.cpp tests/test_surface_poles_constraints.cpp tests/test_surface_poles_conversion.cpp tests/test_surface_poles_influence.cpp tests/test_fill.cpp)
+target_link_libraries(forgekernel_surface_tools_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_surface_tools_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_surface_tools_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_surface_tools_tests COMMAND forgekernel_surface_tools_tests)
+set_tests_properties(forgekernel_surface_tools_tests PROPERTIES TIMEOUT 180)
+
+# Raccordi conici e variabili: geometria e stazioni in lunghezza d'arco.
+add_executable(forgekernel_blend_profile_tests tests/fk_test_main.cpp tests/test_blend_profiles.cpp)
+target_link_libraries(forgekernel_blend_profile_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_blend_profile_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_blend_profile_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_blend_profile_tests COMMAND forgekernel_blend_profile_tests)
+set_tests_properties(forgekernel_blend_profile_tests PROPERTIES TIMEOUT 60)
+
+# Orientamento delle facce rifilate e curva da doppia proiezione: solo kernel proprio.
+add_executable(forgekernel_face_normal_bounds_tests tests/fk_test_main.cpp tests/test_face_normal_bounds.cpp)
+target_link_libraries(forgekernel_face_normal_bounds_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_face_normal_bounds_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_face_normal_bounds_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_face_normal_bounds_tests COMMAND forgekernel_face_normal_bounds_tests)
+set_tests_properties(forgekernel_face_normal_bounds_tests PROPERTIES TIMEOUT 30)
+
+add_executable(forgekernel_sketch_projection_tests tests/test_sketch_projection.cpp)
+target_link_libraries(forgekernel_sketch_projection_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_sketch_projection_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_sketch_projection_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_sketch_projection_tests COMMAND forgekernel_sketch_projection_tests)
+set_tests_properties(forgekernel_sketch_projection_tests PROPERTIES TIMEOUT 60)
+
+# Contatti B-rep e riferimenti esatti alle curve proiettate: solo kernel proprio.
+add_executable(forgekernel_projected_curve_reference_tests tests/test_projected_curve_references.cpp)
+target_link_libraries(forgekernel_projected_curve_reference_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_projected_curve_reference_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_projected_curve_reference_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_projected_curve_reference_tests COMMAND forgekernel_projected_curve_reference_tests)
+set_tests_properties(forgekernel_projected_curve_reference_tests PROPERTIES TIMEOUT 60)
+
+add_executable(forgekernel_surface_parameterization_tests tests/fk_test_main.cpp tests/test_surface_parameterization.cpp)
+target_link_libraries(forgekernel_surface_parameterization_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_surface_parameterization_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_surface_parameterization_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_surface_parameterization_tests COMMAND forgekernel_surface_parameterization_tests)
+set_tests_properties(forgekernel_surface_parameterization_tests PROPERTIES TIMEOUT 60)
+
+add_executable(forgekernel_disjoint_union_tests tests/fk_test_main.cpp tests/test_disjoint_union.cpp)
+target_link_libraries(forgekernel_disjoint_union_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_disjoint_union_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_disjoint_union_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_disjoint_union_tests COMMAND forgekernel_disjoint_union_tests)
+set_tests_properties(forgekernel_disjoint_union_tests PROPERTIES TIMEOUT 60)
+
+
+# Loft con guide implicite esatte e sezioni piane da riferimenti spaziali.
+# Indipendente da OpenCASCADE e dai documenti esterni dell'utente.
+add_executable(forgekernel_loft_projected_guide_tests tests/test_loft_projected_guides.cpp)
+target_link_libraries(forgekernel_loft_projected_guide_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_loft_projected_guide_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_loft_projected_guide_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_loft_projected_guide_tests COMMAND forgekernel_loft_projected_guide_tests)
+set_tests_properties(forgekernel_loft_projected_guide_tests PROPERTIES TIMEOUT 120)
+
+# Continuita' interna e invarianza della forma loft: solo kernel proprio.
+add_executable(forgekernel_loft_shape_tests tests/test_loft_shape.cpp)
+target_link_libraries(forgekernel_loft_shape_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_loft_shape_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_loft_shape_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_loft_shape_tests COMMAND forgekernel_loft_shape_tests)
+set_tests_properties(forgekernel_loft_shape_tests PROPERTIES TIMEOUT 120)
+
+# Sezioni proiettate/estratte implicite: costruzione NURBS entro budget, sorgenti immutate.
+add_executable(forgekernel_loft_projected_section_tests tests/test_loft_projected_sections.cpp)
+target_link_libraries(forgekernel_loft_projected_section_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_loft_projected_section_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_loft_projected_section_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_loft_projected_section_tests COMMAND forgekernel_loft_projected_section_tests)
+set_tests_properties(forgekernel_loft_projected_section_tests PROPERTIES TIMEOUT 120)
+
+# Condizioni trasversali alle guide: direzioni, G1, forma e sezioni esatte.
+add_executable(forgekernel_loft_complexity_tests tests/fk_test_main.cpp tests/test_loft_complexity.cpp)
+target_link_libraries(forgekernel_loft_complexity_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_loft_complexity_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_loft_complexity_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_loft_complexity_tests COMMAND forgekernel_loft_complexity_tests)
+set_tests_properties(forgekernel_loft_complexity_tests PROPERTIES TIMEOUT 120)
+
+add_executable(forgekernel_loft_guide_constraint_tests tests/test_loft_guide_constraints.cpp)
+target_link_libraries(forgekernel_loft_guide_constraint_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_loft_guide_constraint_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_loft_guide_constraint_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_loft_guide_constraint_tests COMMAND forgekernel_loft_guide_constraint_tests)
+set_tests_properties(forgekernel_loft_guide_constraint_tests PROPERTIES TIMEOUT 120)
+
+# Regolarita degli offset, riconoscimento esatto e cancellazione: solo kernel proprio.
+add_executable(forgekernel_offset_validation_tests tests/fk_test_main.cpp tests/test_offset_validation.cpp)
+target_link_libraries(forgekernel_offset_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_offset_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_offset_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_offset_validation_tests COMMAND forgekernel_offset_validation_tests)
+set_tests_properties(forgekernel_offset_validation_tests PROPERTIES TIMEOUT 60)
+
+# Proiezioni locali: svuotamento libero dopo scala e posa, genealogia e input immutato.
+add_executable(forgekernel_shell_pose_tests tests/fk_test_main.cpp tests/test_shell_pose.cpp)
+target_link_libraries(forgekernel_shell_pose_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_shell_pose_tests PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(forgekernel_shell_pose_tests PRIVATE FORGEKERNEL_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
+set_target_properties(forgekernel_shell_pose_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_shell_pose_tests COMMAND forgekernel_shell_pose_tests)
+set_tests_properties(forgekernel_shell_pose_tests PROPERTIES TIMEOUT 180)
+
+# Fit con limite continuo del residuo geometrico e fallimenti atomici, senza Qt/OCCT.
+add_executable(forgekernel_curve_fit_validation_tests tests/fk_test_main.cpp tests/test_curve_fit_validation.cpp)
+target_link_libraries(forgekernel_curve_fit_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_curve_fit_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_curve_fit_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_curve_fit_validation_tests COMMAND forgekernel_curve_fit_validation_tests)
+set_tests_properties(forgekernel_curve_fit_validation_tests PROPERTIES TIMEOUT 120)
+
+add_executable(forgekernel_offset_split_crease_tests tests/test_offset_split_creases.cpp)
+target_link_libraries(forgekernel_offset_split_crease_tests PRIVATE forgekernel)
+target_compile_definitions(forgekernel_offset_split_crease_tests PRIVATE FORGECAD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_compile_options(forgekernel_offset_split_crease_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_offset_split_crease_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_offset_split_crease_tests COMMAND forgekernel_offset_split_crease_tests)
+set_tests_properties(forgekernel_offset_split_crease_tests PROPERTIES TIMEOUT 60)
+
+add_executable(forgekernel_blend_contact_break_tests tests/fk_test_main.cpp tests/test_blend_contact_breaks.cpp)
+target_link_libraries(forgekernel_blend_contact_break_tests PRIVATE forgekernel)
+target_compile_definitions(forgekernel_blend_contact_break_tests PRIVATE FORGECAD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_compile_options(forgekernel_blend_contact_break_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_blend_contact_break_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_blend_contact_break_tests COMMAND forgekernel_blend_contact_break_tests)
+set_tests_properties(forgekernel_blend_contact_break_tests PROPERTIES TIMEOUT 60)
+
+add_executable(forgekernel_plane_jets_tests tests/test_bspline_plane_jets.cpp)
+target_link_libraries(forgekernel_plane_jets_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_plane_jets_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_plane_jets_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_plane_jets_tests COMMAND forgekernel_plane_jets_tests)
+set_tests_properties(forgekernel_plane_jets_tests PROPERTIES TIMEOUT 30)
+
+# Derivate polinomiali stabili e lunghezze di curve fitte, senza OCCT.
+add_executable(forgekernel_bspline_derivative_tests tests/fk_test_main.cpp tests/test_bspline_derivatives.cpp)
+target_link_libraries(forgekernel_bspline_derivative_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_bspline_derivative_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_bspline_derivative_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_bspline_derivative_tests COMMAND forgekernel_bspline_derivative_tests)
+set_tests_properties(forgekernel_bspline_derivative_tests PROPERTIES TIMEOUT 30)
+
+# Cache NURBS: snapshot concorrenti e durata dei risultati, senza OCCT/Qt.
+add_executable(forgekernel_bspline_cache_tests tests/fk_test_main.cpp tests/test_bspline_cache.cpp)
+target_link_libraries(forgekernel_bspline_cache_tests PRIVATE forgekernel)
+target_include_directories(forgekernel_bspline_cache_tests PRIVATE ${CMAKE_SOURCE_DIR})
+target_compile_options(forgekernel_bspline_cache_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_bspline_cache_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_bspline_cache_tests COMMAND forgekernel_bspline_cache_tests)
+set_tests_properties(forgekernel_bspline_cache_tests PROPERTIES TIMEOUT 60)
+
+# Classificazione UV ai bordi NURBS: budget fisico e domini periodici.
+add_executable(forgekernel_face_parameter_tests tests/fk_test_main.cpp tests/test_face_parameter_classify.cpp)
+target_link_libraries(forgekernel_face_parameter_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_face_parameter_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_face_parameter_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_face_parameter_tests COMMAND forgekernel_face_parameter_tests)
+set_tests_properties(forgekernel_face_parameter_tests PROPERTIES TIMEOUT 30)
+
+# Jet a u fisso: NURBS razionali, istanze, nodi stretti e quadrature di massa.
+add_executable(forgekernel_bspline_isoline_tests tests/fk_test_main.cpp tests/test_bspline_isoline.cpp)
+target_link_libraries(forgekernel_bspline_isoline_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_bspline_isoline_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_bspline_isoline_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_bspline_isoline_tests COMMAND forgekernel_bspline_isoline_tests)
+set_tests_properties(forgekernel_bspline_isoline_tests PROPERTIES TIMEOUT 60)
+
+add_executable(forgekernel_loft_correspondence_tests tests/fk_test_main.cpp tests/test_loft_correspondence.cpp)
+target_link_libraries(forgekernel_loft_correspondence_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_loft_correspondence_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_loft_correspondence_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_loft_correspondence_tests COMMAND forgekernel_loft_correspondence_tests)
+set_tests_properties(forgekernel_loft_correspondence_tests PROPERTIES TIMEOUT 120)
+
+add_executable(forgekernel_loft_point_tests tests/test_loft_points.cpp)
+target_link_libraries(forgekernel_loft_point_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_loft_point_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_loft_point_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_loft_point_tests COMMAND forgekernel_loft_point_tests)
+set_tests_properties(forgekernel_loft_point_tests PROPERTIES TIMEOUT 120)
+
+# Cuciture UV dei loft chiusi durante booleane e unificazione delle facce.
+add_executable(forgekernel_boolean_seam_tests tests/test_boolean_seams.cpp)
+target_link_libraries(forgekernel_boolean_seam_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_boolean_seam_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_boolean_seam_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_boolean_seam_tests COMMAND forgekernel_boolean_seam_tests)
+set_tests_properties(forgekernel_boolean_seam_tests PROPERTIES TIMEOUT 120)
+
+# Griglie NURBS fitte: le coppie di pezze disgiunte non consumano la ricerca.
+add_executable(forgekernel_marching_seed_grid_tests tests/test_marching_seed_grid.cpp)
+target_link_libraries(forgekernel_marching_seed_grid_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_marching_seed_grid_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_marching_seed_grid_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_marching_seed_grid_tests COMMAND forgekernel_marching_seed_grid_tests)
+set_tests_properties(forgekernel_marching_seed_grid_tests PROPERTIES TIMEOUT 60)
+
+add_executable(forgekernel_surface_mapping_tests tests/test_surface_mapping.cpp)
+target_link_libraries(forgekernel_surface_mapping_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_surface_mapping_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_surface_mapping_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_surface_mapping_tests COMMAND forgekernel_surface_mapping_tests)
+set_tests_properties(forgekernel_surface_mapping_tests PROPERTIES TIMEOUT 120)
+
+# Box delle facce NURBS ritagliate: geometria conservata e ricerca locale.
+add_executable(forgekernel_trimmed_face_bounds_tests tests/test_trimmed_face_bounds.cpp)
+target_link_libraries(forgekernel_trimmed_face_bounds_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_trimmed_face_bounds_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_trimmed_face_bounds_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_trimmed_face_bounds_tests COMMAND forgekernel_trimmed_face_bounds_tests)
+set_tests_properties(forgekernel_trimmed_face_bounds_tests PROPERTIES TIMEOUT 30)
+
+add_executable(forgekernel_solid_trim_tests tests/test_solid_trim.cpp)
+target_link_libraries(forgekernel_solid_trim_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_solid_trim_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_solid_trim_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_solid_trim_tests COMMAND forgekernel_solid_trim_tests)
+set_tests_properties(forgekernel_solid_trim_tests PROPERTIES TIMEOUT 60)
+
+# Raggi sui coni quasi piani: falde distinte, classificazione e booleane.
+add_executable(forgekernel_cone_rays_tests tests/test_cone_rays.cpp)
+target_link_libraries(forgekernel_cone_rays_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_cone_rays_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_cone_rays_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_cone_rays_tests COMMAND forgekernel_cone_rays_tests)
+set_tests_properties(forgekernel_cone_rays_tests PROPERTIES TIMEOUT 60)
+
+add_executable(forgekernel_blend_cavity_tests tests/fk_test_main.cpp tests/test_blend_cavity.cpp tests/test_blend_transitions.cpp)
+target_link_libraries(forgekernel_blend_cavity_tests PRIVATE forgekernel)
+target_compile_definitions(forgekernel_blend_cavity_tests PRIVATE FORGECAD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_compile_options(forgekernel_blend_cavity_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_blend_cavity_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_blend_cavity_tests COMMAND forgekernel_blend_cavity_tests)
+set_tests_properties(forgekernel_blend_cavity_tests PROPERTIES TIMEOUT 90)
+
+add_executable(forgekernel_blend_cavity_regression_tests tests/fk_test_main.cpp tests/test_blend_cavity_regressions.cpp)
+target_link_libraries(forgekernel_blend_cavity_regression_tests PRIVATE forgekernel)
+target_compile_definitions(forgekernel_blend_cavity_regression_tests PRIVATE FORGECAD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_compile_options(forgekernel_blend_cavity_regression_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_blend_cavity_regression_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_blend_cavity_regression_tests COMMAND forgekernel_blend_cavity_regression_tests)
+set_tests_properties(forgekernel_blend_cavity_regression_tests PROPERTIES TIMEOUT 90)
+
+# Mitre ISO: fit continuo, budget prefissati e fin effettive, senza Qt/OCCT.
+add_executable(forgekernel_blend_mitre_validation_tests tests/fk_test_main.cpp tests/test_blend_mitre_validation.cpp)
+target_link_libraries(forgekernel_blend_mitre_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_blend_mitre_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_blend_mitre_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_blend_mitre_validation_tests COMMAND forgekernel_blend_mitre_validation_tests)
+set_tests_properties(forgekernel_blend_mitre_validation_tests PROPERTIES TIMEOUT 180)
+
+# Continuazioni dei bordi: parametro razionale, ISO e fin effettive, senza Qt/OCCT.
+add_executable(forgekernel_blend_boundary_validation_tests tests/fk_test_main.cpp tests/test_blend_boundary_validation.cpp)
+target_link_libraries(forgekernel_blend_boundary_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_blend_boundary_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_blend_boundary_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_blend_boundary_validation_tests COMMAND forgekernel_blend_boundary_validation_tests)
+set_tests_properties(forgekernel_blend_boundary_validation_tests PROPERTIES TIMEOUT 180)
+
+
+
+
+# Atlanti NURBS G1 e raccordi oltre le suddivisioni artificiali dei supporti.
+add_executable(forgekernel_nurbs_support_tests tests/fk_test_main.cpp tests/test_nurbs_supports.cpp)
+target_link_libraries(forgekernel_nurbs_support_tests PRIVATE forgekernel)
+target_compile_definitions(forgekernel_nurbs_support_tests PRIVATE FORGECAD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_compile_options(forgekernel_nurbs_support_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_nurbs_support_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_nurbs_support_tests COMMAND forgekernel_nurbs_support_tests)
+set_tests_properties(forgekernel_nurbs_support_tests PROPERTIES TIMEOUT 240)
+
+# Sweep: controllo globale sui carrier B-rep, trim delle teste e cuciture.
+# Le regressioni geometriche sono eseguibili anche senza Qt e OpenCASCADE.
+add_executable(forgekernel_sweep_validation_tests tests/fk_test_main.cpp
+    tests/test_sweep_validation.cpp tests/test_sweep_caps.cpp
+    tests/test_sweep_analytic_bridge.cpp tests/test_sweep_global.cpp)
+target_link_libraries(forgekernel_sweep_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_sweep_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_sweep_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_sweep_validation_tests COMMAND forgekernel_sweep_validation_tests)
+set_tests_properties(forgekernel_sweep_validation_tests PROPERTIES TIMEOUT 300)
+
+add_executable(forgekernel_sheet_fit_validation_tests tests/fk_test_main.cpp tests/test_sheet_fit_validation.cpp)
+target_link_libraries(forgekernel_sheet_fit_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_sheet_fit_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_sheet_fit_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_sheet_fit_validation_tests COMMAND forgekernel_sheet_fit_validation_tests)
+set_tests_properties(forgekernel_sheet_fit_validation_tests PROPERTIES TIMEOUT 180)
+
+# Giunzioni tangenti estese: certificato continuo sui due supporti e fin finali.
+add_executable(forgekernel_sheet_join_validation_tests tests/fk_test_main.cpp tests/test_sheet_join_validation.cpp)
+target_link_libraries(forgekernel_sheet_join_validation_tests PRIVATE forgekernel)
+target_compile_definitions(forgekernel_sheet_join_validation_tests PRIVATE
+    FORGEKERNEL_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
+target_compile_options(forgekernel_sheet_join_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_sheet_join_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_sheet_join_validation_tests COMMAND forgekernel_sheet_join_validation_tests)
+set_tests_properties(forgekernel_sheet_join_validation_tests PROPERTIES TIMEOUT 180)
+
+add_executable(forgekernel_curve_projection_tests tests/fk_test_main.cpp tests/test_curve_projection.cpp)
+target_link_libraries(forgekernel_curve_projection_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_curve_projection_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_curve_projection_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_curve_projection_tests COMMAND forgekernel_curve_projection_tests)
+set_tests_properties(forgekernel_curve_projection_tests PROPERTIES TIMEOUT 180)
+
+add_executable(forgekernel_boundary_fit_validation_tests tests/fk_test_main.cpp tests/test_boundary_fit_validation.cpp)
+target_link_libraries(forgekernel_boundary_fit_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_boundary_fit_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_boundary_fit_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_boundary_fit_validation_tests COMMAND forgekernel_boundary_fit_validation_tests)
+set_tests_properties(forgekernel_boundary_fit_validation_tests PROPERTIES TIMEOUT 180)
+
+add_executable(forgekernel_surface_curve_fit_validation_tests tests/fk_test_main.cpp tests/test_surface_curve_fit_validation.cpp)
+target_link_libraries(forgekernel_surface_curve_fit_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_surface_curve_fit_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_surface_curve_fit_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_surface_curve_fit_validation_tests COMMAND forgekernel_surface_curve_fit_validation_tests)
+set_tests_properties(forgekernel_surface_curve_fit_validation_tests PROPERTIES TIMEOUT 180)
+
+add_executable(forgekernel_mapping_carrier_validation_tests tests/fk_test_main.cpp tests/test_mapping_carrier_validation.cpp)
+target_link_libraries(forgekernel_mapping_carrier_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_mapping_carrier_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_mapping_carrier_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_mapping_carrier_validation_tests COMMAND forgekernel_mapping_carrier_validation_tests)
+set_tests_properties(forgekernel_mapping_carrier_validation_tests PROPERTIES TIMEOUT 180)
+
+# Trasferimenti Plane: residuo continuo e offset indipendente dalle coordinate UV.
+add_executable(forgekernel_mapping_uv_validation_tests tests/test_mapping_pcurve_validation.cpp)
+target_link_libraries(forgekernel_mapping_uv_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_mapping_uv_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_mapping_uv_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_mapping_uv_validation_tests COMMAND forgekernel_mapping_uv_validation_tests)
+set_tests_properties(forgekernel_mapping_uv_validation_tests PROPERTIES TIMEOUT 180)
+
+# Certificazione del mapping affine obliquo sulle estrusioni originali.
+add_executable(forgekernel_mapping_diagonal_validation_tests tests/fk_test_main.cpp tests/test_mapping_diagonal_validation.cpp)
+target_link_libraries(forgekernel_mapping_diagonal_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_mapping_diagonal_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_mapping_diagonal_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_mapping_diagonal_validation_tests COMMAND forgekernel_mapping_diagonal_validation_tests)
+set_tests_properties(forgekernel_mapping_diagonal_validation_tests PROPERTIES TIMEOUT 180)
+
+# Conservazione dei contorni originali nell'appiattimento piano.
+add_executable(forgekernel_planar_flatten_validation_tests tests/fk_test_main.cpp tests/test_planar_flatten_validation.cpp)
+target_link_libraries(forgekernel_planar_flatten_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_planar_flatten_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_planar_flatten_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_planar_flatten_validation_tests COMMAND forgekernel_planar_flatten_validation_tests)
+set_tests_properties(forgekernel_planar_flatten_validation_tests PROPERTIES TIMEOUT 180)
+
+# Conservazione delle curve originali nelle pareti piane di Spessore.
+add_executable(forgekernel_planar_thicken_validation_tests tests/fk_test_main.cpp tests/test_planar_thicken_validation.cpp)
+target_link_libraries(forgekernel_planar_thicken_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_planar_thicken_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_planar_thicken_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_planar_thicken_validation_tests COMMAND forgekernel_planar_thicken_validation_tests)
+set_tests_properties(forgekernel_planar_thicken_validation_tests PROPERTIES TIMEOUT 180)
+
+# Proiezione su Plane: residuo continuo dagli originali e controllo postgiunta.
+add_executable(forgekernel_projection_fit_validation_tests tests/test_projection_fit_validation.cpp)
+target_link_libraries(forgekernel_projection_fit_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_projection_fit_validation_tests PRIVATE -Wall -Wextra -Wpedantic
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+set_target_properties(forgekernel_projection_fit_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_projection_fit_validation_tests COMMAND forgekernel_projection_fit_validation_tests)
+set_tests_properties(forgekernel_projection_fit_validation_tests PROPERTIES TIMEOUT 180)
+
+# Offset dei bordi di estrusione: originali separati e controllo postassemblaggio.
+add_executable(forgekernel_edge_offset_fit_validation_tests tests/test_edge_offset_fit_validation.cpp)
+target_link_libraries(forgekernel_edge_offset_fit_validation_tests PRIVATE forgekernel)
+target_compile_definitions(forgekernel_edge_offset_fit_validation_tests PRIVATE HAVE_EDGE_PROVIDER)
+target_compile_options(forgekernel_edge_offset_fit_validation_tests PRIVATE -Wall -Wextra -Wpedantic
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+set_target_properties(forgekernel_edge_offset_fit_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_edge_offset_fit_validation_tests COMMAND forgekernel_edge_offset_fit_validation_tests)
+set_tests_properties(forgekernel_edge_offset_fit_validation_tests PROPERTIES TIMEOUT 180)
+
+# Contatti quasi coincidenti sul trim: certificati continui di geometria e UV.
+add_executable(forgekernel_boolean_boundary_tests tests/test_boolean_boundary.cpp)
+target_link_libraries(forgekernel_boolean_boundary_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_boolean_boundary_tests PRIVATE -Wall -Wextra -Wpedantic
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+set_target_properties(forgekernel_boolean_boundary_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_boolean_boundary_tests COMMAND forgekernel_boolean_boundary_tests)
+set_tests_properties(forgekernel_boolean_boundary_tests PROPERTIES TIMEOUT 60)
+
+# Associazione piana S(PC(t))=E(t): residuo continuo e parametri originali.
+add_executable(forgekernel_offset_pcurve_tests tests/test_offset_pcurve_validation.cpp)
+target_link_libraries(forgekernel_offset_pcurve_tests PRIVATE forgekernel)
+target_compile_definitions(forgekernel_offset_pcurve_tests PRIVATE HAVE_PLANE_PCURVE_PROVIDER=1)
+target_compile_options(forgekernel_offset_pcurve_tests PRIVATE -Wall -Wextra -Wpedantic
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+set_target_properties(forgekernel_offset_pcurve_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_offset_pcurve_tests COMMAND forgekernel_offset_pcurve_tests)
+set_tests_properties(forgekernel_offset_pcurve_tests PROPERTIES TIMEOUT 120)
+
+# Cucitura Plane: parametro originale, bound fisico e fin realmente emesse.
+add_executable(forgekernel_sew_pcurve_tests tests/test_sew_pcurve_validation.cpp)
+target_link_libraries(forgekernel_sew_pcurve_tests PRIVATE forgekernel)
+target_compile_definitions(forgekernel_sew_pcurve_tests PRIVATE HAVE_PLANE_SEW_PROVIDER=1)
+target_compile_options(forgekernel_sew_pcurve_tests PRIVATE -Wall -Wextra -Wpedantic
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+set_target_properties(forgekernel_sew_pcurve_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_sew_pcurve_tests COMMAND forgekernel_sew_pcurve_tests)
+set_tests_properties(forgekernel_sew_pcurve_tests PROPERTIES TIMEOUT 180)
+
+# Continuous residual proof of the emitted non-ISO sheet joins.
+add_executable(forgekernel_surface_curve_bounds_tests tests/fk_test_main.cpp
+    tests/test_surface_curve_bounds.cpp tests/test_sheet_join_ledger.cpp
+    tests/test_surface_curve_rational.cpp tests/test_surface_curve_instances.cpp
+    tests/test_surface_curve_rational_edges.cpp tests/test_surface_curve_rational_pcurves.cpp tests/test_surface_curve_wrappers.cpp)
+target_link_libraries(forgekernel_surface_curve_bounds_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_surface_curve_bounds_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_surface_curve_bounds_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_surface_curve_bounds_tests COMMAND forgekernel_surface_curve_bounds_tests)
+set_tests_properties(forgekernel_surface_curve_bounds_tests PROPERTIES TIMEOUT 180)
+
+# Mapping nonPlane: residuo continuo e contratto delle fin dopo build.
+add_executable(forgekernel_mapping_nonplane_validation_tests tests/fk_test_main.cpp
+    tests/test_mapping_nonplane_validation.cpp tests/test_mapping_fit_validation.cpp)
+target_link_libraries(forgekernel_mapping_nonplane_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_mapping_nonplane_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_mapping_nonplane_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_mapping_nonplane_validation_tests COMMAND forgekernel_mapping_nonplane_validation_tests)
+set_tests_properties(forgekernel_mapping_nonplane_validation_tests PROPERTIES TIMEOUT 180)
+
+# Inversione UV: residuo effettivo dopo riporto periodico e scelta del seam.
+add_executable(forgekernel_invert_point_validation_tests tests/fk_test_main.cpp
+    tests/test_invert_point_validation.cpp)
+target_link_libraries(forgekernel_invert_point_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_invert_point_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_invert_point_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_invert_point_validation_tests COMMAND forgekernel_invert_point_validation_tests)
+set_tests_properties(forgekernel_invert_point_validation_tests PROPERTIES TIMEOUT 120)
+
+# Residui SP-curve: misure finite e rifiuto delle verifiche prive di campioni.
+add_executable(forgekernel_pcurve_deviation_validation_tests tests/fk_test_main.cpp
+    tests/test_pcurve_deviation_validation.cpp)
+target_link_libraries(forgekernel_pcurve_deviation_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_pcurve_deviation_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_pcurve_deviation_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_pcurve_deviation_validation_tests COMMAND forgekernel_pcurve_deviation_validation_tests)
+set_tests_properties(forgekernel_pcurve_deviation_validation_tests PROPERTIES TIMEOUT 120)
+
+# Quadranti coniche: progresso rappresentabile e cancellazione cooperativa.
+add_executable(forgekernel_quadrant_breakpoints_validation_tests tests/fk_test_main.cpp
+    tests/test_quadrant_breakpoints_validation.cpp)
+target_link_libraries(forgekernel_quadrant_breakpoints_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_quadrant_breakpoints_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_quadrant_breakpoints_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_quadrant_breakpoints_validation_tests COMMAND forgekernel_quadrant_breakpoints_validation_tests)
+set_tests_properties(forgekernel_quadrant_breakpoints_validation_tests PROPERTIES TIMEOUT 30)
+
+# Estensione: lunghezza fisica sul parametro finale, senza successi non convergenti.
+add_executable(forgekernel_sheet_arc_validation_tests tests/fk_test_main.cpp
+    tests/test_sheet_arc_validation.cpp)
+target_link_libraries(forgekernel_sheet_arc_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_sheet_arc_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_sheet_arc_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_sheet_arc_validation_tests COMMAND forgekernel_sheet_arc_validation_tests)
+set_tests_properties(forgekernel_sheet_arc_validation_tests PROPERTIES TIMEOUT 120)
+
+# Lunghezza d'arco: velocita' stabile e cancellazione, anche nella cache loft.
+add_executable(forgekernel_arc_length_validation_tests tests/fk_test_main.cpp
+    tests/test_arc_length_validation.cpp)
+target_link_libraries(forgekernel_arc_length_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_arc_length_validation_tests PRIVATE -Wall -Wextra -Wpedantic
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+set_target_properties(forgekernel_arc_length_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_arc_length_validation_tests COMMAND forgekernel_arc_length_validation_tests)
+set_tests_properties(forgekernel_arc_length_validation_tests PROPERTIES TIMEOUT 30)
+
+# Accumuli GK condivisi: overflow recuperabile, rifiuti finiti e regressione nativa.
+add_executable(forgekernel_quadrature_validation_tests tests/fk_test_main.cpp
+    tests/test_quadrature_validation.cpp)
+target_link_libraries(forgekernel_quadrature_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_quadrature_validation_tests PRIVATE -Wall -Wextra -Wpedantic
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+set_target_properties(forgekernel_quadrature_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_quadrature_validation_tests COMMAND forgekernel_quadrature_validation_tests)
+set_tests_properties(forgekernel_quadrature_validation_tests PROPERTIES TIMEOUT 30)

@@ -1,0 +1,9 @@
+# Baseline reproduction; exit1 expected after input0issues
+c++ -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -ffp-contract=off -I/home/myungit/Linux_CAD_forFree/kernel /tmp/k10-offset-pose-review/core/probe.cpp /tmp/k10-offset-pose-review/core/libforgekernel-frozen.a -pthread -o /tmp/k10-offset-pose-review/core/probe
+/tmp/k10-offset-pose-review/core/probe > /tmp/k10-offset-pose-review/core/baseline.log 2>&1
+# Candidate single TU + frozen archive; actual exit0
+c++ -O3 -g -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -ffp-contract=off -I/home/myungit/Linux_CAD_forFree/kernel -c /tmp/k10-offset-pose-review/core/kernel/fk_offset.cpp -o /tmp/k10-offset-pose-review/core/fk_offset.candidate.o
+c++ -O3 -g -DNDEBUG -std=gnu++17 -I/home/myungit/Linux_CAD_forFree/kernel /tmp/k10-offset-pose-review/core/probe.cpp /tmp/k10-offset-pose-review/core/fk_offset.candidate.o /tmp/k10-offset-pose-review/core/libforgekernel-frozen.a -pthread -o /tmp/k10-offset-pose-review/core/probe-candidate
+/tmp/k10-offset-pose-review/core/probe-candidate > /tmp/k10-offset-pose-review/core/candidate.log 2>&1
+# Private diagnostic builds use fk_offset.diagnostic.cpp/profile-before.cpp/profile-after.cpp instead of production TU, same flags/archive.
+# Baseline profile exits1, candidate profile exits0. No production exports/instrumentation hooks.

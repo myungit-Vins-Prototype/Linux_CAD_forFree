@@ -1,0 +1,7 @@
+[  OK  ] ArcLengthSafeControls
+[  OK  ] ArcLengthCancellationPreset
+[  OK  ] ArcLengthReparametrizedSpeedsKeepPhysicalLength
+[  OK  ] ArcLengthNonfiniteDerivativeIsRejected
+[  OK  ] ArcLengthInvalidRangesAreRejected
+[  OK  ] ArcLengthCachedFailuresDoNotPoisonFiniteEntries
+6/6 test superati

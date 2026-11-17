@@ -2403,17 +2403,4 @@ bool forgePickFace(const Body &body, const QVector3D &origin, const QVector3D &d
     }
 }
 
-
-bool forgeIntersectRay(const Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index) {
-    try {
-        double t = 0.0;
-        if (!firstRayHit(body, Vec3(origin.x(), origin.y(), origin.z()), Vec3(direction.x(), direction.y(), direction.z()), 1e-7, t, nullptr, index))
-            return false;
-        distance = t;
-        return true;
-    } catch (const std::exception &) {
-        return false;
-    }
-}
-
 }

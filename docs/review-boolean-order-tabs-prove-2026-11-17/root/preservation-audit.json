@@ -1,0 +1,25 @@
+{
+  "HEAD_origin_main_unchanged": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "index_empty": true,
+  "no_commit_or_push": true,
+  "baseline_files": 6113,
+  "preserved_existing": 6111,
+  "changed_existing": [
+    "CLAUDE.md",
+    "docs/code-review-2026-11-15.md"
+  ],
+  "all_software_sources_unchanged": true,
+  "previous_proof_packages_preserved": 26,
+  "previous_proof_artifacts": 3526,
+  "CLAUDE_bytes": 16262,
+  "binary_hashes_verified_unchanged": {
+    "forgecad-release/forgecad": "99eb77fc779b028cf85fb86a6d1839d44893f248f2af95e883e3ff0f96f1732e",
+    "forgecad-release/forgecad_view_tests": "52c77cc2435c2024aa37cc853ecd035facc0e0c37958c369882c52e9b572440f",
+    "forgecad-release/kernel/libforgekernel.a": "ea1825d26334bd83b1169859a425fa1efb451ceab9136ea8c4e388542857960b",
+    "forgecad-release/kernel/forgekernel_tests": "6642e6b9116e3200604062e031c080124feab3f6714c8dc41b157a09a4e82721",
+    "forgecad-release/kernel/forgekernel_shell_pose_tests": "882310c8ca7dda2cb71ec1a712168e86ffb9ee7153381674bdca684d0d18db07"
+  },
+  "original_document_unchanged_sha256": "0f53ce38bd5261ec79f21eab776ce47721892accb35c2cc6d8b996ecf35c2b92",
+  "raw_saved_record_identity_verified": true,
+  "no_new_software_build_or_CI": true
+}

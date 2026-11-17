@@ -1,0 +1,1 @@
+rg exit 1: nessuna occorrenza delle tre API o extendPickFinished_ nei due afterfiles.

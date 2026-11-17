@@ -1,0 +1,27 @@
+from pathlib import Path
+import json,hashlib,difflib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-curve-wrapper-review');B=json.loads((T/'root/baseline.json').read_text());sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();pairs={}
+for f in ['kernel/fk_surface_curve_bounds.cpp','kernel/fk_surface_curve_bounds.h']:pairs[f]=T/'core'/f
+for n in ['bounds','instances','rational_edges','rational_pcurves','wrappers']:pairs['kernel/tests/test_surface_curve_'+n+'.cpp']=T/'tests'/('test_surface_curve_'+n+'.cpp')
+assert sha(pairs['kernel/fk_surface_curve_bounds.cpp'])=='7dfb4c8f4b2d06ac1be0ef469d053232aa879fe2b762cf176567fabfd4059fba'
+assert sha(pairs['kernel/fk_surface_curve_bounds.h'])=='dd92c62ce5707241743f70a34602af9b0b0e6eca048c765a23fc7a8e634a1aca'
+assert sha(pairs['kernel/tests/test_surface_curve_wrappers.cpp'])=='24d856c786e83f821aadd27fce3c37bd07f8053628c1fadd8f2f1f632ef82778'
+W=T/'root/candidate';f='kernel/CMakeLists.txt';s=(R/f).read_text();old='tests/test_surface_curve_rational_pcurves.cpp)';assert s.count(old)==1;s=s.replace(old,'tests/test_surface_curve_rational_pcurves.cpp tests/test_surface_curve_wrappers.cpp)');p=W/f;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s);pairs[f]=p
+f='tools/generate_architecture.py';s=(R/f).read_text();old='E cubica e Q Line/BSpline1/3 anche razionali positive, S NURBS';assert old in s;s=s.replace(old,'E cubica e Q Line/BSpline1/3 anche razionali positive con trim originali; E anche trasformata affine, S NURBS')
+old='Snapshot dei poli base e matrici IEEE originali in intervalli outward, traversal finito/cancellabile prima degli accessori ricorsivi;';assert old in s;s=s.replace(old,'Snapshot dei poli base e matrici IEEE originali in intervalli outward; wrapper Trim E/Q e Transformed E, range esatti per ogni trim e catene di massimo32 link cancellabili prima degli accessori ricorsivi;')
+pos=s.index(" 'kernel/tests/test_surface_curve_rational_pcurves.cpp':")
+s=s[:pos]+" 'kernel/tests/test_surface_curve_wrappers.cpp': ('tests', 'Wrapper Trim E/Q e Transformed E: intervalli correlati, catene affini originali anche singolari, scarto nascosto da arrotondamento, picchi Q e fin prima di assegnare, range di ogni trim senza epsilon, limite32/33, famiglie non supportate e cancellazione.'),\n"+s[pos:];p=W/f;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s);pairs[f]=p
+reviewed={}
+for f,p in pairs.items():
+ if f in B:assert sha(R/f)==B[f],f
+ else:assert not (R/f).exists(),f
+ p.read_text()
+for n in ['bounds','instances','rational_edges','rational_pcurves']:
+ f='kernel/tests/test_surface_curve_'+n+'.cpp';diff=list(difflib.unified_diff((R/f).read_text().splitlines(),pairs[f].read_text().splitlines()));reviewed[f]=diff
+ for line in diff:
+  if line.startswith(('+','-')) and not line.startswith(('+++','---')):assert any(k in line for k in ['Unsupported','Certified','FK_TEST(','unsupported(','certified(']),(f,line)
+(T/'root/reviewed-test-deltas.json').write_text(json.dumps(reviewed,indent=2)+'\n')
+manifest={f:sha(p) for f,p in pairs.items()}
+for f,p in pairs.items():(R/f).write_bytes(p.read_bytes())
+for f,h in manifest.items():assert sha(R/f)==h
+(T/'root/integrated-sources.json').write_text(json.dumps(manifest,indent=2)+'\n');print(json.dumps(manifest,indent=2));print(json.dumps(reviewed,indent=2))

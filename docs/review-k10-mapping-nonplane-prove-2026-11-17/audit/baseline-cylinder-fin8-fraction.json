@@ -1,0 +1,29 @@
+{
+  "pass": true,
+  "input_sha256": "00272b0c3afd8bf27fd84eb5760aa14a06f95e26320a3042ce4eb7638a130a1d",
+  "method": "Exact Fraction homogeneous original IEEE Cox/de Boor composition and Bernstein whole-interval hull; complete E/Q knot partition and all closed intersected S cells",
+  "records": [
+    {
+      "fin": 8,
+      "edge": 8,
+      "face": 2,
+      "budget": 8e-08,
+      "pass": true,
+      "upper_mm": 1.0718379110461663e-08,
+      "cells": 16,
+      "leaves": 32,
+      "branches": 108,
+      "max_depth": 1,
+      "label": "cylinder",
+      "runtimeStatus": 2,
+      "runtimeUpper": "inf"
+    }
+  ],
+  "elapsed": 0.44841780100250617,
+  "not_claimed": [
+    "Full mapping intent or carrier fit",
+    "Newton/branch correctness",
+    "Global trim/topology",
+    "Unsupported families"
+  ]
+}

@@ -1,0 +1,154 @@
+{
+  "graph_sha256": "dca2d66bf1813c32f0edb9295c0a4b6fea1bb3f41d8ea19f9876b04921a0107e",
+  "nodes_total": 778,
+  "edges_total": 11372,
+  "nodes": [
+    {
+      "id": "kernel/fk_blend_model.h",
+      "description": "Interno ai raccordi senza booleane (fk_blend_loop, fk_blend_surface): il body come liste modificabili di Body::build, per la chirurgia topologica.",
+      "group": "kernel"
+    },
+    {
+      "id": "kernel/fk_pcurve.cpp",
+      "description": "SP-curve (Parasolid) / pcurve (OCCT): la curva di un edge nello spazio dei parametri (u, v) di una faccia, con lo stesso parametro dell'edge: S(p(t)) = C(t) per t nel range dell'edge.",
+      "group": "kernel"
+    },
+    {
+      "id": "kernel/fk_sheet.cpp",
+      "description": "Taglio, rifilo ed estensione di lamine; offset NURBS planari certificati. Famiglia ISO scelta dalle pcurve sorgenti originali con limite fisico continuo e ancore per incidenza; giunti ISO verificati sui due supporti a cap fisso e fin ricontrollate dopo build/unify. Sorgenti nonISO, anche quasi tangenti, usano Newton campionato; certificati ISO falliti restano terminali.",
+      "group": "kernel"
+    },
+    {
+      "id": "kernel/fk_unify.cpp",
+      "description": "Unisce facce sullo stesso dominio e bordi compatibili, preservando le cuciture UV necessarie alle superfici chiuse non periodiche.",
+      "group": "kernel"
+    }
+  ],
+  "edges": [
+    {
+      "source": "kernel/fk_blend_model.h",
+      "target": "kernel/fk_blend_model.h",
+      "kind": "call",
+      "count": 11,
+      "sites": [
+        {
+          "line": 305,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::build::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_blend_model.h:291:22)::operator()",
+          "owner": "ForgeCad::Kernel::detail::BlendModel::build"
+        },
+        {
+          "line": 306,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::build::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_blend_model.h:291:22)::operator()",
+          "owner": "ForgeCad::Kernel::detail::BlendModel::build"
+        },
+        {
+          "line": 330,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::build::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_blend_model.h:319:35)::operator()",
+          "owner": "ForgeCad::Kernel::detail::BlendModel::build"
+        },
+        {
+          "line": 349,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::build::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_blend_model.h:319:35)::operator()",
+          "owner": "ForgeCad::Kernel::detail::BlendModel::build"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_pcurve.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 60,
+      "sites": [
+        {
+          "line": 520,
+          "symbol": "ForgeCad::Kernel::computePCurves::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_pcurve.cpp:503:29)::operator()",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_sheet.cpp",
+      "target": "kernel/fk_blend_model.h",
+      "kind": "call",
+      "count": 7,
+      "sites": [
+        {
+          "line": 1010,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::build",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_sheet.cpp",
+      "target": "kernel/fk_blend_model.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_sheet.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 177,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::makePlaneSheet"
+        },
+        {
+          "line": 797,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 1011,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_sheet.cpp",
+      "target": "kernel/fk_sheet.cpp",
+      "kind": "call",
+      "count": 89,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_sheet.cpp",
+      "target": "kernel/fk_unify.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1013,
+          "symbol": "ForgeCad::Kernel::unifySameDomain",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_unify.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 365,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::unifyBody"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_unify.cpp",
+      "target": "kernel/fk_unify.cpp",
+      "kind": "call",
+      "count": 21,
+      "sites": []
+    }
+  ],
+  "limitation": "Pre-integration architecture snapshot used to locate responsibilities and both call directions. Newly introduced modules are absent until root regenerates the graph; code audited directly afterward."
+}

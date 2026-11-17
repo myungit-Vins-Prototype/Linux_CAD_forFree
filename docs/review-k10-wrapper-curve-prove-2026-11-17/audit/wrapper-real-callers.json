@@ -1,0 +1,296 @@
+{
+  "scope": "Static object reachability and stored representation only; no new CAD/import/iso runtime operation claimed",
+  "conclusions": [
+    "Trimmed constructor accepts endpoint epsilon1e-12; certificate query containment intentionally does not inherit it.",
+    "TransformedCurve constructor permits arbitrary affine metadata; exact positional enclosure needs only finite coefficients, not invertibility.",
+    "transformCurve handles existing Trimmed/Transformed objects, and its newly stored composed double matrix is the provider input, not an ideal previous transform sequence.",
+    "Body codec persists and reconstructs every Trimmed range and Transformed matrix+basis, preserving original representation tree.",
+    "IGES curve/entity transforms construct TransformedCurve, including transformed compound pieces.",
+    "ExtrusionSurface.vIso and RevolutionSurface.uIso construct TransformedCurve wrappers; their own carrier types remain outside this provider family.",
+    "BSplineSurface.uIso/vIso (even shared instance) return native BSplineCurve data, not TransformedCurve. Do not misattribute wrapper provenance to those functions."
+  ],
+  "sourceExcerpts": [
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_curve.h",
+      "sha256": "4344d65f2fda1c373471e89d763907bafe9f7d6b88a3196ceaac1dadb3cf8214",
+      "excerpts": [
+        {
+          "firstLine": 127,
+          "lastLine": 166,
+          "lines": [
+            "class TrimmedCurve final : public Curve<N> {",
+            "public:",
+            "    TrimmedCurve(CurvePtr<N> basis, double first, double last);",
+            "",
+            "    CurveType type() const override { return CurveType::Trimmed; }",
+            "    Interval domain() const override { return {first_, last_}; }",
+            "    void evaluate(double t, int order, Vec<N> *out) const override { basis_->evaluate(t, order, out); }",
+            "    void evaluateLeft(double t, int order, Vec<N> *out) const override { basis_->evaluateLeft(t, order, out); }",
+            "    std::vector<double> breakpoints(const Interval &range) const override;",
+            "",
+            "    const CurvePtr<N> &basis() const { return basis_; }",
+            "",
+            "private:",
+            "    CurvePtr<N> basis_;",
+            "    double first_, last_;",
+            "};",
+            "",
+            "// Curva 3D trasformata: P(t) = T(C(t)), stesso parametro della curva base.",
+            "// Serve per le isoparametriche delle superfici estruse e di rivoluzione.",
+            "class TransformedCurve final : public Curve<3> {",
+            "public:",
+            "    TransformedCurve(CurvePtr<3> basis, const Transform3 &transform);",
+            "",
+            "    CurveType type() const override { return CurveType::Transformed; }",
+            "    Interval domain() const override { return basis_->domain(); }",
+            "    bool isPeriodic() const override { return basis_->isPeriodic(); }",
+            "    double period() const override { return basis_->period(); }",
+            "    void evaluate(double t, int order, Vec3 *out) const override;",
+            "    void evaluateLeft(double t, int order, Vec3 *out) const override;",
+            "    std::vector<double> breakpoints(const Interval &range) const override { return basis_->breakpoints(range); }",
+            "",
+            "    const CurvePtr<3> &basis() const { return basis_; }",
+            "    const Transform3 &transform() const { return transform_; }",
+            "",
+            "private:",
+            "    CurvePtr<3> basis_;",
+            "    Transform3 transform_;",
+            "};",
+            "",
+            "namespace detail {"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_curve.cpp",
+      "sha256": "a56cbc9bd3f06f60f7b1ef6bd2c94cf660dc2099da81466993decd43b831f3bc",
+      "excerpts": [
+        {
+          "firstLine": 111,
+          "lastLine": 150,
+          "lines": [
+            "TrimmedCurve<N>::TrimmedCurve(CurvePtr<N> basis, double first, double last)",
+            "    : basis_(std::move(basis)), first_(first), last_(last) {",
+            "    if (!basis_) throw std::invalid_argument(\"TrimmedCurve: curva base nulla\");",
+            "    if (!std::isfinite(first) || !std::isfinite(last)) throw std::invalid_argument(\"TrimmedCurve: estremi non finiti\");",
+            "    if (basis_->isPeriodic()) {",
+            "        const double period = basis_->period();",
+            "        const double tolerance = 1.0e-12 * std::max(1.0, std::fabs(first));",
+            "        last_ -= period * std::floor((last_ - first_) / period);",
+            "        if (last_ <= first_ + tolerance) last_ += period;",
+            "    } else {",
+            "        const Interval domain = basis_->domain();",
+            "        const double tolerance = 1.0e-12 * std::max({1.0, std::fabs(first), std::fabs(last)});",
+            "        if (!domain.contains(first, tolerance) || !domain.contains(last, tolerance))",
+            "            throw std::invalid_argument(\"TrimmedCurve: estremi fuori dal dominio della curva base\");",
+            "    }",
+            "    if (!(last_ > first_)) throw std::invalid_argument(\"TrimmedCurve: intervallo vuoto\");",
+            "}",
+            "",
+            "template <int N>",
+            "std::vector<double> TrimmedCurve<N>::breakpoints(const Interval &range) const {",
+            "    return basis_->breakpoints({std::max(range.lo, first_), std::min(range.hi, last_)});",
+            "}",
+            "",
+            "TransformedCurve::TransformedCurve(CurvePtr<3> basis, const Transform3 &transform)",
+            "    : basis_(std::move(basis)), transform_(transform) {",
+            "    if (!basis_) throw std::invalid_argument(\"TransformedCurve: curva base nulla\");",
+            "}",
+            "",
+            "void TransformedCurve::evaluate(double t, int order, Vec3 *out) const {",
+            "    basis_->evaluate(t, order, out);",
+            "    out[0] = transform_.applyToPoint(out[0]);",
+            "    for (int k = 1; k <= order; ++k) out[k] = transform_.applyToVector(out[k]);",
+            "}",
+            "",
+            "void TransformedCurve::evaluateLeft(double t, int order, Vec3 *out) const {",
+            "    basis_->evaluateLeft(t, order, out);",
+            "    out[0] = transform_.applyToPoint(out[0]);",
+            "    for (int k = 1; k <= order; ++k) out[k] = transform_.applyToVector(out[k]);",
+            "}",
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_transform.cpp",
+      "sha256": "d7420db859aca8ac730ff0c379613129fe03f2afda75a118fb0d9f4390d08580",
+      "excerpts": [
+        {
+          "firstLine": 55,
+          "lastLine": 74,
+          "lines": [
+            "        case CurveType::BSpline: {",
+            "            const auto &spline = static_cast<const BSplineCurve<3> &>(*c);",
+            "            std::vector<Vec3> poles;",
+            "            for (const Vec3 &p : spline.poles()) poles.push_back(point(p));",
+            "            result.first = std::make_shared<BSplineCurve<3>>(spline.degree(), spline.knots(), poles, spline.weights());",
+            "            break;",
+            "        }",
+            "        case CurveType::Trimmed: {",
+            "            const auto &trimmed = static_cast<const TrimmedCurve<3> &>(*c);",
+            "            const auto [basis, k] = curve(trimmed.basis());",
+            "            const Interval domain = trimmed.domain();",
+            "            result = {std::make_shared<TrimmedCurve<3>>(basis, k * domain.lo, k * domain.hi), k};",
+            "            break;",
+            "        }",
+            "        case CurveType::Transformed: {",
+            "            const auto &transformed = static_cast<const TransformedCurve &>(*c);",
+            "            result.first = std::make_shared<TransformedCurve>(transformed.basis(), t_ * transformed.transform());",
+            "            break;",
+            "        }",
+            "        default:"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_body_io.cpp",
+      "sha256": "8e4244045884eafe2af1f623cdb3164ba6d0294977b33635258a43d5e72331e3",
+      "excerpts": [
+        {
+          "firstLine": 352,
+          "lastLine": 374,
+          "lines": [
+            "        case CurveType::Trimmed: {",
+            "            const auto &t = static_cast<const TrimmedCurve<N> &>(c);",
+            "            const int basis = curve<N>(t.basis());",
+            "            record.u8(TrimmedKind);",
+            "            record.i32(basis);",
+            "            record.f64(t.domain().lo);",
+            "            record.f64(t.domain().hi);",
+            "            return;",
+            "        }",
+            "        default: break;",
+            "        }",
+            "        if constexpr (N == 3) {",
+            "            if (c.type() == CurveType::Transformed) {",
+            "                const auto &t = static_cast<const TransformedCurve &>(c);",
+            "                const int basis = curve<3>(t.basis());",
+            "                record.u8(TransformedKind);",
+            "                record.i32(basis);",
+            "                for (int i = 0; i < 3; ++i)",
+            "                    for (int j = 0; j < 3; ++j) record.f64(t.transform().matrix(i, j));",
+            "                record.vec(t.transform().translationPart());",
+            "                return;",
+            "            }",
+            "            if (const auto *helix = dynamic_cast<const HelixCurve *>(&c)) {"
+          ]
+        },
+        {
+          "firstLine": 457,
+          "lastLine": 473,
+          "lines": [
+            "        case TrimmedKind: {",
+            "            const CurvePtr<N> basis = curve<N>(in_.i32());",
+            "            const double first = in_.f64(), last = in_.f64();",
+            "            return std::make_shared<TrimmedCurve<N>>(basis, first, last);",
+            "        }",
+            "        default: break;",
+            "        }",
+            "        if constexpr (N == 3) {",
+            "            if (kind == TransformedKind) {",
+            "                const CurvePtr<3> basis = curve<3>(in_.i32());",
+            "                double m[3][3];",
+            "                for (auto &row : m)",
+            "                    for (double &v : row) v = in_.f64();",
+            "                const Vec3 t = in_.vec<3>();",
+            "                return std::make_shared<TransformedCurve>(basis, Transform3::fromParts(m, t));",
+            "            }",
+            "            if (kind == HelixKind) {"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_iges.cpp",
+      "sha256": "59d011e76d37968c5f753bfb47693c1e2b638c423eb1570219f0bfb5357e4302",
+      "excerpts": [
+        {
+          "firstLine": 594,
+          "lastLine": 603,
+          "lines": [
+            "    std::vector<Piece> curve(int de, int depth = 0) const {",
+            "        // Una composta (102) che rimanda a se stessa non deve ricorrere all'infinito.",
+            "        if (depth > 64) throw std::domain_error(\"IGES: curva composta ciclica o annidata troppo a fondo\");",
+            "        const Directory &d = f_.at(de);",
+            "        const Transform3 t = transform(d.transform);",
+            "        const auto transformed = [&](CurvePtr<3> c) -> CurvePtr<3> {",
+            "            if (d.transform <= 0) return c;",
+            "            return std::make_shared<TransformedCurve>(c, t);",
+            "        };",
+            "        switch (d.type) {"
+          ]
+        },
+        {
+          "firstLine": 618,
+          "lastLine": 626,
+          "lines": [
+            "            for (int k = 0; k < n; ++k) {",
+            "                const std::vector<Piece> p = curve(IgesFile::integer(d, std::size_t(1 + k)), depth + 1);",
+            "                all.insert(all.end(), p.begin(), p.end());",
+            "            }",
+            "            // La composta dentro una trasformazione propria.",
+            "            if (d.transform > 0)",
+            "                for (Piece &p : all) p.curve = std::make_shared<TransformedCurve>(p.curve, t);",
+            "            return all;",
+            "        }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_surface.cpp",
+      "sha256": "795306b2532f63501cfa5ce6e356bee31f37e396a2c5def2e0e829fe0acff51c",
+      "excerpts": [
+        {
+          "firstLine": 286,
+          "lastLine": 292,
+          "lines": [
+            "CurvePtr<3> ExtrusionSurface::uIso(double u) const {",
+            "    return std::make_shared<Line<3>>(curve_->point(wrap(u)), direction_);",
+            "}",
+            "",
+            "CurvePtr<3> ExtrusionSurface::vIso(double v) const {",
+            "    return std::make_shared<TransformedCurve>(curve_, Transform3::translation(v * direction_));",
+            "}"
+          ]
+        },
+        {
+          "firstLine": 319,
+          "lastLine": 324,
+          "lines": [
+            "}",
+            "",
+            "CurvePtr<3> RevolutionSurface::uIso(double u) const {",
+            "    return std::make_shared<TransformedCurve>(meridian_, Transform3::rotation(axisPoint_, axisDirection_, u));",
+            "}",
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/kernel/fk_bspline_surface.cpp",
+      "sha256": "a1b4769fff26a4d8399dc46f2084ab52dd6a9a6e8b3a01791857c9261453af7e",
+      "excerpts": [
+        {
+          "firstLine": 475,
+          "lastLine": 482,
+          "lines": [
+            "CurvePtr<3> BSplineSurface::uIso(double u) const {",
+            "    if (CurvePtr<3> cached = knotIso(true, u)) return cached;",
+            "    return std::make_shared<BSplineCurve<3>>(uIsoCurve(u));",
+            "}",
+            "CurvePtr<3> BSplineSurface::vIso(double v) const {",
+            "    if (CurvePtr<3> cached = knotIso(false, v)) return cached;",
+            "    return std::make_shared<BSplineCurve<3>>(vIsoCurve(v));",
+            "}"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+--- v1/kernel/fk_curve_algo.cpp
++++ v2/kernel/fk_curve_algo.cpp
+@@ -347,7 +347,17 @@
+         Vec<N> d[2];
+         curve.evaluate(t, 1, d);
+         if (!isFinite(d[1])) throw std::domain_error("arcLength: derivata non finita");
+-        const double value = norm(d[1]);
++        const double squared = squaredNorm(d[1]);
++        double value;
++        if (std::isnormal(squared)) {
++            value = std::sqrt(squared);
++        } else {
++            bool zero = true;
++            for (int axis = 0; axis < N; ++axis) zero = zero && d[1][axis] == 0.0;
++            if (zero) value = 0.0;
++            else if constexpr (N == 2) value = std::hypot(d[1][0], d[1][1]);
++            else value = std::hypot(d[1][0], d[1][1], d[1][2]);
++        }
+         if (!std::isfinite(value)) throw std::domain_error("arcLength: velocita' non finita");
+         return value;
+     };
+--- v1/kernel/fk_curve_length_cache.h
++++ v2/kernel/fk_curve_length_cache.h
+@@ -74,7 +74,16 @@
+             Vec3 d[2];
+             curve.evaluate(t, 1, d);
+             if (!isFinite(d[1])) throw std::domain_error("arcLength: derivata non finita");
+-            const double value = norm(d[1]);
++            const double squared = squaredNorm(d[1]);
++            double value;
++            if (std::isnormal(squared)) {
++                value = std::sqrt(squared);
++            } else {
++                bool zero = true;
++                for (int axis = 0; axis < 3; ++axis) zero = zero && d[1][axis] == 0.0;
++                if (zero) value = 0.0;
++                else value = std::hypot(d[1][0], d[1][1], d[1][2]);
++            }
+             if (!std::isfinite(value)) throw std::domain_error("arcLength: velocita' non finita");
+             return value;
+         };

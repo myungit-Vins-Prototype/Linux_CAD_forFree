@@ -1,0 +1,54 @@
+#pragma once
+#include "fk_curve.h"
+#include "fk_surface.h"
+#include <limits>
+
+namespace ForgeCad::Kernel::detail {
+enum class SurfaceCurveBoundStatus { Unsupported, Certified, Failed };
+struct SurfaceCurveBoundResult {
+    SurfaceCurveBoundStatus status = SurfaceCurveBoundStatus::Failed;
+    double upperBound = std::numeric_limits<double>::infinity();
+};
+
+// Builds a private UV candidate BEFORE residual certification. For the
+// family below, Line2 becomes degree-one Bernstein data on the ORIGINAL edge
+// range (no direction renormalization); BSpline2 keeps degree/knots/weights.
+// Candidate poles are bounded to the natural carrier rectangle. E/S, the edge
+// parameter and the caller's budget are unchanged. This is construction, NOT
+// acceptance: the caller must certify the candidate once before assigning it.
+// Unsupported families retain the original Q pointer, shared inputs are not
+// modified. No epsilon and no recovery after a Failed residual proof.
+CurvePtr<2> surfaceCurvePCurveCandidate(const CurvePtr<3> &edge, const SurfacePtr &surface,
+                                       const CurvePtr<2> &pcurve, const Interval &range);
+
+// Whole-range positional residual |edge(t)-surface(pcurve(t))| in mm,
+// with the SAME original edge parameter. budget is finite, positive and
+// fixed by the caller.
+// E: cubic BSpline with optional TrimmedCurve3/TransformedCurve wrappers;
+// Q: Line2 or degree-one/cubic BSpline2 with optional TrimmedCurve2 wrappers;
+// S: nonperiodic BSplineSurface with each degree two or three and strictly
+// positive finite original weights, native or a shared similarity instance.
+// Instance bounds use native base poles and stored IEEE placements with
+// outward intervals, never rounded transformed pole() data. Traversal is
+// bounded/cancellable; exhaustion or inconclusive data return Failed.
+// E/Q support empty or arbitrary strictly positive finite original weights.
+// E/Q wrapper walks are bounded to 32 links EACH and checked before recursive
+// accessors. The same range must be exactly inside EVERY trim and the native
+// supported base domain, with no constructor epsilon. E's finite affine
+// matrices (including shear/singular) are applied separately in outward
+// intervals, never flattened to rounded world poles. Invalid wrapper/range
+// or exhausted traversal returns Failed; other base families are Unsupported.
+// Rational Q uses homogeneous local Cox
+// polynomials and its original positive denominator, including D^(pu+pv)
+// for a polynomial carrier. Original homogeneous E/Q/S coefficients and
+// positive denominator bounds retain the caller's physical budget.
+// Invalid/null data, domains not proved, exhausted fixed resources and
+// unresolved/over-budget bounds return Failed; callers must treat this as
+// terminal for the recognized family. Certified alone publishes a finite
+// whole-range upperBound <= budget. Cancellation propagates distinctly.
+// This checks the actual fin's position, not Newton convergence/branch,
+// trim membership, topology or preservation of the whole carrier.
+SurfaceCurveBoundResult surfaceCurveResidualBound(const CurvePtr<3> &edge, const SurfacePtr &surface,
+                                                  const CurvePtr<2> &pcurve, const Interval &range,
+                                                  double budget);
+}

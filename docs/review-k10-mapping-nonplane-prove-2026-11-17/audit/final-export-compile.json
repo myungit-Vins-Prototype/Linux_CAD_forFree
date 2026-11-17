@@ -1,0 +1,24 @@
+{
+  "argv": [
+    "g++",
+    "-O2",
+    "-std=c++17",
+    "-ffp-contract=off",
+    "-fno-fast-math",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-I",
+    "kernel",
+    "-x",
+    "c++",
+    "-c",
+    "/tmp/k10-mapping-nonplane-review/audit/export_public_final.cpp.txt",
+    "-o",
+    "/tmp/k10-mapping-nonplane-review/audit/export-public-final.o"
+  ],
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "exit": 0,
+  "elapsed": 1.506052959986846,
+  "sourceSHA256": "7d3f2789f98c500f296f6940a28546e92b868db772dfde58e159b6c3a0007438"
+}

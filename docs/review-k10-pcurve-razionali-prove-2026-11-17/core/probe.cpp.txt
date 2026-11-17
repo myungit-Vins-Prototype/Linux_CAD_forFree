@@ -1,0 +1,22 @@
+#include "fk_surface_curve_bounds.h"
+#include "fk_bspline_surface.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+int main(){
+ int failed=0;const std::vector<double> k2{0,0,0,1,1,1},k3{0,0,0,0,1,1,1,1};
+ auto surface=[&](double common){std::vector<Vec3>p;for(int i=0;i<3;++i)for(int j=0;j<3;++j)p.emplace_back(i*.5,j*.5,0);return std::make_shared<BSplineSurface>(2,2,k2,k2,3,3,p,common?std::vector<double>(9,common):std::vector<double>{});};
+ auto check=[&](const char*name,const CurvePtr<3>&e,const SurfacePtr&s,const CurvePtr<2>&q,detail::SurfaceCurveBoundStatus want){auto v=detail::surfaceCurveResidualBound(e,s,q,{0,1},1e-7);std::cout<<name<<" status="<<int(v.status)<<" upper="<<std::setprecision(17)<<v.upperBound<<'\n';failed+=v.status!=want;};
+ auto certified=detail::SurfaceCurveBoundStatus::Certified,rejected=detail::SurfaceCurveBoundStatus::Failed;
+ for(double gauge:{1.,1e20,1e-20,1e50,1e-50}){
+  std::vector<Vec3>ep{{.125,0,0},{.25,0,0},{.5,0,0},{.75,0,0}};std::vector<Vec2>qp{{.125,0},{.25,0},{.5,0},{.75,0}};std::vector<double>w{1,2,3,4},qw=w;for(auto &x:qw)x*=gauge;
+  auto e=std::make_shared<BSplineCurve<3>>(3,k3,ep,w);auto q=std::make_shared<BSplineCurve<2>>(3,k3,qp,qw);
+  std::cout<<"gauge="<<gauge<<" ";check("matchingQ3E3",e,surface(4),q,certified);
+ }
+ auto q1=std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,1,1},std::vector<Vec2>{{.5,0},{1,0}},std::vector<double>{2,1});
+ auto correct=std::make_shared<BSplineCurve<3>>(3,k3,std::vector<Vec3>{{.5,0,0},{.6,0,0},{.75,0,0},{1,0,0}},std::vector<double>{2,5/3.,4/3.,1});
+ check("Dpower-correct",correct,surface(0),q1,certified);
+ auto wrong=std::make_shared<BSplineCurve<3>>(3,k3,std::vector<Vec3>{{8,0,0},{4,0,0},{2,0,0},{1,0,0}});
+ check("Dpower-negative",wrong,surface(0),q1,rejected);
+ return failed?1:0;
+}

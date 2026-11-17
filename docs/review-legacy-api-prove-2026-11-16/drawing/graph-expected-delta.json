@@ -1,0 +1,38 @@
+{
+  "kind": "Expected map changes inferred from exact removed source lines, not a regenerated after graph",
+  "removedDefinition": "ForgeCad::DrawingSheetEditor::setModelProvider",
+  "removedMappedSites": [
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "site": {
+        "line": 2947,
+        "symbol": "ForgeCad::DrawingSheetEditor::DrawingSheetEditor::(lambda at /home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:2876:23)::operator()",
+        "owner": "ForgeCad::DrawingSheetEditor::DrawingSheetEditor"
+      }
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "site": {
+        "line": 2947,
+        "symbol": "ForgeCad::DrawingSheetEditor::Impl::report",
+        "owner": "ForgeCad::DrawingSheetEditor::DrawingSheetEditor"
+      }
+    },
+    {
+      "source": "cad_drawing_editor.cpp",
+      "target": "cad_drawing_editor.cpp",
+      "kind": "call",
+      "site": {
+        "line": 2947,
+        "symbol": "ForgeCad::DrawingSheetEditor::updateModel",
+        "owner": "ForgeCad::DrawingSheetEditor::DrawingSheetEditor"
+      }
+    }
+  ],
+  "retained": "All source bodies in preservation.json unchanged; known live source update path preserved",
+  "coordinatorRequired": "Regenerate/check graph and HTML after real integration"
+}

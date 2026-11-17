@@ -1,0 +1,8 @@
+{
+  "command": [
+    "/tmp/k10-arc-review/root/baseline-tests"
+  ],
+  "exit": 1,
+  "seconds": 0.007269118999829516,
+  "watchdog_seconds": 30
+}

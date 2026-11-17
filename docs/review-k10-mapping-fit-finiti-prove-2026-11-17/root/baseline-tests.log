@@ -1,0 +1,30 @@
+[  OK  ] MappingFitFiniteCubicQuinticGridsAndDeviation
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:30: FK_CHECK(rejected)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:31: FK_CHECK(!result)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:32: FK_CHECK(deviation == -17)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:30: FK_CHECK(rejected)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:31: FK_CHECK(!result)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:32: FK_CHECK(deviation == -17)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:30: FK_CHECK(rejected)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:31: FK_CHECK(!result)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:32: FK_CHECK(deviation == -17)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:30: FK_CHECK(rejected)
+    (altri fallimenti omessi)
+[ FAIL ] MappingFitNonFiniteInteriorProbeCannotPublishSurface (18 controlli falliti)
+[  OK  ] MappingFitNonFiniteCornerAndStencilValuesReject
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: BSplineSurface: polo non finito
+[ FAIL ] MappingFitEveryAnalyticJetVectorMustBeFinite (1 controlli falliti)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:116: FK_CHECK(callbacks == 0)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:116: FK_CHECK(callbacks == 0)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:30: FK_CHECK(rejected)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:31: FK_CHECK(!result)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:32: FK_CHECK(deviation == -17)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:116: FK_CHECK(callbacks == 0)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:30: FK_CHECK(rejected)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:31: FK_CHECK(!result)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:32: FK_CHECK(deviation == -17)
+    /tmp/k10-global-audit-review/tests/test_mapping_fit_validation.cpp:116: FK_CHECK(callbacks == 0)
+    (altri fallimenti omessi)
+[ FAIL ] MappingFitToleranceAndGridPreflightBeforeCallbacks (13 controlli falliti)
+[  OK  ] MappingFitCallbackErrorsAndCancellationDoNotPublish
+3/6 test superati

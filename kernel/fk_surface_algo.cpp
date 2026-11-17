@@ -775,7 +775,11 @@ bool invertPoint(const Surface &surface, const Vec3 &p, Vec2 &uv, double toleran
         }
     }
     unwrapNear(surface, uv, guess);
-    return true;
+    // Anche un multiplo del periodo arrotondato puo' spostare il punto:
+    // verifica gli UV effettivamente restituiti, senza cambiare ramo o cap.
+    if (!isFinite(uv)) return false;
+    const double residual = distance(p, surface.point(uv[0], uv[1]));
+    return std::isfinite(residual) && residual <= tolerance;
 }
 
 

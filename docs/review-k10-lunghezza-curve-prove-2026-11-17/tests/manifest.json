@@ -1,0 +1,29 @@
+{
+  "scope": "K10 arcLength finite physical speed and local cache, V2",
+  "frozen": true,
+  "groups": 6,
+  "baselineFilter": "SafeControls",
+  "candidateFilter": null,
+  "production": {
+    "kernel/fk_curve_algo.cpp": "8ceb22befce610f835a9271ca88b497470a5ba2497210d94cbb8867bccfa3400",
+    "kernel/fk_curve_length_cache.h": "d9f5a424ffc931bae46b818b6bcff644ca06376dabbb9c301ba8ce423f9aa1e0"
+  },
+  "executionByThisAgent": "none; no compilation or integration call",
+  "files": [
+    {
+      "path": "test_arc_length_validation.cpp",
+      "bytes": 9641,
+      "sha256": "cc1703a3b4c927858ff9f4e409b31168d638b3075d3e962061957380322ed738"
+    },
+    {
+      "path": "HANDOFF.txt",
+      "bytes": 3526,
+      "sha256": "775a65f1a41fa50fdb19de382b9fc96ebec98ce3f664487562d79c0561e20351"
+    },
+    {
+      "path": "graph-consult.json",
+      "bytes": 8099,
+      "sha256": "d228ae5262940fe4a9db8751f75d946a3f68811c3767cdd54b3926731106d2dd"
+    }
+  ]
+}

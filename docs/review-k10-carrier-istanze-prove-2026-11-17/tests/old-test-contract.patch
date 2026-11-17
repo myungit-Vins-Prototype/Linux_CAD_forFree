@@ -1,0 +1,11 @@
+--- a/kernel/tests/test_surface_curve_bounds.cpp
++++ b/kernel/tests/test_surface_curve_bounds.cpp
+@@ -173,7 +173,7 @@
+         surfacePoles, weights), uv);
+     unsupported(std::make_shared<TrimmedCurve<3>>(edge, 0, 1), support, uv);
+     unsupported(edge, support, std::make_shared<TrimmedCurve<2>>(uv, 0, 1));
+-    unsupported(edge, std::make_shared<BSplineSurface>(support, Transform3()), uv);
++    certified(edge, std::make_shared<BSplineSurface>(support, Transform3()), uv, {0, 1});
+     unsupported(edge, std::make_shared<Plane>(Frame3()), uv);
+ }
+ FK_TEST(NonIsoResidualCancellationPropagates) {

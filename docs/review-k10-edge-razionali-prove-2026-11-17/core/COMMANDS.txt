@@ -1,0 +1,15 @@
+# Repository read-only; files below are staging only.
+# Compile provider overlay, no library archive copy:
+c++ -O3 -DNDEBUG -std=c++17 -ffp-contract=off -Wall -Wextra -Wpedantic -I/home/myungit/Linux_CAD_forFree/kernel -c /tmp/k10-rational-edge-review/core/kernel/fk_surface_curve_bounds.cpp -o /tmp/k10-rational-edge-review/core/provider.o
+c++ -O3 -DNDEBUG -std=c++17 -ffp-contract=off -I/home/myungit/Linux_CAD_forFree/kernel -x c++ /tmp/k10-rational-edge-review/core/probe.cpp.txt -x none /tmp/k10-rational-edge-review/core/provider.o /tmp/k10-rational-edge-review/root/libforgekernel-baseline.a -pthread -o /tmp/k10-rational-edge-review/core/probe
+/tmp/k10-rational-edge-review/core/probe > /tmp/k10-rational-edge-review/core/probe.log
+# Compile exit0, no warnings; probe exit0:5positive Certified/1negative Failed.
+
+# Same TU probe, baseline and overlay, to compare polynomial-family output:
+c++ -O3 -DNDEBUG -std=c++17 -ffp-contract=off -I/home/myungit/Linux_CAD_forFree/kernel -x c++ /tmp/k10-rational-edge-review/core/polynomial-probe.cpp.txt -x none /tmp/k10-rational-edge-review/root/libforgekernel-baseline.a -pthread -o /tmp/k10-rational-edge-review/core/poly-baseline
+c++ -O3 -DNDEBUG -std=c++17 -ffp-contract=off -I/home/myungit/Linux_CAD_forFree/kernel -x c++ /tmp/k10-rational-edge-review/core/polynomial-probe.cpp.txt -x none /tmp/k10-rational-edge-review/core/provider.o /tmp/k10-rational-edge-review/root/libforgekernel-baseline.a -pthread -o /tmp/k10-rational-edge-review/core/poly-candidate
+/tmp/k10-rational-edge-review/core/poly-baseline /tmp/k10-rational-edge-review/core/poly-baseline.jsonl > /tmp/k10-rational-edge-review/core/poly-baseline.log
+/tmp/k10-rational-edge-review/core/poly-candidate /tmp/k10-rational-edge-review/core/poly-candidate.jsonl > /tmp/k10-rational-edge-review/core/poly-candidate.log
+cmp /tmp/k10-rational-edge-review/core/poly-baseline.jsonl /tmp/k10-rational-edge-review/core/poly-candidate.jsonl
+cmp /tmp/k10-rational-edge-review/core/poly-baseline.log /tmp/k10-rational-edge-review/core/poly-candidate.log
+# Both cmp exit0,48JSON lines.

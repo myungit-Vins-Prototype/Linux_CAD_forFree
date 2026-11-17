@@ -1,0 +1,30 @@
+{
+  "baseline_files": 8289,
+  "changed_existing": [
+    "CLAUDE.md",
+    "docs/code-review-2026-11-15.md",
+    "docs/roadmap.md",
+    "forgeCad2026_gui.cpp",
+    "forgeCad2026_ribbon_preview.cpp",
+    "tools/generate_architecture.py"
+  ],
+  "preserved_existing": 8283,
+  "new_documents": [
+    "docs/history/claude-prima-menu-cache-stato-review-2026-11-17.md",
+    "docs/review-punti-aperti-2026-11-17.md",
+    "docs/review-ui11-menu-cache-2026-11-17.md"
+  ],
+  "previous_proof_packages": 39,
+  "previous_proof_payload_files": 5651,
+  "head_origin": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "index_empty": true,
+  "kernel_general_view_runner_unchanged": true,
+  "ui_only_targeted_tests": true,
+  "baseline_failures": 13,
+  "candidate_checks": 17,
+  "candidate_failures": 0,
+  "overflow_groups": 3,
+  "new_confirmed_bug": "UI11",
+  "total_corrected": 34,
+  "CLAUDE_bytes": 16129
+}

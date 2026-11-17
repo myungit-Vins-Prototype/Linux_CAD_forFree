@@ -1,0 +1,18 @@
+{
+  "authorization": "Root explicit 2026-11-17 after final67Release/SAN hashes/exports. Only three current-scope private recreatable ELF duplicates. Sources/logs/coefficients/shared archive/proofs untouched.",
+  "files": {
+    "/tmp/k10-curve-wrapper-review/tests/baseline-new-tests": {
+      "sha256": "2b7900888d4da86f5fbcfb04c5441b891e5746f990b7e8953fbe44bec1a427d2",
+      "bytes": 56989088
+    },
+    "/tmp/k10-curve-wrapper-review/tests/candidate-new-tests": {
+      "sha256": "6dc3556757ca313199c0f7622c68536e5b65144149e4ce12ebe15b4c3459858d",
+      "bytes": 56106880
+    },
+    "/tmp/k10-curve-wrapper-review/tests/export-originals": {
+      "sha256": "e4ec3da5b586660a9d83e2c8218bf4f766880d6876db1c1a09f02db0aebeb287",
+      "bytes": 53618232
+    }
+  },
+  "totalBytes": 166714200
+}

@@ -1,0 +1,62 @@
+--- a/kernel/fk_sheet.cpp
++++ b/kernel/fk_sheet.cpp
+@@ -47,16 +47,39 @@
+ }
+ 
+ // Parametro u1 con lunghezza d'arco |u1 - u0| = length sulla curva (verso `sign`).
+-double arcParameter(const Curve<3> &curve, double u0, double length, double sign) {
+-    double u1 = u0 + sign * length / std::max(norm(curve.derivative(u0)), 1e-300);
++double arcParameter(const Curve<3> &curve, double u0, double length, double sign, double tolerance) {
++    cancellationPoint();
++    if (!std::isfinite(u0) || !std::isfinite(length) || !(length > 0.0)
++        || (sign != -1.0 && sign != 1.0) || !std::isfinite(tolerance) || !(tolerance > 0.0))
++        throw std::domain_error("extendSheet: dati della lunghezza d'arco non validi");
++    const double initialSpeed = norm(curve.derivative(u0));
++    if (!std::isfinite(initialSpeed) || !(initialSpeed > 0.0))
++        throw std::domain_error("extendSheet: velocita' iniziale non valida");
++    double u1 = u0 + sign * length / std::max(initialSpeed, 1e-300);
++    if (!std::isfinite(u1)) throw std::domain_error("extendSheet: parametro d'arco non finito");
+     for (int iteration = 0; iteration < 60; ++iteration) {
++        cancellationPoint();
++        if (!std::isfinite(u1 - u0)) throw std::domain_error("extendSheet: intervallo d'arco non finito");
+         const double s = arcLength(curve, {std::min(u0, u1), std::max(u0, u1)}, 1e-13);
+         const double speed = norm(curve.derivative(u1));
++        if (!std::isfinite(s) || !std::isfinite(speed))
++            throw std::domain_error("extendSheet: lunghezza o velocita' d'arco non finita");
+         if (!(speed > 0.0)) break;
+         const double step = sign * (length - s) / speed;
++        if (!std::isfinite(step)) throw std::domain_error("extendSheet: passo d'arco non finito");
+         u1 += step;
++        if (!std::isfinite(u1)) throw std::domain_error("extendSheet: parametro d'arco non finito");
+         if (std::fabs(step) <= 1e-15 * (1.0 + std::fabs(u1))) break;
+     }
++    // Verifica il parametro effettivamente restituito, dopo l'ultimo passo.
++    cancellationPoint();
++    const double delta = u1 - u0;
++    if (!std::isfinite(delta) || !(sign * delta > 0.0))
++        throw std::domain_error("extendSheet: direzione o intervallo d'arco non valido");
++    const double achieved = arcLength(curve, {std::min(u0, u1), std::max(u0, u1)}, 1e-13);
++    if (!std::isfinite(achieved) || std::fabs(achieved - length) > tolerance)
++        throw std::domain_error("extendSheet: lunghezza d'arco richiesta non raggiunta");
++    cancellationPoint();
+     return u1;
+ }
+ 
+@@ -908,7 +931,7 @@
+             const double guess = start + outward * 2.0 * length / speed;
+             const auto &crossSpline = static_cast<const BSplineCurve<3> &>(*crossCurve);
+             const auto reach = extendBSpline(crossSpline, std::min(crossSpline.domain().lo, guess), std::max(crossSpline.domain().hi, guess));
+-            const double end = arcParameter(reach, start, length, outward);
++            const double end = arcParameter(reach, start, length, outward, tolerance);
+             splineEnd = end;
+             Interval ur = surface->uDomain(), vr = surface->vDomain();
+             Interval &range = vIso ? vr : ur;
+@@ -981,7 +1004,7 @@
+                     const double guess = u0 + outward * 2.0 * length / std::max(norm(curve->derivative(u0)), 1e-300);
+                     reach = std::make_shared<BSplineCurve<3>>(extendBSpline(spline, std::min(domain.lo, guess), std::max(domain.hi, guess)));
+                 }
+-                u1 = arcParameter(*reach, u0, length, outward);
++                u1 = arcParameter(*reach, u0, length, outward, tolerance);
+                 if (!extrusion.isUPeriodic() && !domain.contains(u1)) {
+                     if (curve->type() != CurveType::BSpline) throw std::domain_error("extendSheet: la curva base non si prolunga");
+                     const auto &spline = static_cast<const BSplineCurve<3> &>(*curve);

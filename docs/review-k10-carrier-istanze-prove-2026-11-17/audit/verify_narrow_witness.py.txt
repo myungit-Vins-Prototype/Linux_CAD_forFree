@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Exact point counterexample for the sampled nonPlane residual. Not a sampled upper certificate."""
+from pathlib import Path
+import json,types,sys,hashlib
+root=Path(__file__).parent
+for name in ['fraction_common','verify_tensor_fraction']:
+ m=types.ModuleType(name);m.__file__=str(root/(name+'.py.txt'));sys.modules[name]=m
+ exec(compile(Path(m.__file__).read_text(),m.__file__,'exec'),m.__dict__)
+from verify_tensor_fraction import *
+p=Path(sys.argv[1]);records=[json.loads(x) for x in p.read_text().splitlines()]
+r=next(x for x in records if x['label']=='narrow-instance' and x['fin']==0)
+lo,hi=map(exact,r['range']);E=source_spans(normalize(r['curve']),(lo,hi));Q=source_spans(normalize(r['pcurve']),(lo,hi));S=surface_data(r['surface']);budget=exact(r['budget'])
+pu,pv,U,V,nu,nv,_,_=S
+assert r['pcurve']['type']=='bspline' and min(map(exact,r['pcurve']['weights']))>0
+assert all(U[pu]<=exact(p[0])<=U[nu] and V[pv]<=exact(p[1])<=V[nv] for p in r['pcurve']['poles']), 'Q original pole hull must prove whole-image domain'
+def ev(a,t):
+ a=list(a)
+ while len(a)>1:a=[(1-t)*x+t*y for x,y in zip(a,a[1:])]
+ return a[0]
+def at(t):
+ e=next(a for a in E if a['lo']<=t<=a['hi']);q=next(a for a in Q if a['lo']<=t<=a['hi'])
+ e=subspan(e,t,t);q=subspan(q,t,t)
+ uv=[x[0]/q['w'][0] for x in q['h']]
+ pu,pv,U,V,nu,nv,_,_=S
+ ku=next(i for i in range(pu,nu) if U[i]<U[i+1] and U[i]<=uv[0]<=U[i+1]);kv=next(i for i in range(pv,nv) if V[i]<V[i+1] and V[i]<=uv[1]<=V[i+1])
+ sh,sw=compose(S,q,ku,kv);delta=[ev(sh[i],F(0))/ev(sw,F(0))-e['h'][i][0]/e['w'][0] for i in range(3)]
+ return uv,delta
+# IEEE value used by the runtime diagnostic, now interpreted exactly.
+t=F.from_float(.1008);uv,delta=at(t);squared=sum(x*x for x in delta)
+assert abs(delta[2])>budget and squared>budget*budget
+# These 33 exact evaluations show why this PARTICULAR sample grid misses the defect.
+# They are not used to prove any whole-range upper bound.
+sampled=[sum(x*x for x in at(lo+(hi-lo)*F(j,32))[1]) for j in range(33)]
+assert max(sampled)<budget*budget
+out={'pass':True,'scope':'Concrete exact original-IEEE base+stored-placement witness for internal mapBodyByFunction final instance fin; not public wrap API proof','input_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'label':'narrow-instance','fin':0,'parameter_ieee':float(t).hex(),'parameter_fraction':str(t),'uv_fraction':list(map(str,uv)),'residual_fraction':list(map(str,delta)),'z_abs_mm':float(abs(delta[2])),'z_abs_over_budget':float(abs(delta[2])/budget),'squared_distance_fraction':str(squared),'budget_fraction':str(budget),'sample_grid_exact_max_squared_fraction':str(max(sampled)),'sample_grid_size':33,'q_original_pole_hull_inside_natural_domain':True,'sample_grid_below_budget':True,'not_claimed':['Whole-range upper bound','Full mapping intent or carrier-fit correctness','Public CAD bug newly discovered','Topology/trim correctness']}
+Path(sys.argv[2]).write_text(json.dumps(out,indent=2)+'\n');print(json.dumps(out,indent=2))

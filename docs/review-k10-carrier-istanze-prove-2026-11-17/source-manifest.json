@@ -1,0 +1,13 @@
+{
+  "AGENTS.md": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+  "CLAUDE.md": "7808b8f18fd060aaa655c1d96c2ee4286443dca2b7bca07ef5f4c076e2bfa8f2",
+  "docs/code-review-2026-11-15.md": "820f1bbf2a4390942c59d4104e181751800c0c2a73fe0c30e90da52f945ccf30",
+  "docs/history/claude-prima-k10-carrier-istanze-2026-11-17.md": "4b12acc9965d9efb0b833e9009f57a3ccb577073031e38f16b3ac8bf83cf8e1b",
+  "docs/review-k10-carrier-istanze-2026-11-17.md": "519d9ce26c8c6fc00e2481ffc772c88e59e71b0730f54f66b571deaa750191cb",
+  "kernel/CMakeLists.txt": "df989e7437e9846af2cde8ff7b8915996bb47d1efc3f4380c1052befa2127326",
+  "kernel/fk_surface_curve_bounds.cpp": "2d52c696b141891a6f620b9ef4b7dcfae8a82fdf3a5f6280a07abe7ff2e64aa7",
+  "kernel/fk_surface_curve_bounds.h": "94f64598883d8a7a81a2047b3339a83434e99f51da22a2a73c1f2fb4f6e8764a",
+  "kernel/tests/test_surface_curve_bounds.cpp": "a33f5da4cf7b2544f23ce0722368d4df29e215896627d912b40bcd388a0b6899",
+  "kernel/tests/test_surface_curve_instances.cpp": "f381c973b4a15bb323fd874f6a446db461fe6add904d3d0fa2beb68e9c27e327",
+  "tools/generate_architecture.py": "bfeb08452e3e6ae55550378c5d15aa2e54f2f669dd29aef9d0d1f11df7f5b823"
+}

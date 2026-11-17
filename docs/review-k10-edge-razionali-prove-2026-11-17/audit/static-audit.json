@@ -1,0 +1,29 @@
+{
+  "outcome": "No actionable P1/P2 in scoped freeze32b161a9",
+  "sources": [
+    {
+      "path": "kernel/fk_surface_curve_bounds.cpp",
+      "candidateSHA256": "32b161a97903c5ca746a87b3bde59fb3c79566316d0f274a189127cc396f62e6",
+      "integratedSHA256": "32b161a97903c5ca746a87b3bde59fb3c79566316d0f274a189127cc396f62e6"
+    },
+    {
+      "path": "kernel/fk_surface_curve_bounds.h",
+      "candidateSHA256": "b6ccad5f246b08c9e69523e485f978600b51ae46104d64d12b18c53dbd487d00",
+      "integratedSHA256": "b6ccad5f246b08c9e69523e485f978600b51ae46104d64d12b18c53dbd487d00"
+    }
+  ],
+  "review": [
+    "E positions are centered with original anchor before multiplication by original weight. No normalized or rounded homogeneous surrogate is used.",
+    "Source1 W_E uses identical original E knots, cubic degree and original anchors; each node lies in original natural E domain. lowerE=max(min original positive weights,hullWE.lo) is therefore valid for the whole node.",
+    "For each active surface cell after Q-domain proof: N=H_S*W_E-H_E*W_S, denominatorW_S*W_E; numerator degree at most21. Existing all-closed-cell maximum and active-cell lowerS argument unchanged.",
+    "Positive outward divisions S then E avoid an unsafe nominal product of tiny or huge lower bounds; intermediate infinity/uncertainty cannot certify. Interval underflow is enclosed by nextafter rather than rounded-to-zero shortcuts.",
+    "Eweightsconstant branch retains old snapshot positions and residual expression/call without denominator; Q variable weights remain Unsupported.",
+    "Source1 extra storage3ne+6 charged before snapshot allocation, visits/depth/cell/scalar caps unchanged.",
+    "CandidateQ accepts positive variable E weights before the sole final proof. No E/S/cap mutation or recovery after Failed is added."
+  ],
+  "limits": [
+    "This delta expands a continuous residual provider and its ledger family, not all public mapper/extendSheet outputs. Mapper builds currently refit E polynomial.",
+    "No proof of carrier fitting, mapping intent, Newton convergence, trim/topology, rational Q or curve wrappers.",
+    "Conservative overflow/underflow/resource Failed is permitted."
+  ]
+}

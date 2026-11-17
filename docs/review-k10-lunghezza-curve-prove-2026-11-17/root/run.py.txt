@@ -1,0 +1,46 @@
+from pathlib import Path
+import json,hashlib,subprocess,time,os,sys
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-arclength-review/root');K=R/'kernel';lib=R/'forgecad-release/kernel/libforgekernel.a';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def run(name,args,allow=(0,),timeout=600,env=None):
+ start=time.monotonic()
+ with (T/(name+'.log')).open('w') as out:code=subprocess.run(['timeout','--kill-after=2',str(timeout),'/usr/bin/time','-v','-o',str(T/(name+'-time.txt'))]+list(map(str,args)),cwd=R,stdout=out,stderr=subprocess.STDOUT,env=env).returncode
+ j={'command':list(map(str,args)),'exit':code,'seconds':time.monotonic()-start,'watchdog_seconds':timeout};(T/(name+'-result.json')).write_text(json.dumps(j,indent=2)+'\n');print(name,code,round(j['seconds'],3),flush=True)
+ if code not in allow:print((T/(name+'.log')).read_text()[-5000:]);raise SystemExit(1)
+ return j
+flags=['/usr/bin/c++','-std=c++17','-O2','-g','-fno-fast-math','-ffp-contract=off','-Wall','-Wextra','-Wpedantic','-I'+str(K),'-I'+str(K/'tests')]
+targets=['forgekernel_arc_length_validation_tests','forgekernel_bspline_derivative_tests','forgekernel_sheet_arc_validation_tests']
+if sys.argv[1]=='baseline':
+ source=Path('/tmp/k10-arclength-review/core/probe.cpp');assert sha(source)=='5628578b0167f1d94a70784d95c562aa9dd816ba9a1c43cd6cfc79022ea33100';s=source.read_text().replace('} else if (mode == "center") {','''} else if (mode == "underflow") {
+            const double h = std::ldexp(1.0, 600);
+            const BSplineCurve<3> curve(1, {0,0,h,h}, {{0,0,0},{1,0,0}});
+            std::cout << "DERIVATIVE " << curve.derivative(.5*h)[0] << " NORM " << norm(curve.derivative(.5*h)) << std::endl;
+            std::cout << "RETURNED " << arcLength(curve,{0,h}) << std::endl;
+        } else if (mode == "center") {''');(T/'probe.cpp').write_text(s);j={'path':str(lib),'sha256':sha(lib),'bytes':lib.stat().st_size,'copied':False};(T/'staged-library.json').write_text(json.dumps(j,indent=2)+'\n');run('compile-baseline-probe',flags+[T/'probe.cpp',lib,'-pthread','-o',T/'baseline-probe'])
+ for mode in ['cancel','underflow','center']:run('baseline-'+mode,[T/'baseline-probe',mode],timeout=5)
+ run('baseline-velocity',[T/'baseline-probe','velocity'],allow=(124,),timeout=.3);assert sha(lib)==j['sha256']
+elif sys.argv[1]=='candidate-probe':
+ C=Path('/tmp/k10-arclength-review/core/kernel');assert sha(C/'fk_curve_algo.cpp')=='8ceb22befce610f835a9271ca88b497470a5ba2497210d94cbb8867bccfa3400';assert sha(C/'fk_curve_length_cache.h')=='d9f5a424ffc931bae46b818b6bcff644ca06376dabbb9c301ba8ce423f9aa1e0';assert sha(lib)==json.loads((T/'staged-library.json').read_text())['sha256'];run('compile-candidate',flags+['-c',C/'fk_curve_algo.cpp','-o',T/'candidate.o']);run('link-candidate-probe',flags+[T/'probe.cpp',T/'candidate.o',lib,'-pthread','-o',T/'candidate-probe'])
+ for mode in ['cancel','underflow','velocity','center']:run('candidate-'+mode,[T/'candidate-probe',mode],timeout=5)
+ assert sha(lib)==json.loads((T/'staged-library.json').read_text())['sha256']
+elif sys.argv[1] in ['staged-tests','sanitizer']:
+ C=Path('/tmp/k10-arclength-review/core/kernel');N=Path('/tmp/k10-arclength-review/tests/test_arc_length_validation.cpp');assert sha(N)==json.loads((T/'test-freeze.json').read_text())['sha256'];assert sha(lib)==json.loads((T/'staged-library.json').read_text())['sha256'];cf=flags[:1]+['-I'+str(C)]+flags[1:]
+ assert sha(C/'fk_curve_algo.cpp')=='8ceb22befce610f835a9271ca88b497470a5ba2497210d94cbb8867bccfa3400';assert sha(C/'fk_curve_length_cache.h')=='d9f5a424ffc931bae46b818b6bcff644ca06376dabbb9c301ba8ce423f9aa1e0'
+ if sys.argv[1]=='staged-tests':
+  run('compile-baseline-test',flags+['-c',N,'-o',T/'baseline-test.o']);run('compile-main',flags+['-c',K/'tests/fk_test_main.cpp','-o',T/'main.o']);run('link-baseline-tests',flags+[T/'main.o',T/'baseline-test.o',lib,'-pthread','-o',T/'baseline-tests']);run('baseline-safe-controls',[T/'baseline-tests','SafeControls'],timeout=10)
+  run('compile-candidate-test',cf+['-c',N,'-o',T/'test.o']);run('link-candidate-tests',cf+[T/'main.o',T/'test.o',T/'candidate.o',lib,'-pthread','-o',T/'candidate-tests']);run('candidate-tests',[T/'candidate-tests'],timeout=30)
+ else:
+  san=cf+['-O1','-fsanitize=address,undefined','-fno-omit-frame-pointer']
+  for name,p in [('san-test',N),('san-main',K/'tests/fk_test_main.cpp'),('san-provider',C/'fk_curve_algo.cpp')]:run(name+'-compile',san+['-c',p,'-o',T/(name+'.o')])
+  run('san-link',san+[T/'san-main.o',T/'san-test.o',T/'san-provider.o',lib,'-pthread','-o',T/'san-tests']);env=os.environ.copy();env.update(ASAN_OPTIONS='detect_leaks=1:halt_on_error=1',UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1',LSAN_OPTIONS='exitcode=23');run('san-tests',[T/'san-tests'],env=env,timeout=60)
+ assert sha(lib)==json.loads((T/'staged-library.json').read_text())['sha256']
+elif sys.argv[1]=='build':
+ run('configure',['cmake','-S','.','-B','forgecad-release']);run('build',['cmake','--build','forgecad-release','--target','forgecad']+targets+['forgekernel_tests','--parallel','1']);paths=['forgecad-release/forgecad','forgecad-release/kernel/libforgekernel.a']+['forgecad-release/kernel/'+t for t in targets]+['forgecad-release/kernel/forgekernel_tests'];(T/'binaries.json').write_text(json.dumps({p:sha(R/p) for p in paths},indent=2)+'\n')
+elif sys.argv[1]=='ctest':run('ctest',['ctest','--test-dir','forgecad-release','--output-on-failure','-V','--parallel','1','--output-junit',T/'ctest.xml','-R','^('+'|'.join(targets)+')$'])
+elif sys.argv[1]=='legacy':
+ for f in ['ArcLength','CurveLengthCachePreservesQuadratureAndIdentity','SheetExtend','LoftSmoothThroughCircles','LoftUnequalGuideSpansPreserveGeometryAndContact','LoftG1SingleUlpSpanKeepsDistinctCollocationPoints']:run('legacy-'+f,['forgecad-release/kernel/forgekernel_tests',f])
+elif sys.argv[1]=='architecture':run('architecture',['python3','tools/generate_architecture.py','--build-dir','forgecad-release','--jobs','1'],timeout=1200)
+elif sys.argv[1]=='ordinary':
+ C=Path('/tmp/k10-arclength-review/core/kernel');run('link-baseline-ordinary',flags+[T/'ordinary-probe.cpp',lib,'-o',T/'baseline-ordinary']);cf=flags[:1]+['-I'+str(C)]+flags[1:];run('link-candidate-ordinary',cf+[T/'ordinary-probe.cpp',T/'candidate.o',lib,'-o',T/'candidate-ordinary'])
+ for label in ['baseline','candidate']:run(label+'-ordinary',[T/(label+'-ordinary')],timeout=10)
+ a=(T/'baseline-ordinary.log').read_bytes();b=(T/'candidate-ordinary.log').read_bytes();assert a==b;(T/'ordinary-comparison.json').write_text(json.dumps({'byte_identical':True,'sha256':hashlib.sha256(a).hexdigest(),'lines':len(a.splitlines()),'covers':'Line tol1e-11/0/-1, circle, rationalC0 cubic, affine transform, partial/full and cached/direct'},indent=2)+'\n')
+else:raise SystemExit('unknown mode')

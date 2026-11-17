@@ -1,0 +1,33 @@
+from pathlib import Path
+import json,hashlib,subprocess,re,difflib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/review-menu-style-2026-11-17');P=R/'docs/review-ui11-menu-cache-prove-2026-11-17';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();b=json.load(open(T/'baseline.json'));assert not P.exists()
+changed=sorted(f for f,h in b.items() if not (R/f).is_file() or sha(R/f)!=h);expected={'CLAUDE.md','docs/code-review-2026-11-15.md','docs/roadmap.md','forgeCad2026_gui.cpp','forgeCad2026_ribbon_preview.cpp','tools/generate_architecture.py'};assert set(changed)==expected,changed
+for f,h in json.load(open(T/'integrated-sources.json')).items():assert sha(R/f)==h
+assert sha(R/'docs/history/claude-prima-menu-cache-stato-review-2026-11-17.md')==b['CLAUDE.md']
+entries=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=R).decode().split('\0');new={f for f in entries if f and (R/f).is_file()}-set(b);assert new=={'docs/history/claude-prima-menu-cache-stato-review-2026-11-17.md','docs/review-ui11-menu-cache-2026-11-17.md','docs/review-punti-aperti-2026-11-17.md'},new
+prior=R/'docs/review-k10-quadratura-prove-2026-11-17';seals=json.load(open(prior/'root/previous-seals.json'));seal=prior/'SHA256SUMS';assert sha(seal)=='ba00d1a60249067817ba2f5d2f2801e6e9d41d3e57093aae9571bbbd3fae7af2';seals.append({'seal':str(seal.relative_to(R)),'sha256':sha(seal),'files':len(seal.read_text().splitlines())})
+for x in seals:
+ p=R/x['seal'];assert sha(p)==x['sha256']
+ for line in p.read_text().splitlines():h,f=line.split('  ',1);assert sha(p.parent/f)==h
+(T/'previous-seals.json').write_text(json.dumps(seals,indent=2)+'\n')
+for f,h in json.load(open(T/'binaries-after.json')).items():assert sha(R/f)==h
+assert not subprocess.check_output(['git','diff','--cached','--name-only'],cwd=R).strip();head=subprocess.check_output(['git','rev-parse','HEAD','origin/main'],cwd=R,text=True).splitlines();assert head==['47c7c19c4faf490995e8ff64f10d83d8a6abb077']*2;subprocess.run(['git','diff','--check'],cwd=R,check=True)
+mem=(R/'CLAUDE.md').read_text();assert len(mem.encode())<=16384 and len(re.findall(r'^\*\*',mem,re.M))<=10
+for name,old,newtext in [('forgeCad2026_gui.cpp','auto *cacheMenu=optionsMenu->addMenu(', 'auto *cacheMenu=addCadMenu(optionsMenu,'),('forgeCad2026_ribbon_preview.cpp','auto *menu=overflow->addMenu(g.name);','auto *menu=addCadMenu(overflow,g.name);')]:
+ after=(R/name).read_text();assert after.count(newtext)==1;before=after.replace(newtext,old);assert hashlib.sha256(before.encode()).hexdigest()==b[name];(T/(name+'.before.txt')).write_text(before);(T/(name+'.delta.patch')).write_text(''.join(difflib.unified_diff(before.splitlines(True),after.splitlines(True),fromfile='a/'+name,tofile='b/'+name)))
+report={'baseline_files':len(b),'changed_existing':changed,'preserved_existing':len(b)-len(changed),'new_documents':sorted(new),'previous_proof_packages':len(seals),'previous_proof_payload_files':sum(s['files'] for s in seals),'head_origin':head[0],'index_empty':True,'kernel_general_view_runner_unchanged':True,'ui_only_targeted_tests':True,'baseline_failures':13,'candidate_checks':17,'candidate_failures':0,'overflow_groups':3,'new_confirmed_bug':'UI11','total_corrected':34,'CLAUDE_bytes':len(mem.encode())};(T/'preservation-audit.json').write_text(json.dumps(report,indent=2)+'\n')
+P.mkdir();mapped=[]
+def cp(src,relative):
+ data=src.read_bytes();out=P/relative
+ if out.suffix in ['.cpp','.h','.py']:out=out.with_name(out.name+'.txt')
+ if out.suffix!='.png':data.decode('utf-8')
+ assert data[:4]!=b'\x7fELF';out.parent.mkdir(parents=True,exist_ok=True);out.write_bytes(data);mapped.append({'source':str(src),'archive':str(out.relative_to(P)),'sha256':sha(src)})
+for p in sorted(T.rglob('*')):
+ if p.is_file() and '__pycache__' not in p.parts and p.name!='open-items-draft.md':cp(p,p.relative_to(T))
+for f in sorted(expected|new|{'AGENTS.md'}):cp(R/f,Path('workspace')/f)
+(P/'SOURCE-MANIFEST.json').write_text(json.dumps(mapped,indent=2)+'\n');files=sorted(p for p in P.rglob('*') if p.is_file());seal=P/'SHA256SUMS';seal.write_text(''.join(sha(p)+'  '+str(p.relative_to(P))+'\n' for p in files))
+for line in seal.read_text().splitlines():h,f=line.split('  ',1);assert sha(P/f)==h
+for f in ['docs/review-ui11-menu-cache-2026-11-17.md','docs/review-punti-aperti-2026-11-17.md']:
+ p=R/f
+ for target in re.findall(r'\]\(([^)]+)\)',p.read_text()):assert (p.parent/target.split('#')[0]).exists(),target
+print(json.dumps(report,indent=2));print('NEW PROOF',len(files),sum(p.stat().st_size for p in files),sha(seal))

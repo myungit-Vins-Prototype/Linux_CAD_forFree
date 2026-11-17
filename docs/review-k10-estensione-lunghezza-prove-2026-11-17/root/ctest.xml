@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="3"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="41"
+	timestamp="2026-11-17T15:07:17"
+	>
+	<testcase name="forgekernel_sheet_fit_validation_tests" classname="forgekernel_sheet_fit_validation_tests" time="1.34735" status="run">
+		<properties/>
+		<system-out>[  OK  ] SheetFitPlanarNurbsOrientationsAndPose
+[  OK  ] SheetFitHiddenFeatureBothBranchesAndScale
+2/2 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_sheet_join_validation_tests" classname="forgekernel_sheet_join_validation_tests" time="39.9002" status="run">
+		<properties/>
+		<system-out>[  OK  ] SheetJoinImplicitPolynomial
+[  OK  ] SheetJoinTangentPolynomial
+[  OK  ] SheetJoinRigidPose
+[  OK  ] SheetJoinSmallScale
+[  OK  ] SheetJoinLargeScale
+[  OK  ] SheetJoinRational
+[  OK  ] SheetJoinReverseSelection
+[  OK  ] SheetJoinFaceSense
+[  OK  ] SheetJoinCanonicalReversal
+[  OK  ] SheetJoinLowerBoundary
+[  OK  ] SheetJoinTangentRigidPose
+[  OK  ] SheetJoinTangentSmallScale
+[  OK  ] SheetJoinTangentLargeScale
+[  OK  ] SheetJoinTangentRational
+[  OK  ] SheetJoinTangentReverseSelection
+[  OK  ] SheetJoinTangentFaceSense
+[  OK  ] SheetJoinTangentCanonicalReversal
+[  OK  ] SheetJoinTangentLowerBoundary
+[  OK  ] SheetJoinHiddenNarrowKnots
+[  OK  ] SheetJoinTangentGapBudget
+[  OK  ] SheetJoinTangentTrimmedSupport
+[  OK  ] SheetJoinHiddenNarrowPhases
+[  OK  ] SheetJoinHiddenNarrowPose
+[  OK  ] SheetJoinHiddenNarrowSmallScale
+[  OK  ] SheetJoinHiddenNarrowLargeScale
+[  OK  ] SheetJoinHiddenNarrowReverseSelection
+[  OK  ] SheetJoinTangentGapPose
+[  OK  ] SheetJoinCancellationAtomic
+[  OK  ] SheetJoinInvalid...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_sheet_arc_validation_tests" classname="forgekernel_sheet_arc_validation_tests" time="0.0038528" status="run">
+		<properties/>
+		<system-out>[  OK  ] SheetArcZeroSpeedCannotPublishShortReach
+[  OK  ] SheetArcRegularCurveCannotPublishExhaustedNewtonReach
+[  OK  ] SheetArcNaturalPositiveDistancesUsePhysicalReach
+[  OK  ] SheetArcOppositeDirectionAndPoseScaleKeepPhysicalReach
+[  OK  ] SheetArcLinearAndCylinderControlsKeepTheirPhysicalContract
+[  OK  ] SheetArcCancellationDoesNotPublishOrMutateInput
+6/6 test superati
+</system-out>
+	</testcase>
+</testsuite>

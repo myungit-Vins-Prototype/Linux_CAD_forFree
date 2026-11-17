@@ -1,0 +1,24 @@
+[
+  {
+    "label": "forward",
+    "command": [
+      "/tmp/boolean-order-review/tests/raw_union",
+      "/tmp/boolean-order-review/tests/snapshot-record-13.body",
+      "/tmp/boolean-order-review/tests/snapshot-record-14.body",
+      "/tmp/boolean-order-review/tests/raw-original-forward.body"
+    ],
+    "exitCode": 0,
+    "elapsed": 1.4638397179951426
+  },
+  {
+    "label": "reverse",
+    "command": [
+      "/tmp/boolean-order-review/tests/raw_union",
+      "/tmp/boolean-order-review/tests/snapshot-record-14.body",
+      "/tmp/boolean-order-review/tests/snapshot-record-13.body",
+      "/tmp/boolean-order-review/tests/raw-original-reverse.body"
+    ],
+    "exitCode": 0,
+    "elapsed": 1.4827883269899758
+  }
+]

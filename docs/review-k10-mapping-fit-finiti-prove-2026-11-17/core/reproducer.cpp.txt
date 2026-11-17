@@ -1,0 +1,29 @@
+// INERT SOURCE: not compiled/executed by the core agent.
+// Existing internal production API; root/tests own runtime validation.
+#include "fk_mapping_fit.h"
+#include <iostream>
+#include <limits>
+#include <stdexcept>
+using namespace ForgeCad::Kernel;
+int main(int argc,char**) {
+    double deviation=0;
+    const auto value=[](double u,double v) {
+        if(u==.125 && v==.125)
+            return Vec3(std::numeric_limits<double>::quiet_NaN(),v,0);
+        return Vec3(u,v,0);
+    };
+    detail::MappingJetFunction jet;
+    if(argc>1)jet=[](double u,double v,int,int) {
+        detail::MappingJet result;
+        result.p={u,v,0};result.pu={1,0,0};result.pv={0,1,0};result.puv={0,0,0};
+        return result;
+    };
+    try {
+        const auto surface=detail::fitMappingSurface({0,1},{0,1},value,jet,1e-6,deviation,.001,3);
+        std::cout<<"ACCEPTED surface="<<bool(surface)<<" deviation="<<deviation<<'\n';
+        return 1; // Baseline is predicted to accept: NaN second std::max argument is ignored.
+    }catch(const std::domain_error &error) {
+        std::cout<<"REJECTED "<<error.what()<<" deviation="<<deviation<<'\n';
+        return deviation==0?0:2;
+    }
+}

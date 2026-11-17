@@ -1,0 +1,36 @@
+{
+  "sourceHashes": {
+    "tests/test_document_theme_tabs.h": "57fc820e437b1c14ffd514298c84c2639880b5bf610f1092ac7256702ee2f9da",
+    "tests/test_viewport.cpp": "3d1010e64b28bf8100cfeb7e93485a6095e3d6148528126549b673d27b40b490",
+    "tests/test_document_tabs.h": "f3f4070a8b26aae50c600a1cbcb05dcd5d9c57e61ab89eac10f6237989f08a55",
+    "forgeCad2026_application_theme.cpp": "618b68b483952fac10852632b20f735fedb8e41b7dae1dfd06f676cee59582cc",
+    "cad_drawing_window.cpp": "621e8773f9c4aa06cea1868bf1ef4fd8bb9966741ef23aea1e295b05ec55c995",
+    "cad_drawing_compute.h": "202635912105b7991e707039811423024135e3fcc589af23f84343656fa0caed",
+    "CMakeLists.txt": "803fc4d264bca4e9dabf22d6678703e3f593a82813623ef8fefb5d6efbefe122"
+  },
+  "inspectedParentDebugResult": {
+    "command": [
+      "gdb",
+      "-q",
+      "-batch",
+      "-ex",
+      "set pagination off",
+      "-ex",
+      "set confirm off",
+      "-ex",
+      "run",
+      "-ex",
+      "thread apply all bt 18",
+      "-ex",
+      "quit",
+      "--args",
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests",
+      "--theme-tabs-only-2d"
+    ],
+    "exit": 0,
+    "interrupted": false,
+    "only_own_process_group": true
+  },
+  "parentLogSha256": "f310e9fad25bc7285717397f3488d971524ce10ff28b2eb4a8f41aa844d1509d",
+  "noNewExecutions": true
+}

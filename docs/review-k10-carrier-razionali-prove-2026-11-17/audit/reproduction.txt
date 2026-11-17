@@ -1,0 +1,9 @@
+final-build.json contiene argv/cwd esatti del compile/link fresco, final-api-run.json esecuzione/env. La libreria non e inclusa: ricostruire i sorgenti congelati e verificarne SHA in final-library.json. La sorgente .cpp.txt include gli helper del test_sheet_join_validation.cpp originale di cui viene congelata copia inerte; filtra il solo FK_TEST ActualNativeCarrierFinalFins. Test framework e sorgenti include sono registrati con SHA.
+
+Esecuzione certificati indipendenti (nessuna chiamata al provider C++ o al suo estrattore):
+python3 verify_actual_batch.py.txt actual-final final-fraction-results.json
+python3 verify_rational_active_cell.py.txt
+
+verify_failed_domain.py.txt analizza i12jsonl diagnostici tester prehelper; ne sono curati qui due esempi con originali completi, tutti gli hash sono nel riepilogo indipendente. Non e un test di successo e i dump non sono B-rep emessi. Le quantita negative sono UV, non mm.
+
+Gli script inerti .py.txt si eseguono solo se richiesto esplicitamente come sopra; importano gli altri .py.txt con loader locale. No sample comeproof: solo composizione omogenea originale, Fraction esatti e hullBernstein su intervalli completi. Il midpoint presente nel vecchio verifier serve soltanto a dimostrare un controesempio, mai ad accettare.

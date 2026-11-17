@@ -1,0 +1,7 @@
+[  OK  ] PCurveDeviationFiniteControlsAndSampledKnotPeaks
+[  OK  ] PCurveDeviationInvalidSamplesAndRangesReturnInfinity
+[  OK  ] PCurveDeviationNonFiniteNativeEvaluationsNeverLookExact
+[  OK  ] PCurveDeviationOverflowGapFromFinitePointsIsInfinity
+[  OK  ] PCurveAcceptanceNeedsFiniteDeviationEvenWithInfiniteTolerance
+[  OK  ] PCurveDeviationAndAcceptancePropagateCancellation
+6/6 test superati

@@ -1,0 +1,11 @@
+{
+  "AGENTS.md": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+  "CLAUDE.md": "b5921aa6f17b79162bad215b4ae4ab151bca424eeaf28f3945893b8bf234ab4b",
+  "docs/code-review-2026-11-15.md": "db802f12c1a2506664f891c97f2bb783ad94a97dc472dc9025d725f3a126f263",
+  "docs/history/claude-prima-k10-quadranti-2026-11-17.md": "4fe4a32ff14eb514daadcabeb1d7ac5437e3dded88f8221238047debcde8764f",
+  "docs/review-k10-quadranti-2026-11-17.md": "c68322cfd31280641004d87317c5f23ebe0f113fa39276625056e280ba670d92",
+  "kernel/CMakeLists.txt": "6927e8d0098303926f735f7002bbfbae4c437b959396b4ea0507043abfb4b950",
+  "kernel/fk_curve.cpp": "7f47f426d3d19182cc2261741beb4fc6efb94ac72994946c2009863219b98011",
+  "kernel/tests/test_quadrant_breakpoints_validation.cpp": "06034d0946dcba40af414af67052dd6259b1f6c4bd8bce0818e1afb592f7412c",
+  "tools/generate_architecture.py": "3fcd2356555636a9c68b4070512a6ba96b6ba46e1adf971bb6893a8af727f526"
+}

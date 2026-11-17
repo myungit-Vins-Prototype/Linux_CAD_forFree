@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="4"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="0"
+	timestamp="2026-11-17T14:34:54"
+	>
+	<testcase name="forgekernel_curve_projection_tests" classname="forgekernel_curve_projection_tests" time="0.00466627" status="run">
+		<properties/>
+		<system-out>[  OK  ] CurveProjectionRationalKnotsWeightsAndJets
+[  OK  ] CurveProjectionAffineShearNestedWrappers
+[  OK  ] CurveProjectionLinesDegenerateAndUnsupportedConics
+[  OK  ] CurveProjectionInvalidAndCancellation
+[  OK  ] CurveProjectionFillRationalAndBodyRoundtrip
+5/5 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_invert_point_validation_tests" classname="forgekernel_invert_point_validation_tests" time="0.00143983" status="run">
+		<properties/>
+		<system-out>[  OK  ] InvertPointCylinderValidatesFinalUnwrappedResidual
+[  OK  ] InvertPointConeSphereValidateFinalUnwrappedResidual
+[  OK  ] InvertPointTorusValidatesBothFinalPeriodicCoordinates
+[  OK  ] InvertPointModeratePeriodicSeedsKeepNearbyBranch
+[  OK  ] InvertPointPlaneAndClosedNonPeriodicSplineControls
+[  OK  ] InvertPointNonFinitePeriodicSeedsCannotReturnSuccess
+6/6 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_pcurve_deviation_validation_tests" classname="forgekernel_pcurve_deviation_validation_tests" time="0.00110834" status="run">
+		<properties/>
+		<system-out>[  OK  ] PCurveDeviationFiniteControlsAndSampledKnotPeaks
+[  OK  ] PCurveDeviationInvalidSamplesAndRangesReturnInfinity
+[  OK  ] PCurveDeviationNonFiniteNativeEvaluationsNeverLookExact
+[  OK  ] PCurveDeviationOverflowGapFromFinitePointsIsInfinity
+[  OK  ] PCurveAcceptanceNeedsFiniteDeviationEvenWithInfiniteTolerance
+[  OK  ] PCurveDeviationAndAcceptancePropagateCancellation
+6/6 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_quadrant_breakpoints_validation_tests" classname="forgekernel_quadrant_breakpoints_validation_tests" time="0.00127092" status="run">
+		<properties/>
+		<system-out>[  OK  ] QuadrantBreakpointsSafeControls
+[  OK  ] QuadrantBreakpointsInvalidRanges
+[  OK  ] QuadrantBreakpointsNonProgressRange
+[  OK  ] QuadrantBreakpointsCancellationPreset
+4/4 test superati
+</system-out>
+	</testcase>
+</testsuite>

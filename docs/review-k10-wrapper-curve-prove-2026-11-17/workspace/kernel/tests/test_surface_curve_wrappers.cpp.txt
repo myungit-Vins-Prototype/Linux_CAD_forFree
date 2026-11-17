@@ -1,0 +1,211 @@
+#include "fk_surface_curve_bounds.h"
+#include "fk_sheet_join_validation.h"
+#include "fk_bspline.h"
+#include "fk_bspline_surface.h"
+#include "fk_body_io.h"
+#include "fk_cancel.h"
+#include "fk_test.h"
+#include <cmath>
+#include <limits>
+#include <memory>
+#include <stdexcept>
+#include <vector>
+
+using namespace ForgeCad::Kernel;
+namespace {
+using detail::SurfaceCurveBoundStatus;
+constexpr double cap = 8e-8;
+const std::vector<double> k3{0, 0, 0, 0, 1, 1, 1, 1};
+std::vector<double> knots(int degree, Interval range = {0, 1}) {
+    std::vector<double> result(degree + 1, range.lo);
+    result.insert(result.end(), degree + 1, range.hi); return result;
+}
+std::shared_ptr<BSplineSurface> plane(Interval u = {0, 1}, double xshift = 0) {
+    std::vector<Vec3> poles;
+    for (int i = 0; i < 3; ++i) for (int j = 0; j < 3; ++j)
+        poles.emplace_back(xshift + u.lo + u.length() * (i / 2.), j / 2., 0);
+    return std::make_shared<BSplineSurface>(2, 2, knots(2, u), knots(2), 3, 3, poles);
+}
+std::shared_ptr<BSplineCurve<3>> linearEdge(Interval range = {0, 1}, double x = 0, bool vertical = false) {
+    std::vector<Vec3> poles;
+    for (int i = 0; i < 4; ++i) {
+        const double t = range.lo + range.length() * (i / 3.);
+        poles.push_back(vertical ? Vec3(x, t, 0) : Vec3(t, .25, 0));
+    }
+    return std::make_shared<BSplineCurve<3>>(3, knots(3, range), poles);
+}
+std::shared_ptr<BSplineCurve<2>> rationalUV(Interval range = {0, 1}) {
+    return std::make_shared<BSplineCurve<2>>(3, knots(3, range),
+        std::vector<Vec2>{{0, .125}, {.25, .75}, {.75, .25}, {1, .875}}, std::vector<double>{1, 2, 1, 4});
+}
+std::shared_ptr<BSplineCurve<3>> embedded(const BSplineCurve<2> &q, bool nonplanar = false) {
+    std::vector<Vec3> poles; std::vector<double> weights;
+    for (int i = 0; i < q.poleCount(); ++i) {
+        poles.emplace_back(q.poles()[i].x(), q.poles()[i].y(), nonplanar ? (i % 2 ? 2 : -1) : 0);
+        weights.push_back(q.weight(i));
+    }
+    return std::make_shared<BSplineCurve<3>>(3, q.knots(), poles, weights);
+}
+std::shared_ptr<BSplineCurve<2>> peakUV(bool peak) {
+    return std::make_shared<BSplineCurve<2>>(3, k3,
+        std::vector<Vec2>{{0, 0}, {1. / 3, peak ? .01 : 0}, {2. / 3, 0}, {1, 0}}, std::vector<double>{1, 1, 1e8, 1e8});
+}
+void expect(const CurvePtr<3> &e, const SurfacePtr &s, const CurvePtr<2> &q,
+    SurfaceCurveBoundStatus status, Interval range = {0, 1}, double budget = cap) {
+    const auto result = detail::surfaceCurveResidualBound(e, s, q, range, budget);
+    FK_CHECK(result.status == status);
+    if (status == SurfaceCurveBoundStatus::Certified)
+        FK_CHECK(std::isfinite(result.upperBound) && result.upperBound >= 0 && result.upperBound <= budget);
+}
+Body sheet(bool peak) {
+    const std::vector<Vec3> points{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}};
+    const CurvePtr<3> bottom = std::make_shared<TrimmedCurve<3>>(
+        std::make_shared<TransformedCurve>(embedded(*peakUV(false)), Transform3()), 0, 1);
+    const CurvePtr<2> bottomUV = std::make_shared<TrimmedCurve<2>>(peakUV(peak), 0, 1);
+    const std::vector<Body::BuildEdge> edges{{0, 1, bottom, {0, 1}, cap},
+        {1, 2, std::make_shared<Line<3>>(points[1], Vec3(0, 1, 0)), {0, 1}, cap},
+        {3, 2, std::make_shared<Line<3>>(points[3], Vec3(1, 0, 0)), {0, 1}, cap},
+        {0, 3, std::make_shared<Line<3>>(points[0], Vec3(0, 1, 0)), {0, 1}, cap}};
+    Body::BuildFace face; face.surface = plane();
+    face.loops = {{{0, true, bottomUV, 3e-10},
+                   {1, true, std::make_shared<Line<2>>(Vec2(1, 0), Vec2(0, 1)), 0},
+                   {2, false, std::make_shared<Line<2>>(Vec2(0, 1), Vec2(1, 0)), 0},
+                   {3, false, std::make_shared<Line<2>>(Vec2(0, 0), Vec2(0, 1)), 0}}};
+    return Body::buildSheet(points, edges, {face});
+}
+}
+
+FK_TEST(CurveWrapperCorrelatedTrimNonUnitRangeAndLineUV) {
+    const auto e = std::make_shared<TrimmedCurve<3>>(linearEdge({-1, 2}), -.5, 1.5);
+    const auto line = std::make_shared<Line<2>>(Vec2(0, .25), Vec2(1, 0));
+    expect(e, plane({-1, 2}), std::make_shared<TrimmedCurve<2>>(line, -.75, 1.75),
+        SurfaceCurveBoundStatus::Certified, {-.25, 1.25});
+    const auto polynomial = std::make_shared<BSplineCurve<2>>(1, knots(1, {-1, 2}),
+        std::vector<Vec2>{{-1, .25}, {2, .25}});
+    expect(e, plane({-1, 2}), std::make_shared<TrimmedCurve<2>>(polynomial, -.75, 1.75),
+        SurfaceCurveBoundStatus::Certified, {-.25, 1.25});
+}
+
+FK_TEST(CurveWrapperMixedAffineTrimAndRationalParameters) {
+    const auto q = rationalUV({-1, 3});
+    const auto uv = std::make_shared<TrimmedCurve<2>>(std::make_shared<TrimmedCurve<2>>(q, -.75, 2.75), 0, 2);
+    const double a[3][3]{{1, .5, 0}, {0, 2, 0}, {0, 0, -1}};
+    const double b[3][3]{{0, -1, 0}, {1, 0, 0}, {0, 0, .5}};
+    const auto inner = Transform3::fromParts(a, {.25, -.5, 1});
+    const auto outer = Transform3::fromParts(b, {2, 3, -.25});
+    const CurvePtr<3> mixed = std::make_shared<TrimmedCurve<3>>(std::make_shared<TransformedCurve>(
+        std::make_shared<TrimmedCurve<3>>(std::make_shared<TransformedCurve>(embedded(*q), inner), -.5, 2.5), outer), 0, 2);
+    const auto source = plane(); std::vector<Vec3> poles;
+    for (int i = 0; i < 3; ++i) for (int j = 0; j < 3; ++j)
+        poles.push_back(outer.applyToPoint(inner.applyToPoint(source->pole(i, j))));
+    const auto target = std::make_shared<BSplineSurface>(2, 2, knots(2), knots(2), 3, 3, poles);
+    expect(mixed, target, uv, SurfaceCurveBoundStatus::Certified, {.125, 1.75});
+    const auto pose = Transform3::translation(Vec3(2, -3, 4)) * Transform3::scaling(Vec3(), -1.25);
+    expect(std::make_shared<TransformedCurve>(mixed, pose), std::make_shared<BSplineSurface>(target, pose), uv,
+        SurfaceCurveBoundStatus::Certified, {.125, 1.75});
+    // A finite singular affine map is legitimate: no inverse is needed.
+    const double projection[3][3]{{1, 0, 0}, {0, 1, 0}, {0, 0, 0}};
+    const auto flatQ = rationalUV();
+    expect(std::make_shared<TransformedCurve>(embedded(*flatQ, true), Transform3::fromParts(projection, {})),
+        plane(), flatQ, SurfaceCurveBoundStatus::Certified);
+}
+
+FK_TEST(CurveWrapperOriginalAffineMustNotFlattenRoundedPoles) {
+    const double delta = std::ldexp(1., -36), shift = std::ldexp(1., 18), budget = std::ldexp(1., -40);
+    const auto base = linearEdge({0, 1}, delta, true);
+    const auto placement = Transform3::translation({shift, 0, 0});
+    const auto wrapped = std::make_shared<TransformedCurve>(base, placement);
+    const auto q = std::make_shared<Line<2>>(Vec2(0, 0), Vec2(0, 1));
+    std::vector<Vec3> rounded;
+    for (const auto &p : base->poles()) rounded.push_back(placement.applyToPoint(p));
+    FK_CHECK(rounded.front().x() == shift);
+    expect(std::make_shared<BSplineCurve<3>>(3, k3, rounded), plane({0, 1}, shift), q,
+        SurfaceCurveBoundStatus::Certified, {0, 1}, budget);
+    expect(wrapped, plane({0, 1}, shift), q, SurfaceCurveBoundStatus::Failed, {0, 1}, budget);
+}
+
+FK_TEST(CurveWrapperHiddenRationalPeakRemainsRecognized) {
+    const CurvePtr<3> e = std::make_shared<TrimmedCurve<3>>(
+        std::make_shared<TransformedCurve>(embedded(*peakUV(false)), Transform3()), 0, 1);
+    const auto flat = std::make_shared<TrimmedCurve<2>>(peakUV(false), 0, 1);
+    const auto peak = std::make_shared<TrimmedCurve<2>>(peakUV(true), 0, 1);
+    expect(e, plane(), flat, SurfaceCurveBoundStatus::Certified);
+    // Regression witnesses for the alias only; the production bound rejects.
+    for (int i = 0; i <= 32; ++i) {
+        const double t = i / 32.; const auto p = peak->point(t);
+        FK_CHECK(norm(e->point(t) - plane()->point(p.x(), p.y())) < cap);
+    }
+    const double t = 1 / std::sqrt(3e8); const auto p = peak->point(t);
+    FK_CHECK(norm(e->point(t) - plane()->point(p.x(), p.y())) > 10 * cap);
+    expect(e, plane(), peak, SurfaceCurveBoundStatus::Failed);
+}
+
+FK_TEST(CurveWrapperLedgerSinglePlannedFinRejectsBeforeAssign) {
+    auto good = sheet(false); const auto id = good.edges().front(); const auto &e = good.edge(id);
+    const auto fin = good.loopFins(good.face(good.faces().front()).loops.front()).front();
+    const auto q = good.fin(fin).pcurve;
+    const auto records = detail::certifySheetJoins(good, {{0, 0, cap, e.curve, e.range}}, {id});
+    FK_CHECK(records.size() == 1 && good.fin(fin).pcurveTolerance == cap);
+    FK_CHECK(good.fin(fin).pcurve == q);
+    auto bad = sheet(true); const auto badId = bad.edges().front(); const auto before = writeBodyBinary(bad);
+    const auto curve = bad.edge(badId).curve; const auto support = bad.face(bad.faces().front()).surface;
+    bool rejected = false;
+    try { detail::certifySheetJoins(bad, {{0, 0, cap, curve, bad.edge(badId).range}}, {badId}); }
+    catch (const std::domain_error &) { rejected = true; }
+    FK_CHECK(rejected && writeBodyBinary(bad) == before);
+    FK_CHECK(bad.edge(badId).curve == curve && bad.face(bad.faces().front()).surface == support);
+}
+
+FK_TEST(CurveWrapperEveryTrimIsExactAndCandidateCannotBypassIt) {
+    const double outside = -std::ldexp(1., -54);
+    const auto e = linearEdge({-1, 2}); const auto s = plane({-1, 2});
+    const auto line = std::make_shared<Line<2>>(Vec2(0, .25), Vec2(1, 0));
+    const auto innerQ = std::make_shared<TrimmedCurve<2>>(line, 0, 1);
+    const auto outerQ = std::make_shared<TrimmedCurve<2>>(innerQ, outside, 1);
+    expect(e, s, outerQ, SurfaceCurveBoundStatus::Certified);
+    expect(e, s, outerQ, SurfaceCurveBoundStatus::Failed, {outside, 1});
+    FK_CHECK(detail::surfaceCurvePCurveCandidate(e, s, outerQ, {outside, 1}) == outerQ);
+    const auto innerE = std::make_shared<TrimmedCurve<3>>(e, 0, 1);
+    const auto outerE = std::make_shared<TrimmedCurve<3>>(innerE, outside, 1);
+    expect(outerE, s, line, SurfaceCurveBoundStatus::Failed, {outside, 1});
+    FK_CHECK(detail::surfaceCurvePCurveCandidate(outerE, s, line, {outside, 1}) == line);
+}
+
+FK_TEST(CurveWrapperNonFiniteAffineIsTerminal) {
+    const auto q = rationalUV(); const auto e = embedded(*q);
+    const double nan = std::numeric_limits<double>::quiet_NaN(), inf = std::numeric_limits<double>::infinity();
+    const double badMatrix[3][3]{{1, 0, 0}, {0, nan, 0}, {0, 0, 1}};
+    const double identity[3][3]{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+    expect(std::make_shared<TransformedCurve>(e, Transform3::fromParts(badMatrix, {})), plane(), q,
+        SurfaceCurveBoundStatus::Failed);
+    expect(std::make_shared<TransformedCurve>(e, Transform3::fromParts(identity, {inf, 0, 0})), plane(), q,
+        SurfaceCurveBoundStatus::Failed);
+}
+
+FK_TEST(CurveWrapperDepthLimitCancellationAndUnsupportedFamilies) {
+    const auto q = rationalUV(); const auto base = embedded(*q);
+    CurvePtr<3> e = base; CurvePtr<2> uv = q;
+    for (int i = 0; i < 32; ++i) {
+        e = std::make_shared<TransformedCurve>(e, Transform3());
+        uv = std::make_shared<TrimmedCurve<2>>(uv, 0, 1);
+    }
+    expect(e, plane(), q, SurfaceCurveBoundStatus::Certified);
+    expect(base, plane(), uv, SurfaceCurveBoundStatus::Certified);
+    const auto tooDeep = std::make_shared<TransformedCurve>(e, Transform3());
+    expect(tooDeep, plane(), q, SurfaceCurveBoundStatus::Failed);
+    expect(base, plane(), std::make_shared<TrimmedCurve<2>>(uv, 0, 1), SurfaceCurveBoundStatus::Failed);
+    const auto circle3 = std::make_shared<Circle<3>>(Vec3(), Vec3(1, 0, 0), Vec3(0, 1, 0), 1);
+    expect(std::make_shared<TrimmedCurve<3>>(circle3, 1.5 * kPi, .5 * kPi), plane(),
+        std::make_shared<Line<2>>(Vec2(), Vec2(1, 0)),
+        SurfaceCurveBoundStatus::Unsupported, {6.5, 7});
+    const auto circle2 = std::make_shared<Circle<2>>(Vec2(), Vec2(1, 0), Vec2(0, 1), 1);
+    expect(linearEdge({6, 8}), plane(), std::make_shared<TrimmedCurve<2>>(circle2, 1.5 * kPi, .5 * kPi),
+        SurfaceCurveBoundStatus::Unsupported, {6.5, 7});
+    const auto quadratic = std::make_shared<BSplineCurve<3>>(2, knots(2), std::vector<Vec3>{{0, 0, 0}, {.5, .5, 0}, {1, 1, 0}});
+    expect(std::make_shared<TransformedCurve>(quadratic, Transform3()), plane(), q, SurfaceCurveBoundStatus::Unsupported);
+    const auto token = std::make_shared<std::atomic<bool>>(true); CancellationScope scope(token);
+    bool cancelled = false;
+    try { (void)detail::surfaceCurveResidualBound(tooDeep, plane(), q, {0, 1}, cap); }
+    catch (const OperationCancelled &) { cancelled = true; }
+    FK_CHECK(cancelled);
+}

@@ -1,0 +1,77 @@
+{
+  "oracle": "Exact Fraction conversion of original polynomial Bernstein coefficients; no quadrature/samples used as proof",
+  "source": {
+    "degree": 3,
+    "domain": [
+      -1,
+      1
+    ],
+    "knots": [
+      -1,
+      -1,
+      -1,
+      -1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "polesX": [
+      -27,
+      -9,
+      -3,
+      -1
+    ],
+    "weights": "all1"
+  },
+  "reachConstruction": {
+    "domain": [
+      -1,
+      3
+    ],
+    "polesX": [
+      -27,
+      9,
+      -3,
+      1
+    ],
+    "extensionFactor": 2,
+    "exactPowerCoefficientsAscending": [
+      "-8",
+      "12",
+      "-6",
+      "1"
+    ]
+  },
+  "expectedFinalConstructionAtBaselineUHi2": {
+    "domain": [
+      -1,
+      2
+    ],
+    "polesX": [
+      -27,
+      0,
+      0,
+      0
+    ],
+    "extensionFactor": "3/2",
+    "exactPowerCoefficientsAscending": [
+      "-8",
+      "12",
+      "-6",
+      "1"
+    ],
+    "attribution": "Coefficients implied by deterministic dyadic extendBSpline construction, not an independently exported actual final coefficient array."
+  },
+  "polynomial": "x(u)=(u-2)^3",
+  "derivative": "3*(u-2)^2 >=0",
+  "start": 1,
+  "requestedPhysicalLength": 3,
+  "initialSpeed": 3,
+  "initialNewtonParameter": 2,
+  "speedAtInitialNewtonParameter": 0,
+  "trueArc1To2": "1",
+  "truePhysicalDeficit": "2",
+  "sourceRegularity": "Derivative>=3 on[-1,1]. Extrusion alongZheight1 is regular on the original patch. The stationary baseline extension endpoint is a parameter singularity; the independent root public runtime establishes it was actually accepted.",
+  "comparison": "The actual emitted baseline parameter uHi2 is root-observed; exact source polynomial gives physical travel1. No geometry certificate for general quadrature is inferred."
+}

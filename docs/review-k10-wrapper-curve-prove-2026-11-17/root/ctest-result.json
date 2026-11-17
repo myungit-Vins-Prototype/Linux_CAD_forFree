@@ -1,0 +1,19 @@
+{
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "-V",
+    "--parallel",
+    "1",
+    "--output-junit",
+    "/tmp/k10-curve-wrapper-review/root/ctest.xml",
+    "-R",
+    "^(forgekernel_surface_curve_bounds_tests|forgekernel_mapping_nonplane_validation_tests|forgekernel_surface_mapping_tests|forgekernel_sheet_join_validation_tests|forgekernel_surface_instances_tests|forgekernel_tolerance_tests)$"
+  ],
+  "exit": 0,
+  "seconds": 44.93415056799131,
+  "actual_passed": 6,
+  "skipped": []
+}

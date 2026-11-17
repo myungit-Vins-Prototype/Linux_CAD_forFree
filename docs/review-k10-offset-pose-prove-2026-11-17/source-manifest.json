@@ -1,0 +1,10 @@
+{
+  "CLAUDE.md": "a779b6aecc24d4ecde4363580fa254a528350b5a50e5ce6cfb061980a28a9e51",
+  "docs/code-review-2026-11-15.md": "e30e1ca7d73a75d3b086e901d5d9bf3b8124edfe0b0bf2a39ab799291f86b698",
+  "docs/history/claude-prima-k10-offset-pose-2026-11-17.md": "3097b4d71e07cc97980b442de2c182fb709760774044317b5c4564233f815d32",
+  "docs/review-k10-offset-pose-2026-11-17.md": "fc14872058d429605e056c9628acd6f8d80cdaf536bb9329b8758bf12232bbff",
+  "kernel/CMakeLists.txt": "70d4d663b85ba6ce1b13b6e24f48997fda9f2af1fa807460f33fd57caecec893",
+  "kernel/fk_offset.cpp": "07a3f6e60cfd2ed659b6f9ea74b7596c5504130cfe9a78ecd658bbfd901f8aa2",
+  "kernel/tests/test_shell_pose.cpp": "3a0c30574a95bb95cde0b5972ce34a4945da58bb80de719ab48b7a05183e14bf",
+  "tools/generate_architecture.py": "4b644654519e05d7dd600d2eef1794bcf1434e4dc8cc8afc06529ee1f0c61662"
+}

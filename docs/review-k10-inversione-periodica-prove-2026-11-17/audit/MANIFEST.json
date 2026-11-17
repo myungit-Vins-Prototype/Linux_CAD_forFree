@@ -1,0 +1,43 @@
+{
+  "package": "independent-static-invertPoint-and-global-map-audit",
+  "candidateSha256": "2b385177a309a5a832f43394f4f4456294031cf3b30d7d0695743cedf6b83a37",
+  "runtimeCppExecutedByAudit": false,
+  "allPayloadInertText": true,
+  "files": [
+    {
+      "path": "README.txt",
+      "bytes": 2971,
+      "sha256": "f1f0f1f4f89f29f6d1bbd8c3867f4eff643cc3634aaeab9b85481ee183daaa7f"
+    },
+    {
+      "path": "bump-exact-constants.json",
+      "bytes": 519,
+      "sha256": "5e935a11d2a9daa02891e0cab2e78b3992a9f5447b471abb4e6b171391bfeee5"
+    },
+    {
+      "path": "graph-consult.json",
+      "bytes": 722610,
+      "sha256": "00010aa04908e56989b1f42cfa64e701f1efd4085ca27f5034ddd6af5a335009"
+    },
+    {
+      "path": "independent-static-notes.json",
+      "bytes": 4793,
+      "sha256": "9deb056d02026c0c1e6276d0ffc8f20b15272dfce11582cf5e40523666b63b57"
+    },
+    {
+      "path": "invertPoint-candidate.patch.txt",
+      "bytes": 490,
+      "sha256": "263abe9f4fee10620c189530145ee35423438f838ddfb43216454261c9d1621b"
+    },
+    {
+      "path": "repro-carrier-global-bump.cpp.txt",
+      "bytes": 1880,
+      "sha256": "3a32612b1f752837390101b2fed11a69adcdd9c6cb03002004dae80d21963cd7"
+    },
+    {
+      "path": "source-freeze.json",
+      "bytes": 168,
+      "sha256": "3851a91cc9ffc7d18fc8731b36c64093f6252574e522f17d5b1f58e4a633d675"
+    }
+  ]
+}

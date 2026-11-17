@@ -452,11 +452,6 @@ public:
     // Estensione: attiva la scelta dei bordi; deferPreview permette al pannello
     // di apparire prima del calcolo e gestire selezione e anteprima insieme.
     QString beginExtendPick(bool linear, bool deferPreview = false);
-    void setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback);
-    // Tipo dell'estensione per l'anteprima durante la scelta dei bordi.
-    void setEdgePickLinear(bool linear);
-    // Di nuovo alla scelta dei bordi da estendere, con quelli dati gia' scelti.
-    void resumeExtendPick(int body, const QVector<EdgePoint> &edges, bool linear);
     // Modifica degli spigoli del raccordo (o smusso) `blend`: la scelta riparte
     // sulla sua base con gli spigoli attuali; al posto del raccordo si vede
     // l'anteprima. Invio chiama il callback di setEdgeEditCallback.
@@ -1753,7 +1748,6 @@ private:
     int datumPreviewIndex_ = -1;
     std::function<void(int, int, EdgePoint)> helixPickFinished_;
     ChamferSpec edgePickSpec_;  // smusso: modo delle distanze per l'anteprima durante la scelta  // scelta dei bordi di una superficie da estendere
-    std::function<void(int, QVector<EdgePoint>)> extendPickFinished_;
     QVector<int> pickedEdges_, hoverFaceEdges_;
     // Facce scelte per tutti i loro bordi (raccordi e smussi): finche' i bordi
     // restano tutti scelti, la feature salva la faccia e non gli spigoli.

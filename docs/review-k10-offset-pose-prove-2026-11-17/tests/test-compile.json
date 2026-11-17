@@ -1,0 +1,18 @@
+[
+  "c++",
+  "-std=c++17",
+  "-O2",
+  "-g",
+  "-fno-fast-math",
+  "-ffp-contract=off",
+  "-Wall",
+  "-Wextra",
+  "-Wpedantic",
+  "-I/home/myungit/Linux_CAD_forFree/kernel",
+  "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+  "-DFORGEKERNEL_TEST_DATA_DIR=\"/home/myungit/Linux_CAD_forFree/kernel/tests/data\"",
+  "-c",
+  "/tmp/k10-offset-pose-review/tests/test_shell_pose.cpp",
+  "-o",
+  "/tmp/k10-offset-pose-review/tests/test_shell_pose.o"
+]

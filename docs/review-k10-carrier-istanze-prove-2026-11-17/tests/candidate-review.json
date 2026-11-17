@@ -1,0 +1,10 @@
+{
+  "review": "No blocking P1/P2. Bounded basis/placement traversal precedes recursive metadata access; original native poles and original stored IEEE matrices are enclosed with outward I, applied inner-to-outer, centering outermost translation-origin before products/sums. No flattening, inverse map, tolerance increase, or E/Q wrapper widening. Existing final mapping/sheet ledger stays unchanged and uses actual carrier identity.",
+  "candidateHashes": {
+    "fk_surface_curve_bounds.h": "94f64598883d8a7a81a2047b3339a83434e99f51da22a2a73c1f2fb4f6e8764a",
+    "fk_surface_curve_bounds.cpp": "2d52c696b141891a6f620b9ef4b7dcfae8a82fdf3a5f6280a07abe7ff2e64aa7"
+  },
+  "nativeControlFlow": "Native zero-placement branch retains I(nativepole)-origin. Rational positive weights stay attached to the original base.",
+  "limits": "Public constructor canonicalizes to depth1 and rejects invalid/singular/non-similarity placements. Nested-constructor tests cover the composed stored matrix, not a runtime32-link walk. The guard for malformed/deeper chains is static-review coverage only; no invalid object hooks. This certificate concerns fin position only, not carrier-vs-callback mapping fit, branch, trim or global topology.",
+  "testFinalSha256": "f381c973b4a15bb323fd874f6a446db461fe6add904d3d0fa2beb68e9c27e327"
+}

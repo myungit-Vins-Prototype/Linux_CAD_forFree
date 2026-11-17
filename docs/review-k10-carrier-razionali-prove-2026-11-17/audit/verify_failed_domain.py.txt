@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+"""Exact IEEE endpoint domain negatives in pre-proof planned-fin exports.
+No production geometry evaluator is called; these are failing candidate records,
+not successful output bodies. All quantities below are UV, not physical mm.
+"""
+from pathlib import Path
+from fractions import Fraction as F
+import json,sys,hashlib
+root=Path(sys.argv[1]);rows=[]
+def ex(x):return F.from_float(float.fromhex(x))
+for path in sorted(root.glob('SheetJoin*.jsonl')):
+ for line in path.read_text().splitlines():
+  r=json.loads(line);q=r['pcurve'];s=r['surface']
+  assert q['type']=='line'
+  bounds=[]
+  for axis,key,count,degree in [(0,'uKnots','uPoleCount','uDegree'),(1,'vKnots','vPoleCount','vDegree')]:
+   U=list(map(ex,s[key]));lo=U[s[degree]];hi=U[s[count]]
+   o=ex(q['origin'][axis]);d=ex(q['direction'][axis])
+   for t in map(ex,r['range']):
+    value=o+d*t
+    if value<lo or value>hi:
+     excess=max(lo-value,value-hi)
+     bounds.append({'axis':axis,'t':str(t),'excess_exact':str(excess),'excess_uv':float(excess)})
+  if r['status']=='Failed':assert bounds,'Failed has cause beyond endpoint domain in this dataset'
+  else:assert not bounds,'Certified record cannot have true endpoint domain violation'
+  rows.append({'case':path.stem,'face':r['face'],'fin':r['fin'],'edge':r['edge'],'runtime_status':r['status'],'outside':bounds,'input_file_sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
+result={'pass':True,'scope':'Pre-construction-helper candidate planned fins from public call that failed; exact endpoint domain diagnostics only','units':'UV parameters','records':rows,'failed_with_proven_outside_endpoint':sum(bool(r['outside']) for r in rows)}
+Path(sys.argv[2]).write_text(json.dumps(result,indent=2)+'\n');print(len(rows),'records;',result['failed_with_proven_outside_endpoint'],'failed with exact endpoint outside')

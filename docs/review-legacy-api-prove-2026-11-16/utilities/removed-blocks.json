@@ -1,0 +1,44 @@
+[
+  {
+    "file": "cad_forge.cpp",
+    "text": "bool forgeIntersectRay(const Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index) {\n    try {\n        double t = 0.0;\n        if (!firstRayHit(body, Vec3(origin.x(), origin.y(), origin.z()), Vec3(direction.x(), direction.y(), direction.z()), 1e-7, t, nullptr, index))\n            return false;\n        distance = t;\n        return true;\n    } catch (const std::exception &) {\n        return false;\n    }\n}\n\n",
+    "sha256": "5c59b4477a1981171b5708a50a321b7f56a323768a92bfab0e6f462a8262b4e3",
+    "baselineStartLine": 2407,
+    "startLineDuringStagingDeletion": 2407
+  },
+  {
+    "file": "cad_sketch_refs.cpp",
+    "text": "bool nearestBodyEdge(const Body &body, const Vec3 &point, CurvePtr<3> &curve, Interval &range) {\n    double best = std::numeric_limits<double>::max();\n    for (EdgeId e : body.edges()) {\n        const Edge &edge = body.edge(e);\n        if (!edge.curve) continue;\n        const double d = projectPoint(*edge.curve, point, edge.range).distance;\n        if (d < best) best = d, curve = edge.curve, range = edge.range;\n    }\n    return best < std::numeric_limits<double>::max();\n}\n\n",
+    "sha256": "72b65b87ba7da80fcaa58dd234599fb5acd61cdff54025dc9f7e6399c26a3114",
+    "baselineStartLine": 163,
+    "startLineDuringStagingDeletion": 163
+  },
+  {
+    "file": "cad_sketch_refs.cpp",
+    "text": "int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength) {\n    const auto cross = [](const QPointF &a, const QPointF &b) { return a.x() * b.y() - a.y() * b.x(); };\n    for (int i : sketch.constructionSegments) {\n        if (i < 0 || i >= sketch.segments.size()) continue;\n        const auto &s = sketch.segments.at(i);\n        const QPointF d = s.second - s.first;\n        if (std::fabs(cross(d, direction)) > 1e-12 * std::max(1.0, std::hypot(d.x(), d.y()))\n            || std::fabs(cross(s.first - point, direction)) > 1e-12 * std::max({1.0, std::hypot(point.x(), point.y()), std::hypot(s.first.x(), s.first.y())})) continue;\n        for (const auto &c : sketch.geometricConstraints)\n            if (c.type == ConstraintType::Fix && c.first == ConstraintRef{0, i, -1}) return i;\n    }\n    const int index = int(sketch.segments.size());\n    appendSegment(sketch, point - halfLength * direction, point + halfLength * direction, true);\n    sketch.geometricConstraints.append(makeConstraint(sketch, ConstraintType::Fix, {{0, index, -1}}));\n    return index;\n}",
+    "sha256": "4e2445dfb6c7b0cb60d2499c3531aadc14d52141f6b01e4a408b644d7a795303",
+    "baselineStartLine": 612,
+    "startLineDuringStagingDeletion": 601
+  },
+  {
+    "file": "cad_forge.h",
+    "text": "// Distanza lungo il raggio del primo punto del body colpito (geometria esatta).\nbool forgeIntersectRay(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index = nullptr);\n\n",
+    "sha256": "2506948033960af9850c80664b4f64013476a5855fa3b1dd7b0fdac3ac043eee",
+    "baselineStartLine": 227,
+    "startLineDuringStagingDeletion": 227
+  },
+  {
+    "file": "cad_sketch_refs.h",
+    "text": "// Riusa una retta di costruzione gia' fissa e collineare, oppure ne crea una.\nint appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength);\n",
+    "sha256": "f0b577f955a7388f4711c26699abab3c13a5907a0373449312392afb95d8cac8",
+    "baselineStartLine": 56,
+    "startLineDuringStagingDeletion": 56
+  },
+  {
+    "file": "cad_sketch_refs.h",
+    "text": "// Spigolo del body piu' vicino a `point` (la sua curva e il suo tratto).\nbool nearestBodyEdge(const Kernel::Body &body, const Kernel::Vec3 &point, Kernel::CurvePtr<3> &curve, Kernel::Interval &range);\n\n",
+    "sha256": "dc3b31be7e35602ae7641cccf308456d2aa7cf6f5387554e461eba17d0b1a481",
+    "baselineStartLine": 65,
+    "startLineDuringStagingDeletion": 63
+  }
+]

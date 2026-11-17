@@ -1,0 +1,34 @@
+from pathlib import Path
+import hashlib,json
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-offset-pose-review');P=R/'docs/review-k10-offset-pose-prove-2026-11-17';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+assert not P.exists(),'Never overwrite an existing or sealed proof package'
+renames={}
+for source,label in [(T/'core/final-proof','core'),(T/'tests/final-proof','tests'),(T/'audit/final-proof','audit')]:
+ assert source.is_dir(),source
+ for p in source.rglob('*'):
+  if p.is_file():
+   p.read_text();assert p.suffix not in {'.o','.a','.body','.prt'};original=Path(label)/p.relative_to(source);archived=Path(str(original)+'.txt') if p.suffix in {'.cpp','.h','.py'} else original;renames[str(original)]=str(archived);q=P/archived;q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes())
+rootfiles=['baseline.json','status-before.txt','seals-before.json','architecture-before.json','architecture-audit.json','architecture-incident.json','architecture-generate.log','integrated-sources.json','library-freeze.json','build.log','build-result.json','ctest.log','ctest.xml','ctest-result.json','ctest-ui-final.log','ctest-ui-final.xml','ctest-ui-final-result.json','ctest-final-result.json','general.log','general-result.json','app-startup.log','app-startup-result.json','preservation-audit.json','compile-flags.json','components-audit.json','checks.py','verify.py','document.py','app_smoke.py','integrate.py','recover_ctest.py','archive.py']
+for name in rootfiles:
+ p=T/'root'/name;p.read_text();q=P/'root'/(name+'.txt' if p.suffix=='.py' else name);q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes())
+files=set(json.loads((T/'root/integrated-sources.json').read_text()))|{'CLAUDE.md','docs/review-k10-offset-pose-2026-11-17.md','docs/code-review-2026-11-15.md','docs/history/claude-prima-k10-offset-pose-2026-11-17.md'};manifest={}
+for name in sorted(files):
+ p=R/name;q=P/'integrated'/(name+'.txt');q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes());manifest[name]=sha(p)
+(P/'archive-paths.json').write_text(json.dumps({k:v for k,v in renames.items() if k!=v},indent=2)+'\n');(P/'source-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+a=json.loads((T/'root/architecture-audit.json').read_text())
+(P/'README.txt').write_text(f'''K10 local projection premature UV stopping: transformed shell,17November2026.
+Three GPT-6.1 Sol agents. No commit/push; HEAD/origin main47c7c19 unchanged. Previous9 API source changes, earlier K10 modules and25 sealed proof packages preserved. Functional review findings not renumbered; this corrects an already recorded limitation.
+Production source SHA07a3f6e60cfd2ed659b6f9ea74b7596c5504130cfe9a78ecd658bbfd901f8aa2: only UV-relative early stop replaced by exactly-zero components; existing3D objective line search/no-improvement/60iterations and all fit/geometric budgets unchanged. One new test TU+headless CTest target and curated descriptions.
+Complete app build PASS177s;483/483 general kernel;21 unique CTest PASS with zero SKIP;3/3 new pose tests (same source before fix1PASS/2FAIL);16 existing validation cases PASS;19/19 scoped ASan/UBSan/LSan PASS. One production TU offset and3test TUs/main instrumented, dependency kernel Release. Intentional19-byte leak calibration exit23 outside ptrace. No app-wide leak guarantee.
+CTest first attempt recorded19PASS/2BAD_COMMAND during overlap with view-runner rebuild. After completed build all4 UI selections passed on final runner; even first two successful UI executions excluded from final count. Final21 comprises17 kernel targets already rebuilt and4 final UI targets. Initial log/XML/exit8 and final UI log/XML/aggregate are preserved separately. No source change to recover launch errors.
+Investigation uses the original frozen anonymous fixture; the original Superfici document was not reopened or modified. Scale2.5 alone and scale2.5+rotation.42 closed thickness1.25 now PASS; rotation-only control PASS. Optional opened scaled/rotated Face5 public operation also PASS, not a fourth permanent test. Input serialized unchanged; genealogy declared, topology/codec checked. Independent fresh final API22faces/2shells and16 genealogical interior witnesses max5.7405381274469435e-8mm. These are geometric regressions, not continuous shell certificates.
+Exact Fraction analytic plane counterexample proves UV-origin-dependent old stopping bug and nonzero-step application in that synthetic case. Diagnostics on fixed25parameter grid show spread reduction, not absolute accuracy or global proof. Target4t/200 has a nearly constant offset after correction; no diagnostic hooks in production.
+Cost: two single paired controls, CPU+6% and wall+50% with root full build concurrent; not statistical/general performance guarantee. More objective trials observed, not attributed solely to contention. All existing iteration/resource bounds retained. Read HANDOFF and paired-cost.json.
+Wayland startup5s isolated profile, expected binary verified, own process terminated; no pixel/GL certificate. Architecture{a['nodes']}nodes/{a['edges']}edges/{a['units']}TU, hashes/configuration/HTML and both-direction relations verified. Ignored generated graph/HTML not added or copied.
+K10 remains partial: generic construction/sampled fit and global Newton/trim/topology/offset-normal preservation not certified. New proof does not apply to every scale/pose/thickness or updated user document. Previous failed local-basis prototype not integrated. Flacone inverse raw kernel and general native Wayland/macOS UI checks remain open. Earlier GitHub CI does not certify these uncommitted sources.
+All artifacts UTF8 text/JSON/XML/inert source; no CAD/ELF/object/archive. cpp/h/py source extensions have extra .txt as needed; archive-paths.json maps staging names changed on copy. Component manifests retain staging paths; top SHA256SUMS addresses actual archive paths. Source-manifest.json matches final workspace snapshots.
+''')
+entries=[]
+for p in sorted(P.rglob('*')):
+ if p.is_file():p.read_text();entries.append((str(p.relative_to(P)),sha(p)))
+seal=P/'SHA256SUMS';seal.write_text(''.join(h+'  '+f+'\n' for f,h in entries));result={'files_without_seal':len(entries),'bytes_without_seal':sum((P/f).stat().st_size for f,h in entries),'seal_sha256':sha(seal),'path':str(P)};(T/'root/package-result.json').write_text(json.dumps(result,indent=2)+'\n');print(result)

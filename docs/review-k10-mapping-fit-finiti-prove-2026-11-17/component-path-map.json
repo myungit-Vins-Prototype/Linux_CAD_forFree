@@ -1,0 +1,17 @@
+{
+  "tests/test_mapping_fit_validation.cpp": "tests/test_mapping_fit_validation.cpp.txt",
+  "root/archive.py": "root/archive.py.txt",
+  "root/finalize-docs.py": "root/finalize-docs.py.txt",
+  "root/verify.py": "root/verify.py.txt",
+  "root/finish_checks.py": "root/finish_checks.py.txt",
+  "root/integrate.py": "root/integrate.py.txt",
+  "root/reproducer.cpp": "root/reproducer.cpp.txt",
+  "root/run.py": "root/run.py.txt",
+  "root/baseline/tools/generate_architecture.py": "root/baseline/tools/generate_architecture.py.txt",
+  "root/baseline/kernel/fk_mapping_fit.h": "root/baseline/kernel/fk_mapping_fit.h.txt",
+  "root/baseline/kernel/fk_mapping_fit.cpp": "root/baseline/kernel/fk_mapping_fit.cpp.txt",
+  "root/candidate/tools/generate_architecture.py": "root/candidate/tools/generate_architecture.py.txt",
+  "memory-cleanup/milestone.py": "memory-cleanup/milestone.py.txt",
+  "memory-cleanup/cleanup.py": "memory-cleanup/cleanup.py.txt",
+  "memory-cleanup/plan_cleanup.py": "memory-cleanup/plan_cleanup.py.txt"
+}

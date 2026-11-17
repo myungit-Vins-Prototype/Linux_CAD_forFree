@@ -1,0 +1,29 @@
+#pragma once
+#include "fk_curve.h"
+#include "fk_surface.h"
+#include <limits>
+
+namespace ForgeCad::Kernel::detail {
+enum class SurfaceCurveBoundStatus { Unsupported, Certified, Failed };
+struct SurfaceCurveBoundResult {
+    SurfaceCurveBoundStatus status = SurfaceCurveBoundStatus::Failed;
+    double upperBound = std::numeric_limits<double>::infinity();
+};
+
+// Whole-range positional residual |edge(t)-surface(pcurve(t))| in mm,
+// with the SAME original edge parameter. budget is finite, positive and
+// fixed by the caller.
+// E: native cubic BSpline; Q: native Line2 or degree-one/cubic BSpline2;
+// S: native, nonperiodic bicubic BSplineSurface. Empty or exactly constant
+// positive original weights are polynomial and supported. Unequal weights,
+// instances and curve wrappers return Unsupported, never a partial proof.
+// Invalid/null data, domains not proved, exhausted fixed resources and
+// unresolved/over-budget bounds return Failed; callers must treat this as
+// terminal for the recognized family. Certified alone publishes a finite
+// whole-range upperBound <= budget. Cancellation propagates distinctly.
+// This checks the actual fin's position, not Newton convergence/branch,
+// trim membership, topology or preservation of the whole carrier.
+SurfaceCurveBoundResult surfaceCurveResidualBound(const CurvePtr<3> &edge, const SurfacePtr &surface,
+                                                  const CurvePtr<2> &pcurve, const Interval &range,
+                                                  double budget);
+}

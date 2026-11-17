@@ -1,0 +1,55 @@
+{
+  "files": [
+    {
+      "path": "README.txt",
+      "bytes": 2148,
+      "sha256": "de18b07d65f90e76e156c9e2c40ee7063ab0a43392429a7ec709afb86727a7a0"
+    },
+    {
+      "path": "current-reproduction.json",
+      "bytes": 300,
+      "sha256": "baf848c7b11d5bc86094d1ffdcacdedd95463041565f5c1727c76527609bef6b"
+    },
+    {
+      "path": "current-reproduction.log",
+      "bytes": 95,
+      "sha256": "1a016c499cae22fbb2d9250768c939ca79824d0ab4f5b9a034479cc22688e3a5"
+    },
+    {
+      "path": "historical-offset-local-basis.cpp.txt",
+      "bytes": 114828,
+      "sha256": "760433d949c6ea3a1b49a57ef5c264346736433ba8bcac93814e7342f60cd34d"
+    },
+    {
+      "path": "historical-rotation-input-quality.log",
+      "bytes": 253,
+      "sha256": "d69d7bb97a6b6d70bd63deb81cc18760e9565c1d48990e7d0d69bcda3a6fb9fe"
+    },
+    {
+      "path": "historical-rotation-scale-local.log",
+      "bytes": 92,
+      "sha256": "d0e46d3a2e0281417560af91b0f5745ff1d2160088e1f022031b0ee894ebe149"
+    },
+    {
+      "path": "historical-rotation-scale.cpp.txt",
+      "bytes": 1306,
+      "sha256": "b2dfbc41f88d0873b16160ee2b77eea549b7d58eed87c79943c97d17cd54878f"
+    },
+    {
+      "path": "historical-rotation-scale.log",
+      "bytes": 76,
+      "sha256": "3df9d2b23aa16fce5682834cae0cc2ee43673340c346e7baa0e74c36db3f2465"
+    },
+    {
+      "path": "probe_scale_rotation.cpp.txt",
+      "bytes": 1341,
+      "sha256": "eef8a62703018c428939803e14bdedf1d08ff81dd03771a1a938b4884d5c8270"
+    },
+    {
+      "path": "provenance-start.json",
+      "bytes": 1917,
+      "sha256": "66132160c651fbb5458bf4cb1deb15461464d87a3cfd0576ae8c6a41940a064a"
+    }
+  ],
+  "scope": "Unresolved public transformed shell failure; no fix claim"
+}

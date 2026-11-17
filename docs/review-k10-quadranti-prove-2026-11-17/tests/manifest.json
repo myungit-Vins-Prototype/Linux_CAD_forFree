@@ -1,0 +1,37 @@
+{
+  "scope": "quadrantBreakpoints validation; test-only staging",
+  "test": {
+    "path": "/tmp/k10-quadrant-review/tests/test_quadrant_breakpoints_validation.cpp",
+    "sha256": "06034d0946dcba40af414af67052dd6259b1f6c4bd8bce0818e1afb592f7412c",
+    "bytes": 6080
+  },
+  "candidateProduction": {
+    "path": "/tmp/k10-quadrant-review/core/kernel/fk_curve.cpp",
+    "sha256": "7f47f426d3d19182cc2261741beb4fc6efb94ac72994946c2009863219b98011"
+  },
+  "groups": [
+    "QuadrantBreakpointsSafeControls",
+    "QuadrantBreakpointsInvalidRanges",
+    "QuadrantBreakpointsNonProgressRange",
+    "QuadrantBreakpointsCancellationPreset"
+  ],
+  "baselineFilter": "SafeControls",
+  "candidateFilter": null,
+  "executionByThisAgent": "none; no compile and no breakpoint loop execution",
+  "consumerCount": 14,
+  "parentOwns": [
+    "CMake wiring",
+    "baseline/candidate runtime",
+    "external watchdog",
+    "live cancellation private probe",
+    "sanitizers",
+    "repository integration",
+    "memory updates"
+  ],
+  "constraints": [
+    "No permanent threads",
+    "No arbitrary breakpoint/sample cap",
+    "No repository edits",
+    "No archive copies"
+  ]
+}

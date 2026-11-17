@@ -1,0 +1,11 @@
+{
+  "AGENTS.md": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+  "CLAUDE.md": "4fe4a32ff14eb514daadcabeb1d7ac5437e3dded88f8221238047debcde8764f",
+  "docs/code-review-2026-11-15.md": "0425104135c8e5eafa67efcf3646282d78394940a8d2aca7910be00b685f2e94",
+  "docs/history/claude-prima-k10-pcurve-residui-finiti-2026-11-17.md": "407c5d19ac17432714cd531c2c95aae490066878de6de972e126f77128e6cd83",
+  "docs/review-k10-pcurve-residui-finiti-2026-11-17.md": "be27fbd4b2d459127d32402565bbe29a80430df71b8618b5f848ec348528afae",
+  "kernel/CMakeLists.txt": "b5c2df31491d1f28763df482afabab49bbbc2c6cc692a7db98d451e98a6ccf0c",
+  "kernel/fk_pcurve.cpp": "7d7574589225ba9e35899aab76285d824ee7f0bbbe3be48139d212775e1df85b",
+  "kernel/tests/test_pcurve_deviation_validation.cpp": "b3ad0796e0b78a830a7188103e81eb47c48b32ff9a5f4804bfc71423ae4543be",
+  "tools/generate_architecture.py": "bf09f09ce0f94187ae0f8feff1e6a8102799dbe937e8538311622442a3112108"
+}

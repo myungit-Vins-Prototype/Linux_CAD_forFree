@@ -53,17 +53,12 @@ QString appendProjectedSketchEntity(SketchObject &sketch, const SketchObject &so
 QString sketchPlaneReference(const SketchObject &sketch, const SketchFrame &plane, QPointF &point, QPointF &direction);
 QString sketchAxisReference(const SketchObject &sketch, const Kernel::Vec3 &origin, const Kernel::Vec3 &axis,
                             QPointF &point, QPointF &direction);
-// Riusa una retta di costruzione gia' fissa e collineare, oppure ne crea una.
-int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength);
 
 // Aggiunge allo schizzo la proiezione del tratto `range` di `curve`
 // (coordinate del modello); `construction` le fa di costruzione, `fixed` le
 // blocca con un vincolo fisso. Errore vuoto se riesce; `created` riceve le entita' nuove.
 QString appendProjectedCurve(SketchObject &sketch, const Kernel::CurvePtr<3> &curve, const Kernel::Interval &range, bool construction, bool fixed,
                              QVector<SketchEntity> *created = nullptr);
-
-// Spigolo del body piu' vicino a `point` (la sua curva e il suo tratto).
-bool nearestBodyEdge(const Kernel::Body &body, const Kernel::Vec3 &point, Kernel::CurvePtr<3> &curve, Kernel::Interval &range);
 
 // Curve di sezione di solidi e superfici con il piano dello schizzo,
 // limitate ai bordi delle facce e aggiunte come sopra.

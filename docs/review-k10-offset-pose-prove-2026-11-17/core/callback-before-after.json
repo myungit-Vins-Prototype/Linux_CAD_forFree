@@ -1,0 +1,34 @@
+{
+  "before": {
+    "grid_samples": 25,
+    "reference_only_diagnostic": "Qx-4t,Qv-200, NOT continuous geometry proof",
+    "u_reference_spread": 1.9241497284383513e-10,
+    "v_reference_spread": 5.820766091346741e-11,
+    "grid_counters": "GRID calls=28 iterations=40 trials=40",
+    "total_counters": "PROJECT totals calls=471704 iterations=1051846 trials=1368769",
+    "u_minus_4t_range": [
+      -1.9241452875462528e-10,
+      4.440892098500626e-16
+    ],
+    "v_minus_200_range": [
+      0.0,
+      5.820766091346741e-11
+    ]
+  },
+  "after": {
+    "grid_samples": 25,
+    "reference_only_diagnostic": "Qx-4t,Qv-200, NOT continuous geometry proof",
+    "u_reference_spread": 4.440892098500626e-16,
+    "v_reference_spread": 8.526512829121202e-14,
+    "grid_counters": "GRID calls=28 iterations=65 trials=653",
+    "total_counters": "PROJECT totals calls=519211 iterations=1662265 trials=12166304",
+    "u_minus_4t_range": [
+      -1.9241452875462528e-10,
+      -1.9241408466541543e-10
+    ],
+    "v_minus_200_range": [
+      5.8122395785176195e-11,
+      5.820766091346741e-11
+    ]
+  }
+}

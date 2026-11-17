@@ -1,0 +1,158 @@
+#include "fk_surface_curve_bounds.h"
+#include "fk_sheet_join_validation.h"
+#include "fk_bspline.h"
+#include "fk_bspline_surface.h"
+#include "fk_body_io.h"
+#include "fk_cancel.h"
+#include "fk_test.h"
+#include <algorithm>
+#include <cmath>
+#include <memory>
+#include <stdexcept>
+#include <vector>
+
+using namespace ForgeCad::Kernel;
+namespace {
+using detail::SurfaceCurveBoundStatus;
+constexpr double cap = 8e-8;
+const std::vector<double> cubicKnots{0, 0, 0, 0, 1, 1, 1, 1};
+const std::vector<double> ordinaryWeights{1, 2, 1, 4};
+const std::vector<double> peakWeights{1, 1, 1e8, 1e8};
+std::shared_ptr<BSplineCurve<3>> edge(const std::vector<double> &weights = ordinaryWeights,
+    double v = .25, double spike = 0, bool reverse = false, Interval domain = {0, 1},
+    Transform3 placement = Transform3()) {
+    std::vector<Vec3> poles;
+    for (int i = 0; i < 4; ++i)
+        poles.push_back(placement.applyToPoint(Vec3(i / 3., v, i == 1 ? spike : 0)));
+    auto w = weights;
+    if (reverse) { std::reverse(poles.begin(), poles.end()); std::reverse(w.begin(), w.end()); }
+    return std::make_shared<BSplineCurve<3>>(3,
+        std::vector<double>{domain.lo, domain.lo, domain.lo, domain.lo, domain.hi, domain.hi, domain.hi, domain.hi}, poles, w);
+}
+std::shared_ptr<BSplineSurface> carrier(const std::vector<double> &weights = ordinaryWeights, int degreeV = 2) {
+    std::vector<Vec3> poles; std::vector<double> w;
+    for (int i = 0; i < 4; ++i) for (int j = 0; j <= degreeV; ++j) {
+        poles.emplace_back(i / 3., double(j) / degreeV, 0);
+        w.push_back(weights[i]);
+    }
+    std::vector<double> kv(degreeV + 1, 0); kv.insert(kv.end(), degreeV + 1, 1);
+    return std::make_shared<BSplineSurface>(3, degreeV, cubicKnots, kv, 4, degreeV + 1, poles, w);
+}
+CurvePtr<2> uv(double v = .25, bool reverse = false, Interval domain = {0, 1}) {
+    return std::make_shared<BSplineCurve<2>>(1, std::vector<double>{domain.lo, domain.lo, domain.hi, domain.hi},
+        std::vector<Vec2>{{reverse ? 1. : 0., v}, {reverse ? 0. : 1., v}});
+}
+void expect(const CurvePtr<3> &e, const SurfacePtr &s, const CurvePtr<2> &q,
+    SurfaceCurveBoundStatus status, Interval range = {0, 1}) {
+    const auto result = detail::surfaceCurveResidualBound(e, s, q, range, cap);
+    FK_CHECK(result.status == status);
+    if (status == SurfaceCurveBoundStatus::Certified)
+        FK_CHECK(std::isfinite(result.upperBound) && result.upperBound >= 0 && result.upperBound <= cap);
+}
+Body sheet(bool spike) {
+    const auto s = carrier(peakWeights);
+    const std::vector<Vec3> points{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}};
+    const std::vector<Body::BuildEdge> edges{
+        {0, 1, edge(peakWeights, 0, spike ? .01 : 0), {0, 1}, cap},
+        {1, 2, std::make_shared<Line<3>>(points[1], Vec3(0, 1, 0)), {0, 1}, cap},
+        {3, 2, edge(peakWeights, 1), {0, 1}, cap},
+        {0, 3, std::make_shared<Line<3>>(points[0], Vec3(0, 1, 0)), {0, 1}, cap}};
+    Body::BuildFace face;
+    face.surface = s;
+    face.loops = {{{0, true, std::make_shared<Line<2>>(Vec2(0, 0), Vec2(1, 0)), 3e-10},
+                   {1, true, std::make_shared<Line<2>>(Vec2(1, 0), Vec2(0, 1)), 0},
+                   {2, false, uv(1), 0}, {3, false, std::make_shared<Line<2>>(Vec2(0, 0), Vec2(0, 1)), 0}}};
+    return Body::buildSheet(points, edges, {face});
+}
+}
+
+FK_TEST(RationalEdgeNativeTensorSameParameterTrimAndReverse) {
+    const auto e = edge();
+    const auto polynomial = std::make_shared<BSplineCurve<3>>(3, e->knots(), e->poles());
+    // The same poles with unit weights describe a different curve. These tests
+    // exercise an actual rational edge, not a polynomial encoded with weights.
+    FK_CHECK(norm(e->point(.5) - polynomial->point(.5)) > .01);
+    for (int pv : {2, 3}) {
+        expect(e, carrier(ordinaryWeights, pv), uv(), SurfaceCurveBoundStatus::Certified);
+        expect(edge(ordinaryWeights, .25, 0, true, {-2, 3}), carrier(ordinaryWeights, pv), uv(.25, true, {-2, 3}),
+            SurfaceCurveBoundStatus::Certified, {-1.75, 2.125});
+        expect(e, carrier(ordinaryWeights, pv), uv(.25, true), SurfaceCurveBoundStatus::Failed, {.125, .875});
+    }
+    const std::vector<double> ku{-3, -2, -1, 0, .375, .75, 1, 2, 3, 4};
+    const std::vector<double> weights{1, 2, 1, 4, 2, 1};
+    const std::vector<double> kv{0, 0, 0, 1, 1, 1};
+    std::vector<Vec3> ep, sp; std::vector<double> sw;
+    for (int i = 0; i < 6; ++i) {
+        ep.emplace_back(i / 5., .25, 0);
+        for (int j = 0; j < 3; ++j) { sp.emplace_back(i / 5., j / 2., 0); sw.push_back(weights[i]); }
+    }
+    expect(std::make_shared<BSplineCurve<3>>(3, ku, ep, weights),
+        std::make_shared<BSplineSurface>(3, 2, ku, kv, 6, 3, sp, sw), uv(), SurfaceCurveBoundStatus::Certified);
+}
+
+FK_TEST(RationalEdgeIndependentWeightGaugesAndPhysicalPlacement) {
+    const auto pose = Transform3::translation(Vec3(2, -3, 4)) * Transform3::scaling(Vec3(), -1.25);
+    for (int power : {-200, 0, 200}) {
+        auto ew = ordinaryWeights, sw = ordinaryWeights;
+        for (auto &w : ew) w *= std::ldexp(1., power);
+        for (auto &w : sw) w *= std::ldexp(1., -power);
+        expect(edge(ew, .25, 0, false, {0, 1}, pose),
+            std::make_shared<BSplineSurface>(carrier(sw), pose), uv(), SurfaceCurveBoundStatus::Certified);
+    }
+}
+
+FK_TEST(RationalEdgeHiddenPeakBetweenLegacySamplesIsRecognized) {
+    const auto s = carrier(peakWeights);
+    const auto flat = edge(peakWeights), peaked = edge(peakWeights, .25, .01);
+    const auto q = uv();
+    expect(flat, s, q, SurfaceCurveBoundStatus::Certified);
+    // This grid only documents why sampling misses the rational peak. The
+    // production continuous bound, below, is the rejection being tested.
+    for (int i = 0; i <= 32; ++i) {
+        const double t = i / 32.; const auto p = q->point(t);
+        FK_CHECK(norm(peaked->point(t) - s->point(p.x(), p.y())) < cap);
+    }
+    const double t = 1 / std::sqrt(3e8); const auto p = q->point(t);
+    FK_CHECK(norm(peaked->point(t) - s->point(p.x(), p.y())) > 10 * cap);
+    expect(peaked, s, q, SurfaceCurveBoundStatus::Failed);
+}
+
+FK_TEST(RationalEdgeLedgerSinglePlannedFinRejectsBeforeAssign) {
+    auto good = sheet(false);
+    auto id = good.edges().front(); const auto &e = good.edge(id);
+    const auto records = detail::certifySheetJoins(good, {{0, 0, cap, e.curve, e.range}}, {id});
+    FK_CHECK(records.size() == 1);
+    const auto fin = good.loopFins(good.face(good.faces().front()).loops.front()).front();
+    FK_CHECK(good.fin(fin).pcurveTolerance == cap);
+    // One planned incidence: its first proof fails before any fin assignment.
+    // This does not require multi-plan transactions from certifySheetJoins.
+    auto bad = sheet(true); id = bad.edges().front(); const auto before = writeBodyBinary(bad);
+    const auto curve = bad.edge(id).curve; const auto support = bad.face(bad.faces().front()).surface;
+    const auto range = bad.edge(id).range;
+    bool rejected = false;
+    try { detail::certifySheetJoins(bad, {{0, 0, cap, curve, range}}, {id}); }
+    catch (const std::domain_error &) { rejected = true; }
+    FK_CHECK(rejected);
+    FK_CHECK(writeBodyBinary(bad) == before);
+    FK_CHECK(bad.edge(id).curve == curve && bad.face(bad.faces().front()).surface == support);
+}
+
+FK_TEST(RationalEdgeChangedWeightsAndDomainDoNotBecomeUnsupported) {
+    const auto s = carrier(); auto weights = ordinaryWeights; weights[1] = 5;
+    expect(edge(weights), s, uv(), SurfaceCurveBoundStatus::Failed);
+    const auto outside = std::make_shared<BSplineCurve<2>>(1, std::vector<double>{0, 0, 1, 1},
+        std::vector<Vec2>{{0, .25}, {1.01, .25}});
+    expect(edge(), s, outside, SurfaceCurveBoundStatus::Failed);
+    const auto q = std::dynamic_pointer_cast<const BSplineCurve<2>>(uv());
+    expect(edge(), s, std::make_shared<BSplineCurve<2>>(1, q->knots(), q->poles(), std::vector<double>{1, 2}),
+        SurfaceCurveBoundStatus::Unsupported);
+    expect(std::make_shared<TrimmedCurve<3>>(edge(), 0, 1), s, uv(), SurfaceCurveBoundStatus::Unsupported);
+}
+
+FK_TEST(RationalEdgeCancellationRemainsDistinct) {
+    const auto token = std::make_shared<std::atomic<bool>>(true); CancellationScope scope(token);
+    bool cancelled = false;
+    try { detail::surfaceCurveResidualBound(edge(), carrier(), uv(), {0, 1}, cap); }
+    catch (const OperationCancelled &) { cancelled = true; }
+    FK_CHECK(cancelled);
+}

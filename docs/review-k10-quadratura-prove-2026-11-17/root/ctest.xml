@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="4"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="0"
+	timestamp="2026-11-17T16:50:00"
+	>
+	<testcase name="forgekernel_bspline_derivative_tests" classname="forgekernel_bspline_derivative_tests" time="0.00219715" status="run">
+		<properties/>
+		<system-out>[  OK  ] BSplinePolynomialDerivativesRemainAccurateAfterTranslation
+[  OK  ] BSplinePolynomialDerivativesPreserveOneSidedKnotLimits
+[  OK  ] BSplineDenseTranslatedLengthConvergesWithoutChangingTolerance
+3/3 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_sheet_arc_validation_tests" classname="forgekernel_sheet_arc_validation_tests" time="0.00359126" status="run">
+		<properties/>
+		<system-out>[  OK  ] SheetArcZeroSpeedCannotPublishShortReach
+[  OK  ] SheetArcRegularCurveCannotPublishExhaustedNewtonReach
+[  OK  ] SheetArcNaturalPositiveDistancesUsePhysicalReach
+[  OK  ] SheetArcOppositeDirectionAndPoseScaleKeepPhysicalReach
+[  OK  ] SheetArcLinearAndCylinderControlsKeepTheirPhysicalContract
+[  OK  ] SheetArcCancellationDoesNotPublishOrMutateInput
+6/6 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_arc_length_validation_tests" classname="forgekernel_arc_length_validation_tests" time="0.00121511" status="run">
+		<properties/>
+		<system-out>[  OK  ] ArcLengthSafeControls
+[  OK  ] ArcLengthCancellationPreset
+[  OK  ] ArcLengthReparametrizedSpeedsKeepPhysicalLength
+[  OK  ] ArcLengthNonfiniteDerivativeIsRejected
+[  OK  ] ArcLengthInvalidRangesAreRejected
+[  OK  ] ArcLengthCachedFailuresDoNotPoisonFiniteEntries
+6/6 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_quadrature_validation_tests" classname="forgekernel_quadrature_validation_tests" time="0.00102761" status="run">
+		<properties/>
+		<system-out>[  OK  ] QuadratureSafeControls
+[  OK  ] QuadratureScalarExtremeFiniteIntegral
+[  OK  ] QuadratureVectorExtremeFiniteValuesAndMagnitudes
+[  OK  ] QuadratureNativeArcLengthAtTinyParameterSpan
+[  OK  ] QuadratureNonfiniteCallbacksAreRejected
+[  OK  ] QuadratureLargeMidpointsAndUnrepresentableIntegrals
+6/6 test superati
+</system-out>
+	</testcase>
+</testsuite>

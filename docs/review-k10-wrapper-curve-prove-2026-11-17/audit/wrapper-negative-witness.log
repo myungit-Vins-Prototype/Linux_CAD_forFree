@@ -1,0 +1,124 @@
+{
+  "pass": true,
+  "inputSHA256": "dc751b10275e535ac3d1799d8e9b260b6d633c9300f3190a7dc26afeaf253f8f",
+  "negativeRecordCount": 4,
+  "antiFlatten": {
+    "label": "original-affine-gap",
+    "pass": true,
+    "originalXResidualFraction": "-1/68719476736",
+    "originalXResidualOverBudget": "16",
+    "originalXResidualConstantOverWholeRange": true,
+    "roundedSurrogate": {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 9.094947017729282e-13,
+      "pass": true,
+      "upper_mm": 2.5376526277146437e-17,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0
+    },
+    "scope": "A rounded native surrogate would hide original transformed coefficients; actual original wrapper returns Failed"
+  },
+  "wrappedPeak": {
+    "label": "wrapped-peak",
+    "pass": true,
+    "parameterIEEE": "0x1.e45106b6b3b93p-15",
+    "sameParameterResidualFractions": [
+      "0",
+      "3208553982788152120828575053411791912581757066215718280322672052224622875/3705275527634613251397306430339044695291549435627968270426236048706885151358976",
+      "0"
+    ],
+    "absYMM": 8.659420760637576e-07,
+    "absYOverBudget": 10.82427595079697,
+    "qOriginalPoleHullProvesWholeImageInDomain": true,
+    "flatControl": {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 8e-08,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0
+    },
+    "legacy33MaxSquaredFraction": "276203242776438302167769265271377245025/29362850553862570451970621172202222478973638678616735744",
+    "legacy33MaxMMUpper": 3.0670106157973555e-09,
+    "legacyGridIsNotContinuousCertificate": true
+  },
+  "exactTrimQueries": [
+    {
+      "label": "exact-trim-Q-invalid",
+      "pass": true,
+      "strictOriginalTrimRejection": "Query outside ORIGINAL trim",
+      "violations": [
+        {
+          "link": 2,
+          "trimFractions": [
+            "0",
+            "1"
+          ],
+          "queryFractions": [
+            "-1/18014398509481984",
+            "1"
+          ]
+        }
+      ],
+      "unwrappedGeometryControl": {
+        "fin": null,
+        "edge": null,
+        "face": null,
+        "budget": 8e-08,
+        "pass": true,
+        "upper_mm": 0.0,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      "scope": "Exact query is outside inner trim by2^-54; native E/Q and S domains remain valid and residual zero on the whole requested range"
+    },
+    {
+      "label": "exact-trim-E-invalid",
+      "pass": true,
+      "strictOriginalTrimRejection": "Query outside ORIGINAL trim",
+      "violations": [
+        {
+          "link": 2,
+          "trimFractions": [
+            "0",
+            "1"
+          ],
+          "queryFractions": [
+            "-1/18014398509481984",
+            "1"
+          ]
+        }
+      ],
+      "unwrappedGeometryControl": {
+        "fin": null,
+        "edge": null,
+        "face": null,
+        "budget": 8e-08,
+        "pass": true,
+        "upper_mm": 0.0,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      "scope": "Exact query is outside inner trim by2^-54; native E/Q and S domains remain valid and residual zero on the whole requested range"
+    }
+  ],
+  "notClaimed": [
+    "Rounded surrogate is original geometry",
+    "Public CAD failure or new global mapping bug",
+    "Samples as continuous proof",
+    "Whole-range upper bound for the peak failing curve",
+    "Multi-plan ledger transaction atomicity"
+  ]
+}

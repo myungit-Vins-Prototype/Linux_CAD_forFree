@@ -1,0 +1,26 @@
+{
+  "executable": "/tmp/k10-offset-pose-review/tests/san/candidate-tests",
+  "argv": [],
+  "environment": {
+    "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1",
+    "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1",
+    "LSAN_OPTIONS": "exitcode=23"
+  },
+  "execution": "exec_command require_escalated outside sandbox ptrace",
+  "calibration": {
+    "source": "/tmp/k10-offset-pose-review/tests/san/leak_calibration.cpp",
+    "compile": [
+      "c++",
+      "-O1",
+      "-g",
+      "-fno-omit-frame-pointer",
+      "-fsanitize=address,undefined",
+      "/tmp/k10-offset-pose-review/tests/san/leak_calibration.cpp",
+      "-pthread",
+      "-o",
+      "/tmp/k10-offset-pose-review/tests/san/leak-calibration"
+    ],
+    "expectedExit": 23,
+    "expectedReport": "19 byte(s) leaked in 1 allocation(s)"
+  }
+}

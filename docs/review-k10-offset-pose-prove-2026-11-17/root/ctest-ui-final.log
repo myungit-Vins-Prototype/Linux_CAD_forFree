@@ -1,0 +1,74 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 54
+    Start 54: forgecad_blend_history_tests
+
+54: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--blend-history"
+54: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+54: Environment variables: 
+54:  QT_QPA_PLATFORM=offscreen
+54:  QT_QPA_OFFSCREEN_NO_GLX=1
+54:  QT_QPA_PLATFORMTHEME=
+54:  QT_STYLE_OVERRIDE=Fusion
+54:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+54: Test timeout computed to be: 60
+1/4 Test #54: forgecad_blend_history_tests .....   Passed    0.04 sec
+test 55
+    Start 55: forgecad_all_history_tests
+
+55: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--all-history"
+55: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+55: Environment variables: 
+55:  QT_QPA_PLATFORM=offscreen
+55:  QT_QPA_OFFSCREEN_NO_GLX=1
+55:  QT_QPA_PLATFORMTHEME=
+55:  QT_STYLE_OVERRIDE=Fusion
+55:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+55: Test timeout computed to be: 120
+2/4 Test #55: forgecad_all_history_tests .......   Passed    1.51 sec
+test 66
+    Start 66: forgecad_surface_tools_tests
+
+66: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--surface-tools"
+66: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+66: Environment variables: 
+66:  QT_QPA_PLATFORM=offscreen
+66:  QT_QPA_OFFSCREEN_NO_GLX=1
+66:  QT_QPA_PLATFORMTHEME=
+66:  QT_STYLE_OVERRIDE=Fusion
+66:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+66: Test timeout computed to be: 180
+66: PASS individual fill influence, picking identity and persistence
+66: PASS superfici: rete/estensione/poli, dipendenze, rigenerazione, Undo/Redo, UI/mouse, formato53, errori atomici, revisioni e sola lettura
+3/4 Test #66: forgecad_surface_tools_tests .....   Passed    0.79 sec
+test 85
+    Start 85: forgecad_extension_panel_tests
+
+85: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--extend-contour-pick"
+85: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+85: Environment variables: 
+85:  QT_QPA_PLATFORM=offscreen
+85:  QT_QPA_OFFSCREEN_NO_GLX=1
+85:  QT_QPA_PLATFORMTHEME=
+85:  QT_STYLE_OVERRIDE=Fusion
+85:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+85: Test timeout computed to be: 60
+85: PASS Estendi: comando reale, pannello prima dei bordi, mouse, contorni, anteprima, Invio/Esc/chiusura e Undo/Redo
+85: Estensione: scelta del contorno completo OK
+4/4 Test #85: forgecad_extension_panel_tests ...   Passed    0.72 sec
+
+The following tests passed:
+	forgecad_blend_history_tests
+	forgecad_all_history_tests
+	forgecad_surface_tools_tests
+	forgecad_extension_panel_tests
+
+100% tests passed out of 4
+
+Total Test time (real) =   3.07 sec

@@ -1,0 +1,19 @@
+from pathlib import Path
+import json,hashlib,subprocess,time,os,sys
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-quadrature-review/root');K=R/'kernel';lib=R/'forgecad-release/kernel/libforgekernel.a';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def run(name,args,allow=(0,),timeout=600,env=None):
+ start=time.monotonic()
+ with (T/(name+'.log')).open('w') as out:code=subprocess.run(['timeout','--kill-after=2',str(timeout),'/usr/bin/time','-v','-o',str(T/(name+'-time.txt'))]+list(map(str,args)),cwd=R,stdout=out,stderr=subprocess.STDOUT,env=env).returncode
+ j={'command':list(map(str,args)),'exit':code,'seconds':time.monotonic()-start,'watchdog_seconds':timeout};(T/(name+'-result.json')).write_text(json.dumps(j,indent=2)+'\n');print(name,code,round(j['seconds'],3),flush=True)
+ if code not in allow:print((T/(name+'.log')).read_text()[-5000:]);raise SystemExit(1)
+ return j
+flags=['/usr/bin/c++','-std=c++17','-O2','-g','-fno-fast-math','-ffp-contract=off','-Wall','-Wextra','-Wpedantic','-I'+str(K),'-I'+str(K/'tests')]
+
+
+C=Path('/tmp/k10-quadrature-review/core/kernel');N=Path('/tmp/k10-quadrature-review/tests/test_quadrature_validation.cpp');cf=flags[:1]+['-I'+str(C)]+flags[1:]
+run('compile-baseline-tests',flags+[N,K/'tests/fk_test_main.cpp',lib,'-pthread','-o',T/'baseline-tests'])
+run('baseline-safe-controls',[T/'baseline-tests','SafeControls'],timeout=10)
+for label,fl,extra in [('baseline',flags,[]),('candidate',cf,[T/'candidate.o'])]:
+ run('link-'+label+'-length-golden',fl+[T/'ordinary-length.cpp']+extra+[lib,'-pthread','-o',T/(label+'-length-golden')])
+ run(label+'-length-golden',[T/(label+'-length-golden')],timeout=10)
+assert (T/'baseline-length-golden.log').read_bytes()==(T/'candidate-length-golden.log').read_bytes()

@@ -1,0 +1,48 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-arc-review');P=R/'docs/review-k10-estensione-lunghezza-prove-2026-11-17';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();assert not P.exists()
+components=[('core',T/'core/final-proof','MANIFEST.json','5de226039aaaf71f0f95f2ac07c6df8593aa9a5e87cdbd421154ebb2d3f1c458'),('audit',T/'audit/final-proof','MANIFEST.json','80fa4759937c713614c7e90d000d9e2a841ee3c6c2d1ff7470bba16045c9ce0f'),('tests',T/'tests','manifest.json','e825e381cc88916b43f292baa13acb8b4f531171e5c61a1da26aa4417390b2ea')]
+for label,d,name,h in components:
+ assert sha(d/name)==h;j=json.loads((d/name).read_text())
+ if 'files' in j:
+  files=j['files'];entries=files if isinstance(files,list) else [{'path':f,'sha256':x} for f,x in files.items()]
+  for e in entries:assert sha(d/e['path'])==e['sha256']
+ else:
+  assert label=='tests'
+  for key in ['test','candidateProduction']:assert sha(Path(j[key]['path']))==j[key]['sha256']
+
+renames={}
+def copy(d,label):
+ for p in d.rglob('*'):
+  if not p.is_file() or '__pycache__' in p.parts or p.name=='package-result.json':continue
+  p.read_text();assert p.suffix not in {'.o','.a','.prt','.step','.body'};rel=str(p.relative_to(d));dest=rel+'.txt' if p.suffix in {'.cpp','.h','.py'} else rel;q=P/label/dest;q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes())
+  if rel!=dest:renames[label+'/'+rel]=label+'/'+dest
+for label,d,_,_ in components:copy(d,label)
+copy(T/'root','root')
+files=set(json.loads((T/'root/integrated-sources.json').read_text()))|{'AGENTS.md','CLAUDE.md','docs/code-review-2026-11-15.md','docs/review-k10-estensione-lunghezza-2026-11-17.md','docs/history/claude-prima-k10-estensione-lunghezza-2026-11-17.md'};source={}
+for f in sorted(files):p=R/f;q=P/'workspace'/(f+'.txt');q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(p.read_bytes());source[f]=sha(p)
+(P/'source-manifest.json').write_text(json.dumps(source,indent=2)+'\n');(P/'component-path-map.json').write_text(json.dumps(renames,indent=2)+'\n')
+a=json.loads((T/'root/architecture-audit.json').read_text());pres=json.loads((T/'root/preservation-audit.json').read_text());clean=json.loads((T/'root/cleanup-result.json').read_text())
+(P/'README.txt').write_text(f'''K10: lunghezza fisica dell'estensione — 17 novembre 2026
+
+Correzione integrata in fk_sheet.cpp SHA d584e6cf: arcParameter verifica lunghezza fisica e direzione del parametro FINALE dopo gli ultimi passi Newton, e fallisce se non convergente. Entrambi i chiamanti (B-spline e Extrusion) passano tolerance1e-9*scale già calcolata dall'operazione sull'input. Questo è un NUOVO gate della lunghezza con budget preesistente dell'operazione, non un cap prima verificato da arcParameter. Quadratura1e-13, formule Newton,60iterazioni e criterio passo invariati. Guard finiti/larghezza prima di ogni integrale e cancellazione; una TU produzione, nessun header pubblico modificato.
+
+API pubblica nativa, driver root: curva cubica su[-1,1] poliX[-27,-9,-3,-1] ossia x=(u-2)^3, estrusaZheight1, edge terminale per incidenza costruttiva esplicita. Richiesta3mm; baseline y=0 restituisce uHi2, arco emesso1.0000000000000013mm, sorgente/output checkBody0. Variante regolare y=2^-36u restituisce uHi7.62031405918383, arco178.53408777564366mm; sorgente/output checkBody0. Candidata rifiuta entrambe con domain_error e historyoperands0. Audit indipendente Fraction dimostra polinomio preservato, arco esatto1 e deficit2 per y=0; nessun runtime C++ da auditor. Coordinate ordinarie, nessun CAD utente dichiarato risolto. Core/audit/test agenti GPT-6.1 Sol, staging solo, integrazione e TUTTO runtime root.
+
+NuovaTU6gruppi: baseline4/6, candidata6/6, ASan/UBSan6/6 con leak detection. Strumentate fk_sheet.cpp, nuovaTU e main; restante kernel Release, non intera app. Due testimoni su Extrusion e tensor B-spline equivalente; positivi lunghezze.25/.5, direzioneopposta/posa/scala, lineare/cilindro, inputbyteimmutato e annullamento. Positivi misurano fin reali+carrierfinale e oracolo distanza. Historybaseline azzerata all'ingresso: non si promette sentinellaimmutata, solo nessuna nuova partialhistory pubblicata. Il cambiamento rifiuta risultati errati, non introduce un algoritmo per completare quei casi.
+
+Build completa app, runner e target pertinenti PASS;3CTest senza skip (nuova lunghezza, sheetfit, sheetjoin); runner storico solo SheetExtend2/2 PASS. Nessun UI/avvio grafico, suite483, nuovaCI, commit/push o riavvio app aperta. Compilazioni/analisi seriali, link alla libreria esistente senza copiarla. Dopo i test eliminati solo {clean['removed_files']} ELF/oggetti privati ricreabili, {clean['bytes']}byte; sorgenti/log/piani/hash conservati. Nessun CAD o cartellaQA utente modificato.
+
+Architettura {a['nodes']}nodi/{a['edges']}relazioni/{a['units']}TU, zero errori; hash/configurazione/HTML e call/include/reference nei due versi, --check PASS. arcLength template risolve alla dichiarazione in fk_curve_algo.h: prima asserzione troppo specifica sul .cpp corretta nel verificatore, nessuna modifica di software/generatore per questo. Implementazione .cpp letta separatamente. Generati ignorati non aggiunti a Git. Preservati {pres['previous_packages']} pacchetti/{pres['previous_artifacts']}artefatti precedenti, {pres['preserved_existing']}dei{pres['baseline_files']}file baseline e sole5modifiche esistenti attese. HEAD/origin47c7c19 e indexvuoto invariati, memoria{pres['CLAUDE_bytes']}byte con archivio completo precedente.
+
+Limiti: arcLength usa quadratura stimata, non certificazione continua; il gate interno verifica il reach, non ogni deriva di coefficienti/carrier dopo rebuild/unify (positivi emessi controllati nei casi coperti). Quadratura interna su valutazioni nonfinite/cancellazione resta da approfondire. K10globale, Newton/famiglie unsupported e topologia generale aperti,33rilievi funzionali invariati. Costo aggiuntivo una misura finale, nessuna nuova promessa di convergenza.
+
+Payload solo UTF-8/testo/JSON/XML/sorgenti inerti con suffisso aggiuntivo.txt, nessun ELF/oggetto/archive/CAD/B-rep. Manifest componenti riferiti ai percorsi staging e verificati prima copia; component-path-map.json documenta rinomine, SHA256SUMS verifica tutti i percorsi effettivi, manifest inclusi. Gli script sono fotografie da ricreare in staging nuovo, non eseguire nelle prove sigillate. Rapporto esterno e root/ contengono comandi,log,tempi,hashbinari e limiti. CI storica non certifica modifiche locali non committate.
+''')
+entries=[]
+for p in sorted(P.rglob('*')):
+ if p.is_file():p.read_text();entries.append((str(p.relative_to(P)),sha(p)))
+seal=P/'SHA256SUMS';seal.write_text(''.join(h+'  '+f+'\n' for f,h in entries))
+for f,h in entries:assert sha(P/f)==h
+for f,h in source.items():assert sha(R/f)==h
+j={'path':str(P),'files_without_seal':len(entries),'bytes_without_seal':sum((P/f).stat().st_size for f,h in entries),'seal_sha256':sha(seal)};(T/'root/package-result.json').write_text(json.dumps(j,indent=2)+'\n');print(j)

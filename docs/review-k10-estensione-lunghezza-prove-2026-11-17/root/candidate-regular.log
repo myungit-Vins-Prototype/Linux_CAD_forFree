@@ -1,0 +1,3 @@
+CASE lo=-1 epsilon=1.4551915228366852e-11 inputIssues=0 selected=1 sourceSpeed=3
+REFERENCE initialEnd=2 speedAt2=1.4551915228366852e-11 arc1to2=0.99999999999999989 requested=3
+FAIL exception=extendSheet: lunghezza d'arco richiesta non raggiunta historyOperands=0

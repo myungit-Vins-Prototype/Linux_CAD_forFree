@@ -1,0 +1,18 @@
+[
+  "c++",
+  "-std=c++17",
+  "-O2",
+  "-g",
+  "-fno-fast-math",
+  "-ffp-contract=off",
+  "-Wall",
+  "-Wextra",
+  "-Wpedantic",
+  "-I/tmp/k10-noniso-review/provider/kernel",
+  "-I/home/myungit/Linux_CAD_forFree/kernel",
+  "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+  "-c",
+  "/tmp/k10-noniso-review/tests/test_surface_curve_bounds.cpp",
+  "-o",
+  "/tmp/k10-noniso-review/tests/test_surface_curve_bounds.o"
+]

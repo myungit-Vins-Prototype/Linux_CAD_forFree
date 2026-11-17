@@ -1,0 +1,8 @@
+La ricetta esatta di compile/link e in final-driver-build.json. Il driver include il test_sheet_join_validation.cpp di produzione congelato in source-evidence.json per riusare solo gli esportatori e il caso reale. La libreria non e inclusa: final-library.json ne registra SHA e sorgenti; ricostruirla dal checkout corrispondente. Tutti i .cpp.txt e .py.txt sono intenzionalmente inerti.
+
+Dopo ricostruzione e esecuzione del driver con CI_NEWTON_FIN_EXPORT al percorso desiderato:
+python3 check_actual_export.py.txt actual-newton-fins.json actual-preflight.json
+python3 verify_actual_newton_fins.py.txt actual-newton-fins.json actual-fraction-results.json
+python3 verify_extraction_identity.py.txt
+
+Nessun sampling certifica il successo. Fraction usa tutti gli originali IEEE codificati hex, composizione omogenea Cox, partizione comune completa e hull Bernstein su tutte le celle intersecate. La valutazione midpoint nel verifier serve solo a dimostrare un controesempio in caso negativo, mai ad accettare.

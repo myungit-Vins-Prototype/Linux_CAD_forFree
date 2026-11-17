@@ -1,0 +1,208 @@
+{
+  "baselineHead": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "checks": [
+    {
+      "check": "CadViewport::beginExtendPick body preserved",
+      "pass": true,
+      "file": "forgeCad2026_viewport_selection.cpp",
+      "sha256": "377ecda936c1d6170446d9f2f93fc2c4c430f3830b67f2fd704c26f7dce182c4"
+    },
+    {
+      "check": "CadViewport::startEdgePick body preserved",
+      "pass": true,
+      "file": "forgeCad2026_viewport_selection.cpp",
+      "sha256": "e616a5f7bd106c931345e12b3cc7fc20deaa7e29501b36b2fb182a137542b860"
+    },
+    {
+      "check": "CadViewport::edgePicked body preserved",
+      "pass": true,
+      "file": "forgeCad2026_viewport_selection.cpp",
+      "sha256": "376d71ed69b6dd9dcec819908dd7fb165ad881970f14f2a2c687ff7dace29cf1"
+    },
+    {
+      "check": "CadViewport::cancelEdgePick body preserved",
+      "pass": true,
+      "file": "forgeCad2026_viewport_selection.cpp",
+      "sha256": "aa6e959f3950fcaa313146b83c376b243c512624a50d1067b4e0ab04ef96a52c"
+    },
+    {
+      "check": "CadViewport::pickReferences body preserved",
+      "pass": true,
+      "file": "forgeCad2026_viewport_selection.cpp",
+      "sha256": "064815339fa2515df37679bd351a4712f8d65dcaac9a45f3fea9f5fe3af990de"
+    },
+    {
+      "check": "CadViewport::beginBlendEdit body preserved",
+      "pass": true,
+      "file": "forgeCad2026_viewport_selection.cpp",
+      "sha256": "1f1027f4f852aece181eae8b228e87a294dea793a5efedc4c6a25f2bab56ea18"
+    },
+    {
+      "check": "finishEdgePick exact targeted replacement",
+      "pass": true
+    },
+    {
+      "check": "extend return precedes both blend/edit completion callbacks",
+      "pass": true
+    },
+    {
+      "check": "finishEdgePick common cleanup remains before extend return",
+      "pass": true
+    },
+    {
+      "check": "extend state flags retained",
+      "pass": true
+    },
+    {
+      "check": "orphan extend API and callback field absent",
+      "pass": true
+    },
+    {
+      "check": "DrawingSheetEditor::updateModel body preserved",
+      "pass": true,
+      "file": "cad_drawing_editor.cpp",
+      "sha256": "f7f3eb541f794d25691ede02294d90a398a8ad0c2a388f9d005ad73d1ec98830"
+    },
+    {
+      "check": "DrawingSheetEditor::installPreparedModel body preserved",
+      "pass": true,
+      "file": "cad_drawing_editor.cpp",
+      "sha256": "a6423d4b8f905ed3058e18dadce1d2129d1b5dd07de1f7af7d415d73c3b5df9d"
+    },
+    {
+      "check": "DrawingSheetEditor::isReadOnly body preserved",
+      "pass": true,
+      "file": "cad_drawing_editor.cpp",
+      "sha256": "a5d4d9931d86f660f9a669e56c29c1430768b6901014576a1e14685f1f5bec0c"
+    },
+    {
+      "check": "setReadOnly exact removal only of dead provider action enable",
+      "pass": true
+    },
+    {
+      "check": "dead editor action/provider/setter absent",
+      "pass": true
+    },
+    {
+      "check": "removed drawing action absent from icon table and readOnly findChild loop",
+      "pass": true
+    },
+    {
+      "check": "DrawingWindow::updateFromSource body preserved",
+      "pass": true,
+      "file": "cad_drawing_window.cpp",
+      "sha256": "91d51091c31ae2e3968712a308142f6652c7cbbcb7205eb1394fc0a7b2975fa6"
+    },
+    {
+      "check": "DrawingWindow::refreshTitle body preserved",
+      "pass": true,
+      "file": "cad_drawing_window.cpp",
+      "sha256": "473ae7b42e579e9a3d0bedf42fbd00b0c46f773d967bcbb87bd6233e7833ec82"
+    },
+    {
+      "check": "DrawingWindow::refreshEditAccess body preserved",
+      "pass": true,
+      "file": "cad_drawing_window.cpp",
+      "sha256": "f56d89a1591cff39c49f55bcce991cde34b30d4e0dbe1d11b5539dab8ae3f4ca"
+    },
+    {
+      "check": "DrawingWindow::requireEditAccess body preserved",
+      "pass": true,
+      "file": "cad_drawing_window.cpp",
+      "sha256": "800ab259b16d3b35f366c30a6d220543a19232d14bd82529e7a3f2763a9eab71"
+    },
+    {
+      "check": "DrawingWindow::refreshModelUpdateNotice body preserved",
+      "pass": true,
+      "file": "cad_drawing_window.cpp",
+      "sha256": "48b3f88883888967efffba54caf87cb069ac8de02f85fbbababf41e4a1d7fbc0"
+    },
+    {
+      "check": "installEditor exact removal only of removed action dereference",
+      "pass": true
+    },
+    {
+      "check": "saved-source action retained and connected",
+      "pass": true
+    },
+    {
+      "check": "removed drawing action has no container reference",
+      "pass": true
+    },
+    {
+      "check": "baseline matches HEAD47 forgeCad2026_viewport.h",
+      "pass": true
+    },
+    {
+      "check": "includes unchanged forgeCad2026_viewport.h",
+      "pass": true
+    },
+    {
+      "check": "baseline matches HEAD47 forgeCad2026_viewport_selection.cpp",
+      "pass": true
+    },
+    {
+      "check": "includes unchanged forgeCad2026_viewport_selection.cpp",
+      "pass": true
+    },
+    {
+      "check": "baseline matches HEAD47 cad_drawing_editor.cpp",
+      "pass": true
+    },
+    {
+      "check": "includes unchanged cad_drawing_editor.cpp",
+      "pass": true
+    },
+    {
+      "check": "baseline matches HEAD47 cad_drawing_editor.h",
+      "pass": true
+    },
+    {
+      "check": "includes unchanged cad_drawing_editor.h",
+      "pass": true
+    },
+    {
+      "check": "baseline matches HEAD47 cad_drawing_window.cpp",
+      "pass": true
+    },
+    {
+      "check": "includes unchanged cad_drawing_window.cpp",
+      "pass": true
+    }
+  ],
+  "files": [
+    {
+      "file": "forgeCad2026_viewport.h",
+      "baselineSHA256": "b9a801c6152f9723550a7e001209b8333ea2db4d4ab23709bc59c909b83e1d9d",
+      "afterSHA256": "68f944cb2aa67f2769c3f9622bb93c2e7064a1e2e2ca87fcb797bfc6c1c5f2e0",
+      "workingTreeMatchesCandidate": true
+    },
+    {
+      "file": "forgeCad2026_viewport_selection.cpp",
+      "baselineSHA256": "9ef5c603294813cb10edb850ef2177ecf16833e52998fcae24381dfe3a86b02e",
+      "afterSHA256": "fdebd58819cd46dfdc56e3a32876ff72c021944e19677e0571974f68c132d6b9",
+      "workingTreeMatchesCandidate": true
+    },
+    {
+      "file": "cad_drawing_editor.cpp",
+      "baselineSHA256": "01da076e44b8d1786b1505ac50aa36f484083d78653bc0138b890262195cf54c",
+      "afterSHA256": "91e57393d7817c78af6b493593ba88a0e6918eed35efc17bf8828c405f4100d7",
+      "workingTreeMatchesCandidate": true
+    },
+    {
+      "file": "cad_drawing_editor.h",
+      "baselineSHA256": "c3d1c08ff11ed6967343fdaa8505c99a573ea8c61e1fcedc6112d364a6f137d5",
+      "afterSHA256": "d4d05639d3271b6e4cc788e3cc3e8acc384298f76c3935a584862d6ca2ee025c",
+      "workingTreeMatchesCandidate": true
+    },
+    {
+      "file": "cad_drawing_window.cpp",
+      "baselineSHA256": "e860794266cf804e6f6e90428998b74171b0e7166819f66d6523ee00f1067726",
+      "afterSHA256": "621e8773f9c4aa06cea1868bf1ef4fd8bb9966741ef23aea1e295b05ec55c995",
+      "workingTreeMatchesCandidate": true
+    }
+  ],
+  "status": "PASS",
+  "compileAndRuntimePerformed": false,
+  "limits": "Static body/branch/action closure audit only. Root owns build, existing regressions and graph refresh. No external consumers claim; no new mirror tests."
+}

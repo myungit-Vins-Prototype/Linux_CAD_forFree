@@ -1,0 +1,37 @@
+{
+  "baselineHead": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "repoRealPath": "/home/myungit/Linux_CAD_forFree",
+  "stageOnly": true,
+  "files": {
+    "cad_drawing_editor.h": {
+      "beforeSHA256": "c3d1c08ff11ed6967343fdaa8505c99a573ea8c61e1fcedc6112d364a6f137d5",
+      "afterSHA256": "d4d05639d3271b6e4cc788e3cc3e8acc384298f76c3935a584862d6ca2ee025c",
+      "beforeLines": 119,
+      "afterLines": 118
+    },
+    "cad_drawing_editor.cpp": {
+      "beforeSHA256": "01da076e44b8d1786b1505ac50aa36f484083d78653bc0138b890262195cf54c",
+      "afterSHA256": "91e57393d7817c78af6b493593ba88a0e6918eed35efc17bf8828c405f4100d7",
+      "beforeLines": 3663,
+      "afterLines": 3658
+    },
+    "cad_drawing_window.cpp": {
+      "beforeSHA256": "e860794266cf804e6f6e90428998b74171b0e7166819f66d6523ee00f1067726",
+      "afterSHA256": "621e8773f9c4aa06cea1868bf1ef4fd8bb9966741ef23aea1e295b05ec55c995",
+      "beforeLines": 436,
+      "afterLines": 434
+    }
+  },
+  "patchSHA256": "fa4094821d19896e7e193b59bfe383f3243565176db74c37ce62dc062e573b73",
+  "retained": "updateFromSource,drawingReloadSourceAction,updateModel,installPreparedModel,identities,read-only and saved sources",
+  "validation": "Static searches, overlay check and exact preserved bodies; no compilation or runtime/test execution",
+  "rootVerificationRecommended": [
+    "app full build",
+    "forgecad_drawing_editor_tests",
+    "forgecad_drawing_layout_history_tests",
+    "forgecad_linked_drawing_tests",
+    "forgecad_drawing_multisheet_tests",
+    "architecture regeneration and check"
+  ],
+  "limits": "Closed-world repository analysis; no claim that external consumers cannot exist. Public application API removal authorized; headers are not installed as SDK. No new mirror tests. No binary rebuilt by auditor."
+}

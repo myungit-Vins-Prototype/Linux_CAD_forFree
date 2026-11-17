@@ -1,0 +1,7 @@
+[  OK  ] QuadratureSafeControls
+[  OK  ] QuadratureScalarExtremeFiniteIntegral
+[  OK  ] QuadratureVectorExtremeFiniteValuesAndMagnitudes
+[  OK  ] QuadratureNativeArcLengthAtTinyParameterSpan
+[  OK  ] QuadratureNonfiniteCallbacksAreRejected
+[  OK  ] QuadratureLargeMidpointsAndUnrepresentableIntegrals
+6/6 test superati

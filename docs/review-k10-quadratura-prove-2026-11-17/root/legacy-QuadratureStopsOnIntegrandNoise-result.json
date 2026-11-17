@@ -1,0 +1,9 @@
+{
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "QuadratureStopsOnIntegrandNoise"
+  ],
+  "exit": 0,
+  "seconds": 0.023061851999955252,
+  "watchdog_seconds": 600
+}

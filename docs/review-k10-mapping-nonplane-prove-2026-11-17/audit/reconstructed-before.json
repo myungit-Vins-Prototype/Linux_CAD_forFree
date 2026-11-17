@@ -1,0 +1,22 @@
+{
+  "method": "Reverse candidate.patch on PRIVATE copies, SHA matches baseline before inspection; no repository mutation",
+  "sheetBaselineHashSource": "root/baseline.json captured before changes",
+  "files": [
+    {
+      "file": "kernel/fk_surface_mapping.cpp",
+      "sha256": "c830c1c802657b50dd1cafa223af91263dba185cdf109524a16c602b6986f707"
+    },
+    {
+      "file": "kernel/fk_sheet_join_validation.cpp",
+      "sha256": "802e63f376ef95861337fc83a8cdf4d0472931b770fc46cc6922105f4a1b1cf9"
+    },
+    {
+      "file": "kernel/fk_surface_curve_bounds.h",
+      "sha256": "b44a33f8842ce44be82674594c48e1a6480ea76d66fb695010dd2885d8f4cfa6"
+    },
+    {
+      "file": "kernel/fk_surface_curve_bounds.cpp",
+      "sha256": "01e69c5c5bea9aa78cbad607750cc58aa3b3fd562ab86cccb889d02519a9cf7a"
+    }
+  ]
+}

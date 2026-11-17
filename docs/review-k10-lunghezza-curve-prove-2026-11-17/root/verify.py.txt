@@ -1,0 +1,41 @@
+from pathlib import Path
+import json,hashlib,re,subprocess,xml.etree.ElementTree as ET,sys
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-arclength-review/root');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def architecture():
+ g=json.loads((R/'docs/architecture/graph.json').read_text());assert not g['analysis']['errors'];assert g['analysis']['configurationDigest']==sha(R/'forgecad-release/compile_commands.json')
+ for f,h in g['hashes'].items():assert sha(R/f)==h,f
+ html=(R/'docs/architecture/index.html').read_text();assert json.loads(re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',html,re.S).group(1))==g
+ focus={'kernel/fk_curve_algo.cpp','kernel/fk_curve_algo.h','kernel/fk_curve_length_cache.h','kernel/fk_quadrature.h','kernel/fk_cancel.h','kernel/fk_loft.cpp','kernel/tests/test_arc_length_validation.cpp'};nodes={n['id']:n for n in g['nodes']};assert focus<=nodes.keys();inc=[e for e in g['edges'] if e['source'] in focus or e['target'] in focus]
+ assert any(e['source']=='kernel/tests/test_arc_length_validation.cpp' and e['target']=='kernel/fk_curve_algo.h' and e['kind']=='call' and any(s['symbol'].endswith('::arcLength') for s in e.get('sites',[])) for e in inc)
+ assert any(e['source']=='kernel/fk_loft.cpp' and e['target']=='kernel/fk_curve_length_cache.h' and e['kind']=='include' for e in inc)
+ for f in ['kernel/fk_curve_algo.cpp','kernel/fk_curve_length_cache.h']:assert any(e['source']==f and e['target']=='kernel/fk_cancel.h' and e['kind']=='call' for e in inc)
+ commands=json.loads((R/'forgecad-release/compile_commands.json').read_text());protected={}
+ for f in ['kernel/fk_curve_algo.cpp','kernel/fk_loft.cpp','kernel/tests/test_arc_length_validation.cpp']:
+  command=next(c['command'] for c in commands if Path(c['file']).resolve()==(R/f).resolve());assert '-fno-fast-math' in command and '-ffp-contract=off' in command;protected[f]=command
+ (T/'protected-compile-commands.json').write_text(json.dumps(protected,indent=2)+'\n')
+ j={'nodes':len(nodes),'edges':len(g['edges']),'units':len(g['analysis']['units']),'errors':[],'hashes_config_HTML_verified':True,'focus':{f:{'description':nodes[f]['description'],'relations':{d:{k:sum(e['kind']==k and e['target' if d=='incoming' else 'source']==f for e in inc) for k in ['call','include','reference']} for d in ['incoming','outgoing']}} for f in sorted(focus)}};(T/'architecture-audit.json').write_text(json.dumps(j,indent=2)+'\n');(T/'architecture-incident.json').write_text(json.dumps(inc,indent=2)+'\n')
+ with (T/'architecture-check.log').open('w') as out:subprocess.run(['python3','tools/generate_architecture.py','--check'],cwd=R,stdout=out,stderr=subprocess.STDOUT,check=True)
+ print(j['nodes'],j['edges'],j['units'])
+def preservation():
+ b=json.loads((T/'baseline.json').read_text());changed=sorted(f for f,h in b.items() if not (R/f).is_file() or sha(R/f)!=h);integrated=json.loads((T/'integrated-sources.json').read_text());expected=set(integrated)-{'kernel/tests/test_arc_length_validation.cpp'}|{'CLAUDE.md','docs/code-review-2026-11-15.md'};assert set(changed)==expected,changed
+ for f,h in integrated.items():assert sha(R/f)==h
+ prior=R/'docs/review-k10-estensione-lunghezza-prove-2026-11-17';seals=json.loads((prior/'root/previous-seals.json').read_text());p=prior/'SHA256SUMS';seals.append({'seal':str(p.relative_to(R)),'sha256':'9df7ce475e474a5957480b7b9dc8a3928c9018f59dcc65d429c0453acbbd902d','files':len(p.read_text().splitlines())})
+ for s in seals:
+  p=R/s['seal'];assert sha(p)==s['sha256']
+  for line in p.read_text().splitlines():h,f=line.split('  ',1);assert sha(p.parent/f)==h
+ (T/'previous-seals.json').write_text(json.dumps(seals,indent=2)+'\n')
+ assert sha(R/'docs/history/claude-prima-k10-lunghezza-curve-2026-11-17.md')==b['CLAUDE.md'];mem=(R/'CLAUDE.md').read_text();assert len(mem.encode())<=16384 and len(re.findall(r'^\*\*',mem,re.M))<=10
+ head=subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip();assert head=='47c7c19c4faf490995e8ff64f10d83d8a6abb077' and subprocess.check_output(['git','rev-parse','origin/main'],cwd=R,text=True).strip()==head;assert not subprocess.check_output(['git','diff','--cached','--name-only'],cwd=R,text=True).strip();subprocess.run(['git','diff','--check'],cwd=R,check=True)
+ for f,h in json.loads((T/'binaries.json').read_text()).items():assert sha(R/f)==h
+ assert sha(R/'forgecad-release/forgecad_view_tests')=='52c77cc2435c2024aa37cc853ecd035facc0e0c37958c369882c52e9b572440f'
+ cases=list(ET.parse(T/'ctest.xml').getroot().iter('testcase'));assert len(cases)==3 and not any(c.find('failure') is not None or c.find('skipped') is not None for c in cases)
+ assert '1/1 test superati' in (T/'baseline-safe-controls.log').read_text()
+ for f in ['candidate-tests.log','san-tests.log']:assert '6/6 test superati' in (T/f).read_text()
+ for name,count in [('ArcLength',2),('CurveLengthCachePreservesQuadratureAndIdentity',1),('SheetExtend',2),('LoftSmoothThroughCircles',1),('LoftUnequalGuideSpansPreserveGeometryAndContact',1),('LoftG1SingleUlpSpanKeepsDistinctCollocationPoints',1)]:assert f'{count}/{count} test superati' in (T/('legacy-'+name+'.log')).read_text()
+ assert 'RETURNED 0' in (T/'baseline-underflow.log').read_text();assert 'RETURNED 1' in (T/'baseline-cancel.log').read_text();assert json.loads((T/'baseline-velocity-result.json').read_text())['exit']==124
+ for name in ['underflow','velocity']:assert 'RETURNED 1' in (T/('candidate-'+name+'.log')).read_text()
+ assert 'CANCELLED' in (T/'candidate-cancel.log').read_text();assert 'REJECTED' in (T/'candidate-center.log').read_text()
+ assert (T/'baseline-ordinary.log').read_bytes()==(T/'candidate-ordinary.log').read_bytes();assert json.loads((T/'ordinary-comparison.json').read_text())['byte_identical']
+ for n in ['build','ctest','architecture','candidate-tests','san-tests','legacy-ArcLength','candidate-underflow','candidate-velocity','candidate-ordinary']:assert json.loads((T/(n+'-result.json')).read_text())['exit']==0
+ j={'baseline_files':len(b),'changed_existing':changed,'preserved_existing':len(b)-len(changed),'previous_packages':len(seals),'previous_artifacts':sum(s['files'] for s in seals),'HEAD_origin_main':head,'index_empty':True,'no_commit_push_UI_CI_general483':True,'CLAUDE_bytes':len(mem.encode()),'ctest_passed':3,'new_groups':6,'baseline_safe_groups_run_passed':1,'legacy_filtered':8,'ordinary_probe_byte_identical':True,'native_unit_length_recovered_both_reparametrizations':True,'quad_header_public_header_and_tolerances_unchanged':True,'baseline_watchdog_native_norm_overflow':124};(T/'preservation-audit.json').write_text(json.dumps(j,indent=2)+'\n');print(j)
+if __name__=='__main__':globals()[sys.argv[1]]()

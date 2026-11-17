@@ -1,0 +1,4 @@
+phase 0 color=#f0f0f0 alpha=255
+phase 1 color=#111820 alpha=255
+phase 2 color=#f0f0f0 alpha=255
+RESULT checks=17 failures=0 overflowGroups=3

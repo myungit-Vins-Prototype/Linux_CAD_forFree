@@ -1,0 +1,7 @@
+add_executable(forgekernel_shell_pose_tests tests/fk_test_main.cpp tests/test_shell_pose.cpp)
+target_link_libraries(forgekernel_shell_pose_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_shell_pose_tests PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(forgekernel_shell_pose_tests PRIVATE FORGEKERNEL_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
+set_target_properties(forgekernel_shell_pose_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_shell_pose_tests COMMAND forgekernel_shell_pose_tests)
+set_tests_properties(forgekernel_shell_pose_tests PROPERTIES TIMEOUT 180)

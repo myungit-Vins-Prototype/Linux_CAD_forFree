@@ -1,0 +1,391 @@
+{
+  "nodes": [
+    {
+      "id": "kernel/fk_curve_algo.cpp",
+      "group": "kernel",
+      "description": "Proiezioni esatte con tratti Bezier limitati al range e filtri conservativi. arcLength2/3 controlla cancellazione e valori finiti; sqrt(dot) ordinario conservato e hypot solo per quadrato subnormal/zero/overflow, senza cambiare quadratura GK, partizioni, somme o tolleranza legacy.",
+      "lines": 407,
+      "symbols": [
+        "ForgeCad::Kernel::addCandidate",
+        "ForgeCad::Kernel::arcLength",
+        "ForgeCad::Kernel::bsplineCandidates",
+        "ForgeCad::Kernel::bsplineMinimum",
+        "ForgeCad::Kernel::circleCandidates",
+        "ForgeCad::Kernel::collectCandidates",
+        "ForgeCad::Kernel::genericCandidates",
+        "ForgeCad::Kernel::lineCandidates",
+        "ForgeCad::Kernel::projectPoint",
+        "ForgeCad::Kernel::projectPointCandidates",
+        "ForgeCad::Kernel::projectPointCandidatesWithin",
+        "ForgeCad::Kernel::projectionAt",
+        "ForgeCad::Kernel::refineProjection",
+        "ForgeCad::Kernel::requireFinite",
+        "ForgeCad::Kernel::segmentCandidates"
+      ]
+    },
+    {
+      "id": "kernel/fk_curve_length_cache.h",
+      "group": "kernel",
+      "description": "Cache locale delle lunghezze per loft, curve immutabili prese in prestito: stessi controlli finiti/cancellazione e norma stabile di arcLength, quadratura e somma invariate. Cache bounded con hit/eviction originali, nessun valore non finito pubblicato; prefissi validi possono restare dopo un errore.",
+      "lines": 123,
+      "symbols": [
+        "ForgeCad::Kernel::detail::CurveLengthCache::CurveLengthCache",
+        "ForgeCad::Kernel::detail::CurveLengthCache::Key::operator<",
+        "ForgeCad::Kernel::detail::CurveLengthCache::get",
+        "ForgeCad::Kernel::detail::CurveLengthCache::key",
+        "ForgeCad::Kernel::detail::CurveLengthCache::put",
+        "ForgeCad::Kernel::detail::CurveLengthCache::statistics",
+        "ForgeCad::Kernel::detail::CurveLengthCache::~CurveLengthCache"
+      ]
+    },
+    {
+      "id": "kernel/fk_mass.cpp",
+      "group": "kernel",
+      "description": "Proprieta di massa: conserva il ramo UV delle SP-curve approssimate come seed del fallback di inversione; nelle collezioni miste solo le regioni solide contribuiscono al volume/inertia; completa i contorni UV sui lati NURBS collassati certificati dai poli; riuso dei jet NURBS a u fisso con fk_bspline_isoline nelle quadrature V; facce indipendenti in parallelo, somme seriali, errori ordinati e cancellazione; proprieta complete e tolleranze conservate.",
+      "lines": 736,
+      "symbols": [
+        "ForgeCad::Kernel::FaceIntegrator::FaceIntegrator",
+        "ForgeCad::Kernel::FaceIntegrator::band",
+        "ForgeCad::Kernel::FaceIntegrator::bigJump",
+        "ForgeCad::Kernel::FaceIntegrator::degenerateAt",
+        "ForgeCad::Kernel::FaceIntegrator::domainIntegrals",
+        "ForgeCad::Kernel::FaceIntegrator::finIntegral",
+        "ForgeCad::Kernel::FaceIntegrator::inner",
+        "ForgeCad::Kernel::FaceIntegrator::integrand",
+        "ForgeCad::Kernel::FaceIntegrator::invert",
+        "ForgeCad::Kernel::FaceIntegrator::invertAt",
+        "ForgeCad::Kernel::FaceIntegrator::refine",
+        "ForgeCad::Kernel::FaceIntegrator::unwrap",
+        "ForgeCad::Kernel::SwappedCurve::SwappedCurve",
+        "ForgeCad::Kernel::SwappedCurve::breakpoints",
+        "ForgeCad::Kernel::SwappedCurve::domain",
+        "ForgeCad::Kernel::SwappedCurve::evaluate",
+        "ForgeCad::Kernel::SwappedCurve::evaluateLeft",
+        "ForgeCad::Kernel::SwappedCurve::isPeriodic",
+        "ForgeCad::Kernel::SwappedCurve::period",
+        "ForgeCad::Kernel::SwappedCurve::type",
+        "ForgeCad::Kernel::SwappedSurface::SwappedSurface",
+        "ForgeCad::Kernel::SwappedSurface::evaluate",
+        "ForgeCad::Kernel::SwappedSurface::isUPeriodic",
+        "ForgeCad::Kernel::SwappedSurface::isVPeriodic",
+        "ForgeCad::Kernel::SwappedSurface::type",
+        "ForgeCad::Kernel::SwappedSurface::uBreakpoints",
+        "ForgeCad::Kernel::SwappedSurface::uDomain",
+        "ForgeCad::Kernel::SwappedSurface::uPeriod",
+        "ForgeCad::Kernel::SwappedSurface::vBreakpoints",
+        "ForgeCad::Kernel::SwappedSurface::vDomain",
+        "ForgeCad::Kernel::SwappedSurface::vPeriod",
+        "ForgeCad::Kernel::faceArea",
+        "ForgeCad::Kernel::massProperties",
+        "ForgeCad::Kernel::referenceFrame",
+        "ForgeCad::Kernel::wrapsOnlyInV"
+      ]
+    },
+    {
+      "id": "kernel/fk_quadrature.h",
+      "group": "kernel",
+      "description": "Quadratura adattiva di Gauss-Kronrod 7-15 (nodi e pesi di QUADPACK), per integrali lungo le curve (lunghezze, aree, numeri di avvolgimento) e, annidata, sulle facce (proprieta' di massa).",
+      "lines": 204,
+      "symbols": [
+        "ForgeCad::Kernel::detail::adaptiveIntegral",
+        "ForgeCad::Kernel::detail::adaptivePanel",
+        "ForgeCad::Kernel::detail::gaussKronrod",
+        "ForgeCad::Kernel::detail::integrate",
+        "ForgeCad::Kernel::detail::integrateVector",
+        "ForgeCad::Kernel::detail::panel"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "cad_mass.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 49,
+          "symbol": "ForgeCad::Kernel::detail::adaptiveIntegral",
+          "owner": "ForgeCad::curveMassProperties"
+        }
+      ]
+    },
+    {
+      "source": "cad_mass.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 8,
+          "symbol": "fk_quadrature.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_curve_algo.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 11,
+          "symbol": "fk_quadrature.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_curve_length_cache.h",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 110,
+          "symbol": "ForgeCad::Kernel::detail::integrate",
+          "owner": "ForgeCad::Kernel::detail::CurveLengthCache::get"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_curve_length_cache.h",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 5,
+          "symbol": "fk_quadrature.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "call",
+      "count": 9,
+      "sites": [
+        {
+          "line": 362,
+          "symbol": "ForgeCad::Kernel::detail::Evaluation::Evaluation",
+          "owner": "ForgeCad::Kernel::FaceIntegrator::inner"
+        },
+        {
+          "line": 363,
+          "symbol": "ForgeCad::Kernel::detail::Evaluation::Evaluation",
+          "owner": "ForgeCad::Kernel::FaceIntegrator::inner"
+        },
+        {
+          "line": 379,
+          "symbol": "ForgeCad::Kernel::detail::integrateVector",
+          "owner": "ForgeCad::Kernel::FaceIntegrator::inner"
+        },
+        {
+          "line": 388,
+          "symbol": "ForgeCad::Kernel::detail::Evaluation::Evaluation",
+          "owner": "ForgeCad::Kernel::FaceIntegrator::inner"
+        },
+        {
+          "line": 396,
+          "symbol": "ForgeCad::Kernel::detail::integrateVector",
+          "owner": "ForgeCad::Kernel::FaceIntegrator::band"
+        },
+        {
+          "line": 511,
+          "symbol": "ForgeCad::Kernel::detail::Evaluation::Evaluation",
+          "owner": "ForgeCad::Kernel::FaceIntegrator::finIntegral"
+        },
+        {
+          "line": 521,
+          "symbol": "ForgeCad::Kernel::detail::Evaluation::Evaluation",
+          "owner": "ForgeCad::Kernel::FaceIntegrator::finIntegral"
+        },
+        {
+          "line": 527,
+          "symbol": "ForgeCad::Kernel::detail::integrateVector",
+          "owner": "ForgeCad::Kernel::FaceIntegrator::finIntegral"
+        },
+        {
+          "line": 558,
+          "symbol": "ForgeCad::Kernel::detail::integrateVector",
+          "owner": "ForgeCad::Kernel::FaceIntegrator::domainIntegrals"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 12,
+          "symbol": "fk_quadrature.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_profile.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 46,
+          "symbol": "ForgeCad::Kernel::detail::Evaluation::Evaluation",
+          "owner": "ForgeCad::Kernel::signedArea"
+        },
+        {
+          "line": 49,
+          "symbol": "ForgeCad::Kernel::detail::Evaluation::Evaluation",
+          "owner": "ForgeCad::Kernel::signedArea"
+        },
+        {
+          "line": 54,
+          "symbol": "ForgeCad::Kernel::detail::adaptiveIntegral",
+          "owner": "ForgeCad::Kernel::signedArea"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_profile.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 8,
+          "symbol": "fk_quadrature.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_blend_features.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 148,
+          "symbol": "ForgeCad::Kernel::detail::integrate",
+          "owner": "BlendGeneralMatchesAnalytic"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_blend_features.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 9,
+          "symbol": "fk_quadrature.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "call",
+      "count": 7,
+      "sites": [
+        {
+          "line": 333,
+          "symbol": "ForgeCad::Kernel::detail::integrate",
+          "owner": "splineCylinderCommonVolume"
+        },
+        {
+          "line": 342,
+          "symbol": "ForgeCad::Kernel::detail::integrate",
+          "owner": "splineCylinderCommonVolume"
+        },
+        {
+          "line": 369,
+          "symbol": "ForgeCad::Kernel::detail::integrate",
+          "owner": "BooleanCurvedExtrusions"
+        },
+        {
+          "line": 949,
+          "symbol": "ForgeCad::Kernel::detail::integrate",
+          "owner": "BooleanHigherOrderContacts"
+        },
+        {
+          "line": 959,
+          "symbol": "ForgeCad::Kernel::detail::integrate",
+          "owner": "BooleanHigherOrderContacts"
+        },
+        {
+          "line": 1018,
+          "symbol": "ForgeCad::Kernel::detail::integrate",
+          "owner": "BooleanCoaxialRevolutions"
+        },
+        {
+          "line": 1191,
+          "symbol": "ForgeCad::Kernel::detail::integrate",
+          "owner": "BooleanPartialSplineCoincidence"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 34,
+          "symbol": "fk_quadrature.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mass.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "call",
+      "count": 4,
+      "sites": [
+        {
+          "line": 85,
+          "symbol": "ForgeCad::Kernel::detail::integrate",
+          "owner": "greenMoments"
+        },
+        {
+          "line": 394,
+          "symbol": "ForgeCad::Kernel::detail::Evaluation::Evaluation",
+          "owner": "QuadratureStopsOnIntegrandNoise"
+        },
+        {
+          "line": 398,
+          "symbol": "ForgeCad::Kernel::detail::Evaluation::Evaluation",
+          "owner": "QuadratureStopsOnIntegrandNoise"
+        },
+        {
+          "line": 400,
+          "symbol": "ForgeCad::Kernel::detail::integrateVector",
+          "owner": "QuadratureStopsOnIntegrandNoise"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mass.cpp",
+      "target": "kernel/fk_quadrature.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 21,
+          "symbol": "fk_quadrature.h",
+          "owner": ""
+        }
+      ]
+    }
+  ]
+}

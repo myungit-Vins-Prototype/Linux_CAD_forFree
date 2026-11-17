@@ -1,0 +1,53 @@
+{
+  "package": "independent-static-pcurve-metric-failclosed-review",
+  "candidateSha256": "7d7574589225ba9e35899aab76285d824ee7f0bbbe3be48139d212775e1df85b",
+  "payloadInertTextOnly": true,
+  "cppRuntimeByAudit": false,
+  "files": [
+    {
+      "path": "README.txt",
+      "bytes": 2650,
+      "sha256": "aef5582b7bfc337a0e36bf831f29403b86f2c341577ccf90e2d8389b24fac963"
+    },
+    {
+      "path": "baseline-runtime-attribution.json",
+      "bytes": 2940,
+      "sha256": "3b22d795e09af35113831689cd513063fe93da26c6b3a679d9c4ead3509add9d"
+    },
+    {
+      "path": "candidate-fk_pcurve.cpp.txt",
+      "bytes": 29124,
+      "sha256": "7d7574589225ba9e35899aab76285d824ee7f0bbbe3be48139d212775e1df85b"
+    },
+    {
+      "path": "candidate.patch.txt",
+      "bytes": 3609,
+      "sha256": "228a194c192183c2cd01a68b2a1d28583dcd617ceab35bd9ac08585058344d10"
+    },
+    {
+      "path": "graph-consult.json",
+      "bytes": 447093,
+      "sha256": "d9a1f5127f41cd50d5f49b7416ab13292a0e5db957d5672304e030c64f2eb8ac"
+    },
+    {
+      "path": "independent-candidate-review.json",
+      "bytes": 1625,
+      "sha256": "86abffd2300b530191bd7169ebe2a9c3566e8bae358fc44161fb8cac2f91d50a"
+    },
+    {
+      "path": "out-of-domain-nan-algebra.json",
+      "bytes": 1567,
+      "sha256": "72dc55d480d857d6a4627b467e434177e4c9170f0d648bfa9063e6489ffbfefb"
+    },
+    {
+      "path": "repro-pcurve-nan.cpp.txt",
+      "bytes": 894,
+      "sha256": "6b1f7fd116dda9f3b247e5ce2a37023558885f40401391b9f2c524f1ffebc68d"
+    },
+    {
+      "path": "root-probe.cpp.txt",
+      "bytes": 757,
+      "sha256": "8d53de55191ceefa240f5c617f4a49cca3dea060557c56289923c72b5d15ee00"
+    }
+  ]
+}

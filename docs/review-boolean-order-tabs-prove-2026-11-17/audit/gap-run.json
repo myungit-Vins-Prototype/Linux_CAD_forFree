@@ -1,0 +1,9 @@
+{
+  "argv": [
+    "/tmp/boolean-order-review/audit/inspect_reverse_gap",
+    "/tmp/boolean-order-review/tests/raw-original-reverse.body"
+  ],
+  "exit": 0,
+  "elapsed": 0.01428053600830026,
+  "scope": "Concrete sampled witnesses on frozen output reread; not a continuous global upper bound"
+}

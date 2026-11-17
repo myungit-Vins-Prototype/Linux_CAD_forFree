@@ -1,0 +1,21 @@
+{
+  "source": "Root task messages; core did not execute this probe",
+  "surface": "CylindricalSurface(Frame3(),10)",
+  "point": "surface.point(.25,2)",
+  "tolerance": 1e-08,
+  "scale": 10,
+  "cases": [
+    {
+      "guessU": 100000000.0,
+      "reportedReturn": true,
+      "reportedOutputU": 99999998.30730486,
+      "reportedResidualApprox": 6.33460856e-08
+    },
+    {
+      "guessU": 1000000000000.0,
+      "reportedReturn": true,
+      "reportedResidualApprox": 0.0003198
+    }
+  ],
+  "candidateRuntimeResultsIncluded": false
+}

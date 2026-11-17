@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests",
+    "--document-tabs"
+  ],
+  "binary_sha256": "52c77cc2435c2024aa37cc853ecd035facc0e0c37958c369882c52e9b572440f",
+  "exit": 0,
+  "timed_out": false,
+  "seconds": 7.097694151991163,
+  "platform": "Wayland",
+  "profile": "isolated temporary settings and recovery",
+  "session_state": "Failed to get path for session 'self': Caller does not belong to any known session.\n",
+  "only_own_process_group_terminated": false,
+  "pixel_rendering_certified": false
+}

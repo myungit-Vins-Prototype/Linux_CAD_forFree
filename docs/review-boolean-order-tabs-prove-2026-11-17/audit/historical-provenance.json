@@ -1,0 +1,20 @@
+[
+  {
+    "source": "/home/myungit/.codex/visualizations/2026/11/01/01a195e7-2588-7793-a934-4518cbbe84f2/boolean-flacone3/validation-swapped.log",
+    "staged": "historical-validation-swapped.log",
+    "sha256": "f01723e03450fe4f7273351a9abdd6100f2480f54a841fc29e4ddb333767d7e1",
+    "scope": "Historical 2026-11-01 only; not rerun on current kernel"
+  },
+  {
+    "source": "/home/myungit/.codex/visualizations/2026/11/01/01a195e7-2588-7793-a934-4518cbbe84f2/boolean-flacone3/validation-forward.log",
+    "staged": "historical-validation-forward.log",
+    "sha256": "6b83b072d8d91dc0694c97a48243c5fb49a2054cc1d0761838c8ff38aae0939a",
+    "scope": "Historical 2026-11-01 only; not rerun on current kernel"
+  },
+  {
+    "source": "/home/myungit/.codex/visualizations/2026/11/01/01a195e7-2588-7793-a934-4518cbbe84f2/boolean-flacone3/verification.json",
+    "staged": "historical-verification.json",
+    "sha256": "5fd3c8ecf595dc6118ef0f0fd10089d5e8841ed491d5e97290f37740659c844f",
+    "scope": "Historical 2026-11-01 only; not rerun on current kernel"
+  }
+]

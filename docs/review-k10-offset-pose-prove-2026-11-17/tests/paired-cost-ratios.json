@@ -1,0 +1,15 @@
+{
+  "ratios": [
+    {
+      "case": "original",
+      "wallRatio": 1.4934131103459733,
+      "aggregateChildCpuRatio": 1.0610516708424818
+    },
+    {
+      "case": "rotation",
+      "wallRatio": 1.507769519615532,
+      "aggregateChildCpuRatio": 1.0625165809671444
+    }
+  ],
+  "scope": "single paired observation; concurrent full build, no general performance claim"
+}

@@ -1,0 +1,11 @@
+narrow-instance ACCEPTED issues=0 immutable=1 deviation=1.1850076475639071e-11
+narrow-instance fin=0 instance=1 status=0 cap=8.0000000000000002e-08 finTol=1e-14
+narrow-instance fin=1 instance=1 status=0 cap=8.0000000000000002e-08 finTol=1e-14
+narrow-instance fin=2 instance=1 status=0 cap=8.0000000000000002e-08 finTol=1e-14
+narrow-instance fin=3 instance=1 status=0 cap=8.0000000000000002e-08 finTol=1e-14
+actual residual=0.00075000000000000002
+public-instance issues=0 immutable=1 deviation=8.9600943677361105e-11
+public-instance fin=0 instance=1 status=0 cap=8.0000000000000002e-08 finTol=6.3610612101046527e-11
+public-instance fin=1 instance=1 status=0 cap=8.0000000000000002e-08 finTol=7.4114789757086227e-11
+public-instance fin=2 instance=1 status=0 cap=8.0000000000000002e-08 finTol=4.7403266673548852e-11
+public-instance fin=3 instance=1 status=0 cap=8.0000000000000002e-08 finTol=7.5668812873916687e-11

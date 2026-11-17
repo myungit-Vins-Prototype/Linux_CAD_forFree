@@ -1,0 +1,22 @@
+#include "fk_surface_curve_bounds.h"
+#include "fk_bspline_surface.h"
+#include <iostream>
+#include <iomanip>
+#include <vector>
+using namespace ForgeCad::Kernel;
+int main(){
+ const std::vector<double> k{0,0,0,0,1,1,1,1};
+ int failures=0;
+ for(auto scale:std::vector<std::pair<double,double>>{{1,1},{1e100,1e-100},{1e-100,1e100},{1e250,1e-250},{1e-250,1e250}}){
+  std::vector<Vec3> p,e;std::vector<double>w,ew;
+  for(int i=0;i<4;++i){e.push_back(Vec3(i/3.,0,0));ew.push_back((i+1)*scale.first);for(int j=0;j<4;++j){p.emplace_back(i/3.,j/3.,0);w.push_back((i+1)*scale.second);}}
+  auto edge=std::make_shared<BSplineCurve<3>>(3,k,e,ew);
+  auto surface=std::make_shared<BSplineSurface>(3,3,k,k,4,4,p,w);
+  auto q=std::make_shared<Line<2>>(Vec2(),Vec2(1,0));
+  auto result=detail::surfaceCurveResidualBound(edge,surface,q,{0,1},1e-7);
+  std::cout<<std::setprecision(17)<<"Escale="<<scale.first<<" Sscale="<<scale.second<<" status="<<int(result.status)<<" upper="<<result.upperBound<<'\n';
+  failures+=result.status!=detail::SurfaceCurveBoundStatus::Certified;
+  if(scale.first==1){auto bad=std::make_shared<BSplineCurve<3>>(3,k,std::vector<Vec3>{{0,0,0},{1/3.,0,.001},{2/3.,0,0},{1,0,0}},ew);auto negative=detail::surfaceCurveResidualBound(bad,surface,q,{0,1},1e-7);std::cout<<"negative="<<int(negative.status)<<'\n';failures+=negative.status!=detail::SurfaceCurveBoundStatus::Failed;}
+ }
+ return failures?1:0;
+}

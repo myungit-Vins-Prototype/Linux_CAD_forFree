@@ -1,0 +1,9 @@
+{
+  "command": [
+    "/tmp/k10-arclength-review/root/candidate-probe",
+    "cancel"
+  ],
+  "exit": 0,
+  "seconds": 0.0025626690039644018,
+  "watchdog_seconds": 5
+}

@@ -1,0 +1,14 @@
+{
+  "candidate": {
+    "path": "/tmp/k10-quadrature-review/core/v2/kernel/fk_quadrature.h",
+    "sha256": "f1ec31f8673d753192d7d9646448f30a78f16fb9ec0bac514f74680dc663d3d6"
+  },
+  "mass": {
+    "path": "/tmp/k10-quadrature-review/core/v2/kernel/fk_mass.cpp",
+    "sha256": "8248392ee0b7be25dd2b4217bc0ad29eeaf04c939e4e4940a12d328be45c66aa"
+  },
+  "tests": {
+    "path": "/tmp/k10-quadrature-review/tests-final/test_quadrature_validation.cpp",
+    "sha256": "fbdf6dde51a2c29b69c88a2d2b53990ff7d88c1c906627035c76f2b58e9ff88b"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "command": [
+    "/usr/bin/c++",
+    "-I/tmp/k10-quadrature-review/core/kernel",
+    "-std=c++17",
+    "-O2",
+    "-g",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "-O1",
+    "-fsanitize=address,undefined",
+    "-fno-omit-frame-pointer",
+    "-c",
+    "/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+    "-o",
+    "/tmp/k10-quadrature-review/root/san-main.o"
+  ],
+  "exit": 0,
+  "seconds": 0.42591198500304017,
+  "watchdog_seconds": 600
+}

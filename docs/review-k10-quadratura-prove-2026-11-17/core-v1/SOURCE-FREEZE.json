@@ -1,0 +1,12 @@
+{
+  "baseline_sha256": "30964c986ea45e022115223d60ae6277373d844ecced2d75b97a3ecd9b345310",
+  "candidate_sha256": "048c8007849e807c2721a20e90387c855a2076ba3e56bcc90cf55320e3a804b7",
+  "patch_sha256": "f7fdd0603f0013308a6c243154f37115fec556c813f9d0760c662dfe7d71f9c1",
+  "baseline_repository_source_unchanged": true,
+  "core_cpp_runtime_performed": false,
+  "public_signature_changes": false,
+  "callback_samples_per_panel": 15,
+  "maximum_depth_unchanged": 30,
+  "tolerance_contract_changed": false,
+  "candidate_runtime_status": "PENDING root/tests"
+}

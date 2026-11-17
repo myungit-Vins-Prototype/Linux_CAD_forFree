@@ -1,0 +1,7 @@
+# Compilazione probe eseguita (GCC, nessuna compilazione repo da questo agente)
+/usr/bin/c++ -std=c++17 -O2 -g -Wall -Wextra -Wpedantic -ffp-contract=off -fno-fast-math -I/home/myungit/Linux_CAD_forFree/kernel -I/tmp/k10-noniso-review/provider/kernel /tmp/k10-noniso-review/provider/probe.cpp /tmp/k10-noniso-review/provider/kernel/fk_surface_curve_bounds.cpp /tmp/ci-sheet-fix/core/before/libforgekernel.a -pthread -o /tmp/k10-noniso-review/provider/probe
+# exit0; nessun warning
+/tmp/k10-noniso-review/provider/probe /tmp/k10-noniso-review/provider/historical-input.txt > /tmp/k10-noniso-review/provider/probe.log
+# exit0; 5/5 Certified
+# provider.o esterno al pacchetto è storico pre-cap>0: non usarlo.
+# Patch nuovi file dalla radice repo: git apply < provider.patch (integrazione a cura root).

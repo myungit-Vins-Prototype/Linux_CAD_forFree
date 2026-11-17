@@ -1,0 +1,154 @@
+{
+  "scope": "K10 independent final emitted Newton fin positional audit",
+  "files": [
+    {
+      "path": "README.txt",
+      "bytes": 1984,
+      "sha256": "33cdb6b292a7a9844979c44e65bc0bb63c27ec89b04eb004121b5c9ca3abbb8b"
+    },
+    {
+      "path": "actual-fin-run.json",
+      "bytes": 365,
+      "sha256": "64b6a0a09dc0cab996b31901964e941000564f34b6e1830b2c388d50374dd66c"
+    },
+    {
+      "path": "actual-fin-run.log",
+      "bytes": 60,
+      "sha256": "246641daf236349f702b446ba41c411cf690ad01fb4f721b950116e4a39bc4c5"
+    },
+    {
+      "path": "actual-fraction-results.json",
+      "bytes": 1090,
+      "sha256": "45650cb9d6da7b42ab64741de00e191974fc6451cbda68fcccf33870d8bb09b0"
+    },
+    {
+      "path": "actual-newton-fins.json",
+      "bytes": 2862843,
+      "sha256": "c5fab8c27930e1da6014f15b67c38adde371914d05ca3a4b5e8ba852eac47d84"
+    },
+    {
+      "path": "actual-preflight.json",
+      "bytes": 734,
+      "sha256": "85c1e250fef21b6cac6be3661d26f2278681bcae4c6a18081455b4c9e964280d"
+    },
+    {
+      "path": "check_actual_export.py.txt",
+      "bytes": 1598,
+      "sha256": "33436bca7f4867e342f22083b22c7901fd11b3f59b2e1fd7b538aafc0ce5fdcf"
+    },
+    {
+      "path": "extraction-identity-result.json",
+      "bytes": 495,
+      "sha256": "e01250173b3844b298a1d9bfeeced4c12d0cd1d8431df5f6758f6250a7078cd3"
+    },
+    {
+      "path": "final-driver-build.json",
+      "bytes": 709,
+      "sha256": "fdd5f9a8477933b594ea5d422831a8bc59deccb24f833db4027f562df59f3e9e"
+    },
+    {
+      "path": "final-driver-build.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "final-library.json",
+      "bytes": 844,
+      "sha256": "965ccb1fa5720b13a88439407912ff903b6be8b423a07072a8cceaebf3618907"
+    },
+    {
+      "path": "fraction_common.py.txt",
+      "bytes": 4133,
+      "sha256": "6c201bca580c820cbedb5ba4e2b5b397af7958046266fe96528bb9de3aafe2cb"
+    },
+    {
+      "path": "graph-consult-compact.json",
+      "bytes": 5232,
+      "sha256": "24ca9621710142c311222ccb7b6af518544275cec55093f220ddaa1f8be0f6fd"
+    },
+    {
+      "path": "kernel__fk_blend_model.h.txt",
+      "bytes": 19786,
+      "sha256": "79ae3a57aa175799632503b9ec81993fd6174880a2773cd709059c5a3ab9661f"
+    },
+    {
+      "path": "kernel__fk_sheet.cpp.txt",
+      "bytes": 60281,
+      "sha256": "32dc9c3b46c89b049104897706270b080fecc8b419c4535242fd95092a408a9a"
+    },
+    {
+      "path": "kernel__fk_sheet_join_validation.cpp.txt",
+      "bytes": 4103,
+      "sha256": "288a297190a477dc785af2809261007ff1efffcd2a9f06821bd1c7683ffbd55c"
+    },
+    {
+      "path": "kernel__fk_sheet_join_validation.h.txt",
+      "bytes": 1270,
+      "sha256": "99cd816b27d52c78b5ff0bbcf93ad5facb4d774afea172b500eae85d0f49aa98"
+    },
+    {
+      "path": "kernel__fk_surface_curve_bounds.cpp.txt",
+      "bytes": 20144,
+      "sha256": "4e39bfa15f2d329ff8b58e0a99625bf58609cc363f59fc479c83be07f3ee139f"
+    },
+    {
+      "path": "kernel__fk_surface_curve_bounds.h.txt",
+      "bytes": 1531,
+      "sha256": "24176f2037e85be67cac692a6b93c339cdab84f6b3599e03444e3f99c1752925"
+    },
+    {
+      "path": "kernel__tests__fk_test_main.cpp.txt",
+      "bytes": 1613,
+      "sha256": "d4e8174aa18faf0d899dd5731be71f6029fa9113a8eab6385f7151a44f57e70c"
+    },
+    {
+      "path": "kernel__tests__test_sheet_join_validation.cpp.txt",
+      "bytes": 28440,
+      "sha256": "451b30b1488b94f3e817449a27779bef85ad0d28abf2896cabd4e22e4b5ab763"
+    },
+    {
+      "path": "provider-review.txt",
+      "bytes": 5876,
+      "sha256": "b9f2ea4d88385d153e8ac7312cc00bc9f5c3a0ccd04f58caa44925c501662172"
+    },
+    {
+      "path": "reproduction.txt",
+      "bytes": 1007,
+      "sha256": "556a4fbb54bb4582dae2de6afdfe9c1004ab8a4141a3063dea46477a10289b17"
+    },
+    {
+      "path": "reuse-provenance.json",
+      "bytes": 1966,
+      "sha256": "971833253d39bced68361fa219c94ec2cd050198dc26f62f6f96294f1adf8257"
+    },
+    {
+      "path": "source-evidence.json",
+      "bytes": 2413,
+      "sha256": "58d075ac4c53c7b0f8ebbc284e1fb3fe2ad1a6e05876e0d8b23a06628ca81951"
+    },
+    {
+      "path": "test_actual_newton_fin_exports.cpp.txt",
+      "bytes": 4662,
+      "sha256": "a3fecc8e7db053b5743acd08c123f5bb359bd2fdba1db998659ec626e2c3614c"
+    },
+    {
+      "path": "verify_actual_newton_fins.py.txt",
+      "bytes": 1334,
+      "sha256": "253d4e82872aa5ff2dbadcbe344b02e6712cea946e751188681914c7f8e91090"
+    },
+    {
+      "path": "verify_extraction_identity.py.txt",
+      "bytes": 2824,
+      "sha256": "3711730ffc31f86aeb4929d150e892438f50085130161ae2e0a5b06f61361ad3"
+    },
+    {
+      "path": "verify_tensor_fraction.py.txt",
+      "bytes": 5760,
+      "sha256": "08fccbe94b071f2c478e0d268f6a8b3fb60ea663f0a7c456033d826e44b63cf3"
+    }
+  ],
+  "payload_files": 29,
+  "payload_bytes": 3043097,
+  "allowed_content": "UTF-8 text/JSON/inert sources only; no CAD or executable artifacts",
+  "prior_seals": "unchanged"
+}

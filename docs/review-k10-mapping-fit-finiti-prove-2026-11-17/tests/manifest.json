@@ -1,0 +1,8 @@
+{
+  "ownership": "Texts only. No compile/run/repo write/archive copy. Root owns integration and serial verification.",
+  "files": {
+    "test_mapping_fit_validation.cpp": "821b8930879f26a03ac496178ed5ed71839a85e9bd991440f6d63f76e97f9dad",
+    "graph-consult.json": "064e909e623d19654670f37492b4df4f72b79ec379c535981d2140ac8fbfe166",
+    "HANDOFF.txt": "72e922b80b547bd3ff6eb9dd65183a46fc60d2f4f85bb1b39fbf12f94435aab6"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "curve-validation": [
+    "c++",
+    "-std=c++17",
+    "-O2",
+    "-g",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "-c",
+    "/home/myungit/Linux_CAD_forFree/kernel/tests/test_curve_fit_validation.cpp",
+    "-o",
+    "/tmp/k10-offset-pose-review/tests/curve-validation.o"
+  ],
+  "offset-validation": [
+    "c++",
+    "-std=c++17",
+    "-O2",
+    "-g",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "-c",
+    "/home/myungit/Linux_CAD_forFree/kernel/tests/test_offset_validation.cpp",
+    "-o",
+    "/tmp/k10-offset-pose-review/tests/offset-validation.o"
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "newTests": 6,
+  "existingProviderLedgerMappingTests": 40,
+  "release": {
+    "exit": 0,
+    "seconds": 0.3896239010064164
+  },
+  "sanitizer": {
+    "runs": [
+      {
+        "label": "calibration",
+        "exit": 23,
+        "seconds": 0.018048009995254688,
+        "command": [
+          "/tmp/k10-instance-carrier-review/tests/leak-calibration"
+        ],
+        "binarySha256": "b06299f68429ea3834879229e3173b2ae0a47e2d9e302ee9199eac71d3546303"
+      },
+      {
+        "label": "tests",
+        "exit": 0,
+        "seconds": 4.769965230996604,
+        "command": [
+          "/tmp/k10-instance-carrier-review/tests/asan/instance-tests"
+        ],
+        "binarySha256": "b16455359e95084425af985ee475b7c93af2c962754b8e814cba9ca337936e58"
+      }
+    ],
+    "environment": {
+      "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1",
+      "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1",
+      "LSAN_OPTIONS": "exitcode=23"
+    },
+    "scope": "One changed production TU (fk_surface_curve_bounds), five test TUs and fk_test_main instrumented. Remaining single frozen archive a0c553 is Release. Runtime outside ptrace; real LSan calibration19bytes/ex23."
+  },
+  "newFinalTestSourceSha256": "f381c973b4a15bb323fd874f6a446db461fe6add904d3d0fa2beb68e9c27e327",
+  "oldTestOnlyContractChangeSha256": "a33f5da4cf7b2544f23ce0722368d4df29e215896627d912b40bcd388a0b6899",
+  "oldBaselineTestSha256": "c403cdf969a9e1bb8512059977a8cee3ebeb4ae3187ac88d3ee54ba837f01d30",
+  "productionChangedTUs": 1,
+  "instrumentedTestTUs": 5,
+  "mainInstrumented": true,
+  "baselineArchiveReadOnlyUnique": "/tmp/k10-instance-carrier-review/root/libforgekernel-baseline.a",
+  "baselineArchiveSha256": "a0c5530e331c08d86fc5c4fa29e4477e66fa1ff4c6c646df15d959f211e9531c",
+  "newBaselineTests": {
+    "linkCommand": [
+      "/usr/bin/c++",
+      "/tmp/k10-instance-carrier-review/tests/release/test_surface_curve_instances.o",
+      "/tmp/k10-instance-carrier-review/tests/release/fk_test_main.o",
+      "/tmp/k10-instance-carrier-review/root/libforgekernel-baseline.a",
+      "-lpthread",
+      "-o",
+      "/tmp/k10-instance-carrier-review/tests/baseline-tests-final"
+    ],
+    "exit": 1,
+    "seconds": 0.00811715099553112,
+    "testSourceSha256": "f381c973b4a15bb323fd874f6a446db461fe6add904d3d0fa2beb68e9c27e327",
+    "librarySha256": "a0c5530e331c08d86fc5c4fa29e4477e66fa1ff4c6c646df15d959f211e9531c",
+    "scope": "Only final six new tests linked against frozen baseline provider; no staged production object"
+  },
+  "candidatePublicFinalRecordCount": 4,
+  "historicalDraft": "Seven new tests initially, baseline3/7/candidate47/47 including constructor-only compatibility test. Removed only that redundant test before final freeze; final baseline2/6 and candidate46/46. Historical logs and source are separate."
+}

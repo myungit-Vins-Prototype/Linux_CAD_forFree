@@ -1,0 +1,285 @@
+{
+  "scope": "Original-base and stored-placement instance carrier targeted tests",
+  "files": [
+    {
+      "path": "HANDOFF.txt",
+      "bytes": 5138,
+      "sha256": "c85d4323f3ebb9a022b0bda21100b7d74ffa04665a73cd5fba066f9a4e8488dc"
+    },
+    {
+      "path": "asan/build-result.json",
+      "bytes": 207,
+      "sha256": "82813ccce3c984f24ebf4d21465e9bef77e85bbaf0d30602aaa5c717de44a576"
+    },
+    {
+      "path": "asan/calibration.log",
+      "bytes": 998,
+      "sha256": "c739698688dacf1eb46232fee0a8fb6c7db084d33755be8930377a5c3e085053"
+    },
+    {
+      "path": "asan/compile-commands.json",
+      "bytes": 4006,
+      "sha256": "82094144a3c8fb560e06e64ff4eb4fb133062d6f2a1340321ec33fac835cbe9e"
+    },
+    {
+      "path": "asan/compile-results.json",
+      "bytes": 799,
+      "sha256": "518f34fc8cb3d56f248896ef6e7d4acb5fa16974ba0c20898e2b3106c249fcf5"
+    },
+    {
+      "path": "asan/fk_surface_curve_bounds.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/fk_test_main.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/link-command.json",
+      "bytes": 1048,
+      "sha256": "c168022912225ac94afddd4d5df7cd59bde45f705ffef5a40e134bc7b30ee9d2"
+    },
+    {
+      "path": "asan/link.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/run-results.json",
+      "bytes": 970,
+      "sha256": "4cc122d146bcf37fb67f925755e1761fd49d6a5dc6251dcbfd8dc13a511e7d71"
+    },
+    {
+      "path": "asan/source-hashes.json",
+      "bytes": 1184,
+      "sha256": "0d2ea8ed48c1eba0abca75dcb2d7df898deefddcafd125901897442144daff02"
+    },
+    {
+      "path": "asan/test_mapping_nonplane_validation.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/test_sheet_join_ledger.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/test_surface_curve_bounds.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/test_surface_curve_instances.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/test_surface_curve_rational.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "asan/tests.log",
+      "bytes": 2784,
+      "sha256": "66e73944ae93059678d74a39a41845e4e7a6f73c2e8080ce618f615723c1c5d5"
+    },
+    {
+      "path": "baseline-final-result.json",
+      "bytes": 696,
+      "sha256": "808149f93497b9b42ec04b429507ae550ae01ea44c6314095b5bebf540f57003"
+    },
+    {
+      "path": "baseline-final-tests.log",
+      "bytes": 3891,
+      "sha256": "e4d7f680eb9c21eb5696130cc92d79d13850fd41e2574520de12920194febfce"
+    },
+    {
+      "path": "baseline-fins.jsonl",
+      "bytes": 23479,
+      "sha256": "a423ee2e6f8030c5a7fc0843dbdfec9bf8bb4c7612f1ce552f19981ab8b154ce"
+    },
+    {
+      "path": "baseline-probe.log",
+      "bytes": 912,
+      "sha256": "6aa0557e5d7c043acd8b4f9389e23e8fa4be891c1e970438955085e0be258f6e"
+    },
+    {
+      "path": "baseline-tests.log",
+      "bytes": 3958,
+      "sha256": "2fe15b005bfa210026b33c33c3963db13938d45d17e1d7efdcc64d042a2be7e2"
+    },
+    {
+      "path": "baseline_probe.cpp.txt",
+      "bytes": 10576,
+      "sha256": "7ef92982845d8921fde23f16672c34f1dddc95f99d6237e770e621aaeeb90485"
+    },
+    {
+      "path": "build_overlay.py.txt",
+      "bytes": 2710,
+      "sha256": "5a63e7aa47bfffb6c635986f1e785f9eb1773fd4c8e5f339c4a0b65eca35c4fb"
+    },
+    {
+      "path": "candidate-export-result.json",
+      "bytes": 733,
+      "sha256": "bfddc644c442afd48b76b28492d7d52813be2efaf37afc9c54698c2469f48e48"
+    },
+    {
+      "path": "candidate-fins.jsonl",
+      "bytes": 8463,
+      "sha256": "73387d8a6c8199ef3e40399157b9c48fa18651a594f92d00d31c5644d08be0bb"
+    },
+    {
+      "path": "candidate-manifest.json",
+      "bytes": 217,
+      "sha256": "0bbeb5aa243f15d9a2b78ca2fc8998fe43d3c9d90080b8d7fe209ff169888b1c"
+    },
+    {
+      "path": "candidate-probe.log",
+      "bytes": 394,
+      "sha256": "8f6b3feb94a0474cb0e232dfe433cc70b2a4111604d01b2af02d6baa0577f5fa"
+    },
+    {
+      "path": "candidate-review.json",
+      "bytes": 1312,
+      "sha256": "378526291f07fc129901b3ccd34bde5a95682505af70b0e978f5df02fef53886"
+    },
+    {
+      "path": "fk_surface_curve_bounds.cpp.txt",
+      "bytes": 28672,
+      "sha256": "2d52c696b141891a6f620b9ef4b7dcfae8a82fdf3a5f6280a07abe7ff2e64aa7"
+    },
+    {
+      "path": "fk_surface_curve_bounds.h.txt",
+      "bytes": 2752,
+      "sha256": "94f64598883d8a7a81a2047b3339a83434e99f51da22a2a73c1f2fb4f6e8764a"
+    },
+    {
+      "path": "graph-consult.json",
+      "bytes": 81681,
+      "sha256": "f402cd2cf256dc64be0af4ccc7dd2ef88daaf97b1546d6b36c9d658f50429dd1"
+    },
+    {
+      "path": "historical-v1-47tests.log",
+      "bytes": 2851,
+      "sha256": "6716270a6480de51496682f607ad065c4df29f68126693f8209f5e0dd5404bb0"
+    },
+    {
+      "path": "historical-v1-source-hashes.json",
+      "bytes": 1184,
+      "sha256": "832b96d7c91b1b80401306408a973753fb58a1a8fe120ce9693ba202f3a9572e"
+    },
+    {
+      "path": "historical-v1-test_surface_curve_instances.cpp.txt",
+      "bytes": 15542,
+      "sha256": "3529d8a72f4eaac149ec5271f18fb038f74364d2defd84eb3a56e85d06e1161e"
+    },
+    {
+      "path": "leak_calibration.cpp.txt",
+      "bytes": 216,
+      "sha256": "b73910ded67c00d23c4e402c1b73dcf990cfb4b0c5f517003ac5952134dde35d"
+    },
+    {
+      "path": "library-freeze.json",
+      "bytes": 270,
+      "sha256": "09f59aef4a61895d5a218675117ab6fc87f5c24886dbb48bbc5482e52d87b240"
+    },
+    {
+      "path": "old-test-contract.patch",
+      "bytes": 603,
+      "sha256": "657c37ec90d4c39d041e956452dba388ce392d0439bfb9eb26b5cca21acd5ed7"
+    },
+    {
+      "path": "release/build-result.json",
+      "bytes": 207,
+      "sha256": "34f69e63ab75aebaad874c588e597ab9ea8fb0323a171132995c2bd483d1dae2"
+    },
+    {
+      "path": "release/compile-commands.json",
+      "bytes": 3558,
+      "sha256": "df444a6e284c1a5c7b8c6136109223caea1f3b80d9e96b0ba100120db236f3fc"
+    },
+    {
+      "path": "release/compile-results.json",
+      "bytes": 799,
+      "sha256": "518f34fc8cb3d56f248896ef6e7d4acb5fa16974ba0c20898e2b3106c249fcf5"
+    },
+    {
+      "path": "release/fk_surface_curve_bounds.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/fk_test_main.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/link-command.json",
+      "bytes": 1009,
+      "sha256": "3331d39646e3a0dd37f31243ea2e427ade76d1120523857a56f5004242698348"
+    },
+    {
+      "path": "release/link.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/run-result.json",
+      "bytes": 48,
+      "sha256": "cebf4e4e3fc7b467f096ad97823b6f9eee1f937141c0100325c2ec70badc2e05"
+    },
+    {
+      "path": "release/source-hashes.json",
+      "bytes": 1184,
+      "sha256": "0d2ea8ed48c1eba0abca75dcb2d7df898deefddcafd125901897442144daff02"
+    },
+    {
+      "path": "release/test_mapping_nonplane_validation.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/test_sheet_join_ledger.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/test_surface_curve_bounds.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/test_surface_curve_instances.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/test_surface_curve_rational.compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release/tests.log",
+      "bytes": 2784,
+      "sha256": "66e73944ae93059678d74a39a41845e4e7a6f73c2e8080ce618f615723c1c5d5"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 2801,
+      "sha256": "61c1bef4795a738139c1f7d69eaf87e5c4af5cb809f865dba8afd1b7d1b52733"
+    },
+    {
+      "path": "test_surface_curve_bounds.cpp.txt",
+      "bytes": 10609,
+      "sha256": "a33f5da4cf7b2544f23ce0722368d4df29e215896627d912b40bcd388a0b6899"
+    },
+    {
+      "path": "test_surface_curve_instances.cpp.txt",
+      "bytes": 14607,
+      "sha256": "f381c973b4a15bb323fd874f6a446db461fe6add904d3d0fa2beb68e9c27e327"
+    }
+  ]
+}

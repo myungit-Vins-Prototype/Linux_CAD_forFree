@@ -1,0 +1,46 @@
+{
+  "input_sha256": "c5fab8c27930e1da6014f15b67c38adde371914d05ca3a4b5e8ba852eac47d84",
+  "scope": "public-extendSheet-actual-Newton-fin-pair",
+  "provenance": {
+    "sourceEdge": 1,
+    "sourceFaces": [
+      0,
+      1
+    ],
+    "edge": 2
+  },
+  "method": "Exact Fraction original IEEE homogeneous tensor composition and complete common knot partition; no production provider or extractor.",
+  "not_claimed": [
+    "Newton algorithm continuous certification",
+    "Global trim membership",
+    "All generated fins"
+  ],
+  "records": [
+    {
+      "fin": 2,
+      "edge": 2,
+      "face": 0,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 1.526929851153793e-08,
+      "cells": 60,
+      "leaves": 60,
+      "branches": 62,
+      "max_depth": 0,
+      "elapsed_seconds": 3.654800538002746
+    },
+    {
+      "fin": 11,
+      "edge": 2,
+      "face": 1,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 1.5439309150134088e-08,
+      "cells": 60,
+      "leaves": 60,
+      "branches": 66,
+      "max_depth": 0,
+      "elapsed_seconds": 6.63646407500346
+    }
+  ]
+}

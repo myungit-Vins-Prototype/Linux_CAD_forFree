@@ -1,0 +1,17 @@
+Final test supplement to ../tests-v2/COVERAGE.txt. V1 and V2 remain unchanged.
+
+TU SHA256 fbdf6dde51a2c29b69c88a2d2b53990ff7d88c1c906627035c76f2b58e9ff88b
+Same six groups, same V2 production header f1ec31f8673d753192d7d9646448f30a78f16fb9ec0bac514f74680dc663d3d6
+and mass8248392ee0b7be25dd2b4217bc0ad29eeaf04c939e4e4940a12d328be45c66aa.
+
+Only addition: VectorExtreme now forces recursive refinement using active t^14
+(value and magnitude) plus two passive oscillating finite components/magnitude0.
+A separately integrated one-component active reference determines callback
+count; three-component controlled1 must match that count (>15), give identical
+active IEEE result and physical integral1/15 within1e-12. This tests propagation
+of the controlled prefix to child panels without predicting an implementation
+specific subdivision count or claiming passive true-integral convergence.
+
+All existing first-panel15calls, rawGKbit oracle, passiveNaN and controlled>N
+checks remain. No other source edits, compilation, test operation, repository
+writes or UI performed. Parent owns actual runtime and architecture/memory.

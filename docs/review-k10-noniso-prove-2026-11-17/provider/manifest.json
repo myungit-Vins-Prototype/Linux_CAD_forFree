@@ -1,0 +1,38 @@
+{
+  "HANDOFF.md": {
+    "sha256": "ce4d748a840ff510fabf7955e30b67f7d1c67835115733bf6e82c58c417857fe",
+    "bytes": 3764
+  },
+  "commands.txt": {
+    "sha256": "478873d9aad73aecab4b6f4c59be1667df7d37cacdfba7a696abe859d0d61444",
+    "bytes": 800
+  },
+  "evidence.json": {
+    "sha256": "4bb94acff9455db4a4f581f765f29bd80757c98732671a299a76e0c2c5c3f1aa",
+    "bytes": 238773
+  },
+  "historical-input.txt": {
+    "sha256": "7b57adf517718ddcedf5a36b8ffc7bee87d0dd691667008c1bd35a9ae58192c9",
+    "bytes": 2507863
+  },
+  "kernel/fk_surface_curve_bounds.cpp": {
+    "sha256": "4e39bfa15f2d329ff8b58e0a99625bf58609cc363f59fc479c83be07f3ee139f",
+    "bytes": 20144
+  },
+  "kernel/fk_surface_curve_bounds.h": {
+    "sha256": "24176f2037e85be67cac692a6b93c339cdab84f6b3599e03444e3f99c1752925",
+    "bytes": 1531
+  },
+  "probe.cpp": {
+    "sha256": "31e944a04d4c0bbbf2002592884e7711efd685acf705642e56d099a1ec24d5a0",
+    "bytes": 3412
+  },
+  "probe.log": {
+    "sha256": "55eac41441e05beabedd24b0e37c2cea318f2726a75abdb55826b22b4580e677",
+    "bytes": 410
+  },
+  "provider.patch": {
+    "sha256": "2cf29024bd4c30d7a124eb134d21e0c5e08016db21c719ae5f4f7e83aaf0d082",
+    "bytes": 22257
+  }
+}

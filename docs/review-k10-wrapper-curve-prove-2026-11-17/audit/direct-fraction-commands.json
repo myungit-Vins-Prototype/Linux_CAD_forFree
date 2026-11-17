@@ -1,0 +1,20 @@
+{
+  "cwd": "/home/myungit/Linux_CAD_forFree",
+  "observedExit": 0,
+  "commands": [
+    [
+      "python3",
+      "/tmp/k10-curve-wrapper-review/audit/verify_public_fins.py.txt",
+      "/tmp/k10-curve-wrapper-review/tests/candidate-originals.jsonl",
+      "/tmp/k10-curve-wrapper-review/audit/direct-positive-fraction-result.json",
+      "trim-line,trim-BSpline,mixed-native,mixed-instance,singular-affine,rounded-affine-surrogate,wrapped-peak-flat,wrapper-ledger-actual,exact-trim-Q-valid"
+    ],
+    [
+      "python3",
+      "/tmp/k10-curve-wrapper-review/audit/verify_wrapper_negative_witnesses.py.txt",
+      "/tmp/k10-curve-wrapper-review/tests/candidate-originals.jsonl",
+      "/tmp/k10-curve-wrapper-review/audit/wrapper-negative-witness-result.json"
+    ]
+  ],
+  "inputSHA256": "dc751b10275e535ac3d1799d8e9b260b6d633c9300f3190a7dc26afeaf253f8f"
+}

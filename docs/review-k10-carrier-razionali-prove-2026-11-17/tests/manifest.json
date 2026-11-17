@@ -1,0 +1,233 @@
+{
+  "createdUtc": "2026-11-17T05:47:20.695466+00:00",
+  "sourceHead": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "results": {
+    "releaseCombined": "67/67 PASS exit0",
+    "sanitizerCombined": "67/67 PASS exit0",
+    "sanitizerSeconds": 303.7752917619946,
+    "lsanCalibration": "19 bytes in 1 allocation; exit23",
+    "actualPublicDiagnostic": "6/6 pass; 18 incidences post-build +18 post-unify; Certified capedge=capfin=prefit",
+    "initialProviderOnly": "56/62; six newly recognized public failures exact natural-domain overshoot, no provider slack",
+    "historicalTests": "test_sheet_join_validation.cpp and test_offset.cpp identical to HEAD; fk_sheet unchanged since preceding nonISO milestone",
+    "productionSources": "2 changed TUs +2headers match integrated freeze"
+  },
+  "sourceSha256": {
+    "test_surface_curve_bounds.cpp": "c403cdf969a9e1bb8512059977a8cee3ebeb4ae3187ac88d3ee54ba837f01d30",
+    "test_surface_curve_rational.cpp": "369e095a4c716f3c58957bd05ddb605222d4e2fd2ab1f7b6b3d95600fd01594a",
+    "test_sheet_join_ledger.cpp": "c05a59e5a4a532e37608dffec943e0f4f19d1821d9033dac8a735127b1b03740"
+  },
+  "binarySha256ForAttributionOnly": {
+    "candidate-tests": "a5f1adb05e18a955af6feea65dd319181d423884f95a8a6bd87c54ebec3dbc3b",
+    "san/candidate-tests": "92281c27485053fb7e73c202cc639f208b19a03418b47679bacad168c706b25d",
+    "libforgekernel-baseline.a": "500d4c72b5adba86e4d5758f71b2fdebfed8eb1f8f95bf7d521ef24cf4f47d3b"
+  },
+  "scope": {
+    "directRationalCarrier": "9 synthetic tests; S degrees2/3, positive variable weights; E/Q polynomial",
+    "boundedConstructionLedger": "3 new emitted candidate tests; unchanged E/S/cap, shared unplanned map, half-ulp exact outside, physical gap remains Failed",
+    "previous": "13 provider and9ledger+33 original public tests preserved except one new-family expectation/name",
+    "sanitizer": "2 changed productionTUs +all4 testTUs/main instrumented; remaining dependency archive incl unchanged fk_sheet Release",
+    "archived": "inert source/text/JSON/patch only; no binary/object/archive/CAD"
+  },
+  "files": {
+    "README.txt": {
+      "sha256": "1c7e030fea17fff25ba2ee3b213b8857ec9f08a70b0bf5e01571ad2c84b30d39",
+      "bytes": 3725
+    },
+    "SheetJoinCanonicalReversal-final.jsonl": {
+      "sha256": "449e0ae92807c36376c50dd4d13f28ae6b50a9d4ac07ac4da9ea6a3d09a9875c",
+      "bytes": 13525
+    },
+    "SheetJoinCanonicalReversal.jsonl": {
+      "sha256": "f1e4645548563c5513c27fb3d6a23f439ddcd2122a9deca4564c21c8019f1dbc",
+      "bytes": 4170
+    },
+    "SheetJoinFaceSense-final.jsonl": {
+      "sha256": "312f21806b90d0b07a21fc67f8a3fe3a6b505c96d489efafd5810862649b1866",
+      "bytes": 13527
+    },
+    "SheetJoinFaceSense.jsonl": {
+      "sha256": "1d82b1c29597d6c4a573229ef82367b61a11f84fac384dae3b39fe28fcfe4977",
+      "bytes": 4172
+    },
+    "SheetJoinImplicitPolynomial-final.jsonl": {
+      "sha256": "449e0ae92807c36376c50dd4d13f28ae6b50a9d4ac07ac4da9ea6a3d09a9875c",
+      "bytes": 13525
+    },
+    "SheetJoinImplicitPolynomial.jsonl": {
+      "sha256": "f1e4645548563c5513c27fb3d6a23f439ddcd2122a9deca4564c21c8019f1dbc",
+      "bytes": 4170
+    },
+    "SheetJoinLargeScale-final.jsonl": {
+      "sha256": "025fa968a080aa75822527b074b9f99bf61fb4eddf81427853113d90278eb2d1",
+      "bytes": 13445
+    },
+    "SheetJoinLargeScale.jsonl": {
+      "sha256": "6ebb3675ace06f97dc9c792ee687f09cb3ccb60c634b17731a3b43fbd95eaf06",
+      "bytes": 4145
+    },
+    "SheetJoinRational-final.jsonl": {
+      "sha256": "654ea4ec44ef73275118e42e0a3fdaddb8455d57f869a725ca83d2aad382b108",
+      "bytes": 14177
+    },
+    "SheetJoinRational.jsonl": {
+      "sha256": "c4b153344b0a856f3a353a03006911448585ee251210626885c39dc9966aaa95",
+      "bytes": 4436
+    },
+    "SheetJoinSmallScale-final.jsonl": {
+      "sha256": "cafeb08ead04bbac0662faffa38137184efbd94b1b3479afc6543d958acf85f7",
+      "bytes": 14101
+    },
+    "SheetJoinSmallScale.jsonl": {
+      "sha256": "93c864dc276c9969fed7a8940b998c05826bd3b9af30c6b2954f7b0f43e32441",
+      "bytes": 4331
+    },
+    "actual-final-trace-summary.json": {
+      "sha256": "f0d1c987f518235a13fa955c40904ade2335fbfb813f76a9ecc76b7f1b934236",
+      "bytes": 824
+    },
+    "baseline-library.json": {
+      "sha256": "fbc558c35853668d44d1a3451bbee796745d80923eb531f3c864aded46746c12",
+      "bytes": 294
+    },
+    "candidate-67-final.log": {
+      "sha256": "c88bb3cdf6b2aa6016e97fb3dc58b028547b8f61b2bd1b5009baf092c0235117",
+      "bytes": 3252
+    },
+    "candidate-link.json": {
+      "sha256": "a23ef0444f0c042c57247549a44ab9b9b4468ef0f71b94263b1c9842be303489",
+      "bytes": 779
+    },
+    "compile-commands.json": {
+      "sha256": "38c33202f6c97171d4602aa0d6aac678fe1156fae107cde9e1fb9a6f32777396",
+      "bytes": 1972
+    },
+    "compiler-version.txt": {
+      "sha256": "0b52fa36f98d1a1ff3f77256f64c13ac7e2264cf7f072ea7943756a0ef378028",
+      "bytes": 228
+    },
+    "diagnostic-link.json": {
+      "sha256": "89801829ed55caae728d2388026f1955a43be7a3dd238489b952b7dacd3b1a3e",
+      "bytes": 587
+    },
+    "domain-verification.log": {
+      "sha256": "140878c816710069fc49c9d1f15d6de29ee0672ae164d5d0d1c9d377df5d6714",
+      "bytes": 1138
+    },
+    "export-rational-witness.cpp.txt": {
+      "sha256": "59eeecd827a7821accb2d07b15f4a6331968dfbfdcd9b88943a55b7868cba1fa",
+      "bytes": 4190
+    },
+    "export-rational-witness.log": {
+      "sha256": "f1f9482b1e176856ba7d54610f37bdb62caf1b5ecd8977555b6dbe05f7281471",
+      "bytes": 59
+    },
+    "failure-domain-summary.json": {
+      "sha256": "f4d21be93f97aefcb43ae67376ac8424e005a5ca2a152b244ba2ce9a93bae161",
+      "bytes": 4665
+    },
+    "final-diagnostic-link.json": {
+      "sha256": "73efe996e99365d27092b7efae5ceae74c0726b152d1bd6f10853acdd247d1be",
+      "bytes": 605
+    },
+    "final-trace-export.cpp.txt": {
+      "sha256": "f16c585e4f768f940aefb9380a7d143b755402f93b238d33ad0d311122e56547",
+      "bytes": 4026
+    },
+    "graph-consult.json": {
+      "sha256": "ecfafe081d41ea1ab999b6c822b5f9d0f8f1fd2070b4abd22dc7f3106f0e4859",
+      "bytes": 3046
+    },
+    "half-ulp.log": {
+      "sha256": "237aceac69888989f38228588c5d52f1ace8d7d4f3d8eb79cdda4f0645974006",
+      "bytes": 76
+    },
+    "independent-audit-reference.json": {
+      "sha256": "dc8b14cc0d641888758880079b900223ad701a11b1cf5a75be69c4d4aa836bb4",
+      "bytes": 676
+    },
+    "initial-candidate.log": {
+      "sha256": "61c278059bec7b02367c964575938561d70d784c1c4be8c81cb6082aaa73a065",
+      "bytes": 3902
+    },
+    "integrated-source-freeze.json": {
+      "sha256": "5e2fa9354a6077f52c73f21d21c12eb227acf8f2fd6112f15fd382fec8a89cc0",
+      "bytes": 978
+    },
+    "leak_calibration.cpp.txt": {
+      "sha256": "b73910ded67c00d23c4e402c1b73dcf990cfb4b0c5f517003ac5952134dde35d",
+      "bytes": 216
+    },
+    "ledger-diagnostic.cpp.txt": {
+      "sha256": "8e8497a3f3cb8037f0c887160dca305595a98f562e35b25836d94eef400e1135",
+      "bytes": 4255
+    },
+    "ledger-final-diagnostic.cpp.txt": {
+      "sha256": "e4c84f1545eeabfd97b27f9a4ea4cd1acc58e2d656e010d5facbe98f589d8099",
+      "bytes": 8505
+    },
+    "preservation.json": {
+      "sha256": "34008308dfd7f1549973a6817e43c95c804793bef6317834949e1ca3d9a8909d",
+      "bytes": 477
+    },
+    "rational-hidden-peak-witness.json": {
+      "sha256": "bfc14e036c6d83a2c5e12c4c6eef4e9ea2923a5f0412f4c556b680636ec54002",
+      "bytes": 4597
+    },
+    "rational-nine.log": {
+      "sha256": "a4856efa40831009212f9bc4100a6ec925da62dab6a1139065ac76a392235d71",
+      "bytes": 531
+    },
+    "san-combined-sanitizer.log": {
+      "sha256": "42d4bcc74af4fa1d91d1d73b0b254a14c98370eab8055c4c1230ccd0dbb56f2f",
+      "bytes": 3252
+    },
+    "san-compile-commands.json": {
+      "sha256": "5a4cc1c645c1f6e9db148b87c06c8dd458309fd1645510ba50704ee693038d56",
+      "bytes": 3626
+    },
+    "san-compile-results.json": {
+      "sha256": "809e4b5bf2f95b580abdd760539828f9bf36f6f4f4b2c334dd5fd67bcf4c153b",
+      "bytes": 583
+    },
+    "san-leak-calibration.log": {
+      "sha256": "a377f5209430dbfe1d67530c9979566eabd661ca43b4cba188188aa2159e3998",
+      "bytes": 989
+    },
+    "san-link-command.json": {
+      "sha256": "19bb9a2b7f640fae36ba96a4d85217ffedc847231e6ad50693fdbba589b93b69",
+      "bytes": 547
+    },
+    "san-run-command.json": {
+      "sha256": "86ca4853e9a9e26137400016c29e35e512ded214c8935ab72de0a483846e8e74",
+      "bytes": 784
+    },
+    "san-runtime-results.json": {
+      "sha256": "1c52576706fa0ca79e571dc83d31d38045d085dd41e58e3f7dd8c4ae522ab204",
+      "bytes": 620
+    },
+    "test_sheet_join_ledger.cpp.txt": {
+      "sha256": "c05a59e5a4a532e37608dffec943e0f4f19d1821d9033dac8a735127b1b03740",
+      "bytes": 16102
+    },
+    "test_surface_curve_bounds.cpp.txt": {
+      "sha256": "c403cdf969a9e1bb8512059977a8cee3ebeb4ae3187ac88d3ee54ba837f01d30",
+      "bytes": 10603
+    },
+    "test_surface_curve_rational.cpp.txt": {
+      "sha256": "369e095a4c716f3c58957bd05ddb605222d4e2fd2ab1f7b6b3d95600fd01594a",
+      "bytes": 8629
+    },
+    "tests.patch": {
+      "sha256": "7bfb8bc9729994d1ad2910ce946d6ab1abe0fabce2c7501d20ae4b8154afd8d7",
+      "bytes": 15171
+    },
+    "trace-export.cpp.txt": {
+      "sha256": "33f8f013b44fc8cd4f93b9caf40375e47a5c1a6bbec88e577786815444ff59b4",
+      "bytes": 3977
+    },
+    "verify_domain_endpoints.py.txt": {
+      "sha256": "6a02a41b187bd2d3e76c79f484feab736377dbf985421bb0c1450fe8bfae4fe9",
+      "bytes": 1255
+    }
+  }
+}

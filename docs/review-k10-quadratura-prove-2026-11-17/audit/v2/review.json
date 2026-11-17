@@ -1,0 +1,18 @@
+{
+  "verdict": "No static blocker in V2; V1 consumer-contract audit explicitly incomplete",
+  "V1ReportUnchangedSHA256": "32be6dafd4dedd0141cfa29102b05509c2589ba01411e8dfb59bc4e4f72266ba",
+  "V2ReportSHA256": "c2575acbe4ffa17f15cd6919728197e931d8b82c207e17aaefd8555da5befa6f",
+  "sources": {
+    "fk_quadrature.h": "f1ec31f8673d753192d7d9646448f30a78f16fb9ec0bac514f74680dc663d3d6",
+    "fk_mass.cpp": "8248392ee0b7be25dd2b4217bc0ad29eeaf04c939e4e4940a12d328be45c66aa"
+  },
+  "controlledDefault": "N",
+  "checked": [
+    "invalid count rejected before callback on both new count-bearing ingress functions",
+    "count propagated both recursive children and noise criteria",
+    "all N components finite-validated before depth30 and checked in child sums",
+    "mass14 values integrated, first11 control adaptation, last3 magnitude default0",
+    "vector adaptiveIntegral signature unchanged and defaults to N"
+  ],
+  "runtime": "none by auditor"
+}

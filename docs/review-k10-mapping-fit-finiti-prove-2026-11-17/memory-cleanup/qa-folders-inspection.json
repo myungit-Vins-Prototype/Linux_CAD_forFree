@@ -1,0 +1,267 @@
+[
+  {
+    "directory": "boolean-box-qa",
+    "bytes": 109797947,
+    "cad_files": [],
+    "cad_count": 0
+  },
+  {
+    "directory": "complexity-reduction-qa",
+    "bytes": 4421113839,
+    "cad_files": [
+      "SurfaceModellingExample219-specchi-condivisi.prt",
+      "roundtrip-G2-1.prt",
+      "roundtrip-G2-0.prt",
+      "input-current.prt",
+      "SurfaceModellingExample219-ridotto.prt",
+      "SurfaceModellingExample219-griglie-ridotte.prt",
+      "SurfaceModellingExample219-corpo-griglie-ridotte.step",
+      "SurfaceModellingExample219-svuotato-baseline.step",
+      "SurfaceModellingExample219-svuotato-griglie-ridotte.step"
+    ],
+    "cad_count": 9
+  },
+  {
+    "directory": "forgecad_ribbon_preview_autogen",
+    "bytes": 733688,
+    "cad_files": [],
+    "cad_count": 0
+  },
+  {
+    "directory": "hlr-cone-qa",
+    "bytes": 292125,
+    "cad_files": [],
+    "cad_count": 0
+  },
+  {
+    "directory": "hlr-cylinder-qa",
+    "bytes": 221784,
+    "cad_files": [],
+    "cad_count": 0
+  },
+  {
+    "directory": "hlr-torus-qa",
+    "bytes": 362246,
+    "cad_files": [],
+    "cad_count": 0
+  },
+  {
+    "directory": "honeyrepeat-pattern-qa",
+    "bytes": 221381357,
+    "cad_files": [
+      "input-01f7151b.prt",
+      "HoneyRepeat-ripetizione-circolare.prt"
+    ],
+    "cad_count": 2
+  },
+  {
+    "directory": "honeyrepeat-trim-qa",
+    "bytes": 328109502,
+    "cad_files": [
+      "input-0548d7c4.prt",
+      "input-22a7d106.prt",
+      "HoneyRepeat-tagliato-tra-superfici.prt"
+    ],
+    "cad_count": 3
+  },
+  {
+    "directory": "honeyrepeat-unified-trim-qa",
+    "bytes": 218928956,
+    "cad_files": [
+      "input-22a7d106.prt",
+      "HoneyRepeat-tagliato-tra-superfici.prt"
+    ],
+    "cad_count": 2
+  },
+  {
+    "directory": "intersection-snaps-2026-11-04-qa",
+    "bytes": 1484890,
+    "cad_files": [],
+    "cad_count": 0
+  },
+  {
+    "directory": "knifehandle-flatten-qa",
+    "bytes": 438828812,
+    "cad_files": [
+      "input.prt",
+      "input-latest.prt",
+      "KnifeHandle-F5-F6-Piano5-appiattite-155.prt",
+      "KnifeHandle-F5-F6-Piano5-appiattite.prt"
+    ],
+    "cad_count": 4
+  },
+  {
+    "directory": "knifehandle-incremental-qa",
+    "bytes": 217077672,
+    "cad_files": [],
+    "cad_count": 0
+  },
+  {
+    "directory": "knifehandle-pattern-wrap-qa",
+    "bytes": 486206096,
+    "cad_files": [
+      "input.prt",
+      "KnifeHandle-Riempimento19-F6.prt",
+      "input-current.prt",
+      "KnifeHandle-Riempimento19-F6-aggiornato.prt"
+    ],
+    "cad_count": 4
+  },
+  {
+    "directory": "knifehandle-trim-1-4-qa",
+    "bytes": 880205896,
+    "cad_files": [
+      "input.prt",
+      "KnifeHandle-taglio-corpi-1-4.prt"
+    ],
+    "cad_count": 2
+  },
+  {
+    "directory": "knifehandle-trim-qa",
+    "bytes": 362175775,
+    "cad_files": [
+      "input.prt",
+      "KnifeHandle-trim-both-qa.prt"
+    ],
+    "cad_count": 2
+  },
+  {
+    "directory": "knifehandle-union-pattern-qa",
+    "bytes": 910026485,
+    "cad_files": [
+      "input-4b1c257e.prt",
+      "KnifeHandle-manico-e-rilievi-uniti.prt"
+    ],
+    "cad_count": 2
+  },
+  {
+    "directory": "knifehandle-unroll-plane5-qa",
+    "bytes": 318146392,
+    "cad_files": [
+      "input-920a5daf.prt",
+      "KnifeHandle-sviluppo-cilindri.prt"
+    ],
+    "cad_count": 2
+  },
+  {
+    "directory": "knifehandle-wrap-twofaces-qa",
+    "bytes": 2489796759,
+    "cad_files": [
+      "input.prt",
+      "KnifeHandle-Riempimento19-F5-F6-rigido.prt",
+      "input-7f89e509.prt",
+      "KnifeHandle-155-F5-F6-rigido.prt",
+      "KnifeHandle-155-F5-F6-quilt-cubico.prt",
+      "KnifeHandle-155-F5-F6-quilt.prt"
+    ],
+    "cad_count": 6
+  },
+  {
+    "directory": "knifehandle-wrap20-qa",
+    "bytes": 655892439,
+    "cad_files": [
+      "input-38de9d2d.prt",
+      "input-b8b7f553.prt",
+      "KnifeHandle-Riempimento20-due-facce-piegato.prt",
+      "KnifeHandle-Riempimento20-due-facce-piegato-attuale.prt"
+    ],
+    "cad_count": 4
+  },
+  {
+    "directory": "loft-correspondence-2026-11-04-qa",
+    "bytes": 1706493,
+    "cad_files": [],
+    "cad_count": 0
+  },
+  {
+    "directory": "loft-guide-controls-qa",
+    "bytes": 372901,
+    "cad_files": [],
+    "cad_count": 0
+  },
+  {
+    "directory": "loft-guide-face-pick-qa",
+    "bytes": 281373390,
+    "cad_files": [
+      "input-user-current.prt",
+      "SurfaceModellingExample219-appoggio-prima-loft13.prt"
+    ],
+    "cad_count": 2
+  },
+  {
+    "directory": "loft7-final-qa",
+    "bytes": 107574834,
+    "cad_files": [
+      "input.prt",
+      "KnifeHandle-loft7-G1.prt",
+      "input-user-latest.prt"
+    ],
+    "cad_count": 3
+  },
+  {
+    "directory": "mapping-multi-qa",
+    "bytes": 250226501,
+    "cad_files": [
+      "input.prt",
+      "KnifeHandle-sviluppo-cilindri.prt",
+      "Deformazione-multipla.prt"
+    ],
+    "cad_count": 3
+  },
+  {
+    "directory": "mapping-qa",
+    "bytes": 105881693,
+    "cad_files": [
+      "Riempimento.prt",
+      "Sviluppo.prt",
+      "Deformazione.prt"
+    ],
+    "cad_count": 3
+  },
+  {
+    "directory": "mapping-targets-qa",
+    "bytes": 249831553,
+    "cad_files": [
+      "input.prt",
+      "KnifeHandle-appoggio-multifaccia.prt"
+    ],
+    "cad_count": 2
+  },
+  {
+    "directory": "pattern-variation-2026-11-04-qa",
+    "bytes": 1335661,
+    "cad_files": [],
+    "cad_count": 0
+  },
+  {
+    "directory": "ribbon-preview",
+    "bytes": 106781470,
+    "cad_files": [],
+    "cad_count": 0
+  },
+  {
+    "directory": "shell-f0-f14-qa",
+    "bytes": 1287864342,
+    "cad_files": [
+      "input-G2.prt",
+      "roundtrip-G2-1.prt",
+      "roundtrip-G2-0.prt",
+      "SurfaceModellingExample219-svuotato-1mm.prt"
+    ],
+    "cad_count": 4
+  },
+  {
+    "directory": "shell-nonfinite-2026-11-04-qa",
+    "bytes": 2796022877,
+    "cad_files": [
+      "input-current.prt",
+      "partial.prt",
+      "roundtrip-1.prt",
+      "roundtrip-0.prt",
+      "SurfaceModellingExample219-svuotamento-corretto.prt",
+      "final-native/input.prt",
+      "final-native/roundtrip-1.prt"
+    ],
+    "cad_count": 7
+  }
+]

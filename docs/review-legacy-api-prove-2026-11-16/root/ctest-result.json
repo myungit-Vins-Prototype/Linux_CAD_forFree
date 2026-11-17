@@ -1,0 +1,31 @@
+{
+  "exit": 0,
+  "seconds": 6.537473301999853,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "--parallel",
+    "1",
+    "--output-junit",
+    "/tmp/legacy-api-review/root/ctest.xml",
+    "-V",
+    "-R",
+    "^(forgecad_extension_panel_tests|forgecad_chamfer_preview_state_tests|forgecad_surface_tools_tests|forgecad_drawing_editor_tests|forgecad_drawing_layout_history_tests|forgecad_linked_drawing_tests|forgecad_drawing_multisheet_tests|forgecad_display_mesh_tests|forgecad_linked_sketch_reference_tests|forgecad_body_sketch_reference_cache_tests)$"
+  ],
+  "selected_tests": [
+    "forgecad_extension_panel_tests",
+    "forgecad_chamfer_preview_state_tests",
+    "forgecad_surface_tools_tests",
+    "forgecad_drawing_editor_tests",
+    "forgecad_drawing_layout_history_tests",
+    "forgecad_linked_drawing_tests",
+    "forgecad_drawing_multisheet_tests",
+    "forgecad_display_mesh_tests",
+    "forgecad_linked_sketch_reference_tests",
+    "forgecad_body_sketch_reference_cache_tests"
+  ],
+  "skipped": [],
+  "actual_passed": 10
+}

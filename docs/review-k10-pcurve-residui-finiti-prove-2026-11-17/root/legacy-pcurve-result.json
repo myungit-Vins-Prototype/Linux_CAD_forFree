@@ -1,0 +1,8 @@
+{
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "PCurve"
+  ],
+  "exit": 0,
+  "seconds": 1.4160690209973836
+}

@@ -1,0 +1,6 @@
+{
+  "kernel/fk_curve.cpp": "7f47f426d3d19182cc2261741beb4fc6efb94ac72994946c2009863219b98011",
+  "kernel/CMakeLists.txt": "6927e8d0098303926f735f7002bbfbae4c437b959396b4ea0507043abfb4b950",
+  "tools/generate_architecture.py": "3fcd2356555636a9c68b4070512a6ba96b6ba46e1adf971bb6893a8af727f526",
+  "kernel/tests/test_quadrant_breakpoints_validation.cpp": "06034d0946dcba40af414af67052dd6259b1f6c4bd8bce0818e1afb592f7412c"
+}

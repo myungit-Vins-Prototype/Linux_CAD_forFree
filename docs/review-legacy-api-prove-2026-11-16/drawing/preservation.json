@@ -1,0 +1,32 @@
+{
+  "exactPreservedFunctions": [
+    {
+      "file": "cad_drawing_editor.cpp",
+      "signature": "QString DrawingSheetEditor::updateModel(",
+      "sha256": "f7f3eb541f794d25691ede02294d90a398a8ad0c2a388f9d005ad73d1ec98830",
+      "byteIdentical": true
+    },
+    {
+      "file": "cad_drawing_editor.cpp",
+      "signature": "void DrawingSheetEditor::installPreparedModel(",
+      "sha256": "a6423d4b8f905ed3058e18dadce1d2129d1b5dd07de1f7af7d415d73c3b5df9d",
+      "byteIdentical": true
+    },
+    {
+      "file": "cad_drawing_window.cpp",
+      "signature": "QString DrawingWindow::updateFromSource(",
+      "sha256": "91d51091c31ae2e3968712a308142f6652c7cbbcb7205eb1394fc0a7b2975fa6",
+      "byteIdentical": true
+    },
+    {
+      "file": "cad_drawing_window.cpp",
+      "signature": "void DrawingWindow::refreshEditAccess(",
+      "sha256": "f56d89a1591cff39c49f55bcce991cde34b30d4e0dbe1d11b5539dab8ae3f4ca",
+      "byteIdentical": true
+    }
+  ],
+  "setReadOnly": "Byte-identical after removal only of dead action enable expression; all actual read-only guards/cancellation/action lists preserved",
+  "reloadSourceAndWindowUpdateAction": "All lines containing drawingReloadSourceAction or updateAction_ byte-identical",
+  "removedActionDereferences": "Absent from icons and container findChild; no null-check workaround or other action changed",
+  "includes": "No include cleanup; std::function remains used"
+}

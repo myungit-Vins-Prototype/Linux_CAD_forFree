@@ -1,0 +1,46 @@
+{
+  "baseline_files": 8001,
+  "changed_existing": [
+    "CLAUDE.md",
+    "CMakeLists.txt",
+    "docs/code-review-2026-11-15.md",
+    "kernel/CMakeLists.txt",
+    "kernel/fk_mass.cpp",
+    "kernel/fk_quadrature.h",
+    "tools/generate_architecture.py"
+  ],
+  "new_source_documents": [
+    "docs/history/claude-prima-k10-quadratura-2026-11-17.md",
+    "docs/review-k10-quadratura-2026-11-17.md",
+    "kernel/tests/test_quadrature_validation.cpp"
+  ],
+  "preserved_existing": 7994,
+  "previous_packages": 38,
+  "previous_artifacts": 5367,
+  "HEAD_origin_main": "47c7c19c4faf490995e8ff64f10d83d8a6abb077",
+  "index_empty": true,
+  "preexisting_compile_commands_symlink_matches_HEAD": true,
+  "no_commit_push_UI_CI_general483": true,
+  "CLAUDE_bytes": 16126,
+  "ctest_passed": 4,
+  "new_groups": 6,
+  "baseline_safe_groups": 1,
+  "legacy": {
+    "legacy-LoftSmoothThroughCircles": 1,
+    "legacy-MassParallelPreservesFirstFailureAndCancellation": 1,
+    "legacy-MassParallelPreservesResultsAndInput": 1,
+    "legacy-MassVerticalSplineSkipsNullFlux": 1,
+    "legacy-MassOfExtrusions": 1,
+    "legacy-MassOfBoxes": 1,
+    "legacy-QuadratureStopsOnIntegrandNoise": 1,
+    "legacy-CurveLengthCachePreservesQuadratureAndIdentity": 1,
+    "legacy-ArcLength": 2
+  },
+  "legacy_total": 10,
+  "ordinary_hexfloat_lines": 26,
+  "length_cache_hexfloat_lines": 8,
+  "mass_hexfloat_body_lines": 3,
+  "mass_passive_components_explicit": true,
+  "native_unit_length_recovered": true,
+  "baseline_watchdog_exit": 124
+}

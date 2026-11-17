@@ -1,0 +1,12 @@
+{
+  "baseline_sha256": "32dc9c3b46c89b049104897706270b080fecc8b419c4535242fd95092a408a9a",
+  "candidate_sha256": "d584e6cf0622bcb59f8a4f57b19230279ab7fd7b7509a48b39a2b3e28ff8df76",
+  "patch_sha256": "ccc11b39f043bc6017a35e0961a40b9359b44dd9f60e32be1982a5b81975b317",
+  "public_probe_sha256": "785cf819bc667f357fc8571773df010c90fd1b47a89bfb5e98e534db2612dbf8",
+  "baseline_repository_source_unchanged": true,
+  "core_verification": "static review + exact Fraction algebra only; public runtime by root",
+  "candidate_runtime_status": "PENDING root/tests",
+  "physical_budget": "existing tolerance=1e-9*scale, prefit; passed at both existing calls",
+  "quadrature_tolerance": 1e-13,
+  "maximum_newton_iterations": 60
+}

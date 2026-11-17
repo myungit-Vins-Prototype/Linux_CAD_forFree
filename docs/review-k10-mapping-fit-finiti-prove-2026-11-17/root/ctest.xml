@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="2"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="0"
+	timestamp="2026-11-17T12:27:38"
+	>
+	<testcase name="forgekernel_surface_mapping_tests" classname="forgekernel_surface_mapping_tests" time="0.726719" status="run">
+		<properties/>
+		<system-out>PASS sviluppo piano/cilindro/cono, aree/lunghezze, rifiuto doppia curvatura, deformazione cilindrica/volume, genealogia, B-rep, STEP e mesh, appoggio multifaccia continuo/NURBS/vuoti
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_mapping_nonplane_validation_tests" classname="forgekernel_mapping_nonplane_validation_tests" time="0.242406" status="run">
+		<properties/>
+		<system-out>[  OK  ] MappingNonPlaneCylinderFinalFinsAndNullHistory
+[  OK  ] MappingNonPlaneQuadraticTargetFinalFinsAndNullHistory
+[  OK  ] MappingNonPlaneRationalCarrierFinalFinsAndNullHistory
+[  OK  ] MappingNonPlaneHiddenCarrierPeakRejectedAtomically
+[  OK  ] MappingNonPlaneFarOutsideCannotBeRepairedByClamping
+[  OK  ] MappingNonPlaneCancellationPreservesInputsAndOutputs
+[  OK  ] MappingFitFiniteCubicQuinticGridsAndDeviation
+[  OK  ] MappingFitNonFiniteInteriorProbeCannotPublishSurface
+[  OK  ] MappingFitNonFiniteCornerAndStencilValuesReject
+[  OK  ] MappingFitEveryAnalyticJetVectorMustBeFinite
+[  OK  ] MappingFitToleranceAndGridPreflightBeforeCallbacks
+[  OK  ] MappingFitCallbackErrorsAndCancellationDoNotPublish
+12/12 test superati
+</system-out>
+	</testcase>
+</testsuite>

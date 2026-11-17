@@ -1,0 +1,12 @@
+import json,pathlib,shlex,subprocess
+repo=pathlib.Path('/home/myungit/Linux_CAD_forFree'); stage=pathlib.Path('/tmp/boolean-order-review/tests'); build=repo/'forgecad-release'
+db=json.load(open(build/'compile_commands.json')); entry=next(x for x in db if x['file'].endswith('/cad_document_io.cpp'))
+a=shlex.split(entry['command']); idx=a.index('-o');a[idx+1]=str(stage/'extract.o'); a[-1]=str(stage/'extract.cpp');
+with open(stage/'extract-compile.log','w') as log:subprocess.run(a,cwd=entry['directory'],stdout=log,stderr=subprocess.STDOUT,check=True)
+b=shlex.split(entry['command']);b[b.index('-o')+1]=str(stage/'cad_document_io_snapshot.o');b[-1]=str(stage/'cad_document_io_snapshot.cpp')
+with open(stage/'snapshot-compile.log','w') as log:subprocess.run(b,cwd=entry['directory'],stdout=log,stderr=subprocess.STDOUT,check=True)
+a=shlex.split((build/'CMakeFiles/forgecad.dir/link.txt').read_text());a=[x for x in a if x!='-Wl,--dependency-file=CMakeFiles/forgecad.dir/link.d']; a[a.index('CMakeFiles/forgecad.dir/forgeCad2026.cpp.o')]=str(stage/'extract.o');a[a.index('-o')+1]=str(stage/'extract');a[a.index('kernel/libforgekernel.a')]=str(stage/'libforgekernel-baseline.a');a[a.index('CMakeFiles/forgecad.dir/cad_document_io.cpp.o')]=str(stage/'cad_document_io_snapshot.o');a.insert(1,'-Wl,--strip-debug')
+(stage/'extract-link-command.json').write_text(json.dumps(a,indent=2))
+with open(stage/'extract-link.log','w') as log:subprocess.run(a,cwd=build,stdout=log,stderr=subprocess.STDOUT,check=True)
+subprocess.run([str(stage/'extract'),str(stage/'Flacone3-frozen.prt'),str(stage)],check=True)
+print((stage/'features.json').read_text())

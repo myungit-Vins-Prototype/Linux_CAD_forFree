@@ -1,0 +1,74 @@
+{
+  "pass": true,
+  "input_sha256": "4ae3e8de7e268ef8d4b57b6cacc50109c35821bc6acce662bfdff11662650a1a",
+  "method": "Exact Fraction homogeneous original IEEE Cox/de Boor composition and Bernstein whole-interval hull; complete E/Q knot partition and all closed intersected S cells",
+  "records": [
+    {
+      "fin": 0,
+      "edge": 0,
+      "face": 0,
+      "budget": 8e-08,
+      "pass": true,
+      "upper_mm": 5.841103241770124e-11,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "label": "quilt-rational",
+      "runtimeStatus": "Certified",
+      "runtimeUpper": "0x1.b87b00b50e762p-34"
+    },
+    {
+      "fin": 1,
+      "edge": 1,
+      "face": 0,
+      "budget": 8e-08,
+      "pass": true,
+      "upper_mm": 6.862651582546281e-11,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "label": "quilt-rational",
+      "runtimeStatus": "Certified",
+      "runtimeUpper": "0x1.a23ca818cfcf9p-34"
+    },
+    {
+      "fin": 2,
+      "edge": 2,
+      "face": 0,
+      "budget": 8e-08,
+      "pass": true,
+      "upper_mm": 8.665476095512873e-11,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "label": "quilt-rational",
+      "runtimeStatus": "Certified",
+      "runtimeUpper": "0x1.3bd21d0e509d5p-33"
+    },
+    {
+      "fin": 3,
+      "edge": 3,
+      "face": 0,
+      "budget": 8e-08,
+      "pass": true,
+      "upper_mm": 1.1633061947451104e-10,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "label": "quilt-rational",
+      "runtimeStatus": "Certified",
+      "runtimeUpper": "0x1.a9f8686647164p-33"
+    }
+  ],
+  "elapsed": 0.03071217100659851,
+  "not_claimed": [
+    "Full mapping intent or carrier fit",
+    "Newton/branch correctness",
+    "Global trim/topology",
+    "Unsupported families"
+  ]
+}

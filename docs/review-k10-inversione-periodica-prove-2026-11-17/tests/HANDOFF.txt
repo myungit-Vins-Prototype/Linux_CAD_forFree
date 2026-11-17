@@ -1,0 +1,23 @@
+K10 — invertPoint: verificare successo dopo le mutazioni finali UV
+
+Sorgente congelata
+/tmp/k10-newton-review/tests/test_invert_point_validation.cpp
+SHA256c77471ae664519c94ca3c6d28258cec3c4794b64238990da079b721260e3d1d4,5738byte,6 FK_TEST.
+Nessuna modifica successiva allo SHA trasmesso a root. Questo agente ha scritto soltanto sorgente test, consultazione grafo e note: nessun repoedit, compilazione, runtime, archivecopy o UI. Root possiede patchproduzione, CMake per targetstandalone e verifiche seriali baseline/candidate.
+
+Ricognizione
+Letti AGENTS.md/CLAUDE.md, fk_surface_algo.h e implementazioneinvertPoint/unwrapNear, superfici analitiche e primo test InvertPointKeepsClosedBSplineBranch in kernel/tests/test_surface_algo.cpp (TU dei confrontiOCCT). Le descrizioni e i link call/include/ref bidirezionali sono conservati in graph-consult.json. La TU nuova non include OCCT né testutilOCCT e replica solo quel controllo kernel già esistente.
+Il probe runtime e i residui pre-fix di cilindroR10 conUguess1e8/1e12 sono evidenza di root, non esecuzioni di questo agente.
+
+Sei gruppi semantici
+1.InvertPointCylinderValidatesFinalUnwrappedResidual: p=S(.25,2), R10, seedsU1e8/1e12/1e16. Ogni TRUE deve avere UV finali finiti e residuo3D finale<=1e-8.
+2.InvertPointConeSphereValidateFinalUnwrappedResidual: stessa proprietà su cono angolo.4/raggio10 e sferaR10, lontano dai poli/apice, gli stessi seedsU.
+3.InvertPointTorusValidatesBothFinalPeriodicCoordinates: toroR10/r2, seedsgrandi separatiU eV e un caso con entrambe le coordinate lontane. Verifica dopo tutte le mutazioni.
+4.InvertPointModeratePeriodicSeedsKeepNearbyBranch: cilindro,cono,sfera,toro a0/±24giri con piccola perturbazione. DeveTRUE, residuofinale<=1e-8 e parametri periodici entro mezzo periodo dal seed. Impedisce che una correzione alwaysfalse passi i negativi.
+5.InvertPointPlaneAndClosedNonPeriodicSplineControls: piano con frame traslato/ruotato e stima lontana deve riuscire; replica kernel-only del testOCCT esistente sul cilindro convertitoBSpline chiuso nonperiodico, siaU siaV trasposta. Entrambi i rami del seam devono restare vicini alla stima e rispettare la tolleranza1e-3 già usata dall'originale, lasciato invariato.
+6.InvertPointNonFinitePeriodicSeedsCannotReturnSuccess: NaN/±Inf sulla coordinata periodicaU del cilindro oV del toro devonoFALSE. Non vengono creati oggetti geometrici invalidi. Una coordinata nonperiodica iniziale nonfinita non viene generalizzata a rifiuto: la proiezione globale potrebbe recuperarla validamente.
+
+Scelte e limiti
+Le prove dei seedsgrandi sono portabili: non impongono FALSE se una diversa libm riesce a ottenere un ramo finale rappresentabile entrocap. Impongono il contratto osservabile TRUE⇒UVfiniti e residuofinale<=tolerance. Non riscrivono unwrapNear o la sua aritmetica nel test. I positivi separati verificano sia successo sia ramo vicino.
+Non si richiede UVimmutato suFALSE: l'API attuale aggiorna UV anche nei fallimenti. Nessun nuovo requisito su inputscale/tolleranze o altre famiglie; nessuna tolleranza rialzata, mesh, campioni come certificato o nuovo comando CAD. Le misure sono regressioni del risultato puntuale di invertPoint, non certificati continui globali.
+Nessun esito baseline/candidate/SAN dichiarato da questo agente. Root esegue e conserva i risultati prima dell'integrazione, aggiorna CLAUDE/grafo e conclude le verifiche pertinenti. Prove precedenti sigillate non modificate; binari di turni conclusi non riutilizzati.

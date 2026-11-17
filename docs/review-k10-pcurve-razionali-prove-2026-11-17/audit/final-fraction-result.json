@@ -1,0 +1,280 @@
+{
+  "pass": true,
+  "inputSHA256": "3169732453b395786ef23a987f9d4775a8cb1742cd964d8a79d77a4d3271d3c5",
+  "method": "Exact Fraction original homogeneous E/S Cox composition, full E/Q knot partition and all closed intersected S cells; Euclidean rational Bernstein numerator/denominator enclosure",
+  "records": [
+    {
+      "fin": 0,
+      "edge": 0,
+      "face": 0,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "rationalE": true,
+      "runtimeStatus": "Certified",
+      "runtimeUpper": "0x1.22fc0a879f252p-41"
+    },
+    {
+      "fin": 1,
+      "edge": 1,
+      "face": 0,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "rationalE": true,
+      "runtimeStatus": "Certified",
+      "runtimeUpper": "0x1.22fc0a879f252p-41"
+    },
+    {
+      "fin": 2,
+      "edge": 2,
+      "face": 0,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "rationalE": true,
+      "runtimeStatus": "Certified",
+      "runtimeUpper": "0x1.22fc0a879f252p-41"
+    },
+    {
+      "fin": 3,
+      "edge": 3,
+      "face": 0,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "rationalE": true,
+      "runtimeStatus": "Certified",
+      "runtimeUpper": "0x1.22fc0a879f252p-41"
+    }
+  ],
+  "genuineRationalEAndQ": [
+    {
+      "fin": 0,
+      "source": "curve",
+      "coordinate": 0,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "numeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    },
+    {
+      "fin": 0,
+      "source": "pcurve",
+      "coordinate": 0,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "numeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    },
+    {
+      "fin": 1,
+      "source": "curve",
+      "coordinate": 1,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "numeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    },
+    {
+      "fin": 1,
+      "source": "pcurve",
+      "coordinate": 1,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "numeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    },
+    {
+      "fin": 2,
+      "source": "curve",
+      "coordinate": 0,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "numeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    },
+    {
+      "fin": 2,
+      "source": "pcurve",
+      "coordinate": 0,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "numeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    },
+    {
+      "fin": 3,
+      "source": "curve",
+      "coordinate": 1,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "numeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    },
+    {
+      "fin": 3,
+      "source": "pcurve",
+      "coordinate": 1,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "numeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    }
+  ],
+  "originalPolynomialSDenominatorIdentity": "Wsbar=7*D^4 exactly on all4 actual fins; production normalized branch uses D^4",
+  "elapsed": 0.026491042008274235,
+  "scope": "Internal ledger integration on actual Body::buildSheet/unify final4 Q-rational fins; not a new public extendSheet or mapper family"
+}

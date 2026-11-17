@@ -1,0 +1,18 @@
+from pathlib import Path
+import hashlib,json
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-quadrature-review/root');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();old=json.loads((T/'v1/integrated-sources.json').read_text());b=json.loads((T/'baseline.json').read_text())
+for f,h in old.items():assert sha(R/f)==h,f
+assert sha(R/'kernel/fk_mass.cpp')==b['kernel/fk_mass.cpp']
+frozen=json.loads((T/'freeze.json').read_text())
+for v in frozen.values():assert sha(Path(v['path']))==v['sha256']
+for p in ['staged-tests','san-tests']:assert '6/6 test superati' in (T/(p+'.log')).read_text()
+assert (T/'baseline-mass-golden.log').read_bytes()==(T/'candidate-mass-golden.log').read_bytes()
+for key,dst in [('candidate','kernel/fk_quadrature.h'),('mass','kernel/fk_mass.cpp'),('tests','kernel/tests/test_quadrature_validation.cpp')]:(R/dst).write_bytes(Path(frozen[key]['path']).read_bytes())
+p=R/'tools/generate_architecture.py';s=p.read_text();s=s.replace('Stime numeriche, non certificati continui; tolleranze e profondita legacy conservate.','Prefisso delle componenti che guidano il raffinamento esplicito, tutte restano finite. Stime numeriche, non certificati continui; tolleranze e profondita legacy conservate.');s=s.replace('callback15 senza replay, lunghezza B-spline nativa e cache,','callback15 senza replay e propagazione ricorsiva dei contatori passivi, lunghezza B-spline nativa e cache,');s=s.replace('proprieta complete e tolleranze conservate.','proprieta complete e tolleranze conservate. I tre contatori di avvolgimento sono componenti passive esplicite della quadratura, senza sentinelle infinite.');p.write_text(s)
+paths=list(old)+['kernel/fk_mass.cpp'];(T/'integrated-sources.json').write_text(json.dumps({f:sha(R/f) for f in paths},indent=2)+'\n')
+p=R/'CLAUDE.md';s=p.read_text();start=s.index('**17/11 — K10 quadratura');end=s.index('\nQ/E razionali',start);s=s[:start]+'''**17/11 — K10 quadratura integrata; nessun commit/push.**
+Retta1mm h2^-1023: watchdog→1. V2 staging6/6+SAN, golden GK/lunghezze/massa bitidentici PASS.
+Contatori massa passivi espliciti; app/regressioni/mappa in verifica. V1 scartata per sentinel Inf.
+K10parziale,33invariati. [Quadratura](docs/review-k10-quadratura-2026-11-17.md),
+[lunghezze](docs/review-k10-lunghezza-curve-2026-11-17.md), [storico K10](docs/history/claude-prima-k10-quadratura-2026-11-17.md).
+''' +s[end:];assert len(s.encode())<=16384;p.write_text(s);print('V2 integrated, memory',len(s.encode()))

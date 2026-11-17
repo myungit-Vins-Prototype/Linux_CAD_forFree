@@ -1,0 +1,23 @@
+#include "fk_curve.h"
+#include "fk_cancel.h"
+#include <iostream>
+#include <iomanip>
+#include <thread>
+#include <chrono>
+#include <limits>
+#include <string>
+using namespace ForgeCad::Kernel;
+int main(int argc,char**argv){
+ const std::string mode=argc>1?argv[1]:"normal";const auto c=makeCircle(Vec2(0,0),1);Interval range{-.3,8};
+ auto token=std::make_shared<std::atomic<bool>>(mode=="preset");CancellationScope scope(token);std::thread canceller;
+ if(mode=="stalled")range={1e20,1e20+1e9};
+ if(mode=="infinite")range={-std::numeric_limits<double>::infinity(),0};
+ if(mode=="during"){range={0,1e12};canceller=std::thread([token]{std::this_thread::sleep_for(std::chrono::milliseconds(5));token->store(true);});}
+ int status=0;
+ try{auto breaks=c.breakpoints(range);std::cout<<"returned count="<<breaks.size();if(mode=="normal")for(double t:breaks)std::cout<<' '<<std::hexfloat<<t;std::cout<<'\n';}
+ catch(const OperationCancelled&){std::cout<<"cancelled\n";}
+ catch(const std::invalid_argument&e){std::cout<<"invalid_argument: "<<e.what()<<'\n';}
+ catch(const std::domain_error&e){std::cout<<"domain_error: "<<e.what()<<'\n';}
+ catch(const std::exception&e){std::cout<<"unexpected: "<<e.what()<<'\n';status=1;}
+ if(canceller.joinable())canceller.join();return status;
+}

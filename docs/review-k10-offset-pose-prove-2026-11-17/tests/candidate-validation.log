@@ -1,0 +1,17 @@
+[  OK  ] CurveFitCertifiedDegree27OffsetPoseScaleRational
+[  OK  ] CurveFitCertifiedNestedTrims
+[  OK  ] CurveFitCertifiedInvalidAndAtomic
+[  OK  ] CurveFitCertifiedUnresolvedAndCancellation
+[  OK  ] CurveFitCertifiedConicParameterNotAssumedPolynomial
+[  OK  ] CurveFitCertifiedRevolutionMeridian
+[  OK  ] CurveFitLegacyInvalidInputAndAtomic
+[  OK  ] CurveFitCertifiedRescaledWeightsTrimTransform
+[  OK  ] CurveFitCertifiedMultipleSpansUnclamped
+[  OK  ] CurveFitCertifiedProviderDomainAndCancellation
+[  OK  ] CurveFitCertifiedClosedNurbsAcrossSeam
+[  OK  ] OffsetValidationHiddenSpanAndScale
+[  OK  ] OffsetValidationToroidalDomain
+[  OK  ] OffsetValidationCancellationAndReset
+[  OK  ] OffsetValidationAnalyticExtrusionAndRevolution
+[  OK  ] OffsetValidationRotatedCircularConstructions
+16/16 test superati

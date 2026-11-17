@@ -1,0 +1,34 @@
+{
+  "rotation-scale.cpp": {
+    "path": "/home/myungit/.codex/visualizations/2026/11/01/01a195e7-2588-7793-a934-4518cbbe84f2/superfici-shell-fix/rotation-scale.cpp",
+    "sha256": "b2dfbc41f88d0873b16160ee2b77eea549b7d58eed87c79943c97d17cd54878f"
+  },
+  "rotation-scale.log": {
+    "path": "/home/myungit/.codex/visualizations/2026/11/01/01a195e7-2588-7793-a934-4518cbbe84f2/superfici-shell-fix/rotation-scale.log",
+    "sha256": "3df9d2b23aa16fce5682834cae0cc2ee43673340c346e7baa0e74c36db3f2465"
+  },
+  "rotation-scale-local.log": {
+    "path": "/home/myungit/.codex/visualizations/2026/11/01/01a195e7-2588-7793-a934-4518cbbe84f2/superfici-shell-fix/rotation-scale-local.log",
+    "sha256": "d0e46d3a2e0281417560af91b0f5745ff1d2160088e1f022031b0ee894ebe149"
+  },
+  "rotation-input-quality.log": {
+    "path": "/home/myungit/.codex/visualizations/2026/11/01/01a195e7-2588-7793-a934-4518cbbe84f2/superfici-shell-fix/rotation-input-quality.log",
+    "sha256": "d69d7bb97a6b6d70bd63deb81cc18760e9565c1d48990e7d0d69bcda3a6fb9fe"
+  },
+  "offset-local-basis.cpp": {
+    "path": "/home/myungit/.codex/visualizations/2026/11/01/01a195e7-2588-7793-a934-4518cbbe84f2/superfici-shell-fix/offset-local-basis.cpp",
+    "sha256": "760433d949c6ea3a1b49a57ef5c264346736433ba8bcac93814e7342f60cd34d"
+  },
+  "/home/myungit/.codex/visualizations/2026/11/01/01a195e7-2588-7793-a934-4518cbbe84f2/superfici-shell-fix/shell_stitched_tangent.body": {
+    "sha256": "f266d6fd50ebb5c69b97038dcf05c787fa2ff763426946930d4093b4425af7f9",
+    "bytes": 156850
+  },
+  "/home/myungit/Linux_CAD_forFree/kernel/tests/data/shell_stitched_tangent.body": {
+    "sha256": "f266d6fd50ebb5c69b97038dcf05c787fa2ff763426946930d4093b4425af7f9",
+    "bytes": 156850
+  },
+  "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a": {
+    "sha256": "500d4c72b5adba86e4d5758f71b2fdebfed8eb1f8f95bf7d521ef24cf4f47d3b",
+    "bytes": 180980982
+  }
+}

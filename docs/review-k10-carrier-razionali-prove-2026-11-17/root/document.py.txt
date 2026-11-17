@@ -1,0 +1,36 @@
+from pathlib import Path
+import json,re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-next-review/root')
+b=json.loads((T/'build-result.json').read_text());c=json.loads((T/'ctest-result.json').read_text());g=json.loads((T/'general-result.json').read_text());a=json.loads((T/'architecture-audit.json').read_text());p=json.loads((T/'app-startup-result.json').read_text())
+assert b['exit']==c['exit']==g['exit']==0 and c['actual_passed']==16 and not c['skipped'] and p['alive']
+assert '483/483' in (T/'general.log').read_text() or re.search(r'483.*483|483 test', (T/'general.log').read_text())
+san=json.loads((T.parent/'tests/final-proof/san-runtime-results.json').read_text());assert [r['exit'] for r in san['results']]==[23,0]
+assert '67/67' in (T.parent/'tests/final-proof/candidate-67-final.log').read_text() and '67/67' in (T.parent/'tests/final-proof/san-combined-sanitizer.log').read_text()
+assert json.loads((T.parent/'audit/final-proof/final-fraction-results.json').read_text())['pass']
+rows='''| Verifica | Esito e perimetro |
+| --- | --- |
+| Build completa | PASS, app aggiornata, circa@SECONDS@s; test target ricompilato dopo il congelamento della fixture finale. |
+| CTest pertinenti | 16/16 PASS, zero skip; nomi esatti e JUnit nel pacchetto. |
+| Kernel generale | 483/483 PASS, runner ricompilato. |
+| Driver mirato | 67/67 PASS, senza rimuovere le 33 regressioni pubbliche precedenti. |
+| ASan/UBSan/LSan | 67/67 PASS sui due TU modificati provider/ledger e test/main strumentati; resto kernel Release. Perdita intenzionale di19byte rilevata con exit23 fuori ptrace. Non certifica l'intera app. |
+| Geometria pubblica | 6 casi,18 fin finali: runtime Certified, capedge=capfin=capPrefit; input immutato, Rational senza history byte-identico. |
+| Audit indipendente Fraction | 18/18 PASS sugli originali IEEE. Rational massimo2,737789171e-11mm <1e-7; implicit2,059007839e-10mm <1e-7; LargeScale1,474654696e-7mm <2,331437325e-6 fissato prima del fit. |
+| Avvio Wayland | PASS5s con profilo temporaneo ed eseguibile effettivo verificato; nessun documento/processo utente toccato, nessuna certificazione pixel/GL. |
+| Architettura | @NODES@ nodi /@EDGES@ relazioni /@UNITS@ TU, zero errori AST; hash, HTML, configurazione e archi nei due versi verificati. |
+| Conservazione | Baseline5796file,24pacchetti precedenti e nove sorgenti API locali preservati; regressioni SheetJoin e Offset originali immutate. Index vuoto; nessun commit/push. |
+'''.replace('@SECONDS@',str(round(b['seconds']))).replace('@NODES@',str(a['nodes'])).replace('@EDGES@',str(a['edges'])).replace('@UNITS@',str(a['units']))
+report=(T/'report-draft.md').read_text().replace('@VALIDATION@',rows);(R/'docs/review-k10-carrier-razionali-2026-11-17.md').write_text(report)
+q=R/'docs/code-review-2026-11-15.md';s=q.read_text();top='''**K10 carrier razionali, prosecuzione locale verificata:** supporti NURBS nativi di grado2/3 con pesi positivi e pcurve costruite nel dominio prima della prova continua; cap originali invariati. App completa,16/16CTest,483/483kernel,67/67mirati e sanitizer, Fraction18fin/6casi e mappa PASS. K10 generale parziale,33bug invariati. Nessun commit/push. [Rapporto, prove e limiti](review-k10-carrier-razionali-2026-11-17.md).
+
+''';idx=s.index('**K10 nonISO');s=s[:idx]+top+s[idx:];s=s.replace('estendere il controllo oltre la prima famiglia nonISO nativa bicubica ora verificata; gli altri carrier e casi generici campionati restano aperti.','estendere il controllo oltre i supporti nativi2/3 polinomiali/razionali positivi ora verificati; E/Q a pesi variabili, istanze/wrapper, altri gradi e Newton/globale restano aperti.');q.write_text(s)
+q=R/'CLAUDE.md';s=q.read_text();idx=s.index('**17/11 — K10 carrier razionali');end=s.index('**17/11 — K10 nonISO',idx);s=s[:idx]+'''**17/11 — K10 carrier razionali verificati, nessun commit/push.**
+Tre Sol: S2/3,pesi positivi; E/Q polinomiali. Pcurve nel dominio prima della prova,cap invariato.
+App/16CTest/483kernel/67mirati+sanitizer/Fraction18fin-6casi/Wayland avvio/mappa PASS.
+24pacchetti e API preservati;33bug invariati. K10 parziale;Superfici/prototipo ancora falliscono.
+[Prove/limiti](docs/review-k10-carrier-razionali-2026-11-17.md); [archivio](docs/history/claude-prima-k10-carrier-razionali-2026-11-17.md).
+
+'''+s[end:]
+s=s.replace('il prototipo con base locale non è\n  integrato. Limite generale aperto.','anche il prototipo locale fallisce. Limite generale aperto.')
+s=s.replace('Tre Sol: fin native bicubiche con residuo continuo, cap prefit e genealogia build/unify.\nApp/22CTest/483kernel/55mirati+sanitizer/Fraction2fin-120campate/462identita/Wayland avvio/mappa PASS.\n23pacchetti e API locali preservati;33bug invariati. Newton/globale/unsupported restano parziali.','Fin bicubiche: app/22CTest/483kernel/55mirati+sanitizer/Fraction2fin-120campate/462identita/avvio/mappa PASS.\n33bug invariati;Newton/globale/unsupported parziali.')
+assert len(s.encode())<=16384 and len(re.findall(r'^\*\*',s,re.M))<=10;(q).write_text(s);print('CLAUDE bytes',len(s.encode()))

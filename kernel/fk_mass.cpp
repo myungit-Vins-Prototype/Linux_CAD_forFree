@@ -514,17 +514,17 @@ LoopValues FaceIntegrator::finIntegral(const FinTrack &track) const {
             out.magnitude[k] = (g.magnitude[k] + local.magnitude[k] * vExtent) * duMagnitude;
         }
         // Servono solo a contare gli avvolgimenti: non guidano la quadratura.
+        // La grandezza resta zero; il chiamante limita le componenti controllate.
         out.value[11] = du;
         out.value[12] = uv[1] * du;
         out.value[13] = dv;
-        for (std::size_t k = kFaceValues; k < kLoopValues; ++k) out.magnitude[k] = HUGE_VAL;
         return out;
     };
     LoopValues total{};
     const std::vector<double> breaks = track.curve->breakpoints(track.range);
     for (std::size_t i = 0; i + 1 < breaks.size(); ++i) {
         spanWidth = breaks[i + 1] - breaks[i];
-        const LoopEvaluation piece = detail::integrateVector<kLoopValues>(f, breaks[i], breaks[i + 1], tolerance_, kLoopRoundoff);
+        const LoopEvaluation piece = detail::integrateVector<kLoopValues>(f, breaks[i], breaks[i + 1], tolerance_, kLoopRoundoff, kFaceValues);
         for (std::size_t k = 0; k < kLoopValues; ++k) total[k] += piece.value[k];
     }
     if (!track.sense)

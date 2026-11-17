@@ -1,0 +1,20 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-newton-review/root');B=json.loads((T/'baseline.json').read_text());sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();pairs={'kernel/fk_surface_algo.cpp':T/'fk_surface_algo.cpp','kernel/tests/test_invert_point_validation.cpp':Path('/tmp/k10-newton-review/tests/test_invert_point_validation.cpp')}
+assert sha(pairs['kernel/fk_surface_algo.cpp'])=='2b385177a309a5a832f43394f4f4456294031cf3b30d7d0695743cedf6b83a37';assert sha(pairs['kernel/tests/test_invert_point_validation.cpp'])=='c77471ae664519c94ca3c6d28258cec3c4794b64238990da079b721260e3d1d4'
+W=T/'candidate';f='kernel/CMakeLists.txt';s=(R/f).read_text();assert 'add_executable(forgekernel_invert_point_validation_tests' not in s;s+='''
+# Inversione UV: residuo effettivo dopo riporto periodico e scelta del seam.
+add_executable(forgekernel_invert_point_validation_tests tests/fk_test_main.cpp
+    tests/test_invert_point_validation.cpp)
+target_link_libraries(forgekernel_invert_point_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_invert_point_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_invert_point_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_invert_point_validation_tests COMMAND forgekernel_invert_point_validation_tests)
+set_tests_properties(forgekernel_invert_point_validation_tests PROPERTIES TIMEOUT 120)
+''';p=W/f;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s);pairs[f]=p
+f='tools/generate_architecture.py';s=(R/f).read_text();old='Bordi, nodi C0 e finestre limitate restano candidati.';assert s.count(old)==1;s=s.replace(old,old+' invertPoint ricontrolla UV e residuo fisico finiti dopo riporto periodico e scelta del seam, conserva ramo e cap e rifiuta fasi non rappresentabili entro tolleranza.');pos=s.index(" 'kernel/fk_surface_algo.cpp':");s=s[:pos]+" 'kernel/tests/test_invert_point_validation.cpp': ('tests', 'Inversione UV indipendente da OCCT: residuo finale di cilindro/cono/sfera/toro con grandi fasi U/V, stime moderate vicine al ramo, Plane e seam BSpline chiusi non periodici, rifiuto di stime periodiche non finite.'),\n"+s[pos:];p=W/f;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s);pairs[f]=p
+for f,p in pairs.items():
+ if f in B:assert sha(R/f)==B[f],f
+ else:assert not (R/f).exists(),f
+for f,p in pairs.items():(R/f).write_bytes(p.read_bytes())
+m={f:sha(p) for f,p in pairs.items()};assert all(sha(R/f)==h for f,h in m.items());(T/'integrated-sources.json').write_text(json.dumps(m,indent=2)+'\n');print(m)

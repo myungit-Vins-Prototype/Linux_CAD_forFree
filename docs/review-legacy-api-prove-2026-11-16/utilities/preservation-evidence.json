@@ -1,0 +1,97 @@
+[
+  {
+    "file": "cad_forge.cpp",
+    "symbol": "forgePickFace",
+    "unchanged": true,
+    "bodySha256": "d643ddbb641fd4c34fb3e89a2bd31fd2a93261eae41f86253980421f5e05b053"
+  },
+  {
+    "file": "cad_sketch_refs.cpp",
+    "symbol": "appendSegment",
+    "unchanged": true,
+    "bodySha256": "13c104c23dac7ffb6b3a8555f465131a4a8e49fc6c7aacc0b1b46c600bc02d34"
+  },
+  {
+    "file": "cad_sketch_refs.cpp",
+    "symbol": "appendProjectedCurve",
+    "unchanged": true,
+    "bodySha256": "d8c3deacee9c6fbc03eb78236adf2a3754313b369de9eb17cbb11c24ddee5a58"
+  },
+  {
+    "file": "cad_sketch_refs.cpp",
+    "symbol": "sketchPlaneReference",
+    "unchanged": true,
+    "bodySha256": "6478e95e52559eeb37a2411d10e815a98a1f2853626707bb6542b995fa9bae92"
+  },
+  {
+    "file": "cad_sketch_refs.cpp",
+    "symbol": "sketchAxisReference",
+    "unchanged": true,
+    "bodySha256": "6dc39bba1625d65d965f2b93005fb3eaf718685b0b989de691b851896ae11ada"
+  },
+  {
+    "file": "cad_sketch_refs.cpp",
+    "symbol": "appendLinkedSketchReference",
+    "unchanged": true,
+    "bodySha256": "d06e93bc8dc0dc367d166575a6a06233395d83926011b75b22fdf44d9de3ae38"
+  },
+  {
+    "file": "cad_sketch_refs.cpp",
+    "symbol": "refreshLinkedSketchReferences",
+    "unchanged": true,
+    "bodySha256": "262702ff46ce304b5be8a56afb1b98ac7321557892125ce82bd9117bcc3280ce"
+  },
+  {
+    "file": "cad_forge.h",
+    "includeListUnchanged": true
+  },
+  {
+    "file": "cad_forge.cpp",
+    "includeListUnchanged": true
+  },
+  {
+    "file": "cad_sketch_refs.h",
+    "includeListUnchanged": true
+  },
+  {
+    "file": "cad_sketch_refs.cpp",
+    "includeListUnchanged": true
+  },
+  {
+    "file": "kernel/fk_classify.cpp",
+    "outsidePatch": true,
+    "sha256": "a31fc2cb97d2daff63dd4eac7cd637baeab50e28d60369698d25a0b0c6d54984"
+  },
+  {
+    "file": "kernel/fk_curve_algo.cpp",
+    "outsidePatch": true,
+    "sha256": "4055c830965fb2c0741ca9292e18166dcec0c2528f3228bc33fa2f297fa2e60e"
+  },
+  {
+    "file": "kernel/fk_curve_algo.h",
+    "outsidePatch": true,
+    "sha256": "0afc0af751644da975b283c377fb1ed7569a57c04a1a0c9631547ecbbb2f6b0a"
+  },
+  {
+    "file": "cad_constraints.cpp",
+    "outsidePatch": true,
+    "sha256": "0d86f5e1f7e87dedd2e0c6206952f59be7970bd731786f98bdcdef86878e0a1e"
+  },
+  {
+    "file": "cad_constraints.h",
+    "outsidePatch": true,
+    "sha256": "dfc793601e0882f1b7870b493b8b77459c1ad01930649347a11534c306cc8062"
+  },
+  {
+    "remainingToken": "ConstraintType::Fix",
+    "count": 3
+  },
+  {
+    "remainingToken": "appendSegment(",
+    "count": 9
+  },
+  {
+    "remainingToken": "makeConstraint(",
+    "count": 3
+  }
+]

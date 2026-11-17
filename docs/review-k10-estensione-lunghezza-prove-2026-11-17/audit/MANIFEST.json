@@ -1,0 +1,54 @@
+{
+  "package": "independent-arc-distance-static-audit",
+  "candidateSha256": "d584e6cf0622bcb59f8a4f57b19230279ab7fd7b7509a48b39a2b3e28ff8df76",
+  "cppRuntimeByAudit": false,
+  "fractionOriginalCoefficientOracle": true,
+  "payloadInertTextOnly": true,
+  "files": [
+    {
+      "path": "README.txt",
+      "bytes": 3246,
+      "sha256": "d55bd3e89bee695635c00ca88122c60a64249cfe1a37401623de9dabb7c3f20b"
+    },
+    {
+      "path": "candidate-fk_sheet.cpp.txt",
+      "bytes": 61935,
+      "sha256": "d584e6cf0622bcb59f8a4f57b19230279ab7fd7b7509a48b39a2b3e28ff8df76"
+    },
+    {
+      "path": "candidate.patch.txt",
+      "bytes": 3954,
+      "sha256": "ccc11b39f043bc6017a35e0961a40b9359b44dd9f60e32be1982a5b81975b317"
+    },
+    {
+      "path": "fraction-arc-oracle.json",
+      "bytes": 1763,
+      "sha256": "b21547c381787c0750646c047c26268d34d06f2d22b05ad82330bd0e882a7999"
+    },
+    {
+      "path": "fraction-arc-oracle.py.txt",
+      "bytes": 543,
+      "sha256": "8ff91a565f4645351cf8c32dc12ba3439a72aa4cb3411218edf0390f3ac42e31"
+    },
+    {
+      "path": "graph-consult.json",
+      "bytes": 2453253,
+      "sha256": "2aa1a8597e1f1b505fbb22b0b7bf497ebb142df72c7163ed5c243ccae7f066f2"
+    },
+    {
+      "path": "independent-static-review.json",
+      "bytes": 3113,
+      "sha256": "47977960b8eb1cd9398208992f069f1d0492754ad4f0849826222e2d8b4336ab"
+    },
+    {
+      "path": "native-public-probe.cpp.txt",
+      "bytes": 4363,
+      "sha256": "785cf819bc667f357fc8571773df010c90fd1b47a89bfb5e98e534db2612dbf8"
+    },
+    {
+      "path": "root-runtime-attribution.json",
+      "bytes": 1497,
+      "sha256": "08a1b7afbfe9f1686b8e8bd8248b3472e331c6080b07223b5dbe563c067658f7"
+    }
+  ]
+}

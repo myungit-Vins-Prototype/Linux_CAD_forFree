@@ -1,0 +1,46 @@
+[
+  {
+    "case": "scale-rotation",
+    "args": [
+      2.5,
+      1,
+      1.25,
+      0
+    ],
+    "exit": 1,
+    "seconds": 3.970913979006582
+  },
+  {
+    "case": "rotation-only",
+    "args": [
+      1,
+      1,
+      0.5,
+      0
+    ],
+    "exit": 0,
+    "seconds": 10.080736728996271
+  },
+  {
+    "case": "scale-only",
+    "args": [
+      2.5,
+      0,
+      1.25,
+      0
+    ],
+    "exit": 1,
+    "seconds": 4.3717788479989395
+  },
+  {
+    "case": "original",
+    "args": [
+      1,
+      0,
+      0.5,
+      0
+    ],
+    "exit": 0,
+    "seconds": 8.877207062992966
+  }
+]

@@ -1,0 +1,40 @@
+{
+  "baselineLibrarySHA256": "ea1825d26334bd83b1169859a425fa1efb451ceab9136ea8c4e388542857960b",
+  "baselineFinsSource": "/tmp/k10-mapping-nonplane-review/tests/baseline-fins.jsonl",
+  "baselineFinsAttribution": "Exported by tester, evaluated independently by auditor exact Fraction; no auditor execution of internal negative API",
+  "finalAPIAttribution": "Compiled, linked and executed independently by auditor on root integrated final library a0c553...; no overlay objects",
+  "headersAndSourcesSHA256": [
+    {
+      "file": "before/fk_surface_curve_bounds.cpp.txt",
+      "sha256": "01e69c5c5bea9aa78cbad607750cc58aa3b3fd562ab86cccb889d02519a9cf7a"
+    },
+    {
+      "file": "before/fk_surface_curve_bounds.h.txt",
+      "sha256": "b44a33f8842ce44be82674594c48e1a6480ea76d66fb695010dd2885d8f4cfa6"
+    },
+    {
+      "file": "before/fk_sheet_join_validation.cpp.txt",
+      "sha256": "802e63f376ef95861337fc83a8cdf4d0472931b770fc46cc6922105f4a1b1cf9"
+    },
+    {
+      "file": "before/fk_surface_mapping.cpp.txt",
+      "sha256": "c830c1c802657b50dd1cafa223af91263dba185cdf109524a16c602b6986f707"
+    },
+    {
+      "file": "after/fk_surface_curve_bounds.cpp.txt",
+      "sha256": "24b34d948e7834caf261c8c8e733de067a24795738aae31ac6749390cc9a2c28"
+    },
+    {
+      "file": "after/fk_surface_curve_bounds.h.txt",
+      "sha256": "6f2256143a51864b01d903ab1daa08570c802a69226d33cb6c76b7842000ea41"
+    },
+    {
+      "file": "after/fk_sheet_join_validation.cpp.txt",
+      "sha256": "15e314c0f54241ab8d682290db24065e1a033ed430c6e54474ead062b84f258a"
+    },
+    {
+      "file": "after/fk_surface_mapping.cpp.txt",
+      "sha256": "019423a02a6504b3d6e1d659ba9b3b0707397878d5b8bad3340efd52f2b45d3a"
+    }
+  ]
+}

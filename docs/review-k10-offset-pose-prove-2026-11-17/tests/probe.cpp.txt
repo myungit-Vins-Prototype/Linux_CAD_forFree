@@ -1,0 +1,42 @@
+#include "fk_body_io.h"
+#include "fk_body_check.h"
+#include "fk_mass.h"
+#include "fk_history.h"
+#include "fk_shell.h"
+#include "fk_transform.h"
+#include <fstream>
+#include <iostream>
+#include <iomanip>
+#include <iterator>
+#include <chrono>
+using namespace ForgeCad::Kernel;
+int main(int argc,char **argv) {
+    const double scale=argc>1?std::stod(argv[1]):2.5;
+    const bool pose=argc>2?std::stoi(argv[2])!=0:true;
+    const double thickness=argc>3?std::stod(argv[3]):1.25;
+    const bool opened=argc>4?std::stoi(argv[4])!=0:false;
+    std::ifstream input("/home/myungit/Linux_CAD_forFree/kernel/tests/data/shell_stitched_tangent.body",std::ios::binary);
+    const std::string originalBytes(std::istreambuf_iterator<char>(input),{});
+    const Body original=readBodyBinary(originalBytes);
+    const std::string originalBefore=writeBodyBinary(original);
+    Body source=scale==1?original:scaleBody(original,Vec3(),scale);
+    if(pose)source=transformBody(source,Transform3::rotation(Vec3(12,-23,7),Vec3(1,2,.3),.42));
+    const std::string before=writeBodyBinary(source);
+    CheckOptions checks;checks.loopCrossings=true;
+    const auto issues=checkBody(source,checks);
+    std::cout<<std::setprecision(17)<<"scale="<<scale<<" pose="<<pose<<" thickness="<<thickness<<" opened="<<opened<<" sourceIssues="<<issues.size()<<std::endl;
+    BodyHistory history=makeHistory({&source},source);
+    const auto start=std::chrono::steady_clock::now();
+    try {
+        const Body result=shellBody(source,opened?std::vector<FaceId>{FaceId{5}}:std::vector<FaceId>{},thickness,&history);
+        const auto outIssues=checkBody(result,checks);
+        const double volume=massProperties(result).volume;
+        const bool unchanged=writeBodyBinary(source)==before && writeBodyBinary(original)==originalBefore;
+        std::cout<<"PASS faces="<<result.faces().size()<<" shells="<<result.shells().size()<<" issues="<<outIssues.size()<<" volume="<<volume<<" unchanged="<<unchanged<<" historyOperands="<<history.operandCount()<<" seconds="<<std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count()<<std::endl;
+        return !unchanged||!outIssues.empty()||!issues.empty();
+    } catch(const std::exception &error) {
+        const bool unchanged=writeBodyBinary(source)==before && writeBodyBinary(original)==originalBefore;
+        std::cout<<"FAIL exception="<<error.what()<<" unchanged="<<unchanged<<" historyOperands="<<history.operandCount()<<" seconds="<<std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count()<<std::endl;
+        return 1;
+    }
+}

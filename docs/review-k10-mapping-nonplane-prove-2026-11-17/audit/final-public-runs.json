@@ -1,0 +1,38 @@
+[
+  {
+    "case": "cylinder",
+    "argv": [
+      "/tmp/k10-mapping-nonplane-review/audit/export-public-final",
+      "cylinder",
+      "/tmp/k10-mapping-nonplane-review/audit/final-exports/cylinder.json",
+      "final"
+    ],
+    "exit": 0,
+    "elapsed": 0.10891430299670901,
+    "outputSHA256": "dcefa506919f3d5bd37a99517b34ef2b9878dd957103a5702f90c616ea1e6075"
+  },
+  {
+    "case": "nurbs",
+    "argv": [
+      "/tmp/k10-mapping-nonplane-review/audit/export-public-final",
+      "nurbs",
+      "/tmp/k10-mapping-nonplane-review/audit/final-exports/nurbs.json",
+      "final"
+    ],
+    "exit": 0,
+    "elapsed": 0.007390342987491749,
+    "outputSHA256": "78098313e8a43ca1f478218e2163e66992bfe22f604fb00d943a019ca0b1482c"
+  },
+  {
+    "case": "quilt-rational",
+    "argv": [
+      "/tmp/k10-mapping-nonplane-review/audit/export-public-final",
+      "quilt-rational",
+      "/tmp/k10-mapping-nonplane-review/audit/final-exports/quilt-rational.json",
+      "final"
+    ],
+    "exit": 0,
+    "elapsed": 0.017307797010289505,
+    "outputSHA256": "4ae3e8de7e268ef8d4b57b6cacc50109c35821bc6acce662bfdff11662650a1a"
+  }
+]

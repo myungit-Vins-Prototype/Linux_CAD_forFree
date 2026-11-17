@@ -1,0 +1,57 @@
+[
+  {
+    "path": "/tmp/k10-newton-review/root/san-tests",
+    "sha256": "313a43d4c5ea81b7d49cc3e7c45ccd3a0940ef4da35134348ec549f604d1f822",
+    "bytes": 57340544
+  },
+  {
+    "path": "/tmp/k10-newton-review/root/san-provider.o",
+    "sha256": "43c0e24ca510bb2caff152fb9eefcdba3c47ad79edd3255a6848b99b0155d509",
+    "bytes": 5027728
+  },
+  {
+    "path": "/tmp/k10-newton-review/root/san-main.o",
+    "sha256": "9626bf731a276d33172b4f095d0817b6bafac0b5f9c63d92b8e25b26d89397b4",
+    "bytes": 219064
+  },
+  {
+    "path": "/tmp/k10-newton-review/root/san-test.o",
+    "sha256": "e4338dcd8d87aab8e0b7d7e24b2f777eb746853308cbb057731c8523e22a77c4",
+    "bytes": 1511880
+  },
+  {
+    "path": "/tmp/k10-newton-review/root/candidate-probe",
+    "sha256": "5cc648a54913dc944120ccf98f641b325d82062e632ccc86ff2e55527e77aff2",
+    "bytes": 53164240
+  },
+  {
+    "path": "/tmp/k10-newton-review/root/candidate-tests",
+    "sha256": "63a4905d1230aa43fd30ed355ac03f4ea4234c0d5ad0b918771e3b5ae04d7b85",
+    "bytes": 53495240
+  },
+  {
+    "path": "/tmp/k10-newton-review/root/candidate.o",
+    "sha256": "5a246253484e09e6e03c6f5185520c78cb64d33aed922a9db7c11dc41d447556",
+    "bytes": 1593656
+  },
+  {
+    "path": "/tmp/k10-newton-review/root/baseline-tests",
+    "sha256": "5526dddf60afe80641d5413c3a2fa67a389af408819d32a95905da01aaca1285",
+    "bytes": 53494072
+  },
+  {
+    "path": "/tmp/k10-newton-review/root/main.o",
+    "sha256": "8d8290078f66055dda56b79978a4eeff9e88f1da1aac4dd02fdca0df39284487",
+    "bytes": 107984
+  },
+  {
+    "path": "/tmp/k10-newton-review/root/test.o",
+    "sha256": "b70e93d1f9e021c6806f77a2599633f47c988b01afc71e79af463e2cd986cffd",
+    "bytes": 513088
+  },
+  {
+    "path": "/tmp/k10-newton-review/root/probe",
+    "sha256": "8dbe85ccd66d139ad6cdd60a603d5bfea94cfe450c26737f9fc9a93071d07b74",
+    "bytes": 53120304
+  }
+]

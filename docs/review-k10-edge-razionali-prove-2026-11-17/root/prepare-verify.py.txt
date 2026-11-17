@@ -1,0 +1,11 @@
+from pathlib import Path
+p=Path('/tmp/k10-rational-edge-review/root/verify.py')
+s=Path('/tmp/k10-instance-carrier-review/root/verify.py').read_text().replace('/tmp/k10-instance-carrier-review/root','/tmp/k10-rational-edge-review/root')
+s=s.replace("'kernel/tests/test_surface_curve_instances.cpp','kernel/fk_bspline_surface.cpp'", "'kernel/tests/test_surface_curve_instances.cpp','kernel/tests/test_surface_curve_rational_edges.cpp','kernel/fk_bspline_surface.cpp'")
+s=s.replace("-{'kernel/tests/test_surface_curve_instances.cpp'}", "-{'kernel/tests/test_surface_curve_rational_edges.cpp'}")
+s=s.replace('claude-prima-k10-carrier-istanze-2026-11-17','claude-prima-k10-edge-razionali-2026-11-17')
+s=s.replace("assert linked('kernel/fk_surface_curve_bounds.cpp','kernel/fk_surface_curve_bounds.cpp','call','carrierSource')", "assert linked('kernel/tests/test_surface_curve_rational_edges.cpp','kernel/fk_surface_curve_bounds.cpp','call','surfaceCurveResidualBound')\n assert linked('kernel/tests/test_surface_curve_rational_edges.cpp','kernel/fk_sheet_join_validation.cpp','call','certifySheetJoins')\n assert linked('kernel/fk_surface_curve_bounds.cpp','kernel/fk_surface_curve_bounds.cpp','call','carrierSource')")
+start=s.index("rootlib=json.loads((T/'library-final.json')");end=s.index("\n result={'HEAD_origin_main_unchanged'",start)
+s=s[:start]+"rootlib=json.loads((T/'library-final.json').read_text())['sha256'];assert rootlib==bins['forgecad-release/kernel/libforgekernel.a'];assert json.loads((T/'build-app-result.json').read_text())['exit']==0"+s[end:]
+s=s.replace(",'final_api_and_Fraction_bound_to_root_lib':True","")
+p.write_text(s)

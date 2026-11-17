@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="6"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="46"
+	timestamp="2026-11-17T11:21:42"
+	>
+	<testcase name="forgekernel_surface_instances_tests" classname="forgekernel_surface_instances_tests" time="0.656672" status="run">
+		<properties/>
+		<system-out>[  OK  ] SurfaceInstanceExactJetsAndPoles
+[  OK  ] SurfaceInstanceFlattenedAndImmutable
+[  OK  ] SurfaceInstanceSharesBezierPolesAndBounds
+[  OK  ] SurfaceInstanceBinarySharingAndLegacyRead
+[  OK  ] SurfaceInstanceRejectsInvalidPlacementAndRecords
+[  OK  ] SurfaceInstanceStepReplicaRoundTrip
+[  OK  ] SurfaceInstanceStepRejectsCycles
+[  OK  ] SurfaceInstanceStepReadsStandardMirrorAndScale
+[  OK  ] SurfaceInstancePreservesSingularTrimsAndMesh
+[  OK  ] SurfaceInstanceSewPolarWedgesAndCap
+[  OK  ] SurfaceInstanceZeroRadiusAtHighValenceCusp
+[  OK  ] BodyReadPoolExactSharingAndRecordIdentity
+[  OK  ] BodyReadPoolRejectsNearDuplicatesAndSurvivesPool
+[  OK  ] BodyReadPoolConcurrentDocuments
+14/14 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_tolerance_tests" classname="forgekernel_tolerance_tests" time="0.293363" status="run">
+		<properties/>
+		<system-out>[  OK  ] ToleranceDefaults
+[  OK  ] ToleranceInvalidMetadata
+[  OK  ] ToleranceVertexBudget
+[  OK  ] TolerancePCurveBudget
+[  OK  ] ToleranceEdgeFaceBudget
+[  OK  ] ToleranceDocumentScopesAndWorkers
+[  OK  ] ToleranceDocumentOffsetAccuracy
+7/7 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_surface_mapping_tests" classname="forgekernel_surface_mapping_tests" time="0.730653" status="run">
+		<properties/>
+		<system-out>PASS sviluppo piano/cilindro/cono, aree/lunghezze, rifiuto doppia curvatura, deformazione cilindrica/volume, genealogia, B-rep, STEP e mesh, appoggio multifaccia continuo/NURBS/vuoti
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_sheet_join_validation_tests" classname="forgekernel_sheet_join_validation_tests" time="44.36" status="run">
+		<properties/>
+		<system-out>[  OK  ] SheetJoinImplicitPolynomial
+[  OK  ] SheetJoinTangentPolynomial
+[  OK  ] SheetJoinRigidPose
+[  OK  ] SheetJoinSmallScale
+[  OK  ] SheetJoinLargeScale
+[  OK  ] SheetJoinRational
+[  OK  ] SheetJoinReverseSelection
+[  OK  ] SheetJoinFaceSense
+[  OK  ] SheetJoinCanonicalReversal
+[  OK  ] SheetJoinLowerBoundary
+[  OK  ] SheetJoinTangentRigidPose
+[  OK  ] SheetJoinTangentSmallScale
+[  OK  ] SheetJoinTangentLargeScale
+[  OK  ] SheetJoinTangentRational
+[  OK  ] SheetJoinTangentReverseSelection
+[  OK  ] SheetJoinTangentFaceSense
+[  OK  ] SheetJoinTangentCanonicalReversal
+[  OK  ] SheetJoinTangentLowerBoundary
+[  OK  ] SheetJoinHiddenNarrowKnots
+[  OK  ] SheetJoinTangentGapBudget
+[  OK  ] SheetJoinTangentTrimmedSupport
+[  OK  ] SheetJoinHiddenNarrowPhases
+[  OK  ] SheetJoinHiddenNarrowPose
+[  OK  ] SheetJoinHiddenNarrowSmallScale
+[  OK  ] SheetJoinHiddenNarrowLargeScale
+[  OK  ] SheetJoinHiddenNarrowReverseSelection
+[  OK  ] SheetJoinTangentGapPose
+[  OK  ] SheetJoinCancellationAtomic
+[  OK  ] SheetJoinInvalid...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_surface_curve_bounds_tests" classname="forgekernel_surface_curve_bounds_tests" time="0.198109" status="run">
+		<properties/>
+		<system-out>[  OK  ] NonIsoResidualCubicUVOnOriginalTensorPlane
+[  OK  ] NonIsoResidualBilinearCarrierAndNativeLineUV
+[  OK  ] NonIsoResidualCommonPartitionAcrossEdgeUVAndCarrierKnots
+[  OK  ] NonIsoResidualNonUnitDomainSubrangeAndCorrelatedReversal
+[  OK  ] NonIsoResidualConstantOriginalWeightsRemainPolynomial
+[  OK  ] NonIsoResidualHiddenEdgePeakIsNotAContinuousProof
+[  OK  ] NonIsoResidualHiddenCarrierCellPeakIsRejected
+[  OK  ] NonIsoResidualUVLeavesDomainBetweenThreeMatchingSamples
+[  OK  ] NonIsoResidualInvalidInputsFailClosed
+[  OK  ] NonIsoResidualCurveAndCarrierGapsFailQWeightsAndWrappersUnsupported
+[  OK  ] NonIsoResidualCancellationPropagates
+[  OK  ] NonIsoResidualFixedInputResourceLimitFailsClosed
+[  OK  ] NonIsoResidualUnclampedOriginalCubicKnots
+[  OK  ] SheetJoinLedgerActualTwoFinsAndExtraFixedCaps
+[  OK  ] SheetJoinLedgerExplicitCompactionAndUnifyHistoryPermutation
+[  OK  ] SheetJoinLedgerRecognizedGapCannotUseLargeFinDeviation
+[  OK  ] SheetJoinLedgerMissingMapCurveRangeOrIncidenceRejects
+[  OK  ] Sheet...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_mapping_nonplane_validation_tests" classname="forgekernel_mapping_nonplane_validation_tests" time="0.308817" status="run">
+		<properties/>
+		<system-out>[  OK  ] MappingNonPlaneCylinderFinalFinsAndNullHistory
+[  OK  ] MappingNonPlaneQuadraticTargetFinalFinsAndNullHistory
+[  OK  ] MappingNonPlaneRationalCarrierFinalFinsAndNullHistory
+[  OK  ] MappingNonPlaneHiddenCarrierPeakRejectedAtomically
+[  OK  ] MappingNonPlaneFarOutsideCannotBeRepairedByClamping
+[  OK  ] MappingNonPlaneCancellationPreservesInputsAndOutputs
+6/6 test superati
+</system-out>
+	</testcase>
+</testsuite>

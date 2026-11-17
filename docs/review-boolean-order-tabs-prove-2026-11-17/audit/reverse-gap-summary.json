@@ -1,0 +1,163 @@
+{
+  "scope": "Concrete finite evaluated witnesses, not a continuous upper bound. Nearest-surface projection is numerical.",
+  "count": 72,
+  "maxNumericalProjectedDistance": 1.5895451417868778e-14,
+  "maxEndpointVertexGap": 1.4600096689803086e-07,
+  "edge1Face2": [
+    {
+      "edge": 1,
+      "fin": 5,
+      "face": 2,
+      "parameter": "0x1.bdea7f1dc89d4p-27",
+      "edgeTol": 1.4746097656701118e-07,
+      "startVertexGap": 1.4600096689803086e-07,
+      "endVertexGap": 7.108583389127582e-23,
+      "finTol": 6.664545664042538e-08,
+      "projectDistance": 0,
+      "pcurveResidual": 0,
+      "x": [
+        11.25,
+        1.4600096689803094e-07,
+        90
+      ]
+    },
+    {
+      "edge": 1,
+      "fin": 5,
+      "face": 2,
+      "parameter": "0x1.921fb60759692p-2",
+      "edgeTol": 1.4746097656701118e-07,
+      "startVertexGap": 1.4600096689803086e-07,
+      "endVertexGap": 7.108583389127582e-23,
+      "finTol": 6.664545664042538e-08,
+      "projectDistance": 1.7763568394002505e-15,
+      "pcurveResidual": 7.160723346098895e-15,
+      "x": [
+        10.393644691863845,
+        4.305188732133652,
+        90
+      ]
+    },
+    {
+      "edge": 1,
+      "fin": 5,
+      "face": 2,
+      "parameter": "0x1.921fb597dec95p-1",
+      "edgeTol": 1.4746097656701118e-07,
+      "startVertexGap": 1.4600096689803086e-07,
+      "endVertexGap": 7.108583389127582e-23,
+      "finTol": 6.664545664042538e-08,
+      "projectDistance": 2.6645352591003757e-15,
+      "pcurveResidual": 2.6645352591003757e-15,
+      "x": [
+        7.954951210919956,
+        7.954951365777365,
+        90
+      ]
+    },
+    {
+      "edge": 1,
+      "fin": 5,
+      "face": 2,
+      "parameter": "0x1.2d97c816086f1p+0",
+      "edgeTol": 1.4746097656701118e-07,
+      "startVertexGap": 1.4600096689803086e-07,
+      "endVertexGap": 7.108583389127582e-23,
+      "finTol": 6.664545664042538e-08,
+      "projectDistance": 3.552713678800501e-15,
+      "pcurveResidual": 3.552713678800501e-15,
+      "x": [
+        4.305188529802695,
+        10.393644775672072,
+        90
+      ]
+    },
+    {
+      "edge": 1,
+      "fin": 5,
+      "face": 2,
+      "parameter": "0x1.921fb56021797p+0",
+      "edgeTol": 1.4746097656701118e-07,
+      "startVertexGap": 1.4600096689803086e-07,
+      "endVertexGap": 7.108583389127582e-23,
+      "finTol": 6.664545664042538e-08,
+      "projectDistance": 3.1868654052141305e-15,
+      "pcurveResidual": 3.64850034011711e-15,
+      "x": [
+        -7.300048246952832e-08,
+        11.250000000000002,
+        90
+      ]
+    },
+    {
+      "edge": 1,
+      "fin": 5,
+      "face": 2,
+      "parameter": "0x1.f6a7a2aa3a83dp+0",
+      "edgeTol": 1.4746097656701118e-07,
+      "startVertexGap": 1.4600096689803086e-07,
+      "endVertexGap": 7.108583389127582e-23,
+      "finTol": 6.664545664042538e-08,
+      "projectDistance": 8.881784197001252e-16,
+      "pcurveResidual": 3.972054645195637e-15,
+      "x": [
+        -4.305188664689998,
+        10.393644719799921,
+        90
+      ]
+    },
+    {
+      "edge": 1,
+      "fin": 5,
+      "face": 2,
+      "parameter": "0x1.2d97c7fa29c72p+1",
+      "edgeTol": 1.4746097656701118e-07,
+      "startVertexGap": 1.4600096689803086e-07,
+      "endVertexGap": 7.108583389127582e-23,
+      "finTol": 6.664545664042538e-08,
+      "projectDistance": 8.881784197001252e-16,
+      "pcurveResidual": 4.782987168225453e-15,
+      "x": [
+        -7.9549513141582295,
+        7.954951262539092,
+        90
+      ]
+    },
+    {
+      "edge": 1,
+      "fin": 5,
+      "face": 2,
+      "parameter": "0x1.5fdbbe9f364c5p+1",
+      "edgeTol": 1.4746097656701118e-07,
+      "startVertexGap": 1.4600096689803086e-07,
+      "endVertexGap": 7.108583389127582e-23,
+      "finTol": 6.664545664042538e-08,
+      "projectDistance": 1.7763568394002505e-15,
+      "pcurveResidual": 3.972054645195637e-15,
+      "x": [
+        -10.393644747735996,
+        4.305188597246348,
+        90
+      ]
+    },
+    {
+      "edge": 1,
+      "fin": 5,
+      "face": 2,
+      "parameter": "0x1.921fb54442d18p+1",
+      "edgeTol": 1.4746097656701118e-07,
+      "startVertexGap": 1.4600096689803086e-07,
+      "endVertexGap": 7.108583389127582e-23,
+      "finTol": 6.664545664042538e-08,
+      "projectDistance": 3.9862904818134775e-16,
+      "pcurveResidual": 4.3322688013275905e-15,
+      "x": [
+        -11.250000000000002,
+        1.3777277912189027e-15,
+        90
+      ]
+    }
+  ],
+  "edge1Face2MaxProjection": 3.552713678800501e-15,
+  "edge1Face2MaxPCurveResidual": 7.160723346098895e-15
+}

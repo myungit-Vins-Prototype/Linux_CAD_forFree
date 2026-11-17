@@ -1,0 +1,10 @@
+# Sola staging in /tmp/legacy-api-review/extend; shell /bin/bash login=false.
+# Letti AGENTS/CLAUDE/piano ed esaminate descrizioni+call/reference grafo prima codice.
+git -C /home/myungit/Linux_CAD_forFree rev-parse HEAD
+rg -n 'setExtendPickCallback|setEdgePickLinear|resumeExtendPick|extendPickFinished_' --glob '!docs/**' .
+# Confronto hash baseline con graph.hashes, incoming vuoti, outgoing conservati in JSON.
+# Create soltanto copie before/after e patch nel percorso /tmp autorizzato.
+git -C /home/myungit/Linux_CAD_forFree apply --check /tmp/legacy-api-review/extend/extend-api-cleanup.patch
+rg -n 'setExtendPickCallback|setEdgePickLinear|resumeExtendPick|extendPickFinished_' /tmp/legacy-api-review/extend/after
+# Ultimo rg exit1 atteso; verificati testo funzioni protette e ordine guardie.
+# Nessun build, test, git apply effettivo, commit o push.

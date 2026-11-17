@@ -1,0 +1,9 @@
+{
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "LoftSmoothThroughCircles"
+  ],
+  "exit": 0,
+  "seconds": 0.036331577008240856,
+  "watchdog_seconds": 600
+}

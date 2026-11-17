@@ -1,0 +1,15 @@
+{
+  "mode": "Verifiche statiche sul delta; nessun test nuovo o eseguito",
+  "repo_two_source_hashes_unchanged": true,
+  "patch_apply_check": "PASS, sola lettura",
+  "after_removed_symbol_occurrences": 0,
+  "protected_function_text_identical": {
+    "QString CadViewport::beginExtendPick(": true,
+    "QString CadViewport::startEdgePick(": true,
+    "void CadViewport::edgePicked(": true,
+    "void CadViewport::cancelEdgePick(": true,
+    "bool CadViewport::edgePickEligible(": true
+  },
+  "finish_order": "panel changed guard; validation; cancel(true); points empty; extend return; edit/blend callbacks",
+  "runtime_tests": "Non eseguiti da core; root integra/builda e usa suite esistenti"
+}

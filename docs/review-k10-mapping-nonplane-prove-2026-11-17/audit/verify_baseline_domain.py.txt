@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+"""Exact endpoint domain diagnostics, not an upper residual certificate."""
+from pathlib import Path
+from fractions import Fraction as F
+import json,sys,hashlib
+p=Path(sys.argv[1]);a=[json.loads(x) for x in p.read_text().splitlines()];out=[]
+def v(x):return F.from_float(float.fromhex(x))
+for r in a:
+ if r['label']=='narrow' or r['status']!=2:continue
+ q=r['pcurve'];assert q['type']=='line'
+ s=r['surface'];d=[(list(map(v,s[k+'Knots']))[s[k+'Degree']],list(map(v,s[k+'Knots']))[s[k+'PoleCount']]) for k in ['u','v']]
+ witness=[]
+ for t in map(v,r['range']):
+  uv=[v(x)+t*v(z) for x,z in zip(q['origin'],q['direction'])]
+  for axis,(x,(lo,hi)) in enumerate(zip(uv,d)):
+   if x<lo or x>hi:
+    gap=lo-x if x<lo else x-hi;witness.append({'parameter':str(t),'axis':axis,'coordinate':str(x),'domain':[str(lo),str(hi)],'outsideFraction':str(gap),'outsideFloat':float(gap)})
+ out.append({'label':r['label'],'fin':r['fin'],'face':r['face'],'edge':r['edge'],'exactEndpointsOutside':bool(witness),'witnesses':witness})
+assert len(out)==16
+j={'pass':True,'scope':'Exact affine endpoint domain classification on actual exported baseline fin pcurves; inside endpoints imply inside whole Line range','input_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'records':out,'count':len(out),'not_claimed':['Residual geometry over-budget','Need for larger physical cap','Sampled range domain proof']}
+Path(sys.argv[2]).write_text(json.dumps(j,indent=2)+'\n');print('Exact affine domain classification PASS',len(out),'outside',sum(r['exactEndpointsOutside'] for r in out),'inside',sum(not r['exactEndpointsOutside'] for r in out))

@@ -2741,7 +2741,7 @@ void PdfWindow::initializeOptions(WindowSetup &setup) {
     saveBodiesAction->setChecked(QSettings().value(QStringLiteral("document/saveBodies"), true).toBool());
     saveBodiesAction->setToolTip(QStringLiteral("Il file e' piu' grande, ma all'apertura i corpi non si ricalcolano"));
     connect(saveBodiesAction, &QAction::toggled, this, [](bool enabled) { QSettings().setValue(QStringLiteral("document/saveBodies"), enabled); });
-    auto *cacheMenu=optionsMenu->addMenu(QStringLiteral("Memoria per la cache all'apertura"));
+    auto *cacheMenu=addCadMenu(optionsMenu,QStringLiteral("Memoria per la cache all'apertura"));
     auto *cacheGroup=new QActionGroup(cacheMenu);cacheGroup->setExclusive(true);
     const int cacheMiB=QSettings().value(QStringLiteral("document/openCacheMiB"),0).toInt();
     for(int mib:{0,256,512,1024,2048,4096}){

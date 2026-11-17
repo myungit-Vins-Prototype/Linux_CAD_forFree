@@ -1,0 +1,27 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-quadrature-review/root');P=R/'docs/review-k10-quadratura-prove-2026-11-17';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+assert not P.exists();assert (T/'preservation-audit.json').exists()
+components=[('core-v1',T.parent/'core/final-proof','MANIFEST.json','1ee97059c6fafdec456e4aa99030f7ee92d1895f32b66cf589ecbca3ed4dfd65'),('core-v2',T.parent/'core/v2/final-proof','MANIFEST.json','c4236e15a580a656608b74f6ef03d408e54bd80d6a6f1adf05ed6c76e2d55659'),('tests-v1',T.parent/'tests','manifest.json','638af82ceb1e7014290bbb90aac1ca3aac6f3abe864de12e750d2c1c45ea95bc'),('tests-v2',T.parent/'tests-v2','manifest.json','3a6e6900cd5d906254df1075620dd941a02e69e572d55399d7a9b3b55126af7e'),('tests-final',T.parent/'tests-final','manifest.json','e7dc3612c0f7f0f62a411e0bbdcad63619b6ad89a9c3069bd41173e9dff6ffce')]
+for _,d,m,h in components:
+ assert sha(d/m)==h
+ obj=json.loads((d/m).read_text());entries=obj['files']
+ for x in entries:assert sha(d/x['path'])==x['sha256'] and (d/x['path']).stat().st_size==x['bytes']
+P.mkdir();paths=[]
+def copy(src,dst):
+ data=src.read_bytes();data.decode('utf-8');assert data[:4]!=b'\x7fELF';out=P/dst
+ if out.suffix in ['.py','.cpp','.h']:out=out.with_name(out.name+'.txt')
+ assert not out.exists(),out;out.parent.mkdir(parents=True,exist_ok=True);out.write_bytes(data);paths.append({'source':str(src),'archive':str(out.relative_to(P)),'sha256':sha(src),'bytes':len(data)})
+for p in sorted(T.rglob('*')):
+ if not p.is_file() or '__pycache__' in p.parts or p.name=='report-draft.md':continue
+ copy(p,Path('root')/p.relative_to(T))
+for label,d,_,_ in components:
+ for p in sorted(d.rglob('*')):
+  if p.is_file() and '__pycache__' not in p.parts:copy(p,Path(label)/p.relative_to(d))
+for p in sorted((T.parent/'audit').rglob('*')):
+ if p.is_file() and '__pycache__' not in p.parts:copy(p,Path('audit')/p.relative_to(T.parent/'audit'))
+files=list(json.loads((T/'integrated-sources.json').read_text()))+['AGENTS.md','CLAUDE.md','docs/code-review-2026-11-15.md','docs/review-k10-quadratura-2026-11-17.md','docs/history/claude-prima-k10-quadratura-2026-11-17.md']
+for f in files:copy(R/f,Path('workspace')/f)
+(P/'SOURCE-MANIFEST.json').write_text(json.dumps(paths,indent=2)+'\n');files=sorted(p for p in P.rglob('*') if p.is_file());seal=P/'SHA256SUMS';seal.write_text(''.join(sha(p)+'  '+str(p.relative_to(P))+'\n' for p in files))
+for line in seal.read_text().splitlines():h,f=line.split('  ',1);assert sha(P/f)==h
+print(json.dumps({'payload_files':len(files),'payload_bytes':sum(p.stat().st_size for p in files),'seal_sha256':sha(seal)},indent=2))

@@ -1,0 +1,121 @@
+{
+  "pass": true,
+  "inputSHA256": "dd0756e5d7a209392b31a33fe7f9327b310f44eb15116442c4340e282262b093",
+  "method": "Exact Fraction original homogeneous E/S Cox composition, full E/Q knot partition and all closed intersected S cells; Euclidean rational Bernstein numerator/denominator enclosure",
+  "records": [
+    {
+      "fin": 0,
+      "edge": 0,
+      "face": 0,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "rationalE": true,
+      "runtimeStatus": "Unsupported",
+      "runtimeUpper": "inf"
+    },
+    {
+      "fin": 1,
+      "edge": 1,
+      "face": 0,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "rationalE": false,
+      "runtimeStatus": "Certified",
+      "runtimeUpper": "0x1.19bf36e4d70c5p-47"
+    },
+    {
+      "fin": 2,
+      "edge": 2,
+      "face": 0,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "rationalE": true,
+      "runtimeStatus": "Unsupported",
+      "runtimeUpper": "inf"
+    },
+    {
+      "fin": 3,
+      "edge": 3,
+      "face": 0,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 0.0,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0,
+      "rationalE": false,
+      "runtimeStatus": "Certified",
+      "runtimeUpper": "0x1.0057f0e530c55p-47"
+    }
+  ],
+  "genuineRationalEdges": [
+    {
+      "fin": 0,
+      "coordinate": 0,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "numeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    },
+    {
+      "fin": 2,
+      "coordinate": 0,
+      "originalWeightFractions": [
+        "1",
+        "2",
+        "1",
+        "3"
+      ],
+      "numeratorPower": [
+        "0",
+        "18014398509481983/9007199254740992",
+        "-18014398509481983/9007199254740992",
+        "3"
+      ],
+      "denominatorPower": [
+        "1",
+        "3",
+        "-6",
+        "5"
+      ],
+      "gcdDegree": 0,
+      "reducedDenominatorDegree": 3,
+      "nonpolynomial": true
+    }
+  ],
+  "elapsed": 0.008678137004608288,
+  "scope": "Internal ledger integration on actual Body::buildSheet/unify final fins; not a new public extendSheet or mapper family"
+}

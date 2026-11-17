@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "files": [
+    {
+      "path": "kernel/fk_quadrature.h",
+      "v1_or_repository_baseline_sha256": "048c8007849e807c2721a20e90387c855a2076ba3e56bcc90cf55320e3a804b7",
+      "candidate_sha256": "f1ec31f8673d753192d7d9646448f30a78f16fb9ec0bac514f74680dc663d3d6"
+    },
+    {
+      "path": "kernel/fk_mass.cpp",
+      "v1_or_repository_baseline_sha256": "29d7223df812f3747d51fd07c5e966b798b6d488d3c77e4207fe32312f45621c",
+      "candidate_sha256": "8248392ee0b7be25dd2b4217bc0ad29eeaf04c939e4e4940a12d328be45c66aa"
+    }
+  ],
+  "incremental_patch_sha256": "ae170470036fd64fad7b36b3987f21240446cac55bcc1af7bf14e8db6b4e8e2d",
+  "v1_manifest_unchanged_sha256": "1ee97059c6fafdec456e4aa99030f7ee92d1895f32b66cf589ecbca3ed4dfd65",
+  "core_cpp_runtime_performed": false,
+  "candidate_runtime_status": "PENDING root/tests"
+}

@@ -1,0 +1,156 @@
+{
+  "nodes": 778,
+  "edges": 11372,
+  "units": 390,
+  "errors": {},
+  "html_matches": true,
+  "removed_symbols_absent": [
+    "CadViewport::resumeExtendPick",
+    "CadViewport::setEdgePickLinear",
+    "CadViewport::setExtendPickCallback",
+    "ForgeCad::DrawingSheetEditor::setModelProvider",
+    "ForgeCad::appendFixedReferenceLine",
+    "ForgeCad::forgeIntersectRay",
+    "ForgeCad::nearestBodyEdge"
+  ],
+  "retained_calls": {
+    "beginExtendPick": 1,
+    "updateModel": 21,
+    "installPreparedModel": 1,
+    "forgePickFace": 3,
+    "appendProjectedCurve": 4,
+    "appendLinkedSketchReference": 13
+  },
+  "focus": {
+    "cad_drawing_editor.cpp": {
+      "description": "Editor della tavola: aggiornamento transazionale del modello tramite API coordinata dal contenitore; centri/assi su bordi selezionati e sezione locale con contorno/profondita, modificabile con quote e richiami associati senza bloccare le altre viste; raggio libero dal primo clic e leader corto per centro esterno; ricollegamento quote con snap, anteprima e conferma atomica; allineatori durante il primo posizionamento e il trascinamento, stato temporaneo riusato fra anteprime e conferma senza salto; snap fra punte coincidenti delle quote lineari/angolari con calcolo geometrico condiviso, priorit\u00e0 e indicatore lampeggiante; guide lampeggianti e aggancio direzionale dei testi di quota al vicino nel verso del movimento, annullamento e Undo al rilascio; quote trasparenti, frecce H/B, richiami obliqui e serie ordinate continue; scala comune del foglio e sorgente della scala per ogni vista, aggiornamento atomico di anteprime e dipendenze; selezione, posizionamento e comandi; inserimento atomico e anteprime di catene e ordinate, propriet\u00e0 e anteprime dei datum/cartigli geometrici e delle rugosit\u00e0 Ra/Rz e dei badge persistenti con scelta della prima quota e frecce nella viewport, incluse anteprime delle viste interrotte e sezioni rimosse a gradini multipli e allineate a due piani angolari; disegno e ridefinizione del taglio con mouse, centro e rami o percorso ortogonale, snap geometrici e anteprima annullabile.",
+      "incoming": {
+        "call": 69,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 49,
+        "include": 25,
+        "reference": 0
+      }
+    },
+    "cad_drawing_editor.h": {
+      "description": "Editor della tavola: aggiornamento transazionale del modello tramite API coordinata dal contenitore; centri/assi su bordi selezionati e sezione locale con contorno/profondita, modificabile con quote e richiami associati senza bloccare le altre viste; raggio libero dal primo clic e leader corto per centro esterno; ricollegamento quote con snap, anteprima e conferma atomica; allineatori durante il primo posizionamento e il trascinamento, stato temporaneo riusato fra anteprime e conferma senza salto; snap fra punte coincidenti delle quote lineari/angolari con calcolo geometrico condiviso, priorit\u00e0 e indicatore lampeggiante; guide lampeggianti e aggancio direzionale dei testi di quota al vicino nel verso del movimento, annullamento e Undo al rilascio; quote trasparenti, frecce H/B, richiami obliqui e serie ordinate continue; scala comune del foglio e sorgente della scala per ogni vista, aggiornamento atomico di anteprime e dipendenze; selezione, posizionamento e comandi; inserimento atomico e anteprime di catene e ordinate, propriet\u00e0 e anteprime dei datum/cartigli geometrici e delle rugosit\u00e0 Ra/Rz e dei badge persistenti con scelta della prima quota e frecce nella viewport, incluse anteprime delle viste interrotte e sezioni rimosse a gradini multipli e allineate a due piani angolari; disegno e ridefinizione del taglio con mouse, centro e rami o percorso ortogonale, snap geometrici e anteprima annullabile.",
+      "incoming": {
+        "call": 0,
+        "include": 25,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 4,
+        "reference": 0
+      }
+    },
+    "cad_drawing_window.cpp": {
+      "description": "Workspace della suite 2D incorporabile nelle schede: chiusura/salvataggi coordinati, ricostruzione menu dopo cambio foglio con unico sottomenu Tema persistente; nuova tavola dallo snapshot valutato del modello salvato, verificato con impronta del file e identita; preparazione cancellabile senza rigenerare la storia; documento multifoglio, salvataggio e PDF multipagina. Il comando Aggiorna dal .prt salvato verifica identita e impronta della sorgente nel contenitore.",
+      "incoming": {
+        "call": 21,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 33,
+        "include": 12,
+        "reference": 0
+      }
+    },
+    "cad_forge.cpp": {
+      "description": "Adatta sketch e parametri al kernel; booleane con genealogia ricondotta agli operandi e recupero dell\u2019unione commutativa nell\u2019ordine inverso dopo un errore geometrico; conversione mesh float con filtro comune dei triangoli degeneri per scena e anteprime, ID topologici coerenti. Il riepilogo delle curve proiettate usa lo scarto della catena finale dopo le giunte.",
+      "incoming": {
+        "call": 39,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 72,
+        "include": 45,
+        "reference": 0
+      }
+    },
+    "cad_forge.h": {
+      "description": "Adatta sketch e parametri al kernel; booleane con genealogia ricondotta agli operandi e recupero dell\u2019unione commutativa nell\u2019ordine inverso dopo un errore geometrico; conversione mesh float con filtro comune dei triangoli degeneri per scena e anteprime, ID topologici coerenti.",
+      "incoming": {
+        "call": 3,
+        "include": 23,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 1,
+        "include": 6,
+        "reference": 0
+      }
+    },
+    "cad_sketch_refs.cpp": {
+      "description": "Proiezioni, contatti e Pierce esatti associativi degli schizzi, inclusi contorni apparenti di facce analitiche proiettati lungo la normale anche su piani esterni al corpo: immagini affini delle curve implicite, sorgenti persistenti per chiavi genealogiche, cache automatiche proiettate direttamente dallo snapshot B-rep senza risolvere i nomi appena creati, refresh e conversioni esplicite visibili senza duplicati; identita leggibili persistenti e diagnostica di tutte le sorgenti rotte con i vincoli interessati. Helix con Transformed usa un fit diretto2D con controllo continuo dopo recalculateCurve e pubblicazione atomica. Helix nuda o solo rifilata conserva il percorso quinticoC2 legacy; altri Other restano fallback campionati. Traversal dei wrapper limitato e cancellabile.",
+      "incoming": {
+        "call": 18,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 36,
+        "include": 25,
+        "reference": 0
+      }
+    },
+    "cad_sketch_refs.h": {
+      "description": "Proiezioni, contatti e Pierce esatti associativi degli schizzi, inclusi contorni apparenti di facce analitiche proiettati lungo la normale anche su piani esterni al corpo: immagini affini delle curve implicite, sorgenti persistenti per chiavi genealogiche, cache automatiche proiettate direttamente dallo snapshot B-rep senza risolvere i nomi appena creati, refresh e conversioni esplicite visibili senza duplicati; identita leggibili persistenti e diagnostica di tutte le sorgenti rotte con i vincoli interessati. Helix con Transformed usa un fit diretto2D con controllo continuo dopo recalculateCurve e pubblicazione atomica. Helix nuda o solo rifilata conserva il percorso quinticoC2 legacy; altri Other restano fallback campionati. Traversal dei wrapper limitato e cancellabile.",
+      "incoming": {
+        "call": 0,
+        "include": 13,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 4,
+        "reference": 0
+      }
+    },
+    "forgeCad2026_viewport.h": {
+      "description": "Contratto e stato privato del coordinatore GUI della vista 3D.",
+      "incoming": {
+        "call": 19,
+        "include": 17,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 3,
+        "include": 23,
+        "reference": 0
+      }
+    },
+    "forgeCad2026_viewport_selection.cpp": {
+      "description": "Selezione e riferimenti: policy comune della costruzione per picking, punti, bordi e selezione rettangolare; priorita alla geometria visibile sulle cache associative nascoste; in creazione e modifica mantiene visibili risultati precedenti e stadi esplicitamente selezionati, anche dopo anteprima fallita o Azzera; Esc ripristina la scena finale. Rende tutti i quattro estremi della nuova ellisse selezionabili e candidati snap. Estendi e coordinato dal pannello con callback changed/key e anteprima differita.",
+      "incoming": {
+        "call": 47,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 39,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "tools/generate_architecture.py": {
+      "description": "Implementazione: generate architecture.",
+      "incoming": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      }
+    }
+  }
+}
