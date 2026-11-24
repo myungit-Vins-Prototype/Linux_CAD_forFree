@@ -1,0 +1,484 @@
+classe	controllo	file	riga	unita	messaggio
+error	arrayIndexOutOfBounds	kernel/fk_math.h	35	cad_circular_pattern_fit.cpp	Array 'c[2]' accessed at index 2, which is out of bounds.
+warning	uninitMemberVarNoCtor	cad_curve_solver.cpp	129	cad_curve_solver.cpp	Member variable 'Cached::degree' has no initializer.
+performance	returnByReference	cad_document_io.h	110	cad_document_io.cpp	Function 'path()' should return member 'path_' by const reference.
+performance	returnByReference	cad_document_recovery.h	30	cad_document_recovery.cpp	Function 'directory()' should return member 'directory_' by const reference.
+warning	uninitMemberVarNoCtor	cad_drawing_dimension.h	14	cad_document_tabs.cpp	Member variable 'DrawingProfileRadius::radius' has no initializer.
+warning	uninitMemberVarNoCtor	cad_drawing_axes.h	80	cad_document_tabs.cpp	Member variable 'Segment::lo' has no initializer.
+warning	uninitMemberVarNoCtor	cad_drawing_axes.h	80	cad_document_tabs.cpp	Member variable 'Segment::hi' has no initializer.
+warning	uninitMemberVarNoCtor	cad_drawing_axes.h	80	cad_document_tabs.cpp	Member variable 'Segment::offset' has no initializer.
+performance	returnByReference	cad_revision_store.h	113	cad_document_tabs.cpp	Function 'directory()' should return member 'directory_' by const reference.
+performance	returnByReference	forgeCad2026_gui.h	29	cad_document_tabs.cpp	Function 'documentFilePath()' should return member 'documentPath_' by const reference.
+performance	returnByReference	cad_drawing_window.h	45	cad_document_tabs.cpp	Function 'filePath()' should return member 'path_' by const reference.
+warning	uninitMemberVarNoCtor	cad_drawing_curve_recognition.h	58	cad_drawing.cpp	Member variable 'Entry::tolerance' has no initializer.
+warning	uninitMemberVarNoCtor	cad_drawing_curve_recognition.h	96	cad_drawing.cpp	Member variable 'Entry::tolerance' has no initializer.
+warning	uninitMemberVarNoCtor	cad_drawing_derived.cpp	77	cad_drawing_derived.cpp	Member variable 'Crossing::firstBudget' has no initializer.
+warning	uninitMemberVarNoCtor	cad_drawing_derived.cpp	77	cad_drawing_derived.cpp	Member variable 'Crossing::secondBudget' has no initializer.
+warning	uninitMemberVarNoCtor	cad_drawing_derived.cpp	114	cad_drawing_derived.cpp	Member variable 'Face::low' has no initializer.
+warning	uninitMemberVarNoCtor	cad_drawing_derived.cpp	114	cad_drawing_derived.cpp	Member variable 'Face::high' has no initializer.
+warning	uninitMemberVarNoCtor	cad_drawing_derived.cpp	133	cad_drawing_derived.cpp	Member variable 'CutSegment::curve' has no initializer.
+warning	uninitMemberVarNoCtor	cad_drawing_local_section_snap.h	22	cad_drawing_editor.cpp	Member variable 'Edge::linear' has no initializer.
+warning	uninitMemberVarNoCtor	cad_drawing_editor.cpp	1105	cad_drawing_editor.cpp	Member variable 'Item::item' has no initializer.
+performance	returnByReference	cad_drawing_editor.h	87	cad_drawing_editor.cpp	Function 'pageContext()' should return member 'pageContext' by const reference.
+error	throwInNoexceptFunction	cad_drawing_editor.cpp	3056	cad_drawing_editor.cpp	Unhandled exception thrown in function declared not to throw exceptions.
+warning	nullPointerRedundantCheck	cad_drawing_editor.cpp	2615	cad_drawing_editor.cpp	Either the condition 'original' is redundant or there is possible null pointer dereference: original.
+performance	passedByValue	cad_drawing_editor.cpp	944	cad_drawing_editor.cpp	Function parameter 'definition' should be passed by const reference.
+performance	passedByValue	cad_drawing_editor.cpp	944	cad_drawing_editor.cpp	Function parameter 'layout' should be passed by const reference.
+performance	passedByValue	cad_drawing_editor.cpp	967	cad_drawing_editor.cpp	Function parameter 'definition' should be passed by const reference.
+performance	passedByValue	cad_drawing_editor.cpp	3221	cad_drawing_editor.cpp	Function parameter 'definition' should be passed by const reference.
+performance	passedByValue	cad_drawing_editor.cpp	3221	cad_drawing_editor.cpp	Function parameter 'layout' should be passed by const reference.
+performance	passedByValue	cad_drawing_editor.cpp	3411	cad_drawing_editor.cpp	Function parameter 'axis' should be passed by const reference.
+performance	passedByValue	cad_drawing_editor.cpp	3419	cad_drawing_editor.cpp	Function parameter 'axis' should be passed by const reference.
+performance	passedByValue	cad_drawing_editor.cpp	3444	cad_drawing_editor.cpp	Function parameter 'note' should be passed by const reference.
+performance	passedByValue	cad_drawing_editor.cpp	3451	cad_drawing_editor.cpp	Function parameter 'note' should be passed by const reference.
+warning	derefInvalidIteratorRedundantCheck	cad_drawing_editor.cpp	1303	cad_drawing_editor.cpp	Either the condition 'result!=results.end()' is redundant or there is possible dereference of an invalid iterator: result.
+warning	uninitMemberVarNoCtor	cad_drawing_preparation.cpp	68	cad_drawing_preparation.cpp	Member variable 'Work::definition' has no initializer.
+warning	uninitMemberVarNoCtor	cad_drawing_preparation.cpp	68	cad_drawing_preparation.cpp	Member variable 'Work::layout' has no initializer.
+performance	passedByValue	cad_drawing_release_ui.cpp	34	cad_drawing_release_ui.cpp	Function parameter 'store' should be passed by const reference.
+performance	passedByValue	cad_drawing_restore.cpp	33	cad_drawing_restore.cpp	Function parameter 'error' should be passed by const reference.
+performance	passedByValue	cad_drawing_sheets_ui.cpp	140	cad_drawing_sheets_ui.cpp	Function parameter 'error' should be passed by const reference.
+performance	passedByValue	toolbar_editor.h	39	cad_drawing_toolbars.h	Function parameter 'commands' should be passed by const reference.
+performance	passedByValue	cad_drawing_toolbars.h	17	cad_drawing_toolbars.h	Function parameter 'bars' should be passed by const reference.
+performance	passedByValue	cad_drawing_toolbars.h	19	cad_drawing_toolbars.h	Function parameter 'path' should be passed by const reference.
+warning	uninitMemberVarNoCtor	cad_drawing_visibility.cpp	35	cad_drawing_visibility.cpp	Member variable 'Entry::kind' has no initializer.
+warning	uninitMemberVarNoCtor	cad_drawing_visibility.cpp	35	cad_drawing_visibility.cpp	Member variable 'Entry::index' has no initializer.
+warning	uninitMemberVarNoCtor	cad_drawing_visibility.cpp	35	cad_drawing_visibility.cpp	Member variable 'Entry::featureId' has no initializer.
+warning	uninitMemberVarNoCtor	cad_drawing_visibility.cpp	231	cad_drawing_visibility.cpp	Member variable 'ExactSphere::radius' has no initializer.
+warning	uninitMemberVarNoCtor	cad_drawing_visibility.cpp	231	cad_drawing_visibility.cpp	Member variable 'ExactSphere::featureId' has no initializer.
+performance	passedByValue	cad_drawing_visibility.cpp	491	cad_drawing_visibility.cpp	Function parameter 'spans' should be passed by const reference.
+warning	uninitMemberVarNoCtor	cad_extrude.cpp	201	cad_extrude.cpp	Member variable 'DisjointLimit::index' has no initializer.
+warning	invalidPrintfArgType_sint	cad_feature_build.cpp	119	cad_feature_build.cpp	%lld in format string (no. 3) requires 'long long' but the argument type is 'signed long'.
+performance	passedByValue	cad_feature_build.cpp	698	cad_feature_build.cpp	Function parameter 'list' should be passed by const reference.
+warning	uninitMemberVarNoCtor	cad_feature_faces.cpp	69	cad_feature_faces.cpp	Member variable 'Candidate::feature' has no initializer.
+warning	uninitMemberVarNoCtor	cad_feature_faces.cpp	72	cad_feature_faces.cpp	Member variable 'Candidate::tolerance' has no initializer.
+warning	uninitMemberVarNoCtor	cad_features.cpp	176	cad_features.cpp	Member variable 'Entity::kind' has no initializer.
+warning	uninitMemberVarNoCtor	cad_features.cpp	176	cad_features.cpp	Member variable 'Entity::index' has no initializer.
+error	danglingTempReference	cad_fill_pattern.cpp	131	cad_fill_pattern.cpp	Using reference to dangling temporary.
+warning	negativeContainerIndex	cad_fill_pattern.cpp	54	cad_fill_pattern.cpp	Array index -1 is out of bounds.
+warning	uninitMemberVarNoCtor	kernel/fk_micro.h	25	cad_forge.cpp	Member variable 'MicroFeature::kind' has no initializer.
+performance	passedByValue	kernel/fk_history_tools.h	51	cad_forge.cpp	Function parameter 'origins' should be passed by const reference.
+performance	passedByValue	cad_loft_correspondence.cpp	40	cad_loft_correspondence.cpp	Function parameter 'message' should be passed by const reference.
+warning	uninitMemberVarNoCtor	cad_measure.cpp	342	cad_measure.cpp	Member variable 'Candidate::d' has no initializer.
+warning	negativeContainerIndex	cad_native_revisions.cpp	209	cad_native_revisions.cpp	Array index -1 is out of bounds.
+performance	returnByReference	cad_pattern_variation_editor.h	13	cad_pattern_variation_editor.cpp	Function 'variations()' should return member 'values_' by const reference.
+warning	uninitMemberVarNoCtor	cad_shape_analysis.cpp	124	cad_shape_analysis.cpp	Member variable 'Sample::first' has no initializer.
+warning	uninitMemberVarNoCtor	cad_shape_analysis.cpp	124	cad_shape_analysis.cpp	Member variable 'Sample::family' has no initializer.
+warning	uninitMemberVarNoCtor	cad_shape_analysis.cpp	202	cad_shape_analysis.cpp	Member variable 'Sample::first' has no initializer.
+performance	passedByValue	cad_sketch_offset.cpp	141	cad_sketch_offset.cpp	Function parameter 'pieces' should be passed by const reference.
+warning	uninitMemberVarNoCtor	cad_snap.cpp	97	cad_snap.cpp	Member variable 'Candidate::external' has no initializer.
+performance	useInitializationList	cad_storyboard_selection.cpp	185	cad_storyboard_selection.cpp	Variable 'dock_' is assigned in constructor body. Consider performing initialization in initialization list.
+warning	uninitMemberVarNoCtor	kernel/fk_body_check.h	34	cad_surface_mapping.cpp	Member variable 'CheckIssue::code' has no initializer.
+error	nullPointer	cad_surface_poles_model.cpp	269	cad_surface_poles_model.cpp	Null pointer dereference
+error	nullPointer	cad_surface_poles_model.cpp	292	cad_surface_poles_model.cpp	Null pointer dereference
+performance	returnByReference	cad_surface_poles_session.h	20	cad_surface_poles_session.cpp	Function 'details()' should return member 'details_' by const reference.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_analysis.cpp	472	forgeCad2026_dialogs_analysis.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_analysis.cpp	491	forgeCad2026_dialogs_analysis.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	noCopyConstructor	forgeCad2026_dialogs_common.cpp	1595	forgeCad2026_dialogs_common.cpp	Class 'SurfaceEndControls' does not have a copy constructor which is recommended since it has dynamic memory/resource management.
+warning	noOperatorEq	forgeCad2026_dialogs_common.cpp	1595	forgeCad2026_dialogs_common.cpp	Class 'SurfaceEndControls' does not have a operator= which is recommended since it has dynamic memory/resource management.
+performance	passedByValue	forgeCad2026_dialogs_common.cpp	1488	forgeCad2026_dialogs_common.cpp	Function parameter 'ref' should be passed by const reference.
+performance	passedByValue	forgeCad2026_dialogs_common.cpp	1650	forgeCad2026_dialogs_common.cpp	Function parameter 'ref' should be passed by const reference.
+performance	passedByValue	forgeCad2026_dialogs_fillet.cpp	148	forgeCad2026_dialogs_fillet.cpp	Function parameter 'text' should be passed by const reference.
+performance	passedByValue	forgeCad2026_dialogs_fillet.cpp	309	forgeCad2026_dialogs_fillet.cpp	Function parameter 'ref' should be passed by const reference.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_sketch.cpp	452	forgeCad2026_dialogs_sketch.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_sketch.cpp	459	forgeCad2026_dialogs_sketch.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_sketch.cpp	542	forgeCad2026_dialogs_sketch.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_sketch.cpp	543	forgeCad2026_dialogs_sketch.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_sketch.cpp	687	forgeCad2026_dialogs_sketch.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_sketch.cpp	754	forgeCad2026_dialogs_sketch.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_sketch.cpp	755	forgeCad2026_dialogs_sketch.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_sketch.cpp	792	forgeCad2026_dialogs_sketch.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+performance	passedByValue	forgeCad2026_dialogs_sketch.cpp	400	forgeCad2026_dialogs_sketch.cpp	Function parameter 'ref' should be passed by const reference.
+performance	passedByValue	forgeCad2026_dialogs_sketch.cpp	1083	forgeCad2026_dialogs_sketch.cpp	Function parameter 'ref' should be passed by const reference.
+warning	uninitMemberVarNoCtor	forgeCad2026_dialogs_solids.cpp	2028	forgeCad2026_dialogs_solids.cpp	Member variable 'SizeField::minimum' has no initializer.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	256	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	342	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	348	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	350	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	350	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	780	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	1053	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	1054	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	1055	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	1056	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	1063	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	1189	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	1190	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	1191	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	1274	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	1440	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	1440	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	1440	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	1674	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	1743	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	1807	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_solids.cpp	1808	forgeCad2026_dialogs_solids.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+performance	passedByValue	forgeCad2026_dialogs_solids.cpp	695	forgeCad2026_dialogs_solids.cpp	Function parameter 'ref' should be passed by const reference.
+performance	passedByValue	forgeCad2026_dialogs_solids.cpp	972	forgeCad2026_dialogs_solids.cpp	Function parameter 'ref' should be passed by const reference.
+performance	passedByValue	forgeCad2026_dialogs_solids.cpp	1150	forgeCad2026_dialogs_solids.cpp	Function parameter 'ref' should be passed by const reference.
+performance	passedByValue	forgeCad2026_dialogs_solids.cpp	1401	forgeCad2026_dialogs_solids.cpp	Function parameter 'ref' should be passed by const reference.
+performance	passedByValue	forgeCad2026_dialogs_solids.cpp	1607	forgeCad2026_dialogs_solids.cpp	Function parameter 'ref' should be passed by const reference.
+performance	passedByValue	forgeCad2026_dialogs_surface_tools.cpp	859	forgeCad2026_dialogs_surface_tools.cpp	Function parameter 'ref' should be passed by const reference.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_surfaces.cpp	81	forgeCad2026_dialogs_surfaces.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_surfaces.cpp	82	forgeCad2026_dialogs_surfaces.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_surfaces.cpp	322	forgeCad2026_dialogs_surfaces.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_surfaces.cpp	1001	forgeCad2026_dialogs_surfaces.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_surfaces.cpp	1113	forgeCad2026_dialogs_surfaces.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_surfaces.cpp	1118	forgeCad2026_dialogs_surfaces.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_surfaces.cpp	1483	forgeCad2026_dialogs_surfaces.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_surfaces.cpp	1484	forgeCad2026_dialogs_surfaces.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_surfaces.cpp	1485	forgeCad2026_dialogs_surfaces.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_surfaces.cpp	1573	forgeCad2026_dialogs_surfaces.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_surfaces.cpp	1574	forgeCad2026_dialogs_surfaces.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_surfaces.cpp	1575	forgeCad2026_dialogs_surfaces.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+warning	nullPointerRedundantCheck	forgeCad2026_dialogs_surfaces.cpp	1888	forgeCad2026_dialogs_surfaces.cpp	Either the condition 'viewport' is redundant or there is possible null pointer dereference: viewport.
+performance	passedByValue	forgeCad2026_dialogs_surfaces.cpp	1001	forgeCad2026_dialogs_surfaces.cpp	Function parameter 'ref' should be passed by const reference.
+performance	passedByValue	forgeCad2026_dialogs_trim.cpp	338	forgeCad2026_dialogs_trim.cpp	Function parameter 'point' should be passed by const reference.
+performance	passedByValue	forgeCad2026_dialogs_trim.cpp	363	forgeCad2026_dialogs_trim.cpp	Function parameter 'ref' should be passed by const reference.
+performance	passedByValue	forgeCad2026_gui.cpp	406	forgeCad2026_gui.cpp	Function parameter 'edges' should be passed by const reference.
+performance	passedByValue	forgeCad2026_gui.cpp	1914	forgeCad2026_gui.cpp	Function parameter 'ref' should be passed by const reference.
+performance	passedByValue	forgeCad2026_gui.cpp	2233	forgeCad2026_gui.cpp	Function parameter 'point' should be passed by const reference.
+performance	passedByValue	forgeCad2026_operation_illustration.cpp	142	forgeCad2026_operation_illustration.cpp	Function parameter 'operation' should be passed by const reference.
+performance	passedByValue	forgeCad2026_operation_illustration.cpp	152	forgeCad2026_operation_illustration.cpp	Function parameter 'a' should be passed by const reference.
+performance	iterateByValue	forgeCad2026_operation_illustration.cpp	157	forgeCad2026_operation_illustration.cpp	Range variable 'a' should be declared as const reference.
+performance	passedByValue	forgeCad2026_operation_illustration.cpp	163	forgeCad2026_operation_illustration.cpp	Function parameter 'o' should be passed by const reference.
+performance	passedByValue	forgeCad2026_operation_illustration.cpp	183	forgeCad2026_operation_illustration.cpp	Function parameter 'label' should be passed by const reference.
+warning	uninitMemberVarNoCtor	forgeCad2026_viewport_document.cpp	232	forgeCad2026_viewport_document.cpp	Member variable 'MeshWork::index' has no initializer.
+performance	passedByValue	forgeCad2026_viewport_document.cpp	1631	forgeCad2026_viewport_document.cpp	Function parameter 'definition' should be passed by const reference.
+performance	returnByReference	forgeCad2026_viewport.h	490	forgeCad2026_viewport_preview.cpp	Function 'previewError()' should return member 'error' by const reference.
+error	mismatchingContainers	forgeCad2026_viewport_preview.cpp	8	forgeCad2026_viewport_preview.cpp	Iterators of different containers 'previewCacheSketches_' and 'sketches_' are used together.
+error	mismatchingContainers	forgeCad2026_viewport_preview.cpp	9	forgeCad2026_viewport_preview.cpp	Iterators of different containers 'previewCacheBodies_' and 'extrusions_' are used together.
+warning	uninitMemberVarNoCtor	forgeCad2026_viewport_sketch.cpp	1737	forgeCad2026_viewport_sketch.cpp	Member variable 'Candidate::constraint' has no initializer.
+warning	uninitMemberVarNoCtor	forgeCad2026_viewport_sketch.cpp	1737	forgeCad2026_viewport_sketch.cpp	Member variable 'Candidate::reference' has no initializer.
+performance	returnByReference	forgeCad2026_viewport.h	734	forgeCad2026_viewport_sketch.cpp	Function 'selectedConstraints()' should return member 'selectedConstraints_' by const reference.
+warning	identicalConditionAfterEarlyExit	forgeCad2026_viewport_sketch.cpp	172	forgeCad2026_viewport_sketch.cpp	Identical condition 'found', second condition is always false
+performance	passedByValue	forgeCad2026_viewport_sketch.cpp	944	forgeCad2026_viewport_sketch.cpp	Function parameter 'ref' should be passed by const reference.
+performance	passedByValue	forgeCad2026_viewport_sketch.cpp	3357	forgeCad2026_viewport_sketch.cpp	Function parameter 'ref' should be passed by const reference.
+warning	uninitMemberVarNoCtor	kernel/fk_blend.cpp	367	kernel/fk_blend.cpp	Member variable 'Corner::edgeFaces' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_blend.cpp	499	kernel/fk_blend.cpp	Member variable 'SewnFace::body' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_blend.cpp	1589	kernel/fk_blend.cpp	Member variable 'Tool::add' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_blend.cpp	1590	kernel/fk_blend.cpp	Member variable 'Tool::chain' has no initializer.
+warning	nullPointer	kernel/fk_blend_loop.cpp	427	kernel/fk_blend_loop.cpp	Possible null pointer dereference: previous
+warning	nullPointerRedundantCheck	kernel/fk_blend_loop.cpp	468	kernel/fk_blend_loop.cpp	Either the condition 'previous' is redundant or there is possible null pointer dereference: previous.
+warning	nullPointerRedundantCheck	kernel/fk_blend_loop.cpp	469	kernel/fk_blend_loop.cpp	Either the condition 'previous' is redundant or there is possible null pointer dereference: previous.
+warning	uninitMemberVarNoCtor	kernel/fk_blend_mitre.h	20	kernel/fk_blend_mitre.cpp	Member variable 'BlendMitreUse::edge' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_blend_mitre.h	25	kernel/fk_blend_mitre.cpp	Member variable 'BlendMitreUse::budget' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_blend_surface.cpp	1697	kernel/fk_blend_surface.cpp	Member variable 'Span::order' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_blend_surface.cpp	1747	kernel/fk_blend_surface.cpp	Member variable 'EdgeLaw::law' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_blend_surface.cpp	1747	kernel/fk_blend_surface.cpp	Member variable 'EdgeLaw::total' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_blend_surface.cpp	1747	kernel/fk_blend_surface.cpp	Member variable 'EdgeLaw::closed' has no initializer.
+error	missingReturn	kernel/fk_blend_surface.cpp	3912	kernel/fk_blend_surface.cpp	Found an exit path from function with non-void return type that has missing return statement
+warning	identicalConditionAfterEarlyExit	kernel/fk_body_check.cpp	402	kernel/fk_body_check.cpp	Identical condition '!issues.empty()', second condition is always false
+error	danglingTempReference	kernel/fk_boolean.cpp	508	kernel/fk_boolean.cpp	Using reference to dangling temporary.
+error	danglingTempReference	kernel/fk_boolean.cpp	515	kernel/fk_boolean.cpp	Using reference to dangling temporary.
+error	danglingTempReference	kernel/fk_boolean.cpp	515	kernel/fk_boolean.cpp	Using reference to dangling temporary.
+error	danglingTempReference	kernel/fk_boolean.cpp	515	kernel/fk_boolean.cpp	Using reference to dangling temporary.
+error	danglingTempReference	kernel/fk_boolean.cpp	813	kernel/fk_boolean.cpp	Using reference to dangling temporary.
+error	danglingTempReference	kernel/fk_boolean.cpp	818	kernel/fk_boolean.cpp	Using reference to dangling temporary.
+error	danglingTempReference	kernel/fk_boolean.cpp	948	kernel/fk_boolean.cpp	Using reference to dangling temporary.
+error	danglingTempReference	kernel/fk_boolean.cpp	2384	kernel/fk_boolean.cpp	Using reference to dangling temporary.
+warning	uninitMemberVarNoCtor	kernel/fk_cycle_point_index.h	19	kernel/fk_boolean.cpp	Member variable 'Point::cycle' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_cycle_point_index.h	45	kernel/fk_boolean.cpp	Member variable 'Node::begin' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_cycle_point_index.h	45	kernel/fk_boolean.cpp	Member variable 'Node::end' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_boolean.cpp	79	kernel/fk_boolean.cpp	Member variable 'Snap::parameter' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_boolean.cpp	81	kernel/fk_boolean.cpp	Member variable 'Snap::tolerance' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_boolean.cpp	309	kernel/fk_boolean.cpp	Member variable 'PCurves::surface' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_boolean.cpp	311	kernel/fk_boolean.cpp	Member variable 'PCurves::deviation' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_boolean.cpp	1914	kernel/fk_boolean.cpp	Member variable 'Radial::use' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_boolean.cpp	1915	kernel/fk_boolean.cpp	Member variable 'Radial::angle' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_boolean.cpp	2278	kernel/fk_boolean.cpp	Member variable 'End::arc' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_boolean.cpp	2279	kernel/fk_boolean.cpp	Member variable 'End::hi' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_boolean.cpp	2709	kernel/fk_boolean.cpp	Member variable 'AssemblyOrigin::face' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_boolean.cpp	2709	kernel/fk_boolean.cpp	Member variable 'AssemblyOrigin::loop' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_boolean.cpp	2709	kernel/fk_boolean.cpp	Member variable 'AssemblyOrigin::fin' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_boolean.cpp	2714	kernel/fk_boolean.cpp	Member variable 'BoundaryUse::face' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_boolean.cpp	2714	kernel/fk_boolean.cpp	Member variable 'BoundaryUse::loop' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_boolean.cpp	2714	kernel/fk_boolean.cpp	Member variable 'BoundaryUse::fin' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_boolean.cpp	2719	kernel/fk_boolean.cpp	Member variable 'BoundaryOutput::edge' has no initializer.
+performance	passedByValue	kernel/fk_boolean_boundary.cpp	76	kernel/fk_boolean_boundary.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/fk_boolean_boundary.cpp	81	kernel/fk_boolean_boundary.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/fk_boolean_boundary.cpp	96	kernel/fk_boolean_boundary.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_boolean_boundary.cpp	96	kernel/fk_boolean_boundary.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/fk_boolean_boundary.cpp	102	kernel/fk_boolean_boundary.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_boolean_boundary.cpp	102	kernel/fk_boolean_boundary.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/fk_boolean_boundary.cpp	103	kernel/fk_boolean_boundary.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_boolean_boundary.cpp	172	kernel/fk_boolean_boundary.cpp	Function parameter 'p' should be passed by const reference.
+warning	uninitMemberVar	kernel/fk_bspline_basis.h	29	kernel/fk_bspline.cpp	Member variable 'ScratchBuffer < double , 64 >::inline_' is not initialized in the constructor.
+warning	uninitMemberVar	kernel/fk_bspline_basis.h	29	kernel/fk_bspline.cpp	Member variable 'ScratchBuffer < double , 8 >::inline_' is not initialized in the constructor.
+warning	uninitMemberVar	kernel/fk_bspline_basis.h	29	kernel/fk_bspline_basis.cpp	Member variable 'ScratchBuffer < double , 16 >::inline_' is not initialized in the constructor.
+warning	uninitMemberVar	kernel/fk_bspline_basis.h	29	kernel/fk_bspline_basis.cpp	Member variable 'ScratchBuffer < double , 32 >::inline_' is not initialized in the constructor.
+warning	uninitMemberVarNoCtor	kernel/fk_bspline_surface.cpp	336	kernel/fk_bspline_surface.cpp	Member variable 'Homogeneous::w' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_curve_fit_bounds.cpp	192	kernel/fk_curve_fit_bounds.cpp	Member variable 'Source::d' has no initializer.
+performance	passedByValue	kernel/fk_curve_fit_bounds.cpp	56	kernel/fk_curve_fit_bounds.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_curve_fit_bounds.cpp	56	kernel/fk_curve_fit_bounds.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/fk_curve_fit_bounds.cpp	59	kernel/fk_curve_fit_bounds.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_curve_fit_bounds.cpp	810	kernel/fk_curve_fit_bounds.cpp	Function parameter 'vector' should be passed by const reference.
+warning	uninitMemberVarNoCtor	kernel/fk_curve_surface.cpp	282	kernel/fk_curve_surface.cpp	Member variable 'NumericSearch::tolerance' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_curve_surface.cpp	282	kernel/fk_curve_surface.cpp	Member variable 'NumericSearch::scale' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_draft.cpp	93	kernel/fk_draft.cpp	Member variable 'Support::offset' has no initializer.
+performance	passedByValue	kernel/fk_face_normal_bounds.cpp	41	kernel/fk_face_normal_bounds.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_face_normal_bounds.cpp	41	kernel/fk_face_normal_bounds.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/fk_face_normal_bounds.cpp	42	kernel/fk_face_normal_bounds.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_face_normal_bounds.cpp	43	kernel/fk_face_normal_bounds.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_face_normal_bounds.cpp	43	kernel/fk_face_normal_bounds.cpp	Function parameter 'b' should be passed by const reference.
+warning	uninitMemberVarNoCtor	kernel/fk_fill.cpp	309	kernel/fk_fill.cpp	Member variable 'Basis::d' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_fill.cpp	673	kernel/fk_fill.cpp	Member variable 'ShapeSection::length' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_fill.cpp	808	kernel/fk_fill.cpp	Member variable 'Constraint::row' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_fill.cpp	808	kernel/fk_fill.cpp	Member variable 'Constraint::weight' has no initializer.
+performance	passedByValue	kernel/fk_helix_projection.cpp	44	kernel/fk_helix_projection.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/fk_helix_projection.cpp	49	kernel/fk_helix_projection.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/fk_helix_projection.cpp	59	kernel/fk_helix_projection.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_helix_projection.cpp	59	kernel/fk_helix_projection.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/fk_helix_projection.cpp	65	kernel/fk_helix_projection.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_helix_projection.cpp	71	kernel/fk_helix_projection.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_helix_projection.cpp	79	kernel/fk_helix_projection.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_history.cpp	58	kernel/fk_history.cpp	Function parameter 'origins' should be passed by const reference.
+error	danglingTempReference	kernel/fk_iges.cpp	897	kernel/fk_iges.cpp	Using reference to dangling temporary.
+error	danglingTempReference	kernel/fk_iges.cpp	898	kernel/fk_iges.cpp	Using reference to dangling temporary.
+error	danglingTempReference	kernel/fk_iges.cpp	898	kernel/fk_iges.cpp	Using reference to dangling temporary.
+error	danglingTempReference	kernel/fk_iges.cpp	898	kernel/fk_iges.cpp	Using reference to dangling temporary.
+error	danglingTempReference	kernel/fk_iges.cpp	898	kernel/fk_iges.cpp	Using reference to dangling temporary.
+error	danglingTempReference	kernel/fk_iges.cpp	898	kernel/fk_iges.cpp	Using reference to dangling temporary.
+error	danglingTempReference	kernel/fk_iges.cpp	898	kernel/fk_iges.cpp	Using reference to dangling temporary.
+warning	uninitMemberVarNoCtor	kernel/fk_iges.cpp	1011	kernel/fk_iges.cpp	Member variable 'SplitFace::face' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_iges.cpp	1475	kernel/fk_iges.cpp	Member variable 'Component::closed' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_iges.cpp	1477	kernel/fk_iges.cpp	Member variable 'Component::hasColour' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_iges.cpp	1478	kernel/fk_iges.cpp	Member variable 'Component::colour' has no initializer.
+portability	localtimeCalled	kernel/fk_iges.cpp	88	kernel/fk_iges.cpp	Non reentrant function 'localtime' called. For threadsafe applications it is recommended to use the reentrant replacement function 'localtime_r'.
+warning	uninitMemberVarNoCtor	kernel/fk_intersect.cpp	287	kernel/fk_intersect.cpp	Member variable 'ConicData::rx' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_intersect.cpp	287	kernel/fk_intersect.cpp	Member variable 'ConicData::ry' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_loft.cpp	469	kernel/fk_loft.cpp	Member variable 'LocalGuide::first' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_loft.cpp	469	kernel/fk_loft.cpp	Member variable 'LocalGuide::influence' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_marching.cpp	253	kernel/fk_marching.cpp	Member variable 'Singular::x' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_marching.cpp	260	kernel/fk_marching.cpp	Member variable 'Singular::branch' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_marching.cpp	757	kernel/fk_marching.cpp	Member variable 'Sample::x' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_mass.cpp	41	kernel/fk_mass.cpp	Member variable 'Sample::t' has no initializer.
+performance	useInitializationList	kernel/fk_math.cpp	10	kernel/fk_math.cpp	Variable 'z_' is assigned in constructor body. Consider performing initialization in initialization list.
+warning	uninitMemberVarNoCtor	kernel/fk_offset.cpp	1285	kernel/fk_offset.cpp	Member variable 'Node::t' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_offset.cpp	1603	kernel/fk_offset.cpp	Member variable 'SurfaceJob::index' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_offset.cpp	1844	kernel/fk_offset.cpp	Member variable 'CurveJob::edge' has no initializer.
+error	invalidContainer	kernel/fk_open_offset.cpp	639	kernel/fk_open_offset.cpp	Using object that points to local variable 'patchHistories' that may be invalid.
+warning	uninitMemberVarNoCtor	kernel/fk_pcurve.cpp	194	kernel/fk_pcurve.cpp	Member variable 'HermiteNode::t' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_project.cpp	24	kernel/fk_project.cpp	Member variable 'Span::firstPole' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_project.cpp	27	kernel/fk_project.cpp	Member variable 'Span::tolerance' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_project.cpp	361	kernel/fk_project.cpp	Member variable 'Run::first' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_project.cpp	361	kernel/fk_project.cpp	Member variable 'Run::last' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_quilt_mapping.cpp	239	kernel/fk_quilt_mapping.cpp	Member variable 'Contact::patch' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sheet_join_validation.h	12	kernel/fk_sheet.cpp	Member variable 'SheetJoinPlan::face' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sheet_join_validation.h	13	kernel/fk_sheet.cpp	Member variable 'SheetJoinPlan::edge' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sheet_join_validation.h	14	kernel/fk_sheet.cpp	Member variable 'SheetJoinPlan::budget' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sheet_join_validation.h	24	kernel/fk_sheet.cpp	Member variable 'EmittedSheetJoin::budget' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sheet_join_validation.h	25	kernel/fk_sheet.cpp	Member variable 'EmittedSheetJoin::sense' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sheet.cpp	330	kernel/fk_sheet.cpp	Member variable 'SplineExtensionSide::vertex' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sheet.cpp	330	kernel/fk_sheet.cpp	Member variable 'SplineExtensionSide::farVertex' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sheet.cpp	330	kernel/fk_sheet.cpp	Member variable 'SplineExtensionSide::edge' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sheet.cpp	330	kernel/fk_sheet.cpp	Member variable 'SplineExtensionSide::farEdge' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sheet.cpp	330	kernel/fk_sheet.cpp	Member variable 'SplineExtensionSide::face' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sheet.cpp	331	kernel/fk_sheet.cpp	Member variable 'SplineExtensionSide::vIso' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sheet.cpp	333	kernel/fk_sheet.cpp	Member variable 'SplineExtensionSide::end' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sheet.cpp	433	kernel/fk_sheet.cpp	Member variable 'SplineJoinCertificate::budget' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sheet.cpp	434	kernel/fk_sheet.cpp	Member variable 'SplineJoinCertificate::expectedUses' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sheet.cpp	477	kernel/fk_sheet.cpp	Member variable 'EmittedSplineJoin::budget' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sketch_projection.cpp	551	kernel/fk_sketch_projection.cpp	Member variable 'ConstantHit::curve' has no initializer.
+performance	passedByValue	kernel/fk_sketch_projection.cpp	177	kernel/fk_sketch_projection.cpp	Function parameter 'roots' should be passed by const reference.
+warning	uninitMemberVarNoCtor	kernel/fk_step.cpp	1409	kernel/fk_step.cpp	Member variable 'Placed::item' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_step.cpp	1411	kernel/fk_step.cpp	Member variable 'Placed::context' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_step.cpp	1480	kernel/fk_step.cpp	Member variable 'Occurrence::id' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_step.cpp	1481	kernel/fk_step.cpp	Member variable 'Occurrence::child' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_step.cpp	1548	kernel/fk_step.cpp	Member variable 'Pending::placed' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_step.cpp	1550	kernel/fk_step.cpp	Member variable 'Pending::length' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_step.cpp	1550	kernel/fk_step.cpp	Member variable 'Pending::angle' has no initializer.
+portability	localtimeCalled	kernel/fk_step.cpp	522	kernel/fk_step.cpp	Non reentrant function 'localtime' called. For threadsafe applications it is recommended to use the reentrant replacement function 'localtime_r'.
+warning	uninitMemberVarNoCtor	kernel/fk_surface_algo.cpp	373	kernel/fk_surface_algo.cpp	Member variable 'Node::lowerBound' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_surface_algo.cpp	375	kernel/fk_surface_algo.cpp	Member variable 'Node::depth' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_surface_curve_bounds.cpp	709	kernel/fk_surface_curve_bounds.cpp	Member variable 'Node::depth' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_surface_mapping.cpp	167	kernel/fk_surface_mapping.cpp	Member variable 'FinContract::edgeTolerance' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_surface_mapping.cpp	168	kernel/fk_surface_mapping.cpp	Member variable 'FinContract::pcurveTolerance' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_surface_mapping.cpp	169	kernel/fk_surface_mapping.cpp	Member variable 'FinContract::proof' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_surface_mapping_bounds.cpp	181	kernel/fk_surface_mapping_bounds.cpp	Member variable 'Mapping::layout' has no initializer.
+performance	passedByValue	kernel/fk_surface_mapping_bounds.cpp	495	kernel/fk_surface_mapping_bounds.cpp	Function parameter 'r' should be passed by const reference.
+performance	passedByValue	kernel/fk_surface_mapping_bounds.cpp	596	kernel/fk_surface_mapping_bounds.cpp	Function parameter 'r' should be passed by const reference.
+warning	uninitMemberVarNoCtor	kernel/fk_surface_poles_jets.h	16	kernel/fk_surface_poles_constraints.cpp	Member variable 'SurfacePoleJetRow::order' has no initializer.
+performance	passedByValue	kernel/fk_surface_poles_conversion.cpp	19	kernel/fk_surface_poles_conversion.cpp	Function parameter 's' should be passed by const reference.
+performance	passedByValue	kernel/fk_surface_poles_jets.cpp	16	kernel/fk_surface_poles_jets.cpp	Function parameter 'side' should be passed by const reference.
+performance	passedByValue	kernel/fk_surface_poles_jets.cpp	55	kernel/fk_surface_poles_jets.cpp	Function parameter 'sa' should be passed by const reference.
+performance	passedByValue	kernel/fk_surface_poles_jets.cpp	56	kernel/fk_surface_poles_jets.cpp	Function parameter 'sb' should be passed by const reference.
+performance	iterateByValue	kernel/fk_surface_poles_jets.cpp	109	kernel/fk_surface_poles_jets.cpp	Range variable 'term' should be declared as const reference.
+performance	passedByValue	kernel/fk_surface_poles_jets.cpp	160	kernel/fk_surface_poles_jets.cpp	Function parameter 't' should be passed by const reference.
+warning	uninitMemberVarNoCtor	kernel/fk_sweep.cpp	794	kernel/fk_sweep.cpp	Member variable 'SectionPole::weight' has no initializer.
+performance	passedByValue	kernel/fk_sweep_analytic_bridge.cpp	45	kernel/fk_sweep_analytic_bridge.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_sweep_analytic_bridge.cpp	45	kernel/fk_sweep_analytic_bridge.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/fk_sweep_analytic_bridge.cpp	46	kernel/fk_sweep_analytic_bridge.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_sweep_analytic_bridge.cpp	46	kernel/fk_sweep_analytic_bridge.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/fk_sweep_analytic_bridge.cpp	47	kernel/fk_sweep_analytic_bridge.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_sweep_analytic_bridge.cpp	48	kernel/fk_sweep_analytic_bridge.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_sweep_analytic_bridge.cpp	49	kernel/fk_sweep_analytic_bridge.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_sweep_analytic_bridge.cpp	49	kernel/fk_sweep_analytic_bridge.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/fk_sweep_analytic_bridge.cpp	50	kernel/fk_sweep_analytic_bridge.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_sweep_analytic_bridge.cpp	50	kernel/fk_sweep_analytic_bridge.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/fk_sweep_analytic_bridge.cpp	73	kernel/fk_sweep_analytic_bridge.cpp	Function parameter 'c' should be passed by const reference.
+performance	passedByValue	kernel/fk_sweep_analytic_bridge.cpp	73	kernel/fk_sweep_analytic_bridge.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/fk_sweep_analytic_bridge.cpp	73	kernel/fk_sweep_analytic_bridge.cpp	Function parameter 'b' should be passed by const reference.
+warning	uninitMemberVarNoCtor	kernel/fk_sweep_caps.cpp	447	kernel/fk_sweep_caps.cpp	Member variable 'Cell::chart' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sweep_caps.cpp	449	kernel/fk_sweep_caps.cpp	Member variable 'Cell::depth' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sweep_caps.cpp	539	kernel/fk_sweep_caps.cpp	Member variable 'Cell::depth' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sweep_surface_validation.cpp	780	kernel/fk_sweep_surface_validation.cpp	Member variable 'Candidate::c' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sweep_surface_validation.cpp	782	kernel/fk_sweep_surface_validation.cpp	Member variable 'Candidate::u' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_sweep_surface_validation.cpp	782	kernel/fk_sweep_surface_validation.cpp	Member variable 'Candidate::v' has no initializer.
+performance	passedByValue	kernel/fk_sweep_surface_validation.cpp	1008	kernel/fk_sweep_surface_validation.cpp	Function parameter 'p' should be passed by const reference.
+error	danglingLifetime	kernel/fk_tessellate.cpp	726	kernel/fk_tessellate.cpp	Non-local variable 'fins_' will use object that points to local variable 'fin'.
+warning	uninitMemberVarNoCtor	kernel/fk_tessellate.cpp	27	kernel/fk_tessellate.cpp	Member variable 'EarNode::index' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_tessellate.cpp	28	kernel/fk_tessellate.cpp	Member variable 'EarNode::x' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_tessellate.cpp	28	kernel/fk_tessellate.cpp	Member variable 'EarNode::y' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_tessellate.cpp	432	kernel/fk_tessellate.cpp	Member variable 'LoopSample::fin' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_tessellate.cpp	433	kernel/fk_tessellate.cpp	Member variable 'LoopSample::t' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_tessellate.cpp	433	kernel/fk_tessellate.cpp	Member variable 'LoopSample::tNext' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_tessellate.cpp	1345	kernel/fk_tessellate.cpp	Member variable 'Candidate::length' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_tessellate.cpp	1347	kernel/fk_tessellate.cpp	Member variable 'Candidate::sample' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_tessellate.cpp	1542	kernel/fk_tessellate.cpp	Member variable 'UVChord::edge' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/fk_tessellate.cpp	1543	kernel/fk_tessellate.cpp	Member variable 'UVChord::interval' has no initializer.
+error	invalidContainer	kernel/fk_tessellate.cpp	266	kernel/fk_tessellate.cpp	Using pointer to member variable 'nodes_' that may be invalid.
+performance	passedByValue	kernel/fk_thicken.cpp	132	kernel/fk_thicken.cpp	Function parameter 'sheets' should be passed by const reference.
+error	unknownMacro	kernel/occt/fk_occt_import.cpp	101	kernel/occt/fk_occt_import.cpp	There is an unknown macro here somewhere. Configuration is required. If Handle is a macro then please configure it.
+error	unknownMacro	kernel/tests/fk_test_util.h	63	kernel/tests/fk_test_profiles.h	There is an unknown macro here somewhere. Configuration is required. If Handle is a macro then please configure it.
+warning	uninitMemberVarNoCtor	kernel/tests/probe_trimmed_sphere.h	15	kernel/tests/probe_blend_candidates.cpp	Member variable 'Cell::nu' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/tests/probe_trimmed_sphere.h	15	kernel/tests/probe_blend_candidates.cpp	Member variable 'Cell::nv' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/tests/probe_trimmed_sphere.h	21	kernel/tests/probe_blend_candidates.cpp	Member variable 'Boundary::box' has no initializer.
+error	uninitvar	kernel/tests/probe_trimmed_sphere.h	40	kernel/tests/probe_blend_candidates.cpp	Uninitialized variable: &a.box
+error	uninitvar	kernel/tests/probe_trimmed_sphere.h	40	kernel/tests/probe_blend_candidates.cpp	Uninitialized variable: &b.box
+warning	nullPointerRedundantCheck	kernel/tests/test_blend_mitre_validation.cpp	136	kernel/tests/test_blend_mitre_validation.cpp	Either the condition '!curve' is redundant or there is possible null pointer dereference: curve.
+warning	nullPointerRedundantCheck	kernel/tests/test_blend_mitre_validation.cpp	138	kernel/tests/test_blend_mitre_validation.cpp	Either the condition '!curve' is redundant or there is possible null pointer dereference: curve.
+warning	nullPointerRedundantCheck	kernel/tests/test_blend_mitre_validation.cpp	138	kernel/tests/test_blend_mitre_validation.cpp	Either the condition '!curve' is redundant or there is possible null pointer dereference: curve.
+error	throwInEntryPoint	kernel/tests/test_boolean_boundary.cpp	99	kernel/tests/test_boolean_boundary.cpp	Unhandled exception thrown in function that is an entry point.
+performance	iterateByValue	kernel/tests/test_boolean_boundary.cpp	126	kernel/tests/test_boolean_boundary.cpp	Range variable 'w' should be declared as const reference.
+performance	passedByValue	kernel/tests/test_boundary_fit_validation.cpp	77	kernel/tests/test_boundary_fit_validation.cpp	Function parameter 'up' should be passed by const reference.
+warning	nullPointerRedundantCheck	kernel/tests/test_curve_fit_validation.cpp	205	kernel/tests/test_curve_fit_validation.cpp	Either the condition 'fit' is redundant or there is possible null pointer dereference: fit.
+performance	passedByValue	kernel/tests/test_curve_projection.cpp	117	kernel/tests/test_curve_projection.cpp	Function parameter 'b' should be passed by const reference.
+warning	uninitMemberVarNoCtor	kernel/tests/test_disjoint_union.cpp	58	kernel/tests/test_disjoint_union.cpp	Member variable 'EdgeSpec::a' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/tests/test_disjoint_union.cpp	58	kernel/tests/test_disjoint_union.cpp	Member variable 'EdgeSpec::b' has no initializer.
+error	throwInEntryPoint	kernel/tests/test_edge_offset_fit_validation.cpp	98	kernel/tests/test_edge_offset_fit_validation.cpp	Unhandled exception thrown in function that is an entry point.
+performance	passedByValue	kernel/tests/test_edge_offset_fit_validation.cpp	30	kernel/tests/test_edge_offset_fit_validation.cpp	Function parameter 'delta' should be passed by const reference.
+performance	iterateByValue	kernel/tests/test_edge_offset_fit_validation.cpp	59	kernel/tests/test_edge_offset_fit_validation.cpp	Range variable 'p' should be declared as const reference.
+performance	passedByValue	kernel/tests/test_loft_complexity.cpp	50	kernel/tests/test_loft_complexity.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_loft_correspondence.cpp	26	kernel/tests/test_loft_correspondence.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_loft_correspondence.cpp	26	kernel/tests/test_loft_correspondence.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_loft_points.cpp	16	kernel/tests/test_loft_points.cpp	Function parameter 'p' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_loft_points.cpp	17	kernel/tests/test_loft_points.cpp	Function parameter 'b' should be passed by const reference.
+error	throwInEntryPoint	kernel/tests/test_loft_shape.cpp	374	kernel/tests/test_loft_shape.cpp	Unhandled exception thrown in function that is an entry point.
+performance	passedByValue	kernel/tests/test_loft_shape.cpp	36	kernel/tests/test_loft_shape.cpp	Function parameter 'a' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_loft_shape.cpp	36	kernel/tests/test_loft_shape.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_loft_shape.cpp	208	kernel/tests/test_loft_shape.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_loft_shape.cpp	273	kernel/tests/test_loft_shape.cpp	Function parameter 'p' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_mapping_pcurve_validation.cpp	456	kernel/tests/test_mapping_pcurve_validation.cpp	Function parameter 'o' should be passed by const reference.
+error	legacyUninitvar	kernel/tests/test_marching_seed_grid.cpp	73	kernel/tests/test_marching_seed_grid.cpp	Uninitialized variable: tolerance
+error	throwInEntryPoint	kernel/tests/test_offset_pcurve_validation.cpp	468	kernel/tests/test_offset_pcurve_validation.cpp	Unhandled exception thrown in function that is an entry point.
+performance	passedByValue	kernel/tests/test_offset_pcurve_validation.cpp	445	kernel/tests/test_offset_pcurve_validation.cpp	Function parameter 'name' should be passed by const reference.
+error	throwInEntryPoint	kernel/tests/test_projection_fit_validation.cpp	132	kernel/tests/test_projection_fit_validation.cpp	Unhandled exception thrown in function that is an entry point.
+warning	uninitMemberVarNoCtor	kernel/tests/test_quadrant_breakpoints_validation.cpp	16	kernel/tests/test_quadrant_breakpoints_validation.cpp	Member variable 'Consumer::name' has no initializer.
+error	throwInEntryPoint	kernel/tests/test_sew_pcurve_validation.cpp	500	kernel/tests/test_sew_pcurve_validation.cpp	Unhandled exception thrown in function that is an entry point.
+warning	uninitMemberVarNoCtor	kernel/tests/test_sheet_arc_validation.cpp	23	kernel/tests/test_sheet_arc_validation.cpp	Member variable 'Curtain::scale' has no initializer.
+warning	uninitMemberVarNoCtor	kernel/tests/test_sheet_fit_validation.cpp	42	kernel/tests/test_sheet_fit_validation.cpp	Member variable 'Fixture::signedLength' has no initializer.
+performance	passedByValue	kernel/tests/test_sheet_join_validation.cpp	288	kernel/tests/test_sheet_join_validation.cpp	Function parameter 'p' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_sheet_join_validation.cpp	349	kernel/tests/test_sheet_join_validation.cpp	Function parameter 'name' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_sheet_join_validation.cpp	435	kernel/tests/test_sheet_join_validation.cpp	Function parameter 'name' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_surface_curve_rational.cpp	38	kernel/tests/test_surface_curve_rational.cpp	Function parameter 'shift' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_surface_curve_rational.cpp	54	kernel/tests/test_surface_curve_rational.cpp	Function parameter 'shift' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_surface_curve_rational_edges.cpp	23	kernel/tests/test_surface_curve_rational_edges.cpp	Function parameter 'placement' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_surface_curve_rational_pcurves.cpp	28	kernel/tests/test_surface_curve_rational_pcurves.cpp	Function parameter 'pose' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_surface_curve_rational_pcurves.cpp	45	kernel/tests/test_surface_curve_rational_pcurves.cpp	Function parameter 'pose' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_surface_mapping_bounds.cpp	58	kernel/tests/test_surface_mapping_bounds.cpp	Function parameter 'options' should be passed by const reference.
+performance	passedByValue	kernel/tests/test_surface_mapping_normal_bounds.cpp	60	kernel/tests/test_surface_mapping_normal_bounds.cpp	Function parameter 'options' should be passed by const reference.
+warning	nullPointerRedundantCheck	kernel/tests/test_surface_tools.cpp	174	kernel/tests/test_surface_tools.cpp	Either the condition 's' is redundant or there is possible null pointer dereference: s.
+warning	uninitMemberVarNoCtor	tests/test_advanced_fillets.h	185	tests/test_advanced_fillets.h	Member variable 'Release::pool' has no initializer.
+warning	uninitMemberVarNoCtor	tests/test_advanced_fillets.h	186	tests/test_advanced_fillets.h	Member variable 'Release::threads' has no initializer.
+warning	uninitMemberVarNoCtor	tests/test_document_theme_tabs.h	44	tests/test_document_theme_tabs.h	Member variable 'Page::window' has no initializer.
+performance	passedByValue	tests/test_drawing_axis_dimensions.h	15	tests/test_drawing_axes.cpp	Function parameter 'd' should be passed by const reference.
+performance	passedByValue	tests/test_drawing_complete_sections.cpp	34	tests/test_drawing_complete_sections.cpp	Function parameter 'e' should be passed by const reference.
+performance	passedByValue	tests/test_drawing_derived.cpp	35	tests/test_drawing_derived.cpp	Function parameter 'e' should be passed by const reference.
+performance	passedByValue	tests/test_drawing_derived.cpp	43	tests/test_drawing_derived.cpp	Function parameter 'kind' should be passed by const reference.
+performance	passedByValue	tests/test_drawing_detail.cpp	31	tests/test_drawing_detail.cpp	Function parameter 's' should be passed by const reference.
+performance	passedByValue	tests/test_drawing_detail.cpp	40	tests/test_drawing_detail.cpp	Function parameter 'kind' should be passed by const reference.
+performance	passedByValue	tests/test_drawing_detail.cpp	41	tests/test_drawing_detail.cpp	Function parameter 'kind' should be passed by const reference.
+error	objectIndex	tests/test_drawing_dimensions.cpp	180	tests/test_drawing_dimensions.cpp	The address of variable 'c' is accessed at non-zero index.
+error	objectIndex	tests/test_drawing_dimensions.cpp	184	tests/test_drawing_dimensions.cpp	The address of variable 'c' is accessed at non-zero index.
+performance	passedByValue	tests/test_drawing_local_section_depth.cpp	49	tests/test_drawing_local_section_depth.cpp	Function parameter 'point' should be passed by const reference.
+performance	passedByValue	tests/test_drawing_local_tools.cpp	36	tests/test_drawing_local_tools.cpp	Function parameter 's' should be passed by const reference.
+performance	passedByValue	tests/test_drawing_preparation.cpp	14	tests/test_drawing_preparation.cpp	Function parameter 'error' should be passed by const reference.
+performance	passedByValue	tests/test_drawing_ui_controls.cpp	26	tests/test_drawing_ui_controls.cpp	Function parameter 's' should be passed by const reference.
+performance	passedByValue	tests/test_drawing_ui_controls.cpp	29	tests/test_drawing_ui_controls.cpp	Function parameter 'kind' should be passed by const reference.
+performance	passedByValue	tests/test_drawing_visibility.cpp	252	tests/test_drawing_visibility.cpp	Function parameter 'p' should be passed by const reference.
+performance	passedByValue	tests/test_extrusion_next_body.h	171	tests/test_extrusion_next_body.h	Function parameter 'dependencies' should be passed by const reference.
+warning	uninitMemberVarNoCtor	tests/test_lazy_mesh.h	7	tests/test_lazy_mesh.h	Member variable 'Restore::set' has no initializer.
+performance	passedByValue	tests/test_loft_projected_sections.h	3	tests/test_loft_projected_sections.h	Function parameter 'points' should be passed by const reference.
+warning	nullPointer	tests/test_pattern_history_repair.h	179	tests/test_pattern_history_repair.h	Possible null pointer dereference: history
+performance	passedByValue	tests/test_projected_curve_references.h	3	tests/test_projected_curve_references.h	Function parameter 'points' should be passed by const reference.
+performance	passedByValue	tests/test_revision_releases.cpp	27	tests/test_revision_releases.cpp	Function parameter 'bad' should be passed by const reference.
+error	danglingTempReference	tests/test_shape_analysis.cpp	137	tests/test_shape_analysis.cpp	Using reference to dangling temporary.
+error	danglingTempReference	tests/test_shape_analysis.cpp	137	tests/test_shape_analysis.cpp	Using reference to dangling temporary.
+error	danglingTempReference	tests/test_shape_analysis.cpp	138	tests/test_shape_analysis.cpp	Using reference to dangling temporary.
+error	danglingTempReference	tests/test_shape_analysis.cpp	139	tests/test_shape_analysis.cpp	Using reference to dangling temporary.
+error	danglingTempReference	tests/test_shape_analysis.cpp	140	tests/test_shape_analysis.cpp	Using reference to dangling temporary.
+error	danglingTempReference	tests/test_shape_analysis.cpp	140	tests/test_shape_analysis.cpp	Using reference to dangling temporary.
+error	danglingTempReference	tests/test_shape_analysis.cpp	144	tests/test_shape_analysis.cpp	Using reference to dangling temporary.
+error	throwInEntryPoint	tests/test_sketch_offset_validation.cpp	163	tests/test_sketch_offset_validation.cpp	Unhandled exception thrown in function that is an entry point.
+warning	uninitMemberVarNoCtor	tests/test_tangent_contacts.h	18	tests/test_solver_partition.h	Member variable 'Restore::set' has no initializer.
+warning	uninitMemberVarNoCtor	tests/test_solver_partition.h	32	tests/test_solver_partition.h	Member variable 'Restore::set' has no initializer.
+warning	uninitMemberVarNoCtor	tests/test_solver_partition.h	112	tests/test_solver_partition.h	Member variable 'Restore::set' has no initializer.
+warning	uninitMemberVarNoCtor	tests/test_solver_partition.h	187	tests/test_solver_partition.h	Member variable 'Restore::set' has no initializer.
+warning	uninitMemberVarNoCtor	tests/test_solver_partition.h	298	tests/test_solver_partition.h	Member variable 'Restore::set' has no initializer.
+performance	passedByValue	tests/test_storyboard_panel_selection.h	86	tests/test_storyboard_panel_selection.h	Function parameter 'name' should be passed by const reference.
+warning	nullPointerRedundantCheck	tests/test_surface_mapping.h	278	tests/test_surface_mapping.h	Either the condition 'parent' is redundant or there is possible null pointer dereference: parent.
+warning	nullPointerRedundantCheck	tests/test_surface_mapping.h	282	tests/test_surface_mapping.h	Either the condition 'parent' is redundant or there is possible null pointer dereference: parent.
+warning	nullPointerRedundantCheck	tests/test_surface_mapping.h	285	tests/test_surface_mapping.h	Either the condition 'dialog' is redundant or there is possible null pointer dereference: dialog.
+warning	nullPointerRedundantCheck	tests/test_surface_mapping.h	288	tests/test_surface_mapping.h	Either the condition 'dialog' is redundant or there is possible null pointer dereference: dialog.
+warning	nullPointerRedundantCheck	tests/test_surface_mapping.h	306	tests/test_surface_mapping.h	Either the condition 'dialog' is redundant or there is possible null pointer dereference: dialog.
+warning	uninitMemberVarNoCtor	tests/test_zoom_input.h	20	tests/test_viewport.cpp	Member variable 'Sample::backend' has no initializer.
+warning	uninitMemberVarNoCtor	tests/test_zoom_input.h	20	tests/test_viewport.cpp	Member variable 'Sample::angle' has no initializer.
+warning	uninitMemberVarNoCtor	tests/test_zoom_input.h	20	tests/test_viewport.cpp	Member variable 'Sample::pixels' has no initializer.
+warning	uninitMemberVarNoCtor	tests/test_zoom_input.h	20	tests/test_viewport.cpp	Member variable 'Sample::touch' has no initializer.
+warning	uninitMemberVarNoCtor	tests/test_zoom_input.h	20	tests/test_viewport.cpp	Member variable 'Sample::direct' has no initializer.
+warning	uninitMemberVarNoCtor	tests/test_zoom_input.h	20	tests/test_viewport.cpp	Member variable 'Sample::expected' has no initializer.
+warning	uninitMemberVarNoCtor	tests/test_viewport.cpp	535	tests/test_viewport.cpp	Member variable 'Scenario::name' has no initializer.
+warning	uninitMemberVarNoCtor	tests/test_viewport.cpp	535	tests/test_viewport.cpp	Member variable 'Scenario::present' has no initializer.
+warning	uninitMemberVarNoCtor	tests/test_viewport.cpp	535	tests/test_viewport.cpp	Member variable 'Scenario::active' has no initializer.
+warning	uninitMemberVarNoCtor	tests/test_viewport.cpp	535	tests/test_viewport.cpp	Member variable 'Scenario::selected' has no initializer.
+warning	uninitMemberVarNoCtor	tests/test_viewport.cpp	535	tests/test_viewport.cpp	Member variable 'Scenario::warning' has no initializer.
+warning	invalidFunctionArg	tests/test_history_preview_mesh.h	26	tests/test_viewport.cpp	Invalid view.extrusions_.at() argument nr 1. The value is -1 but the valid values are '0:'.
+warning	invalidFunctionArg	tests/test_extrusion_next_body.h	175	tests/test_viewport.cpp	Invalid view.extrusions().at() argument nr 1. The value is -1 but the valid values are '0:'.
+warning	invalidFunctionArg	tests/test_storyboard_review.h	280	tests/test_viewport.cpp	Invalid view.extrusions().at() argument nr 1. The value is -1 but the valid values are '0:'.
+warning	invalidFunctionArg	tests/test_viewport.cpp	4455	tests/test_viewport.cpp	Invalid v.sketches_.at() argument nr 1. The value is -1 but the valid values are '0:'.
+warning	nullPointer	tests/test_pattern_placements.h	410	tests/test_viewport.cpp	Possible null pointer dereference: list
+warning	nullPointer	tests/test_surface_poles_multi.h	117	tests/test_viewport.cpp	Possible null pointer dereference: item
+warning	nullPointer	tests/test_surface_poles_multi.h	125	tests/test_viewport.cpp	Possible null pointer dereference: item
+warning	nullPointer	tests/test_surface_poles_multi.h	126	tests/test_viewport.cpp	Possible null pointer dereference: item
+warning	nullPointerRedundantCheck	tests/test_surface_mapping.h	257	tests/test_viewport.cpp	Either the condition 'parent' is redundant or there is possible null pointer dereference: parent.
+warning	nullPointerRedundantCheck	tests/test_surface_mapping.h	269	tests/test_viewport.cpp	Either the condition 'parent' is redundant or there is possible null pointer dereference: parent.
+warning	nullPointer	tests/test_viewport.cpp	1418	tests/test_viewport.cpp	Possible null pointer dereference: list
+warning	nullPointer	tests/test_viewport.cpp	3264	tests/test_viewport.cpp	Possible null pointer dereference: root
+warning	nullPointer	tests/test_viewport.cpp	9235	tests/test_viewport.cpp	Possible null pointer dereference: movableNode
+warning	nullPointer	tests/test_viewport.cpp	9236	tests/test_viewport.cpp	Possible null pointer dereference: movableNode
+warning	nullPointer	tests/test_viewport.cpp	9238	tests/test_viewport.cpp	Possible null pointer dereference: movableNode
+warning	nullPointerRedundantCheck	tests/test_viewport.cpp	9243	tests/test_viewport.cpp	Either the condition 'graphView' is redundant or there is possible null pointer dereference: graphView.
+performance	passedByValue	tests/test_sketch_linked_refs.h	354	tests/test_viewport.cpp	Function parameter 'ref' should be passed by const reference.
+performance	passedByValue	tests/test_sketch_construction.h	48	tests/test_viewport.cpp	Function parameter 'loft' should be passed by const reference.
+performance	passedByValue	tests/test_storyboard_panel_selection.h	36	tests/test_viewport.cpp	Function parameter 'ref' should be passed by const reference.
+performance	passedByValue	tests/test_viewport.cpp	1888	tests/test_viewport.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	tests/test_viewport.cpp	2153	tests/test_viewport.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	tests/test_viewport.cpp	2260	tests/test_viewport.cpp	Function parameter 'b' should be passed by const reference.
+performance	passedByValue	tests/test_viewport.cpp	6971	tests/test_viewport.cpp	Function parameter 'ref' should be passed by const reference.
+performance	passedByValue	tests/test_viewport.cpp	8238	tests/test_viewport.cpp	Function parameter 'q' should be passed by const reference.
+performance	passedByValue	tests/test_viewport.cpp	8301	tests/test_viewport.cpp	Function parameter 'b' should be passed by const reference.
+warning	containerOutOfBounds	tests/test_loft_correspondence.h	53	tests/test_viewport.cpp	Either the condition 'loaded.extrusions[0].loftCorrespondences.isEmpty()' is redundant or expression 'loaded.extrusions[0].loftCorrespondences[1]' causes access out of bounds.
+warning	negativeContainerIndex	tests/test_viewport.cpp	2220	tests/test_viewport.cpp	Array index -1 is out of bounds.
+warning	negativeContainerIndex	tests/test_viewport.cpp	2717	tests/test_viewport.cpp	Array index -1 is out of bounds.
+warning	negativeContainerIndex	tests/test_viewport.cpp	2722	tests/test_viewport.cpp	Array index -1 is out of bounds.
+warning	negativeContainerIndex	tests/test_viewport.cpp	4094	tests/test_viewport.cpp	Array index -1 is out of bounds.
+warning	negativeContainerIndex	tests/test_viewport.cpp	4098	tests/test_viewport.cpp	Array index -1 is out of bounds.
+warning	negativeContainerIndex	tests/test_viewport.cpp	4100	tests/test_viewport.cpp	Array index -1 is out of bounds.
+warning	negativeContainerIndex	tests/test_viewport.cpp	4402	tests/test_viewport.cpp	Array index -1 is out of bounds.
+error	mismatchingContainers	tests/test_edit_preview_reuse.h	42	tests/test_viewport.cpp	Iterators of different containers 'view.preview_.display.edges' and 'existing.display.edges' are used together.
+warning	uninitMemberVarNoCtor	tools/benchmark_metal_boxes.cpp	44	tools/benchmark_metal_boxes.cpp	Member variable 'Case::workers' has no initializer.
+warning	uninitMemberVarNoCtor	tools/benchmark_metal_boxes.cpp	44	tools/benchmark_metal_boxes.cpp	Member variable 'Case::na' has no initializer.
+warning	uninitMemberVarNoCtor	tools/benchmark_metal_boxes.cpp	44	tools/benchmark_metal_boxes.cpp	Member variable 'Case::nb' has no initializer.
+warning	ctunullpointer	forgeCad2026_dialogs_common.cpp	1492	forgeCad2026_dialogs_common.cpp	Null pointer dereference: viewport
+warning	ctunullpointer	forgeCad2026_dialogs_common.cpp	1508	forgeCad2026_dialogs_common.cpp	Null pointer dereference: viewport
+warning	ctunullpointer	forgeCad2026_dialogs_common.cpp	1723	forgeCad2026_dialogs_common.cpp	Null pointer dereference: viewport

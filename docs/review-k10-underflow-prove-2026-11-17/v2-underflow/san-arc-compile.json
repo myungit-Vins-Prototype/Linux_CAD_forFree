@@ -1,0 +1,24 @@
+{
+  "argv": [
+    "c++",
+    "-std=c++17",
+    "-O1",
+    "-g",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-fsanitize=address,undefined",
+    "-fno-omit-frame-pointer",
+    "-I",
+    "/tmp/k10-underflow-review-2026-11-17/candidate",
+    "-I",
+    "/home/myungit/Linux_CAD_forFree/kernel",
+    "-I",
+    "/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "-c",
+    "/tmp/k10-underflow-review-2026-11-17/candidate/fk_curve_algo.cpp",
+    "-o",
+    "/tmp/k10-underflow-review-2026-11-17/san-arc.o"
+  ],
+  "exit": 0,
+  "seconds": 3.3198607030062703
+}

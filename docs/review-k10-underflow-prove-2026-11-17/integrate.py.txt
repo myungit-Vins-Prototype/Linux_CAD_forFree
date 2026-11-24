@@ -1,0 +1,13 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-underflow-review-2026-11-17');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+for n in ['candidate-tests','san-tests','baseline-probe']:
+ assert json.loads((T/(n+'.json')).read_text())['exit']==0
+for target,source in [('kernel/fk_quadrature.h','fk_quadrature.h'),('kernel/tests/test_quadrature_validation.cpp','test_quadrature_validation.cpp')]:
+ assert sha(R/target)==sha(T/'before'/target)
+ (R/target).write_bytes((T/'candidate'/source).read_bytes())
+p=R/'tools/generate_architecture.py';s=p.read_text();s=s.replace('recupera overflow degli accumuli con riscalamento e prodotti frexp/scalbn.','recupera overflow degli accumuli e prodotti pesati subnormali/azzerati con riscalamento e prodotti frexp/scalbn; magnitudini indipendenti e nessuna callback ripetuta.')
+s=s.replace('Sei gruppi GK scalare/vettoriale:','Nove gruppi GK scalare/vettoriale:').replace('lunghezza B-spline nativa e cache, rifiuti NaN/Inf','lunghezza B-spline nativa e cache, underflow completo e parziale del12.5% con integrandi denorm_min e4denorm_min su range2^1023, valori/magnitudini e passive ricorsive indipendenti, rifiuti NaN/Inf');p.write_text(s)
+p=R/'CLAUDE.md';s=p.read_text();a=s.index('17/11 checkpoint:');b=s.index('\n',a);s=s[:a]+'17/11 checkpoint18d0adc pubblicato, remoto verificato; CI44132066010 in corso. K10 underflow riprodotto, candidato9/9+SAN PASS; integrazione/build in corso. [Registro](docs/review-checkpoint-push-2026-11-17.md).'+s[b:];s=s.replace('34rilievi corretti; K10parziale. Sei filoni K10 e altri limiti nell’indice; kernel/runner invariati.','34rilievi corretti; K10parziale. Sei filoni K10 e altri limiti nell’indice.');assert len(s.encode())<=16384;p.write_text(s)
+(T/'integrated-sources.json').write_text(json.dumps({f:sha(R/f) for f in ['kernel/fk_quadrature.h','kernel/tests/test_quadrature_validation.cpp','tools/generate_architecture.py']},indent=2))
+print('integrated; memory bytes',len(s.encode()))

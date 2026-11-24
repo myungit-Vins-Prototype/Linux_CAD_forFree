@@ -1,0 +1,17 @@
+{
+  "argv": [
+    "c++",
+    "-std=c++17",
+    "-O3",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-I",
+    "/home/myungit/Linux_CAD_forFree/kernel",
+    "/tmp/k10-underflow-review-2026-11-17/baseline.cpp",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+    "-o",
+    "/tmp/k10-underflow-review-2026-11-17/baseline"
+  ],
+  "exit": 0,
+  "seconds": 0.6153793730045436
+}

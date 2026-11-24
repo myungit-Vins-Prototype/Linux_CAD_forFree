@@ -1,0 +1,20 @@
+#pragma once
+#include "fk_surface_mapping.h"
+#include <limits>
+namespace ForgeCad::Kernel::detail {
+enum class SurfaceMappingBoundStatus { Unsupported, Certified, Failed };
+struct SurfaceMappingBoundResult {
+    SurfaceMappingBoundStatus status = SurfaceMappingBoundStatus::Unsupported;
+    double upperBound = std::numeric_limits<double>::infinity();
+};
+// Continuous position bound over the WHOLE source UV rectangle. Recognizes
+// Plane source, exactly zero height in options.sourcePlane, separable affine
+// target UV, native nonperiodic polynomial BSpline target degrees2/3, and native
+// polynomial bicubic image. Equal positive weights count as polynomial.
+// Unsupported is a family boundary. Failed is terminal: invalid input, domain,
+// arithmetic or fixed work limit, or inability to prove the externally set cap.
+// No normal-offset, injectivity, topology or arbitrary-map certificate.
+SurfaceMappingBoundResult zeroHeightMappingResidualBound(
+    const Surface &source, const Surface &target, const SurfaceWrapOptions &options,
+    double scaleU, double scaleV, const Surface &image, Interval u, Interval v, double budget);
+}

@@ -1,0 +1,11 @@
+[  OK  ] MappingGlobalNativeBumpHasIndependentInteriorWitness
+[  OK  ] MappingGlobalFlatCarrierWithSameKnotsSucceeds
+[  OK  ] MappingGlobalSolidBumpRejectsSpecificUnprovenCarrierBeforePublication
+[  OK  ] MappingGlobalZeroHeightBottomIdentityRetainsTheRealBump
+[  OK  ] MappingBoundsFlatNativeDegreesAndConstantWeightGauge
+[  OK  ] MappingBoundsInteriorPeakFailsAndHarmlessPeakCertifies
+[  OK  ] MappingBoundsBilinearAndQuadraticCoefficientOracles
+[  OK  ] MappingBoundsDiscreteAxisPermutationAndNegativeUV
+[  OK  ] MappingBoundsInvalidInputsFailAndNonzeroOffsetIsUnsupported
+[  OK  ] MappingBoundsPresetCancellationRemainsDistinct
+10/10 test superati

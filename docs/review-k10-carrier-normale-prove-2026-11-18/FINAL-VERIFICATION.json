@@ -1,0 +1,44 @@
+{
+  "head": "6294aa37e63c51434fd2754ca7b1398d8a281ffe",
+  "branch": "main",
+  "index_empty": true,
+  "previous_packages": 43,
+  "previous_payloads": 6099,
+  "source_and_binary_hashes": {
+    "kernel/fk_surface_mapping.cpp": "cd5e20ef42be0d33136215c3da30e722d776f3eb162b2341878a434f6d4020e3",
+    "kernel/fk_surface_mapping_bounds.cpp": "b37cd46bf9f24a129c291dd9a636d033e76d98fcbbe7b65d4b857980aaa2c515",
+    "kernel/fk_surface_mapping_bounds.h": "53a5bfc9202357646ea061fb7416e34153010b3d70440204757ab38f810acf69",
+    "kernel/tests/test_surface_mapping_bounds.cpp": "59caf73a56788c139e32ca0df8070df88d13568f28a6bd7c52d19b7e6763e643",
+    "kernel/tests/test_mapping_normal_validation.cpp": "06562f6715a11bea708e0307a689ba44b7b89e9df2c69c6ceaca93de5ba6cd0c",
+    "kernel/tests/test_surface_mapping_normal_bounds.cpp": "4ed33946df09d249ef19f9395fb947c9e89ec0338e77cd9979d8f3c744f17c75",
+    "kernel/tests/test_mapping_global_validation.cpp": "932291f070382fcec44695bde905145541b8c0bef87340cfb322753471d70984",
+    "kernel/CMakeLists.txt": "16e78d7960f217f8aa6cc8ccdedd0394cf95a72fccc264064a015c52cc2da19f",
+    "tools/generate_architecture.py": "733749fa1e5d354f6bc86d842f57386be5ddb856ff41a4fc8f482dbe67cb278a",
+    "kernel/fk_quadrature.h": "331e2e96b37c8170022aa2341d225f0e2f010728b8b1ec533a92258243c32615",
+    "kernel/tests/test_quadrature_validation.cpp": "a3cf2172efb672250c172be0239e83aedba4715b33d92fe94d45ad03f774d6f7",
+    "forgecad-release/forgecad": "f0a613de2f36da545105be83434fe0e812d148b3b14d4bea989f3289fb9cbd16",
+    "forgecad-release/kernel/libforgekernel.a": "6cb1512182ddaac8d92cee39e47b660f80b86bd22320928986de3f1cc4b2717d",
+    "forgecad-release/kernel/forgekernel_mapping_global_validation_tests": "c055a40c34498ec90e770faacce85cbb28e95a3e35dd03a807fb8a8b1f819fef"
+  },
+  "document_hashes": {
+    "CLAUDE.md": "bcf7398b4f5df5bd6997ea420c93e260e39a633bd22cd8f30df46811360d43a5",
+    "docs/review-k10-carrier-normale-2026-11-18.md": "5713f22cfddaf874748cb9a4cc30d5c3130ad75c807da53e3657e6d75416f5f6",
+    "docs/review-punti-aperti-2026-11-17.md": "0dd0988a1f45c3c09630a9b29ed72b55be502bcf048f579a9097a90860f820df",
+    "docs/roadmap.md": "b8bbd218bcefdcab24222e1445257187fad73316a8ecbe173ea86a424c0d564d",
+    "docs/code-review-2026-11-15.md": "569b9cc3eb39961d29d17a2e9310a099d9813e41e20129a08de917b3d67102d6",
+    "docs/review-ci-repair-2026-11-17.md": "339f47b20ede6577db36219440014b948385916bb937cece3d9f76e27dde2c11",
+    "docs/review-checkpoint-push-2026-11-17.md": "c08e0a758e86ce0c0c63dc80f8c9d982f7fa76bce9ee46564d43d5325eab7e4c"
+  },
+  "architecture": {
+    "nodes": 810,
+    "edges": 11837,
+    "units": 413,
+    "errors": {},
+    "graph_hash": "051bce01ab5bad1edc3b1efdb78888f5ef7e58a1fe6d9015fc283b51ad699621",
+    "html_hash": "cfb3d2cbb30295461e8701993811c77d1b782315f4d2e0f7faba0349a632dbe3",
+    "typed_bidirectional_focus": "architecture-focus.json"
+  },
+  "local_tests": "7/7 CTest, 18/18 Release and ASan/UBSan; seven TUs instrumented, other kernel Release",
+  "ci_scope": "Previous published code only; local changes are not pushed",
+  "memory_bytes": 16128
+}

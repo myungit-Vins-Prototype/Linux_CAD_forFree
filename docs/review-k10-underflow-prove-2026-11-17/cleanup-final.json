@@ -1,0 +1,85 @@
+{
+  "files": [
+    {
+      "path": "baseline-depth-tests",
+      "bytes": 2079440,
+      "sha256": "0910b56fa6f7b036d4c2e3e118ef649446f1fae2f61c9c8b27ac183743ff573c"
+    },
+    {
+      "path": "mass",
+      "bytes": 54588680,
+      "sha256": "2ca13ca405e8f3d429ac3bf9017197255bf003310a2621a9f7d94a527f8adcff"
+    },
+    {
+      "path": "candidate-length",
+      "bytes": 2025016,
+      "sha256": "9df8358e109518f33d931a194772c84bcd8a4b1aa3e0271b348875be5758b053"
+    },
+    {
+      "path": "baseline-length",
+      "bytes": 2685232,
+      "sha256": "ad8d5d07e755ba509c92eb70b9fa2e8abf95ffa57b308de6642389fac6603291"
+    },
+    {
+      "path": "candidate-quadrature",
+      "bytes": 65440,
+      "sha256": "70917a357295576d5ff33480c3c35365c07a99bca9cf9bbd91ea6b3f9dacef54"
+    },
+    {
+      "path": "baseline-quadrature",
+      "bytes": 43240,
+      "sha256": "6520facbddea85b7774a7f624e9841ff02a8fc58ad69620d04a25f29f450136c"
+    },
+    {
+      "path": "san-tests",
+      "bytes": 9260368,
+      "sha256": "9877f74de48500648fe8d4b57150491ecc528b29b2262ea71deadd1654fc0a26"
+    },
+    {
+      "path": "san-arc.o",
+      "bytes": 2734424,
+      "sha256": "1e1e783181ebe552037384dbe56b2cab7ef9858c12c0f8603e14a728854c0076"
+    },
+    {
+      "path": "candidate-tests",
+      "bytes": 2127224,
+      "sha256": "fd7c5e9e1d9f423c673f78cf1f6cd823ac37b23e77876a542c04d83a79db32b3"
+    },
+    {
+      "path": "arc.o",
+      "bytes": 131880,
+      "sha256": "dc1d2c0c19507366435e9ec5d200fccb35b201efe91ab6f5bc6318312b3ff843"
+    },
+    {
+      "path": "depth-trace-probe",
+      "bytes": 1828448,
+      "sha256": "2efbbe999f2d139638c2f49d0d17f47e0d899a966a79d21467010a044c359646"
+    },
+    {
+      "path": "depth-trace-arc.o",
+      "bytes": 117208,
+      "sha256": "c45de032a3a1b3f207324467acfc870c35a9bfc9b9b89ed10f139025ff1ac4f6"
+    },
+    {
+      "path": "depth-baseline",
+      "bytes": 1828104,
+      "sha256": "917ab43961ec30443dadaade28724e275709d22cb3b424daff65bede4cb50c7f"
+    },
+    {
+      "path": "depth-baseline-arc.o",
+      "bytes": 115656,
+      "sha256": "b1468873cfa575543f39447869cacb99a1236df2752ba20eb61e185dcd077091"
+    },
+    {
+      "path": "depth-current",
+      "bytes": 2503520,
+      "sha256": "8d49b787718759971b8cede6637c8d5375e1409e403d21ba1e3e61f1e20e8d67"
+    },
+    {
+      "path": "baseline",
+      "bytes": 2489048,
+      "sha256": "a8ada29d80340d9430e8f76288a3594f60871809f9d6661052e6b72cd4a1b3aa"
+    }
+  ],
+  "bytes": 84622928
+}

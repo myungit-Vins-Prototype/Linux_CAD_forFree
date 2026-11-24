@@ -1,0 +1,5 @@
+{
+  "kernel/fk_quadrature.h": "331e2e96b37c8170022aa2341d225f0e2f010728b8b1ec533a92258243c32615",
+  "kernel/tests/test_quadrature_validation.cpp": "a3cf2172efb672250c172be0239e83aedba4715b33d92fe94d45ad03f774d6f7",
+  "tools/generate_architecture.py": "013be345ca607d8c7a288027b38deec7ef44e47d984b6c381b87ce82472ec68a"
+}

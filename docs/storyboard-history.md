@@ -66,9 +66,36 @@ inserimento. Con la barra selezionata, le frecce su/giù spostano di un passo;
 Home porta all'inizio, End alla fine. A posizione zero nessun corpo è mostrato;
 alla fine sono mostrati i risultati completi.
 
+La conferma di una modifica conserva la posizione scelta per **Inserisci qui**.
+Si ricalcolano la funzione modificata e gli stadi dipendenti fino alla maniglia,
+compresi gli schizzi associativi. Gli stadi indipendenti conservano la geometria
+già calcolata. Con la maniglia subito dopo la funzione si vede subito la modifica;
+con la maniglia in fondo si vede il risultato finale aggiornato.
+
+Avanzando di un passo si calcolano gli stadi in attesa necessari per quel
+passo, compresi gli schizzi associativi. Tornando indietro e avanzando di
+nuovo si riusano i risultati. **End** raggiunge il risultato finale.
+Aprire esplicitamente una funzione futura prepara i suoi operandi per l’editor.
+
+La verifica del percorso di modifica dall’albero usa una base e tre scale
+concatenate. Aprendo la prima scala dal doppio clic e confermando un fattore
+diverso, la maniglia conserva rispettivamente le posizioni 4/4, 3/4 e 2/4.
+In ciascun caso il volume dello stadio visibile corrisponde al valore atteso e
+i successori oltre la maniglia restano in attesa.
+
+Nella prova precedente alla rimozione dello spostamento automatico, il 21 novembre 2026, modificare la base di una catena di
+30 scale ha richiesto 0,66 ms con arresto alla base e 4,10 ms con ricalcolo
+fino in fondo (mediane di tre conferme in build Release con viewport offscreen).
+Il primo avanzamento ha richiesto 0,48 ms. A fine storia i volumi coincidevano.
+La verifica integrata ha superato 34 test mirati, inclusi i rami indipendenti,
+i piani di appoggio, le estrusioni fino al prossimo corpo, Undo/Redo, le tavole
+collegate e il recupero dopo salvataggio. Nel recupero una breve attesa sul
+thread di lavoro permette a una scansione concorrente di rilasciare il lock
+prima della pulizia del backup.
+
 Una nuova funzione creata durante il rollback viene inserita alla posizione
-scelta. Le funzioni successive restano nella storia: le basi implicite dello
-stesso corpo vengono ricollegate e la sequenza viene rigenerata. I riferimenti
+scelta. Le basi implicite dello stesso corpo vengono ricollegate; gli stadi
+successivi interessati vengono calcolati quando si raggiunge la loro posizione. I riferimenti
 espliciti che non sono più risolvibili producono il normale errore della
 feature. Per vedere il risultato completo dopo l'inserimento, avanzare alla
 fine. Anche quando una funzione gia' inserita diventa una fusione o una
@@ -80,8 +107,11 @@ stesso corpo viene ricongiunta e le cache dipendenti sono rigenerate, anche
 attraverso gli schizzi associativi. Bersagli di altri corpi e riferimenti
 espliciti a facce, bordi o assi conservano il proprio produttore; riferimenti
 mancanti restano errori espliciti. Il file originale cambia solo al salvataggio.
-Il salvataggio conserva tutta la storia; riapertura e Undo/Redo riportano
-la vista alla fine della sequenza.
+Il salvataggio conserva tutte le definizioni e il documento si riapre a fine
+storia. Salvare i corpi calcolati, creare una tavola o effettuare un check-in
+richiede il modello completo e mantiene la maniglia nella posizione scelta.
+Il salvataggio delle sole definizioni aggiorna gli eventuali schizzi associativi
+in attesa. Undo/Redo ripristinano anche la posizione dello stadio registrato.
 
 Dal menu **Visualizza → Barra di posizione storyboard** si sceglie tra
 **Orizzontale nell'albero**, **Verticale a sinistra** e **Verticale a destra**.

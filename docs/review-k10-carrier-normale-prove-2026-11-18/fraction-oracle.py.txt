@@ -1,0 +1,25 @@
+from fractions import Fraction as F
+from pathlib import Path
+import json
+su=(F(1),F(0),F(3,4));sv=(F(0),F(1),F(0))
+def dot(a,b):return sum(x*y for x,y in zip(a,b))
+def cross(a,b):return tuple(a[(i+1)%3]*b[(i+2)%3]-a[(i+2)%3]*b[(i+1)%3] for i in range(3))
+c=cross(su,sv);length=F(5,4);assert dot(c,c)==length*length
+n=tuple(x/length for x in c);assert n==(F(-3,5),F(0),F(4,5))
+result={'natural_cross':[str(x) for x in c],'normal_exact':[str(x) for x in n],'normal_length':str(length),'cases':[]}
+for height in [.002,-.002]:
+ h=F.from_float(height)
+ for sign in [1,-1]:
+  d=tuple(sign*h*x for x in n)
+  tangent=cross(d,c);r=abs(dot(d,d)-h*h);orientation=h*dot(d,c)
+  residual=tuple(d[i]-h*n[i] for i in range(3));e2=dot(residual,residual)
+  assert tangent==(0,0,0) and r==0
+  assert (orientation>0)==(sign==1)
+  assert e2==(0 if sign==1 else 4*h*h)
+  result['cases'].append({'height':str(h),'side':sign,'tangent_squared':str(dot(tangent,tangent)),'R':str(r),'orientation':str(orientation),'actual_error_squared':str(e2)})
+# Original IEEE pole used by the regression and cardinal B4(c)^2=4/9.
+result['regression_peak_exact']=str(F.from_float((9./4.)*1e-4)*F(4,9))
+result['baseline_probe_literal_peak_exact']=str(F.from_float(2.25e-4)*F(4,9))
+result['note']='Exact coefficient oracle, independent of kernel basis/normal evaluator. Opposite-side examples have R=B=0 but error2*abs(h), requiring orientation guard.'
+Path('/tmp/k10-normal-carrier-2026-11-18/fraction-oracle.json').write_text(json.dumps(result,indent=2)+'\n')
+print('Fraction oracle PASS: tilted natural normal, both height signs, opposite-side witness')

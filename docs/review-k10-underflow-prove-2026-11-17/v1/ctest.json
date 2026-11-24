@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "ctest",
+    "--test-dir",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release",
+    "--output-on-failure",
+    "-R",
+    "^forgekernel_(quadrature_validation|arc_length_validation|sheet_arc_validation|bspline_derivative)_tests$"
+  ],
+  "exit": 0,
+  "seconds": 0.03183418800472282
+}

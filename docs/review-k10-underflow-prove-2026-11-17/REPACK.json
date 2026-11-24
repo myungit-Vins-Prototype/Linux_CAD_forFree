@@ -1,0 +1,10 @@
+{
+  "original_seal_sha256": "bb1a428c44decbcf1c152610f9005f561b69727581ab35aca53ff1988123b8bc",
+  "mapping_for_original_verification": {
+    "workspace/kernel/CMakeLists.txt": "workspace/kernel/CMakeLists.txt.txt",
+    "MANIFEST.json": "ORIGINAL-MANIFEST.json",
+    "README.txt": "ORIGINAL-README.txt"
+  },
+  "all_original_payloads_preserved": 288,
+  "reason": "CMakeLists copies must be inert text; no production source changes"
+}

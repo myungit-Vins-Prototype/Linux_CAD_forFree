@@ -1,0 +1,8 @@
+    /tmp/k10-normal-carrier-2026-11-18/tests/test_mapping_normal_validation.cpp:98: FK_CHECK(rejected)
+    /tmp/k10-normal-carrier-2026-11-18/tests/test_mapping_normal_validation.cpp:99: FK_CHECK(deviation == -123 && normalHistoryStamp(history) == oldHistory)
+    /tmp/k10-normal-carrier-2026-11-18/tests/test_mapping_normal_validation.cpp:98: FK_CHECK(rejected)
+    /tmp/k10-normal-carrier-2026-11-18/tests/test_mapping_normal_validation.cpp:99: FK_CHECK(deviation == -123 && normalHistoryStamp(history) == oldHistory)
+[ FAIL ] MappingNormalRaisedSolidBumpRejectsBeforePublicationWithOrWithoutHistory (4 controlli falliti)
+[  OK  ] MappingNormalFlatCarrierAcceptsPositiveAndNegativeHeights
+[  OK  ] MappingNormalOrdinaryQuadraticWrapRemainsSuccessful
+2/3 test superati

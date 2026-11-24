@@ -1,0 +1,47 @@
+from pathlib import Path
+import hashlib,json,shutil,platform,subprocess
+root=Path('/home/myungit/Linux_CAD_forFree');stage=Path('/tmp/k10-global-carrier-2026-11-17');dest=root/'docs/review-k10-carrier-globale-prove-2026-11-17'
+files=['baseline-hashes.json','baseline-output.txt','public-baseline.log','probe.cpp','ci-status.json','ci-job-134247020604-summary.txt','ci-job-134247021154-summary.txt','independent-fraction-oracle.json','stage-build.log','candidate-tests.log','integrated-runner-build.json','integrated-runner-build.log','ctest-mapping.json','ctest-mapping.log','integrated-global-tests.log','final-san-build.json','final-san-build.log','final-san-tests.json','final-san-tests.log','cleanup.json','previous-seals-verified.json','peer-audit.txt','initial-build-partial.json','architecture-generation.log','architecture-generation.json','architecture-check.log','architecture-focus.json','FINAL-VERIFICATION.json','carrier-only.patch.txt','verify-final.py','archive-proofs.py','fk_surface_mapping-before.cpp.txt']
+sourcefiles=['kernel/fk_surface_mapping_bounds.h','kernel/fk_surface_mapping_bounds.cpp','kernel/fk_surface_mapping.cpp','kernel/tests/test_mapping_global_validation.cpp','kernel/tests/test_surface_mapping_bounds.cpp','docs/review-k10-carrier-globale-2026-11-17.md']
+assert all((stage/f).is_file() for f in files)
+assert all((root/f).is_file() for f in sourcefiles)
+assert not dest.exists(),dest
+dest.mkdir()
+manifest=[]
+def copy(src,name):
+ p=dest/name;p.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(src,p)
+ manifest.append({'source':str(src),'archive':name,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
+for f in files:
+ name=f+'.txt' if Path(f).suffix in {'.cpp','.h','.py'} else f
+ copy(stage/f,name)
+for f in sourcefiles:copy(root/f,'source/'+f+'.txt')
+environment={'platform':platform.system(),'machine':platform.machine(),'compiler':subprocess.check_output(['c++','--version'],text=True).splitlines()[0],'cmake':subprocess.check_output(['cmake','--version'],text=True).splitlines()[0]}
+(dest/'environment.json').write_text(json.dumps(environment,indent=2)+'\n')
+(dest/'MANIFEST.json').write_text(json.dumps(manifest,indent=2)+'\n')
+(dest/'README.txt').write_text("""Prove locali K10: interno del carrier, 17 novembre 2026.
+
+Baseline locale precedente al provider, con le correzioni numeriche già presenti.
+Il wrap pubblico restituiva un solido piatto: residuo interno 1e-4 mm contro
+1,22e-10 mm dichiarati. Baseline pubblica 3/4 gruppi; finale 10/10 Release e
+ASan/UBSan, 7/7 CTest. Il provider per quota zero, UV separabili e superfici
+polinomiali rifiuta conservativamente quel solido. Non costruisce né certifica
+l'offset normale generale. Fonte, binario e grafo sono collegati dalla verifica
+finale; 42 pacchetti precedenti rimangono invariati.
+
+La CI44142011489 verde riguarda il software pubblicato78d7268, separato dalle
+nuove modifiche locali. Sorgenti e patch sono testo inerte; nessun ELF, archivio
+di libreria o CAD. Le prove dipendono dalla build descritta nei log: non si
+promette un replay ermetico senza toolchain e libreria. Sanitizer su cinque TU,
+resto kernel Release: non è una verifica LSan dell'intera app.
+
+Il primo log di build è parziale: app completata, poi ricaricato il Makefile per
+il nuovo target. Il comando separato dei runner è riuscito. I binari temporanei
+sono rimossi come registrato in cleanup.json; la build del repository rimane.
+""")
+lines=[]
+for p in sorted(dest.rglob('*')):
+ if p.is_file():lines.append(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.relative_to(dest).as_posix())
+(dest/'SHA256SUMS').write_text('\n'.join(lines)+'\n')
+for line in lines:
+ h,f=line.split(None,1);assert hashlib.sha256((dest/f).read_bytes()).hexdigest()==h
+print('sealed',len(lines),'payloads',sum(p.stat().st_size for p in dest.rglob('*') if p.is_file()),'bytes; SHA256SUMS',hashlib.sha256((dest/'SHA256SUMS').read_bytes()).hexdigest())

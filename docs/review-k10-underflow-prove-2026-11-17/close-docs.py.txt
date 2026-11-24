@@ -1,0 +1,26 @@
+from pathlib import Path
+import json,re,subprocess,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-underflow-review-2026-11-17');C=Path('/tmp/ci-review-repair-2026-11-17');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+head=subprocess.check_output(['git','rev-parse','HEAD','origin/main'],cwd=R,text=True).splitlines();assert head==['78d72684e4e6dfa45ace425bb1d8e776a57d41bc']*2
+runs=json.loads(subprocess.check_output(['gh','run','list','--commit',head[0],'--json','databaseId,status,conclusion,url,headSha','--limit','3'],cwd=R,text=True));assert len(runs)==1 and runs[0]['databaseId']==44142011489
+publish={'head':head[0],'remote_verified':True,'run':runs[0]};(T/'published-ci-repair.json').write_text(json.dumps(publish,indent=2));(C/'published.json').write_text(json.dumps(publish,indent=2))
+p=R/'docs/review-checkpoint-push-2026-11-17.md';s=p.read_text();s+='''
+## Esito e riparazione successiva
+
+Prima CI terminata: build completa PASS su Linux/macOS; test FAIL su entrambe per `ProjectedCutBandAlongExistingEdges` e timeout cumulativo del runner delle tre pose. Corretti il chiamante della classificazione e la registrazione dei casi, senza rimuovere guardie o aumentare il limite della singola prova. [Rapporto](review-ci-repair-2026-11-17.md).
+
+Secondo commit `78d72684e4e6dfa45ace425bb1d8e776a57d41bc` pubblicato su `main`, remoto verificato. [Nuova CI](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/44142011489) in corso: non ancora dichiarata verde. Le riparazioni CI sono versionate; le nuove correzioni di prodotti pesati e arresto adattivo K10 rimangono locali, verificate con app completa,13 gruppi+sanitizer e mappa. [Prove numeriche](review-k10-underflow-2026-11-17.md).
+''';p.write_text(s)
+p=R/'docs/review-ci-repair-2026-11-17.md';s=p.read_text();s+='''
+Aggiornamento locale dopo la pubblicazione: commit `78d7268`, push e SHA remoto verificati. [Nuova CI](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/44142011489) avviata, esito ancora pendente. La copia nelle prove conserva il rapporto precedente al commit, senza alterare il sigillo.
+''';p.write_text(s)
+p=R/'docs/review-k10-underflow-2026-11-17.md';s=p.read_text().replace('Mappa: generazione e controlli finali in corso; non ancora dichiarata verificata.','Mappa numerica PASS:804file/11741relazioni/408TU, zero errori,787,687s in serie; `--check` PASS. Hash, configurazione, HTML e archi tipizzati nei due versi verificati. Il legame template arcLength→integrate è visibile nel sorgente e nell’include, non risolto come arco di chiamata in questa configurazione AST; limite esplicitato.')
+s=s.replace('La mappa, gli hash finali, la pulizia degli artefatti ricreabili e lo stato della CI saranno completati prima della consegna.','La fase successiva ha riparato anche la regressione del profilo proiettato e il budget cumulativo dei test pose emersi nella CI del checkpoint. Dopo quelle due modifiche, app completa ricompilata e7/7 CTest pertinenti PASS, inclusi di nuovo tutti i13 gruppi numerici; suite proiezione5/5 e mappa aggiornata PASS. Queste verifiche sono locali, separate dall’esito remoto.')
+s=s.replace('Queste modifiche successive al checkpoint restano locali.','Solo le riparazioni CI sono state pubblicate in78d7268; header/test/catalogo numerici restano locali. Tre nuovi gruppi di profondità verificati sulla vera baseline18d0adc:0/3PASS attesi prima,13/13PASS complessivi dopo. Un primo driver aveva incluso per errore l’header candidato dalla directory del sorgente, ed è stato corretto prima di attribuire il risultato alla baseline. I controlli interni del verificatore sono stati adeguati allo schema AST reale e al limite sul template, senza modificare software o risultati numerici.')
+s+='\n[Prove inerti e checksum](review-k10-underflow-prove-2026-11-17/SHA256SUMS).\n';p.write_text(s)
+p=R/'docs/review-punti-aperti-2026-11-17.md';s=p.read_text().replace('Checkpoint18d0adc pubblicato e CI Linux/macOS avviata; il nuovo recupero underflow è successivo e resta locale.','Checkpoint18d0adc: build Linux/macOS PASS, test FAIL su profilo/pose. Riparazioni pubblicate in78d7268, nuova CI in corso; il recupero underflow/arresto resta locale.');p.write_text(s)
+p=R/'docs/code-review-2026-11-15.md';s=p.read_text().replace('Mappa finale in corso. Conteggio34 invariato','Mappa PASS. CI del checkpoint: build Linux/macOS PASS, test FAIL su profilo/pose; riparazioni pubblicate in78d7268 e nuova CI in corso. Conteggio34 invariato');p.write_text(s)
+p=R/'CLAUDE.md';s=p.read_text();a=s.index('17/11:18d0adc');b=s.index('\n\n**17/11 — UI11',a);s=s[:a]+'''17/11:18d0adc e riparazione CI78d7268 pubblicati, remoto verificato; CI44142011489 in corso.
+CI18d:build Linux/macOS PASS,test FAIL profilo/pose. Riparazione:app/7CTest/5proiezioni/mappa PASS.
+K10 numerico locale:13/13+SAN,app/4CTest/10storici/golden/mappa PASS; prossimo carrier globale.
+[Prove](docs/review-k10-underflow-2026-11-17.md), [CI](docs/review-ci-repair-2026-11-17.md).'''+s[b:];assert len(s.encode())<=16384;s=s.replace('CI44142011489 in corso','CI44142011489 in corso');p.write_text(s);print('memory',len(s.encode()),'lines',len(s.splitlines()))

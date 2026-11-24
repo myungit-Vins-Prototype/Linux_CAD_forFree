@@ -1,5 +1,7 @@
 # Riparazione CI dopo il checkpoint — 17 novembre 2026
 
+Stato remoto finale: **CI44142011489 PASS**, Linux121/121 e macOS124/124 CTest, entrambe le compilazioni complete riuscite sul software78d7268. Le prove locali successive restano separate da quel run.
+
 Il commit `18d0adcc599335407942f7f7acc5d5266071a402` è stato pubblicato su richiesta dell’utente. [La prima CI](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/44132066010) ha compilato applicazione e test su **Linux e macOS**, ma la fase test è fallita su entrambi. I fallimenti non sono errori del compilatore.
 
 ## Esito della prima CI
@@ -33,3 +35,5 @@ Riparazione pronta per commit/push di `fk_project.cpp`, registrazioni CMake, que
 Aggiornamento locale dopo la pubblicazione: commit `78d7268`, push e SHA remoto verificati. [Nuova CI](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/44142011489) avviata, esito ancora pendente. La copia nelle prove conserva il rapporto precedente al commit, senza alterare il sigillo.
 
 Controllo finale del catalogo: copie CMake archiviate rinominate come testo inerte, con contenuti e sigilli originali conservati e verificati tramite `REPACK.json`. Non cambiano software, log o risultati delle prove.
+
+Verifica remota successiva: CI44142011489 conclusa con **successo su Linux CPU e macOS CPU/Metal**, compilazione e tutti i CTest configurati PASS. Il run verifica il software78d7268; non include il lavoro numerico locale successivo.

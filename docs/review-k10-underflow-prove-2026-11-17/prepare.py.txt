@@ -1,0 +1,117 @@
+from pathlib import Path
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-underflow-review-2026-11-17');K=T/'candidate';K.mkdir(exist_ok=True)
+s=(R/'kernel/fk_quadrature.h').read_text().replace('#include <cstddef>','#include <cstddef>\n#include <limits>')
+needle='// Regola 7-15 su [a, b]:'
+i=s.index(needle)
+s=s[:i]+'''// Un prodotto pesato subnormale perde precisione prima che l'ampiezza
+// possa riportarlo a una grandezza normale. Controllare tutti i termini,
+// anche quelli piccoli accanto a campioni ordinari, senza cambiare le somme.
+inline bool quadratureWeightedUnderflow(const std::array<double, 15> &samples) {
+    const auto small = [](double value, double weight) {
+        return value != 0.0 && std::fabs(value) < std::numeric_limits<double>::min() / weight;
+    };
+    if (small(samples[0], kKronrodWeights[7]) || small(samples[0], kGaussWeights[3])) return true;
+    for (int j = 0; j < 7; ++j) {
+        const double left = samples[1 + 2 * j], right = samples[2 + 2 * j], sum = left + right;
+        if (small(sum, kKronrodWeights[j])
+            || small(std::fabs(left) + std::fabs(right), kKronrodWeights[j])
+            || (j % 2 == 1 && small(sum, kGaussWeights[j / 2]))) return true;
+    }
+    return false;
+}
+
+'''+s[i:]
+s=s.replace('const bool recover = !std::isfinite(kronrod) || !std::isfinite(gauss) || !std::isfinite(absolute);','const bool recover = !std::isfinite(kronrod) || !std::isfinite(gauss) || !std::isfinite(absolute)\n        || quadratureWeightedUnderflow(samples);')
+s=s.replace('''        const bool recover = !std::isfinite(kronrod[k]) || !std::isfinite(gauss[k]) || !std::isfinite(absolute[k]);
+        const bool recoverMagnitude = !std::isfinite(integral.magnitude[k]);''','''        std::array<double, 15> values, magnitudes;
+        for (std::size_t i = 0; i < samples.size(); ++i) {
+            values[i] = samples[i].value[k];
+            magnitudes[i] = samples[i].magnitude[k];
+        }
+        const bool recover = !std::isfinite(kronrod[k]) || !std::isfinite(gauss[k]) || !std::isfinite(absolute[k])
+            || quadratureWeightedUnderflow(values);
+        const bool recoverMagnitude = !std::isfinite(integral.magnitude[k]) || quadratureWeightedUnderflow(magnitudes);''')
+s=s.replace('''            std::array<double, 15> values;
+            for (std::size_t i = 0; i < samples.size(); ++i) values[i] = samples[i].value[k];
+''','')
+s=s.replace('''            std::array<double, 15> values;
+            for (std::size_t i = 0; i < samples.size(); ++i) values[i] = samples[i].magnitude[k];
+            double scale;
+            const auto sums = quadratureScaledSums(values, scale);''','''            double scale;
+            const auto sums = quadratureScaledSums(magnitudes, scale);''')
+(K/'fk_quadrature.h').write_text(s)
+(K/'fk_curve_algo.cpp').write_bytes((R/'kernel/fk_curve_algo.cpp').read_bytes())
+s=(R/'kernel/tests/test_quadrature_validation.cpp').read_text()
+s+='''
+FK_TEST(QuadratureScalarWeightedUnderflow) {
+    const double smallest = std::numeric_limits<double>::denorm_min();
+    const double width = std::ldexp(1., 1023), expected = std::ldexp(1., -51);
+    for (double sign : {-1., 1.}) for (bool reverse : {false, true}) {
+        int calls = 0;
+        double error, absolute;
+        const double actual = detail::gaussKronrod([&](double) { ++calls; return sign * smallest; },
+            reverse ? width : 0., reverse ? 0. : width, error, absolute);
+        FK_CHECK(calls == 15);
+        FK_CHECK(actual != 0.0);
+        finiteNear(actual, (reverse ? -sign : sign) * expected, expected * 1e-14);
+        finiteNear(absolute, expected, expected * 1e-14);
+        FK_CHECK(std::isfinite(error) && error >= 0 && error <= expected * 1e-14);
+        const double adaptive = detail::integrate([&](double) { return sign * smallest; },
+            reverse ? width : 0., reverse ? 0. : width, 1e-30);
+        finiteNear(adaptive, (reverse ? -sign : sign) * expected, expected * 1e-14);
+    }
+    // Nonzero subnormal weighted products, not just complete loss to zero.
+    const double tinyNormal = std::numeric_limits<double>::min();
+    finiteNear(detail::integrate([&](double) { return tinyNormal; }, 0., width, 1e-12), 2., 1e-14);
+    finiteNear(detail::integrate([](double) { return 0.; }, 0., width, 0.), 0., 0.);
+}
+FK_TEST(QuadratureVectorWeightedUnderflow) {
+    const double smallest = std::numeric_limits<double>::denorm_min();
+    const double width = std::ldexp(1., 1023), expected = std::ldexp(1., -51);
+    const auto callback = [&](double) {
+        detail::Evaluation<4> result;
+        result.value = {smallest, -smallest, 1. / width, 0.};
+        result.magnitude = {1. / width, smallest, smallest, 0.};
+        return result;
+    };
+    for (bool reverse : {false, true}) {
+        int calls = 0;
+        detail::Evaluation<4> actual;
+        detail::Values<4> error, absolute;
+        detail::gaussKronrod<4>([&](double t) { ++calls; return callback(t); },
+            reverse ? width : 0., reverse ? 0. : width, actual, error, absolute);
+        FK_CHECK(calls == 15);
+        const double sign = reverse ? -1 : 1;
+        finiteNear(actual.value[0], sign * expected, expected * 1e-14);
+        finiteNear(actual.value[1], -sign * expected, expected * 1e-14);
+        finiteNear(actual.value[2], sign, 1e-14);
+        finiteNear(actual.magnitude[0], 1, 1e-14);
+        finiteNear(actual.magnitude[1], expected, expected * 1e-14);
+        finiteNear(actual.magnitude[2], expected, expected * 1e-14);
+        finiteNear(absolute[0], expected, expected * 1e-14);
+        finiteNear(absolute[1], expected, expected * 1e-14);
+        finiteNear(actual.value[3], 0, 0);
+        finiteNear(actual.magnitude[3], 0, 0);
+        for (std::size_t i = 0; i < 4; ++i) FK_CHECK(std::isfinite(error[i]) && error[i] >= 0);
+        const auto adaptive = detail::integrateVector<4>(callback, reverse ? width : 0.,
+            reverse ? 0. : width, 1e-12, roundoff, 1);
+        for (std::size_t i = 0; i < 4; ++i) {
+            FK_CHECK(adaptive.value[i] == actual.value[i]);
+            FK_CHECK(adaptive.magnitude[i] == actual.magnitude[i]);
+        }
+    }
+}
+FK_TEST(QuadratureNativeArcLengthAtHugeParameterSpan) {
+    const double width = std::ldexp(1., 1023), expected = std::ldexp(1., -51);
+    const BSplineCurve<3> curve(1, {0, 0, width, width}, {{0, 0, 0}, {expected, 0, 0}});
+    FK_CHECK(curve.derivative(width * .5)[0] == std::numeric_limits<double>::denorm_min());
+    finiteNear(distance(curve.point(0), curve.point(width)), expected, expected * 1e-14);
+    finiteNear(arcLength(curve, curve.domain(), 1e-30), expected, expected * 1e-14);
+    detail::CurveLengthCache cache;
+    finiteNear(cache.get(curve, curve.domain(), 1e-30), expected, expected * 1e-14);
+    finiteNear(cache.get(curve, curve.domain(), 1e-30), expected, expected * 1e-14);
+    FK_CHECK(cache.statistics().integrations == 1 && cache.statistics().hits >= 1);
+}
+'''
+(K/'test_quadrature_validation.cpp').write_text(s)
+print('candidate prepared',len(s))

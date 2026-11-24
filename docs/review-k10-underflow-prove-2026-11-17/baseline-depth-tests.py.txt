@@ -1,0 +1,7 @@
+exec(open('/tmp/k10-underflow-review-2026-11-17/run.py').read().split("if mode=='candidate':")[0])
+B=T/'before/kernel';flags=['c++','-std=c++17','-O3','-fno-fast-math','-ffp-contract=off','-I',B,'-I',R/'kernel','-I',R/'kernel/tests']
+(T/'baseline-depth-test.cpp').write_bytes((T/'candidate/test_quadrature_validation.cpp').read_bytes())
+run('baseline-depth-tests-compile',flags+[R/'kernel/tests/fk_test_main.cpp',T/'baseline-depth-test.cpp',T/'depth-baseline-arc.o',R/'forgecad-release/kernel/libforgekernel.a','-o',T/'baseline-depth-tests'])
+run('baseline-depth-tests',[T/'baseline-depth-tests','ReportsDepthExhaustion'],expected=1,timeout=3)
+assert '0/3 test superati' in (T/'baseline-depth-tests.log').read_text()
+print('baseline expected failure confirmed for the three depth groups',flush=True)

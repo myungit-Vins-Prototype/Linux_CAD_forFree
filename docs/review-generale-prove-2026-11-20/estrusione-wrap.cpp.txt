@@ -1,0 +1,50 @@
+#include "fk_bspline.h"
+#include "fk_primitives.h"
+#include "fk_sew.h"
+#include "fk_surface_mapping.h"
+#include <iomanip>
+#include <iostream>
+using namespace ForgeCad::Kernel;
+int main() {
+    const Vec3 origin(.15, .25, .001);
+    const Frame3 boxFrame(origin, Vec3(0, 0, 1), Vec3(.6, -.8, 0));
+    const auto box = makeBox(boxFrame, .01, .625, .0001);
+    FaceId side;
+    for (auto id : box.faces()) {
+        const auto &f = static_cast<const Plane &>(*box.face(id).surface).frame();
+        if (std::abs(dot(f.zDir(), boxFrame.xDir())) > .99 &&
+            std::abs(dot(f.zDir(), origin - f.origin())) < 1e-10)
+            side = id;
+    }
+    const auto sheet = facesAsSheet(box, {side});
+    const auto &frame = static_cast<const Plane &>(*sheet.face(sheet.faces().front()).surface).frame();
+    for (bool bump : {false, true}) {
+        constexpr double center = 3. / 16., d = 1. / 512.;
+        const std::vector<double> k{
+            0, 0, 0, 0, center - 2 * d, center - d, center, center + d, center + 2 * d, 1, 1, 1, 1};
+        std::vector<Vec3> p;
+        for (int i = 0; i < 9; ++i)
+            p.emplace_back((k[i + 1] + k[i + 2] + k[i + 3]) / 3., 0, bump && i == 4 ? 1.5e-4 : 0.);
+        const ExtrusionSurface target(std::make_shared<BSplineCurve<3>>(3, k, p), Vec3(0, 1, 0));
+        SurfaceWrapOptions o;
+        o.tolerance = 1e-6;
+        Vec3 jet[4];
+        target.evaluate(0, 0, 1, jet);
+        const double su = norm(jet[2]), sv = norm(jet[1]);
+        const auto probe = origin + ((center * su - origin.x()) / boxFrame.yDir().x()) * boxFrame.yDir() +
+                           .00005 * boxFrame.zDir();
+        const auto uv = frame.toLocal(probe);
+        const auto expected = target.point(probe.x() / su, probe.y() / sv) +
+                              probe.z() * target.normal(probe.x() / su, probe.y() / sv);
+        try {
+            double deviation = -1;
+            const auto wrapped = wrapBodyOnSurface(sheet, target, o, nullptr, &deviation);
+            std::cout << std::setprecision(10) << "bump=" << bump << " reported=" << deviation << " actual="
+                      << distance(expected,
+                                  wrapped.face(wrapped.faces().front()).surface->point(uv.x(), uv.y()))
+                      << "\n";
+        } catch (const std::exception &e) {
+            std::cout << "bump=" << bump << " " << e.what() << "\n";
+        }
+    }
+}

@@ -1,0 +1,23 @@
+{
+  "argv": [
+    "c++",
+    "-std=c++17",
+    "-O3",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-I",
+    "/tmp/k10-underflow-review-2026-11-17/before/kernel",
+    "-I",
+    "/home/myungit/Linux_CAD_forFree/kernel",
+    "-I",
+    "/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+    "/tmp/k10-underflow-review-2026-11-17/baseline-depth-test.cpp",
+    "/tmp/k10-underflow-review-2026-11-17/depth-baseline-arc.o",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+    "-o",
+    "/tmp/k10-underflow-review-2026-11-17/baseline-depth-tests"
+  ],
+  "exit": 0,
+  "seconds": 4.171713030998944
+}

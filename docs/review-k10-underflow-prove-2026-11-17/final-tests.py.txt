@@ -1,0 +1,33 @@
+from pathlib import Path
+T=Path('/tmp/k10-underflow-review-2026-11-17');p=T/'candidate/test_quadrature_validation.cpp';s=p.read_text();needle='}\nFK_TEST(QuadratureNativeArcLengthAtHugeParameterSpan) {';assert s.count(needle)==1;s=s.replace(needle,'''    int activeCalls = 0, combinedCalls = 0;
+    const auto active = [&](double t) {
+        ++activeCalls;
+        detail::Evaluation<1> result;
+        result.value[0] = result.magnitude[0] = std::pow(t / width, 14);
+        return result;
+    };
+    const auto reference = detail::integrateVector<1>(active, 0., width, 1e-12, roundoff);
+    const auto combined = [&](double t) {
+        ++combinedCalls;
+        detail::Evaluation<2> result;
+        result.value = {std::pow(t / width, 14), smallest};
+        result.magnitude = {result.value[0], smallest};
+        return result;
+    };
+    const auto result = detail::integrateVector<2>(combined, 0., width, 1e-12, roundoff, 1);
+    FK_CHECK(activeCalls > 15 && combinedCalls == activeCalls);
+    FK_CHECK(result.value[0] == reference.value[0]);
+    finiteNear(result.value[1], expected, expected * 1e-14);
+    finiteNear(result.magnitude[1], expected, expected * 1e-14);
+}\nFK_TEST(QuadratureNativeArcLengthAtHugeParameterSpan) {''');a=s.index('    for (double factor : {1., 4.}) {');b=s.index('\n    }',a);s=s[:a]+s[a:b].split('\n',1)[0]+'\n'+'\n'.join('    '+l for l in s[a:b].split('\n')[1:])+s[b:];p.write_text(s)
+p=T/'run.py';s=p.read_text();s+='''
+elif mode=='sanitizer':
+ flags=['c++','-std=c++17','-O1','-g','-fno-fast-math','-ffp-contract=off','-fsanitize=address,undefined','-fno-omit-frame-pointer','-I',str(K),'-I',str(R/'kernel'),'-I',str(R/'kernel/tests')]
+ run('san-arc-compile',flags+['-c',K/'fk_curve_algo.cpp','-o',T/'san-arc.o'])
+ run('san-tests-compile',flags+[R/'kernel/tests/fk_test_main.cpp',K/'test_quadrature_validation.cpp',T/'san-arc.o',R/'forgecad-release/kernel/libforgekernel.a','-o',T/'san-tests'])
+ env=dict(os.environ,ASAN_OPTIONS='detect_leaks=1:halt_on_error=1',UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1')
+ run('san-tests',[T/'san-tests'],timeout=30,env=env)
+elif mode=='baseline-proof':
+ run('baseline-probe-compile',['c++','-std=c++17','-O3','-fno-fast-math','-ffp-contract=off','-I',str(R/'kernel'),T/'baseline.cpp',R/'forgecad-release/kernel/libforgekernel.a','-o',T/'baseline'])
+ run('baseline-probe',[T/'baseline'],timeout=2)
+''';p.write_text(s)

@@ -1,0 +1,19 @@
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+    Start 229: forgekernel_surface_mapping_tests
+1/7 Test #229: forgekernel_surface_mapping_tests ...............   Passed    0.68 sec
+    Start 244: forgekernel_mapping_carrier_validation_tests
+2/7 Test #244: forgekernel_mapping_carrier_validation_tests ....   Passed    1.21 sec
+    Start 245: forgekernel_mapping_uv_validation_tests
+3/7 Test #245: forgekernel_mapping_uv_validation_tests .........   Passed    3.41 sec
+    Start 246: forgekernel_mapping_diagonal_validation_tests
+4/7 Test #246: forgekernel_mapping_diagonal_validation_tests ...   Passed    0.68 sec
+    Start 254: forgekernel_surface_curve_bounds_tests
+5/7 Test #254: forgekernel_surface_curve_bounds_tests ..........   Passed    0.21 sec
+    Start 255: forgekernel_mapping_nonplane_validation_tests
+6/7 Test #255: forgekernel_mapping_nonplane_validation_tests ...   Passed    0.23 sec
+    Start 262: forgekernel_mapping_global_validation_tests
+7/7 Test #262: forgekernel_mapping_global_validation_tests .....   Passed    0.17 sec
+
+100% tests passed out of 7
+
+Total Test time (real) =   6.66 sec

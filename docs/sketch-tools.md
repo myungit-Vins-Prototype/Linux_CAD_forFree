@@ -75,6 +75,23 @@ rifiutano i nuovi file, evitando di perdere i punti. L'asola è salvata come
 segmenti e archi ordinari, senza un nuovo tipo di profilo nel kernel.
 
 
+## Dare la prima misura a uno schizzo
+
+Disegna il profilo a proporzione libera, attiva **Quota**, scegli il lato e
+inserisci la misura reale. Un rettangolo abbozzato di 4 × 2 mm diventa
+40 × 20 mm se assegni 40 mm al lato lungo. Puoi iniziare anche da una distanza
+orizzontale o verticale, da un raggio o da un diametro. Il pannello **Vincoli**
+chiede il valore quando aggiungi la prima quota lineare.
+
+La scala si applica anche alla geometria di costruzione. Gli angoli si
+conservano e un singolo punto fisso può fare da centro. Con la base agganciata
+alla traccia di un piano passante per l’origine, gli estremi scorrono sulla
+traccia e tutto il profilo cambia scala. I riferimenti proiettati conservano
+la posizione originale. Se gli agganci impediscono la scala uniforme o ci
+sono già misure imposte, interviene il risolutore ordinario. Le quote successive e le modifiche a quote già
+inserite seguono i vincoli del profilo. **Annulla** ripristina in un solo
+passaggio sia la geometria sia le quote precedenti.
+
 ## Quote della geometria di costruzione
 
 Per quotare la lunghezza di una linea di costruzione, attivare **Quota**,

@@ -1,0 +1,11 @@
+{
+  "kernel/fk_surface_mapping_bounds.cpp": "c1540c50a1028b0de5e637dee9b2991a26e8827aad1deee2cf7004a79048d154",
+  "kernel/fk_surface_mapping_bounds.h": "c32973201b3e85f4386310393a7c45a7ba7150830352ca4956b31736421e714b",
+  "kernel/fk_surface_mapping.cpp": "03a220dd02fdb826ed11760ab722dd29f6f9fc144ec7c560429dc864bcf011a3",
+  "kernel/tests/test_surface_mapping_bounds.cpp": "d36ec354596e582ef4cb890ce96af63c36422fd07f85d8a9abf3141838d0b64c",
+  "kernel/CMakeLists.txt": "d2a6b06caf06462df696003dab0e525db98bf4b73e28ff62454365d7c509f996",
+  "tools/generate_architecture.py": "2ab96d31aff0418fab9a2e5c750909e8f7300fb6652f6ab15b94b5c158510d5f",
+  "CLAUDE.md": "697cde88be542745cebff73067662e26787ef50820f9d60434eed0ef3ee00a48",
+  "forgecad-release/kernel/libforgekernel.a": "db169a6fef4e87db723852628575705981de7b635a942fd30f8c4374ef74102c",
+  "forgecad-release/forgecad": "6774b6c487d8676a0325d6dd26ee9f43eff7bb56e9e8b6c9f28d227d1cdab57c"
+}

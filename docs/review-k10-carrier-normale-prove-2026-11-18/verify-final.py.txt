@@ -1,0 +1,46 @@
+from pathlib import Path
+import hashlib,json,re,subprocess,os
+root=Path('/home/myungit/Linux_CAD_forFree');stage=Path('/tmp/k10-normal-carrier-2026-11-18')
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def cmd(args):return subprocess.check_output(args,cwd=root,text=True).strip()
+integrated=json.loads((stage/'integrated-hashes.json').read_text())
+for f,h in integrated.items():assert sha(root/f)==h,f
+assert cmd(['git','rev-parse','HEAD'])=='6294aa37e63c51434fd2754ca7b1398d8a281ffe'
+assert cmd(['git','branch','--show-current'])=='main'
+assert not cmd(['git','diff','--cached','--name-only'])
+assert os.readlink(root/'compile_commands.json')==cmd(['git','show','HEAD:compile_commands.json'])
+old=json.loads((stage/'previous-seals-verified.json').read_text());count=0
+for item in old['seals']:
+ p=root/item['seal'];assert sha(p)==item['sha256']
+ for line in p.read_text().splitlines():
+  if not line or line.startswith('#'):continue
+  h,f=line.split(None,1);assert sha(p.parent/f.lstrip('*'))==h,str(p.parent/f)
+  count+=1
+assert count==old['payloads']==6099
+p=json.loads((root/'docs/architecture/graph.json').read_text());edges=p['edges']
+assert not p['analysis']['errors'],p['analysis']['errors']
+assert p['analysis']['configurationDigest']==sha(root/'forgecad-release/compile_commands.json')
+for f,h in p['hashes'].items():assert sha(root/f)==h,f
+m=re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',(root/'docs/architecture/index.html').read_text(),re.S)
+assert m and json.loads(m.group(1))==p
+needed=['kernel/fk_surface_mapping.cpp','kernel/fk_surface_mapping_bounds.cpp','kernel/fk_surface_mapping_bounds.h','kernel/tests/test_mapping_global_validation.cpp','kernel/tests/test_surface_mapping_bounds.cpp','kernel/tests/test_mapping_normal_validation.cpp','kernel/tests/test_surface_mapping_normal_bounds.cpp']
+nodes={n['id']:n for n in p['nodes']}
+assert all(f in nodes and nodes[f]['description'] for f in needed)
+def call(a,b,symbol):return [e for e in edges if e['source']==a and e['target']==b and e['kind']=='call' and any(symbol in s['symbol'] for s in e.get('sites',[]))]
+assert call('cad_surface_mapping.cpp','kernel/fk_surface_mapping.cpp','wrapBodyOnSurface')
+assert call('kernel/fk_surface_mapping.cpp','kernel/fk_surface_mapping_bounds.cpp','constantHeightMappingResidualBound')
+for f in ['kernel/tests/test_surface_mapping_bounds.cpp','kernel/tests/test_surface_mapping_normal_bounds.cpp']:assert call(f,'kernel/fk_surface_mapping_bounds.cpp','constantHeightMappingResidualBound')
+for f in ['kernel/tests/test_mapping_global_validation.cpp','kernel/tests/test_mapping_normal_validation.cpp']:assert call(f,'kernel/fk_surface_mapping.cpp','wrapBodyOnSurface')
+focus=[e for e in edges if (e['source'] in needed or e['target'] in needed) and (e['kind']=='include' or any('constantHeightMappingResidualBound' in s['symbol'] or 'wrapBodyOnSurface' in s['symbol'] for s in e.get('sites',[])))]
+(stage/'architecture-focus.json').write_text(json.dumps({'nodes':[nodes[f] for f in needed],'edges':focus,'incoming':{f:[e for e in focus if e['target']==f] for f in needed},'outgoing':{f:[e for e in focus if e['source']==f] for f in needed}},indent=2)+'\n')
+commands=json.loads((root/'forgecad-release/compile_commands.json').read_text())
+for name in ['fk_surface_mapping_bounds.cpp','test_surface_mapping_bounds.cpp','test_mapping_normal_validation.cpp','test_surface_mapping_normal_bounds.cpp']:
+ c=[u['command'] for u in commands if u['file'].endswith('/'+name)]
+ assert len(c)==1 and '-fno-fast-math' in c[0] and '-ffp-contract=off' in c[0],name
+for name in ['integrated-build','candidate-tests','ctest-mapping','san-build','san-tests','architecture-generation']:assert json.loads((stage/(name+'.json')).read_text())['exit_code']==0,name
+assert (root/'CLAUDE.md').stat().st_size<=16384
+assert len(p['nodes'])==810 and len(p['analysis']['units'])==413
+active=['CLAUDE.md','docs/review-k10-carrier-normale-2026-11-18.md','docs/review-punti-aperti-2026-11-17.md','docs/roadmap.md','docs/code-review-2026-11-15.md','docs/review-ci-repair-2026-11-17.md','docs/review-checkpoint-push-2026-11-17.md']
+result={'head':cmd(['git','rev-parse','HEAD']),'branch':'main','index_empty':True,'previous_packages':len(old['seals']),'previous_payloads':count,'source_and_binary_hashes':integrated,'document_hashes':{f:sha(root/f) for f in active},'architecture':{'nodes':len(p['nodes']),'edges':len(edges),'units':len(p['analysis']['units']),'errors':p['analysis']['errors'],'graph_hash':sha(root/'docs/architecture/graph.json'),'html_hash':sha(root/'docs/architecture/index.html'),'typed_bidirectional_focus':'architecture-focus.json'},'local_tests':'7/7 CTest, 18/18 Release and ASan/UBSan; seven TUs instrumented, other kernel Release','ci_scope':'Previous published code only; local changes are not pushed','memory_bytes':(root/'CLAUDE.md').stat().st_size}
+(stage/'FINAL-VERIFICATION.json').write_text(json.dumps(result,indent=2)+'\n')
+print('FINAL PASS',len(p['nodes']),'nodes',len(edges),'edges',len(p['analysis']['units']),'TU;',len(old['seals']),'prior packages;',count,'payloads unchanged')

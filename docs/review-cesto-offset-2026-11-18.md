@@ -1,0 +1,14 @@
+# Cesto.prt — offset associativo nello Schizzo 2
+
+Sulla copia di `Cesto.prt` lo Schizzo 2 contiene un offset associativo da 6 mm con otto sorgenti e otto copie. Quattro copie sono curve cubiche con 385 poli ciascuna. Dopo aver confermato di nuovo la quota e chiuso lo schizzo, ciascuna passava da 1.025 campioni di visualizzazione a zero. I poli, i nodi e il legame con i bordi rimanevano nel modello. Il solver restituiva successo.
+
+Il ricalcolo dei riferimenti pubblicava le curve ottenute dal solver senza ricostruirne i campioni. Ora il viewport prepara i campioni di ogni curva dello schizzo rigenerato con la qualità corrente prima di pubblicarlo. La verifica su Cesto conserva le quattro curve, gli otto riferimenti e la quota dopo conferma, uscita, rientro e salvataggio con riapertura. La copia di lavoro ha un nuovo UUID. La versione congelata per la prova ha SHA-256 `f9c9c7fb41d8244304447d8d460f55f8f11c9e9c14a70d51f4b5dc4be74db1cf`.
+
+La vista rigenerava inoltre l'offset per controllare il residuo a ogni disegno della quota e ripeteva il calcolo dei suoi punti di attacco. Ora conserva questi dati in coordinate di schizzo per lo stato corrente di curve, segmenti, vincoli e precisione. Le coordinate schermo seguono sempre la camera. Lo stato si aggiorna dopo una modifica e viene rilasciato all'uscita o alla sostituzione del documento.
+
+Nel test Linux Qt offscreen, dieci ridisegni consecutivi delle sole quote a schizzo fermo passano da 1.101–1.111 ms a 0,244–0,268 ms complessivi dopo il primo calcolo. Il primo disegno dopo una modifica richiede ancora circa 110 ms. Una conferma effettiva della quota richiede ancora circa 434 ms e l'uscita dopo quella modifica circa 222 ms. Il tempo del ridisegno delle quote è una misura isolata, senza OpenGL. La verifica del caso reale usa lo stesso codice della build completa di ForgeCAD. Passano anche i tre test viewport mirati per il flusso dello schizzo, i riferimenti associativi vivi e la cache dei riferimenti del corpo. La nuova regressione conserva un arco esatto da un bordo 3D e verifica l'aggiornamento dei punti della quota dopo la variazione.
+
+`Cesto.prt` è stato letto per produrre le copie di lavoro. Il file sorgente risulta aggiornato esternamente dopo la prima prova. La copia corretta verificata appartiene alla versione congelata sopra.
+
+
+Il controllo è riuscito anche su una versione successiva congelata del documento (SHA-256 `f249b7407c423db1e4e237b715686465694892d8e6fd3b7c99ba3a8cbfdcdafa`). La prova in memoria riconferma la quota salvata, esce e rientra nello Schizzo 2. Rimangono quattro curve da 1.025 campioni, otto riferimenti e una quota da 6 mm. Il documento sorgente è stato soltanto letto. Passa inoltre il runner indipendente dell'offset ricompilato con il kernel corrente. Mappa verificata con 810 file, 11.843 relazioni e 413 unità senza diagnostica.

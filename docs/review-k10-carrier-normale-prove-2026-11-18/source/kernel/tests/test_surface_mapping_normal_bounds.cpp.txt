@@ -1,0 +1,163 @@
+#include "fk_bspline_surface.h"
+#include "fk_cancel.h"
+#include "fk_surface_mapping.h"
+#include "fk_surface_mapping_bounds.h"
+#include "fk_test.h"
+
+#include <atomic>
+#include <cmath>
+#include <memory>
+#include <vector>
+
+using namespace ForgeCad::Kernel;
+namespace {
+using Status = detail::SurfaceMappingBoundStatus;
+constexpr double budget = 1e-6;
+
+std::vector<double> normalKnots(int degree) {
+    std::vector<double> knots(degree + 1, 0.);
+    knots.insert(knots.end(), degree + 1, 1.);
+    return knots;
+}
+
+BSplineSurface tiltedTarget(int degree) {
+    std::vector<Vec3> poles;
+    for (int i = 0; i <= degree; ++i) for (int j = 0; j <= degree; ++j) {
+        const double u = double(i) / degree, v = double(j) / degree;
+        poles.emplace_back(u, v, .75 * u);
+    }
+    return BSplineSurface(degree, degree, normalKnots(degree), normalKnots(degree),
+        degree + 1, degree + 1, poles);
+}
+
+BSplineSurface tiltedImage(double height, bool swapped) {
+    std::vector<Vec3> poles;
+    for (int i = 0; i < 4; ++i) for (int j = 0; j < 4; ++j) {
+        const double u = (swapped ? j : i) / (3. * 1.25);
+        const double v = (swapped ? i : j) / 3.;
+        // T(U,V)=(U,V,.75U), Tu x Tv=(-.75,0,1), norm=1.25.
+        // The target's NATURAL normal is (-.6,0,.8), independently of the
+        // sign of the source-to-target UV permutation determinant.
+        poles.emplace_back(u - .6 * height, v, .75 * u + .8 * height);
+    }
+    return BSplineSurface(3, 3, normalKnots(3), normalKnots(3), 4, 4, poles);
+}
+
+Plane parallelSource(double height, bool swapped) {
+    if (swapped)
+        return Plane(Frame3::fromAxes(Vec3(0, 0, height), Vec3(0, 1, 0),
+            Vec3(1, 0, 0), Vec3(0, 0, -1)));
+    return Plane(Frame3(Vec3(0, 0, height), Vec3(0, 0, 1), Vec3(1, 0, 0)));
+}
+
+void normalCertified(const detail::SurfaceMappingBoundResult &proof) {
+    FK_CHECK(proof.status == Status::Certified);
+    FK_CHECK(std::isfinite(proof.upperBound) && proof.upperBound >= 0 && proof.upperBound <= budget);
+}
+
+detail::SurfaceMappingBoundResult normalBound(const Surface &source, const Surface &target,
+        const Surface &image, SurfaceWrapOptions options = {}, double scaleU = 1.25) {
+    return detail::constantHeightMappingResidualBound(source, target, options,
+        scaleU, 1, image, {0, 1}, {0, 1}, budget);
+}
+}
+
+FK_TEST(MappingNormalBoundsTiltedSignedHeightAndSwappedUVMatchExactCubic) {
+    for (int degree : {2, 3}) for (double height : {.002, -.002}) {
+        const auto target = tiltedTarget(degree);
+        const auto image = tiltedImage(height, false);
+        const auto source = parallelSource(height, false);
+        normalCertified(normalBound(source, target, image));
+        // Independent affine oracle, not target.normal(): at source(.5,.5)
+        // U=.4, V=.5 and normal displacement is height*(-.6,0,.8).
+        FK_CHECK(distance(image.point(.5, .5),
+            Vec3(.4 - .6 * height, .5, .3 + .8 * height)) <= 1e-15);
+
+        // Equivalent constant height supplied by options, with det(UV)<0.
+        // Crossing composed derivatives would reverse N and fail this case.
+        auto options = SurfaceWrapOptions{};
+        options.normalOffset = height;
+        const auto swappedSource = parallelSource(0, true);
+        const auto swappedImage = tiltedImage(height, true);
+        normalCertified(normalBound(swappedSource, target, swappedImage, options));
+        FK_CHECK(distance(swappedImage.point(.25, .75),
+            Vec3(.6 - .6 * height, .25, .45 + .8 * height)) <= 1e-15);
+    }
+}
+
+FK_TEST(MappingNormalBoundsWrongOrientedSideFailsIncludingNegativeHeight) {
+    const auto target = tiltedTarget(3);
+    for (double height : {.002, -.002}) {
+        const auto source = parallelSource(height, false);
+        const auto wrong = tiltedImage(-height, false);
+        const Vec3 correct(.4 - .6 * height, .5, .3 + .8 * height);
+        FK_CHECK_NEAR(distance(wrong.point(.5, .5), correct), 2 * std::fabs(height), 1e-15);
+        // The unoriented normal-line and distance-squared invariants both
+        // vanish here. The sign must still reject the opposite normal side.
+        FK_CHECK(normalBound(source, target, wrong).status == Status::Failed);
+    }
+}
+
+FK_TEST(MappingNormalBoundsMissedInteriorBumpAtNonzeroHeightFails) {
+    const std::vector<double> knots{0, 0, 0, 0, 46. / 256., 47. / 256.,
+        48. / 256., 49. / 256., 50. / 256., 1, 1, 1, 1};
+    std::vector<Vec3> poles;
+    for (int i = 0; i < 9; ++i) for (int j = 0; j < 9; ++j)
+        poles.emplace_back((knots[i + 1] + knots[i + 2] + knots[i + 3]) / 3.,
+            (knots[j + 1] + knots[j + 2] + knots[j + 3]) / 3.,
+            i == 4 && j == 4 ? (9. / 4.) * 1e-4 : 0.);
+    const BSplineSurface target(3, 3, knots, knots, 9, 9, poles);
+    std::vector<Vec3> flatPoles;
+    for (int i = 0; i < 4; ++i) for (int j = 0; j < 4; ++j)
+        flatPoles.emplace_back(i / 3., j / 3., .002);
+    const BSplineSurface image(3, 3, normalKnots(3), normalKnots(3), 4, 4, flatPoles);
+    const auto source = parallelSource(.002, false);
+    // B4(c)^2=4/9 and its gradient is zero at c=3/16: adding h*N leaves
+    // the exact positional gap at this witness equal to 1e-4, not h noise.
+    FK_CHECK_NEAR(target.point(3. / 16., 3. / 16.).z(), 1e-4, 1e-16);
+    FK_CHECK(normalBound(source, target, image, {}, 1).status == Status::Failed);
+}
+
+FK_TEST(MappingNormalBoundsDegenerateNormalFailsAndVariableHeightIsUnsupported) {
+    std::vector<Vec3> poles;
+    for (int i = 0; i < 3; ++i) for (int j = 0; j < 3; ++j)
+        poles.emplace_back(i / 2., 0, 0);
+    const BSplineSurface degenerate(2, 2, normalKnots(2), normalKnots(2), 3, 3, poles);
+    const auto source = parallelSource(.002, false);
+    const auto image = tiltedImage(.002, false);
+    FK_CHECK(normalBound(source, degenerate, image, {}, 1).status == Status::Failed);
+
+    // Nonzero mathematical cross product is not sufficient: the existing
+    // Surface::normal metric rejects T=(u,1e-15*v,0) as nearly singular.
+    std::vector<Vec3> squashedPoles, squashedImagePoles;
+    for (int i = 0; i < 3; ++i) for (int j = 0; j < 3; ++j)
+        squashedPoles.emplace_back(i / 2., 1e-15 * (j / 2.), 0);
+    for (int i = 0; i < 4; ++i) for (int j = 0; j < 4; ++j)
+        squashedImagePoles.emplace_back(i / 3., 1e-15 * (j / 3.), .002);
+    const BSplineSurface squashed(2, 2, normalKnots(2), normalKnots(2), 3, 3, squashedPoles);
+    const BSplineSurface squashedImage(3, 3, normalKnots(3), normalKnots(3), 4, 4, squashedImagePoles);
+    FK_CHECK(normalBound(source, squashed, squashedImage, {}, 1).status == Status::Failed);
+
+    // A legitimate tilted source plane has local height .002+.6*u.
+    // This is a family exclusion, not a permission to certify a guessed h.
+    const Plane variable(Frame3::fromAxes(Vec3(0, 0, .002), Vec3(.8, 0, .6),
+        Vec3(0, 1, 0), Vec3(-.6, 0, .8)));
+    const auto target = tiltedTarget(2);
+    FK_CHECK(normalBound(variable, target, image).status == Status::Unsupported);
+}
+
+FK_TEST(MappingNormalBoundsPresetCancellationRemainsDistinct) {
+    const auto source = parallelSource(-.002, true);
+    const auto target = tiltedTarget(2), image = tiltedImage(-.002, true);
+    const auto token = std::make_shared<std::atomic<bool>>(true);
+    bool cancelled = false;
+    {
+        CancellationScope scope(token);
+        try {
+            (void)normalBound(source, target, image);
+        } catch (const OperationCancelled &) {
+            cancelled = true;
+        }
+    }
+    FK_CHECK(cancelled);
+}

@@ -1,0 +1,10 @@
+{
+  "kernel/fk_surface_mapping.cpp": "019423a02a6504b3d6e1d659ba9b3b0707397878d5b8bad3340efd52f2b45d3a",
+  "kernel/fk_mapping_fit.cpp": "03d21ceab86aead510559aee7101ade9a4aba8b1ef516671943b0bfa823fd001",
+  "kernel/fk_mapping_fit.h": "21eca96b7e1895e572e6b7feb55874fd1e7316555e893a9eccc215d5849ba8ad",
+  "kernel/CMakeLists.txt": "1cc796f703b7d96018b42a38fdbf3f781e16fa966033b44e41ddba10d88685cb",
+  "kernel/fk_quadrature.h": "331e2e96b37c8170022aa2341d225f0e2f010728b8b1ec533a92258243c32615",
+  "kernel/tests/test_quadrature_validation.cpp": "a3cf2172efb672250c172be0239e83aedba4715b33d92fe94d45ad03f774d6f7",
+  "tools/generate_architecture.py": "013be345ca607d8c7a288027b38deec7ef44e47d984b6c381b87ce82472ec68a",
+  "forgecad-release/forgecad": "adcf65dee896c8c65bb61b60a8b249b4e5e8366cb5994d3733a4793930396e5d"
+}

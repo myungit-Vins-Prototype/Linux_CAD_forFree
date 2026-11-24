@@ -1,0 +1,243 @@
+Start testing: Nov 18 00:52 CET
+----------------------------------------------------------
+229/263 Testing: forgekernel_surface_mapping_tests
+229/263 Test: forgekernel_surface_mapping_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_mapping_tests"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+"forgekernel_surface_mapping_tests" start time: Nov 18 00:52 CET
+Output:
+----------------------------------------------------------
+PASS sviluppo piano/cilindro/cono, aree/lunghezze, rifiuto doppia curvatura, deformazione cilindrica/volume, genealogia, B-rep, STEP e mesh, appoggio multifaccia continuo/NURBS/vuoti
+<end of output>
+Test time =   0.69 sec
+----------------------------------------------------------
+Test Passed.
+"forgekernel_surface_mapping_tests" end time: Nov 18 00:52 CET
+"forgekernel_surface_mapping_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+244/263 Testing: forgekernel_mapping_carrier_validation_tests
+244/263 Test: forgekernel_mapping_carrier_validation_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_mapping_carrier_validation_tests"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+"forgekernel_mapping_carrier_validation_tests" start time: Nov 18 00:52 CET
+Output:
+----------------------------------------------------------
+[  OK  ] MappingCarrierHiddenTargetsPolyRationalPoseScale
+[  OK  ] MappingCarrierSourceFrameQuarterTurnShiftHolesAndRoundtrip
+[  OK  ] MappingCarrierDeclaredLegacyDiagonalPeriodicAndOffset
+[  OK  ] MappingCarrierFailureAndCallbackCancellationAreAtomic
+[  OK  ] MappingCarrierDegree27SingleSpanAndRoundtrip
+[  OK  ] MappingCarrierTolerantSourceDiscrepanciesAreRejectedAtomically
+[  OK  ] MappingCarrierSmallSourceVertexDiscrepancyIsReported
+[  OK  ] MappingCarrierUnresolvedNaturalBoundaryIsAtomic
+[  OK  ] MappingCarrierRecognizedAffineFinBudgetFailsAtomically
+9/9 test superati
+<end of output>
+Test time =   1.19 sec
+----------------------------------------------------------
+Test Passed.
+"forgekernel_mapping_carrier_validation_tests" end time: Nov 18 00:52 CET
+"forgekernel_mapping_carrier_validation_tests" time elapsed: 00:00:01
+----------------------------------------------------------
+
+245/263 Testing: forgekernel_mapping_uv_validation_tests
+245/263 Test: forgekernel_mapping_uv_validation_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_mapping_uv_validation_tests"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+"forgekernel_mapping_uv_validation_tests" start time: Nov 18 00:52 CET
+Output:
+----------------------------------------------------------
+mapping_polynomial source=0 residual=2.21233e-11 ratio=0.417834 map_error=2.1222e-11 deviation=5.99703e-11 PASS
+mapping_rational source=0 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+mapping_trim_range source=0 residual=4.87976e-11 ratio=0.577215 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+mapping_reverse source=0 residual=4.06494e-11 ratio=0.577229 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+mapping_pose_wrapper source=1.33227e-15 residual=1.35851e-10 ratio=0.950994 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+mapping_scale1000 source=2.29143e-13 residual=6.63743e-09 ratio=0.990916 map_error=1.97452e-08 deviation=1.89836e-08 PASS
+mapping_scale001 source=1.08779e-15 residual=9.9004e-11 ratio=0.939807 map_error=5.97713e-09 deviation=5.95052e-09 PASS
+mapping_height source=5.55112e-17 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+mapping_normal_offset source=5.55112e-17 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+quilt_polynomial source=0 residual=2.21233e-11 ratio=0.417834 map_error=2.1222e-11 deviation=5.99703e-11 PASS
+quilt_rational source=0 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+quilt_trim_range source=0 residual=4.87976e-11 ratio=0.577215 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+quilt_reverse source=0 residual=4.06494e-11 ratio=0.577229 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+quilt_pose_wrapper source=1.33227e-15 residual=1.2318e-10 ratio=0.94292 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+quilt_scale1000 source=2.29143e-13 residual=6.63743e-09 ratio=0.990916 map_error=1.97452e-08 deviation=1.89836e-08 PASS
+quilt_scale001 source=1.08779e-15 residual=5.71195e-11 ratio=0.668689 map_error=5.97712e-09 deviation=5.95051e-09 PASS
+quilt_height source=5.55112e-17 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+quilt_normal_offset source=5.55112e-17 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+quilt_faruv10000_identity source=5.55112e-17 residual=5.60684e-11 ratio=0.561034 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+quilt_faruv10000_pose source=2.03507e-15 residual=1.67554e-08 ratio=0.99596 map_error=1.91676e-08 deviation=1.91555e-08 PASS
+atomic_failures PASS
+passed=21 failed=0
+<end of output>
+Test time =   3.48 sec
+----------------------------------------------------------
+Test Passed.
+"forgekernel_mapping_uv_validation_tests" end time: Nov 18 00:52 CET
+"forgekernel_mapping_uv_validation_tests" time elapsed: 00:00:03
+----------------------------------------------------------
+
+246/263 Testing: forgekernel_mapping_diagonal_validation_tests
+246/263 Test: forgekernel_mapping_diagonal_validation_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_mapping_diagonal_validation_tests"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+"forgekernel_mapping_diagonal_validation_tests" start time: Nov 18 00:52 CET
+Output:
+----------------------------------------------------------
+[  OK  ] MappingDiagonalExtrusionHiddenPolynomialRationalPoseScaleReverse
+[  OK  ] MappingDiagonalExtrusionNestedGeneratorTrimHolesHistoryRoundtrip
+[  OK  ] MappingDiagonalOriginalLineExtrusionSuccess
+[  OK  ] MappingDiagonalProviderPullbackKnotsAndWrongCandidate
+[  OK  ] MappingDiagonalFailureCancellationAreAtomicAndTensorIsUnsupported
+[  OK  ] MappingDiagonalProviderTinyNonzeroUDirectionMustNotSnap
+[  OK  ] MappingDiagonalProviderLineConstantUAndClosedJunctionQueries
+7/7 test superati
+<end of output>
+Test time =   0.70 sec
+----------------------------------------------------------
+Test Passed.
+"forgekernel_mapping_diagonal_validation_tests" end time: Nov 18 00:52 CET
+"forgekernel_mapping_diagonal_validation_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+254/263 Testing: forgekernel_surface_curve_bounds_tests
+254/263 Test: forgekernel_surface_curve_bounds_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_curve_bounds_tests"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+"forgekernel_surface_curve_bounds_tests" start time: Nov 18 00:52 CET
+Output:
+----------------------------------------------------------
+[  OK  ] NonIsoResidualCubicUVOnOriginalTensorPlane
+[  OK  ] NonIsoResidualBilinearCarrierAndNativeLineUV
+[  OK  ] NonIsoResidualCommonPartitionAcrossEdgeUVAndCarrierKnots
+[  OK  ] NonIsoResidualNonUnitDomainSubrangeAndCorrelatedReversal
+[  OK  ] NonIsoResidualConstantOriginalWeightsRemainPolynomial
+[  OK  ] NonIsoResidualHiddenEdgePeakIsNotAContinuousProof
+[  OK  ] NonIsoResidualHiddenCarrierCellPeakIsRejected
+[  OK  ] NonIsoResidualUVLeavesDomainBetweenThreeMatchingSamples
+[  OK  ] NonIsoResidualInvalidInputsFailClosed
+[  OK  ] NonIsoResidualCurveAndCarrierGapsFailValidTrimsCertify
+[  OK  ] NonIsoResidualCancellationPropagates
+[  OK  ] NonIsoResidualFixedInputResourceLimitFailsClosed
+[  OK  ] NonIsoResidualUnclampedOriginalCubicKnots
+[  OK  ] SheetJoinLedgerActualTwoFinsAndExtraFixedCaps
+[  OK  ] SheetJoinLedgerExplicitCompactionAndUnifyHistoryPermutation
+[  OK  ] SheetJoinLedgerRecognizedGapCannotUseLargeFinDeviation
+[  OK  ] SheetJoinLedgerMissingMapCurveRangeOrIncidenceRejects
+[  OK  ] SheetJoinLedgerInvalidBudgetAndEdgeMetadataRejects
+[  OK  ] SheetJoinLedgerUnsupportedFamilyRetainsLegacyWithoutCertificate
+[  OK  ] SheetJoinLedgerUnifiedDriftAndMissingDescendantsReject
+[  OK  ] SheetJoinLedgerCancellationPropagates
+[  OK  ] SheetJoinLedgerMissingCarrierOrOriginalCurveRejects
+[  OK  ] SheetJoinLedgerBoundedCubicCopyPreservesUnplannedSharedMap
+[  OK  ] SheetJoinLedgerHalfUlpLineBuildsBoundedNativeMap
+[  OK  ] SheetJoinLedgerBoundedCandidateCannotRepairPhysicalGap
+[  OK  ] RationalCarrierNativeQuadraticCubicAndMixedIdentity
+[  OK  ] RationalCarrierCellExtrapolatedDenominatorMayBeNegative
+[  OK  ] RationalCarrierWeightGaugeAndPhysicalScale
+[  OK  ] RationalCarrierNonUnitDomainTrimAndCorrelatedReverse
+[  OK  ] RationalCarrierChangedWeightIsRecognizedGap
+[  OK  ] RationalCarrierUVOutsideOriginalDomainFails
+[  OK  ] RationalCarrierCancellationPropagates
+[  OK  ] RationalCarrierHiddenKnotCellPeakFailsContinuously
+[  OK  ] RationalCarrierFixedOriginalScalarLimitFailsClosed
+[  OK  ] SurfaceInstanceIdentityNestedPoseMirrorAndScale
+[  OK  ] SurfaceInstanceRoundedPolesCannotHideOriginalCoefficientGap
+[  OK  ] SurfaceInstancePublicRationalQuiltPreservesFinalFinContracts
+[  OK  ] SurfaceInstanceHiddenCarrierPeakRejectedWithoutLegacyDowngrade
+[  OK  ] SurfaceInstanceCurveWeightsAndWrapperFamiliesRemainExplicit
+[  OK  ] SurfaceInstanceCancellationRemainsDistinct
+[  OK  ] RationalEdgeNativeTensorSameParameterTrimAndReverse
+[  OK  ] RationalEdgeIndependentWeightGaugesAndPhysicalPlacement
+[  OK  ] RationalEdgeHiddenPeakBetweenLegacySamplesIsRecognized
+[  OK  ] RationalEdgeLedgerSinglePlannedFinRejectsBeforeAssign
+[  OK  ] RationalEdgeChangedWeightsAndDomainDoNotBecomeUnsupported
+[  OK  ] RationalEdgeCancellationRemainsDistinct
+[  OK  ] RationalPCurveLinearAndCubicMatchOriginalParameter
+[  OK  ] RationalPCurvePolynomialCarrierNeedsDenominatorPower
+[  OK  ] RationalPCurveRationalCarrierAndPlacementKeepAllDenominators
+[  OK  ] RationalPCurveTrimReverseAndCarrierCellCrossings
+[  OK  ] RationalPCurveHiddenPeakIsNotAContinuousSampleProof
+[  OK  ] RationalPCurveLedgerSinglePlannedFinRejectsBeforeAssign
+[  OK  ] RationalPCurveDomainWrappersAndCancellationStayExplicit
+[  OK  ] CurveWrapperCorrelatedTrimNonUnitRangeAndLineUV
+[  OK  ] CurveWrapperMixedAffineTrimAndRationalParameters
+[  OK  ] CurveWrapperOriginalAffineMustNotFlattenRoundedPoles
+[  OK  ] CurveWrapperHiddenRationalPeakRemainsRecognized
+[  OK  ] CurveWrapperLedgerSinglePlannedFinRejectsBeforeAssign
+[  OK  ] CurveWrapperEveryTrimIsExactAndCandidateCannotBypassIt
+[  OK  ] CurveWrapperNonFiniteAffineIsTerminal
+[  OK  ] CurveWrapperDepthLimitCancellationAndUnsupportedFamilies
+61/61 test superati
+<end of output>
+Test time =   0.21 sec
+----------------------------------------------------------
+Test Passed.
+"forgekernel_surface_curve_bounds_tests" end time: Nov 18 00:52 CET
+"forgekernel_surface_curve_bounds_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+255/263 Testing: forgekernel_mapping_nonplane_validation_tests
+255/263 Test: forgekernel_mapping_nonplane_validation_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_mapping_nonplane_validation_tests"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+"forgekernel_mapping_nonplane_validation_tests" start time: Nov 18 00:52 CET
+Output:
+----------------------------------------------------------
+[  OK  ] MappingNonPlaneCylinderFinalFinsAndNullHistory
+[  OK  ] MappingNonPlaneQuadraticTargetFinalFinsAndNullHistory
+[  OK  ] MappingNonPlaneRationalCarrierFinalFinsAndNullHistory
+[  OK  ] MappingNonPlaneHiddenCarrierPeakRejectedAtomically
+[  OK  ] MappingNonPlaneFarOutsideCannotBeRepairedByClamping
+[  OK  ] MappingNonPlaneCancellationPreservesInputsAndOutputs
+[  OK  ] MappingFitFiniteCubicQuinticGridsAndDeviation
+[  OK  ] MappingFitNonFiniteInteriorProbeCannotPublishSurface
+[  OK  ] MappingFitNonFiniteCornerAndStencilValuesReject
+[  OK  ] MappingFitEveryAnalyticJetVectorMustBeFinite
+[  OK  ] MappingFitToleranceAndGridPreflightBeforeCallbacks
+[  OK  ] MappingFitCallbackErrorsAndCancellationDoNotPublish
+12/12 test superati
+<end of output>
+Test time =   0.23 sec
+----------------------------------------------------------
+Test Passed.
+"forgekernel_mapping_nonplane_validation_tests" end time: Nov 18 00:52 CET
+"forgekernel_mapping_nonplane_validation_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+262/263 Testing: forgekernel_mapping_global_validation_tests
+262/263 Test: forgekernel_mapping_global_validation_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_mapping_global_validation_tests"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+"forgekernel_mapping_global_validation_tests" start time: Nov 18 00:52 CET
+Output:
+----------------------------------------------------------
+[  OK  ] MappingGlobalNativeBumpHasIndependentInteriorWitness
+[  OK  ] MappingGlobalFlatCarrierWithSameKnotsSucceeds
+[  OK  ] MappingGlobalSolidBumpRejectsSpecificUnprovenCarrierBeforePublication
+[  OK  ] MappingGlobalZeroHeightBottomIdentityRetainsTheRealBump
+[  OK  ] MappingBoundsFlatNativeDegreesAndConstantWeightGauge
+[  OK  ] MappingBoundsInteriorPeakFailsAndHarmlessPeakCertifies
+[  OK  ] MappingBoundsBilinearAndQuadraticCoefficientOracles
+[  OK  ] MappingBoundsDiscreteAxisPermutationAndNegativeUV
+[  OK  ] MappingBoundsInvalidInputsFailAndNonzeroOffsetParticipatesInResidual
+[  OK  ] MappingBoundsPresetCancellationRemainsDistinct
+[  OK  ] MappingNormalRaisedSolidBumpRejectsBeforePublicationWithOrWithoutHistory
+[  OK  ] MappingNormalFlatCarrierAcceptsPositiveAndNegativeHeights
+[  OK  ] MappingNormalOrdinaryQuadraticWrapRemainsSuccessful
+[  OK  ] MappingNormalBoundsTiltedSignedHeightAndSwappedUVMatchExactCubic
+[  OK  ] MappingNormalBoundsWrongOrientedSideFailsIncludingNegativeHeight
+[  OK  ] MappingNormalBoundsMissedInteriorBumpAtNonzeroHeightFails
+[  OK  ] MappingNormalBoundsDegenerateNormalFailsAndVariableHeightIsUnsupported
+[  OK  ] MappingNormalBoundsPresetCancellationRemainsDistinct
+18/18 test superati
+<end of output>
+Test time =   5.02 sec
+----------------------------------------------------------
+Test Passed.
+"forgekernel_mapping_global_validation_tests" end time: Nov 18 00:52 CET
+"forgekernel_mapping_global_validation_tests" time elapsed: 00:00:05
+----------------------------------------------------------
+
+End testing: Nov 18 00:52 CET

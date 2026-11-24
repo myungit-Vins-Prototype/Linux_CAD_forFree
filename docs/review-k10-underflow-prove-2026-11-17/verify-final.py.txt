@@ -1,0 +1,35 @@
+from pathlib import Path
+import json,hashlib,re,subprocess
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-underflow-review-2026-11-17');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+for n in ['candidate-tests','san-tests','build','ctest','mass','architecture','architecture-check']:
+ assert json.loads((T/(n+'.json')).read_text())['exit']==0,n
+assert '13/13 test superati' in (T/'candidate-tests.log').read_text()
+assert '13/13 test superati' in (T/'san-tests.log').read_text()
+assert '100% tests passed out of 4' in (T/'ctest.log').read_text()
+for f,h in json.loads((T/'integrated-sources.json').read_text()).items():assert sha(R/f)==h,f
+G=json.loads((R/'docs/architecture/graph.json').read_text());assert not G['analysis']['errors'] and len(G['analysis']['units'])==408
+for f,h in G['hashes'].items():assert sha(R/f)==h,f
+assert G['analysis']['configurationDigest']==sha(R/'forgecad-release/compile_commands.json')
+html=(R/'docs/architecture/index.html').read_text();m=re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',html,re.S);assert m and json.loads(m.group(1))==G
+q='kernel/fk_quadrature.h';nodes={n['id']:n for n in G['nodes']};assert 'profondita' in nodes[q]['description']
+assert any(x.endswith('quadratureWeightedUnderflow') for x in nodes[q]['symbols'])
+focus={q,'kernel/tests/test_quadrature_validation.cpp','kernel/fk_curve_algo.cpp','kernel/fk_mass.cpp','kernel/fk_profile.cpp','kernel/fk_curve_length_cache.h'}
+edges=[e for e in G['edges'] if e['source'] in focus or e['target'] in focus]
+for f in ['kernel/fk_curve_algo.cpp','kernel/fk_mass.cpp','kernel/fk_profile.cpp','kernel/tests/test_quadrature_validation.cpp']:
+ assert any(e['source']==f and e['target']==q and e['kind']=='include' for e in edges),f
+ if f != 'kernel/fk_curve_algo.cpp':
+  assert any(e['source']==f and e['target']==q and e['kind']=='call' for e in edges),f
+assert any(e['source']==q and e['target']==q and e['kind']=='call' and any(s['symbol'].endswith('quadratureWeightedUnderflow') for s in e['sites']) for e in edges)
+commands=json.loads((R/'forgecad-release/compile_commands.json').read_text())
+protected=['kernel/fk_mass.cpp','kernel/fk_profile.cpp','kernel/fk_curve_algo.cpp','kernel/fk_loft.cpp','cad_mass.cpp','kernel/tests/test_quadrature_validation.cpp']
+for f in protected:
+ jobs=[j for j in commands if j['file']==str(R/f)];assert jobs,f
+ for j in jobs:assert '-fno-fast-math' in j['command'] and '-ffp-contract=off' in j['command'],j
+(T/'architecture-final.json').write_text(json.dumps({'nodes':len(G['nodes']),'edges':len(G['edges']),'analysis':G['analysis'],'focus_nodes':[nodes[f] for f in sorted(focus)],'typed_edges_both_directions':edges,'compile_flags_checked':protected},indent=2))
+files=['forgecad-release/forgecad','forgecad-release/kernel/libforgekernel.a','forgecad-release/kernel/forgekernel_tests','forgecad-release/forgecad_view_tests']+[f'forgecad-release/kernel/forgekernel_{n}_tests' for n in ['quadrature_validation','arc_length_validation','sheet_arc_validation','bspline_derivative']]
+binaries={f:sha(R/f) for f in files};(T/'binaries-final.json').write_text(json.dumps(binaries,indent=2))
+assert binaries['forgecad-release/forgecad_view_tests']==json.loads((T/'baseline-binaries.json').read_text())['forgecad-release/forgecad_view_tests']
+assert subprocess.check_output(['git','rev-parse','HEAD','origin/main'],cwd=R,text=True).splitlines()==['18d0adcc599335407942f7f7acc5d5266071a402']*2
+assert not subprocess.check_output(['git','diff','--cached','--name-only'],cwd=R).strip()
+subprocess.run(['git','diff','--check'],cwd=R,check=True)
+print('PASS final sources, full app/binaries, targeted tests/goldens, graph hashes/config/HTML/calls both directions, strict compile flags; checkpoint unchanged')

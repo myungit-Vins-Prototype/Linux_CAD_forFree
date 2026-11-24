@@ -1,0 +1,150 @@
+#include "fk_body_check.h"
+#include "fk_body_io.h"
+#include "fk_bspline_surface.h"
+#include "fk_history.h"
+#include "fk_primitives.h"
+#include "fk_surface_mapping.h"
+#include "fk_test.h"
+
+#include <cmath>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+using namespace ForgeCad::Kernel;
+namespace {
+constexpr double tolerance = 1e-6;
+
+BSplineSurface normalCarrier(bool bump) {
+    const std::vector<double> knots{0, 0, 0, 0, 46. / 256., 47. / 256.,
+        48. / 256., 49. / 256., 50. / 256., 1, 1, 1, 1};
+    std::vector<Vec3> poles;
+    for (int i = 0; i < 9; ++i) for (int j = 0; j < 9; ++j)
+        poles.emplace_back((knots[i + 1] + knots[i + 2] + knots[i + 3]) / 3.,
+            (knots[j + 1] + knots[j + 2] + knots[j + 3]) / 3.,
+            bump && i == 4 && j == 4 ? (9. / 4.) * 1e-4 : 0.);
+    return BSplineSurface(3, 3, knots, knots, 9, 9, poles);
+}
+
+void carrierUnchanged(const BSplineSurface &a, const BSplineSurface &b) {
+    FK_CHECK(a.uKnots() == b.uKnots() && a.vKnots() == b.vKnots());
+    FK_CHECK(a.uDegree() == b.uDegree() && a.vDegree() == b.vDegree());
+    FK_CHECK(a.uPoleCount() == b.uPoleCount() && a.vPoleCount() == b.vPoleCount());
+    FK_CHECK(a.basis() == b.basis());
+    for (int i = 0; i < b.uPoleCount(); ++i) for (int j = 0; j < b.vPoleCount(); ++j) {
+        for (int k = 0; k < 3; ++k) FK_CHECK(a.pole(i, j)[k] == b.pole(i, j)[k]);
+        FK_CHECK(a.weight(i, j) == b.weight(i, j));
+    }
+}
+
+std::string normalHistoryStamp(const BodyHistory &history) {
+    std::ostringstream out;
+    out << history.operandCount();
+    for (auto kind : {EntityKind::Vertex, EntityKind::Edge, EntityKind::Face}) {
+        out << ':' << history.resultSize(kind);
+        for (int i = 0; i < history.resultSize(kind); ++i) {
+            out << '/' << history.isDeclared(kind, i);
+            for (const auto &origin : history.origins(kind, i))
+                out << ',' << origin.operand << ',' << int(origin.kind) << ',' << origin.index
+                    << ',' << int(origin.relation);
+        }
+    }
+    return out.str();
+}
+
+SurfaceWrapOptions normalOptions() {
+    SurfaceWrapOptions options;
+    options.anchor = {0, 0};
+    options.tolerance = tolerance;
+    return options;
+}
+
+void checkNormalResult(const Body &source, const Body &result, const BodyHistory &history, double deviation) {
+    FK_CHECK(!result.isSheet() && result.faces().size() == source.faces().size());
+    FK_CHECK(checkBody(result, {true, true}).empty());
+    FK_CHECK(std::isfinite(deviation) && deviation >= 0 && deviation <= tolerance);
+    FK_CHECK(history.operandCount() == 1);
+    for (auto face : result.faces()) {
+        const auto &origins = history.origins(EntityKind::Face, face.index);
+        FK_CHECK(history.isDeclared(EntityKind::Face, face.index) && origins.size() == 1);
+        if (origins.size() != 1) continue;
+        FK_CHECK(origins.front().operand == 0 && origins.front().kind == EntityKind::Face
+            && origins.front().relation == HistoryRelation::Modified);
+        FK_CHECK(source.contains(FaceId{origins.front().index}));
+    }
+}
+}
+
+FK_TEST(MappingNormalRaisedSolidBumpRejectsBeforePublicationWithOrWithoutHistory) {
+    const auto source = makeBox(Frame3(Vec3(0, 0, .002), Vec3(0, 0, 1), Vec3(1, 0, 0)), 1, 1, .001);
+    const auto before = writeBodyBinary(source);
+    const auto target = normalCarrier(true), oldTarget = target;
+    // At c=3/16, B4(c)=2/3 and B4'(c)=0. The intended bottom height
+    // is .002 + (4/9)*(9/4)*1e-4 = .0021, with the same +Z normal.
+    FK_CHECK_NEAR(target.point(3. / 16., 3. / 16.).z() + .002, .0021, 1e-16);
+    for (bool provideHistory : {true, false}) {
+        auto history = sameIndexHistory(source, source);
+        const auto oldHistory = normalHistoryStamp(history);
+        double deviation = -123;
+        bool rejected = false;
+        try {
+            (void)wrapBodyOnSurface(source, target, normalOptions(),
+                provideHistory ? &history : nullptr, &deviation);
+        } catch (const std::domain_error &error) {
+            rejected = true;
+            FK_CHECK(std::string(error.what()).find("residuo globale del carrier") != std::string::npos);
+        }
+        FK_CHECK(rejected);
+        FK_CHECK(deviation == -123 && normalHistoryStamp(history) == oldHistory);
+        FK_CHECK(writeBodyBinary(source) == before);
+        carrierUnchanged(target, oldTarget);
+    }
+}
+
+FK_TEST(MappingNormalFlatCarrierAcceptsPositiveAndNegativeHeights) {
+    const auto target = normalCarrier(false), oldTarget = target;
+    for (double z : {.002, -.003}) {
+        const auto source = makeBox(Frame3(Vec3(0, 0, z), Vec3(0, 0, 1), Vec3(1, 0, 0)), 1, 1, .001);
+        const auto before = writeBodyBinary(source);
+        BodyHistory history;
+        double deviation = -123;
+        const auto result = wrapBodyOnSurface(source, target, normalOptions(), &history, &deviation);
+        checkNormalResult(source, result, history, deviation);
+        for (auto vertex : result.vertices()) {
+            const auto &origins = history.origins(EntityKind::Vertex, vertex.index);
+            FK_CHECK(history.isDeclared(EntityKind::Vertex, vertex.index) && origins.size() == 1);
+            if (origins.size() != 1) continue;
+            FK_CHECK(origins.front().operand == 0 && origins.front().kind == EntityKind::Vertex);
+            const VertexId parent{origins.front().index};
+            FK_CHECK(source.contains(parent));
+            if (source.contains(parent))
+                FK_CHECK(distance(result.vertex(vertex).point, source.vertex(parent).point) <= tolerance);
+        }
+        FK_CHECK(writeBodyBinary(result) == writeBodyBinary(wrapBodyOnSurface(source, target, normalOptions(), nullptr)));
+        FK_CHECK(writeBodyBinary(source) == before);
+        carrierUnchanged(target, oldTarget);
+    }
+}
+
+FK_TEST(MappingNormalOrdinaryQuadraticWrapRemainsSuccessful) {
+    // Existing public nonplanar wrap fixture, preserved without relaxing its
+    // dimensions, operation tolerance or mandatory successful result.
+    const std::vector<double> knots{0, 0, 0, 1, 1, 1};
+    const double xy[]{-5, 0, 5}, square[]{25, -25, 25};
+    std::vector<Vec3> poles;
+    for (int i = 0; i < 3; ++i) for (int j = 0; j < 3; ++j)
+        poles.emplace_back(xy[i], xy[j], .02 * (square[i] + square[j]));
+    const BSplineSurface target(2, 2, knots, knots, 3, 3, poles), oldTarget = target;
+    const auto source = makeBox(Frame3(Vec3(-.1, -.1, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), .2, .2, .02);
+    const auto before = writeBodyBinary(source);
+    auto options = normalOptions();
+    options.anchor = {.5, .5};
+    BodyHistory history;
+    double deviation = -123;
+    const auto result = wrapBodyOnSurface(source, target, options, &history, &deviation);
+    checkNormalResult(source, result, history, deviation);
+    FK_CHECK(writeBodyBinary(result) == writeBodyBinary(wrapBodyOnSurface(source, target, options, nullptr)));
+    FK_CHECK(writeBodyBinary(source) == before);
+    carrierUnchanged(target, oldTarget);
+}

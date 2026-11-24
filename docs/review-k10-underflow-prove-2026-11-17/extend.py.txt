@@ -1,0 +1,27 @@
+from pathlib import Path
+T=Path('/tmp/k10-underflow-review-2026-11-17');p=T/'candidate/test_quadrature_validation.cpp';s=p.read_text();needle='    // Nonzero subnormal weighted products, not just complete loss to zero.\n';assert s.count(needle)==1;s=s.replace(needle,'''    // Old K15 yields 9*2^-52 instead of 8*2^-52: 12.5% error,
+    // even though the result is finite and nonzero.
+    const double fourSmallest = 4 * smallest;
+    double nonzeroError, nonzeroAbsolute;
+    finiteNear(detail::gaussKronrod([&](double) { return fourSmallest; }, 0., width,
+        nonzeroError, nonzeroAbsolute), 4 * expected, expected * 1e-14);
+    finiteNear(nonzeroAbsolute, 4 * expected, expected * 1e-14);
+'''+needle)
+s=s.replace('''    const BSplineCurve<3> curve(1, {0, 0, width, width}, {{0, 0, 0}, {expected, 0, 0}});''','''    for (double factor : {1., 4.}) {
+    const BSplineCurve<3> curve(1, {0, 0, width, width}, {{0, 0, 0}, {factor * expected, 0, 0}});''')
+s=s.replace('''    FK_CHECK(curve.derivative(width * .5)[0] == std::numeric_limits<double>::denorm_min());
+    finiteNear(distance(curve.point(0), curve.point(width)), expected, expected * 1e-14);
+    finiteNear(arcLength(curve, curve.domain(), 1e-30), expected, expected * 1e-14);
+    detail::CurveLengthCache cache;
+    finiteNear(cache.get(curve, curve.domain(), 1e-30), expected, expected * 1e-14);
+    finiteNear(cache.get(curve, curve.domain(), 1e-30), expected, expected * 1e-14);
+    FK_CHECK(cache.statistics().integrations == 1 && cache.statistics().hits >= 1);''','''    FK_CHECK(curve.derivative(width * .5)[0] == factor * std::numeric_limits<double>::denorm_min());
+    finiteNear(distance(curve.point(0), curve.point(width)), factor * expected, expected * 1e-14);
+    finiteNear(arcLength(curve, curve.domain(), 1e-30), factor * expected, expected * 1e-14);
+    detail::CurveLengthCache cache;
+    finiteNear(cache.get(curve, curve.domain(), 1e-30), factor * expected, expected * 1e-14);
+    finiteNear(cache.get(curve, curve.domain(), 1e-30), factor * expected, expected * 1e-14);
+    FK_CHECK(cache.statistics().integrations == 1 && cache.statistics().hits >= 1);
+    }''')
+p.write_text(s)
+p=T/'baseline.cpp';s=p.read_text();s=s.replace('int main(){','int main(){').replace('BSplineCurve<3> curve','double partial=detail::gaussKronrod([&](double){return 4*tiny;},0.,large,error,absolute);std::cout<<"partial "<<partial<<" expected "<<std::ldexp(1.,-49)<<" relative "<<(partial/std::ldexp(1.,-49)-1)<<"\\n";BSplineCurve<3> curve');p.write_text(s)

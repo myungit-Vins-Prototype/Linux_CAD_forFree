@@ -1,0 +1,41 @@
+{
+  "total_bytes": 331470992,
+  "files": [
+    {
+      "path": "/tmp/k10-global-carrier-2026-11-17/final-san",
+      "bytes": 73136056,
+      "sha256": "ed2204bc7cbe5f9791c5b415526fa2ce96e514a73028de988f11c7319973e0cd"
+    },
+    {
+      "path": "/tmp/k10-global-carrier-2026-11-17/candidate-san",
+      "bytes": 73127320,
+      "sha256": "5881dd0966e1d28bbf98621c5c7f124ad6ba947fedb1455583e951da934957eb"
+    },
+    {
+      "path": "/tmp/k10-global-carrier-2026-11-17/candidate",
+      "bytes": 60423544,
+      "sha256": "d8a8f35353bda3705c198d443e7aa5a79c50f31c075a107d9477e2f974c1be3c"
+    },
+    {
+      "path": "/tmp/k10-global-carrier-2026-11-17/mapping.o",
+      "bytes": 255432,
+      "sha256": "21092a8d68e0c788dfa352cb4df176dc5d24072a9e8257cd140bfecd81b528ba"
+    },
+    {
+      "path": "/tmp/k10-global-carrier-2026-11-17/bounds.o",
+      "bytes": 62144,
+      "sha256": "fab6991c56c94e11b4df82e61bf4e48d75ac8ed2aed1b03947e6d55eab47f0a6"
+    },
+    {
+      "path": "/tmp/k10-global-carrier-2026-11-17/public-baseline",
+      "bytes": 62244896,
+      "sha256": "25cdf9b95402546750a86b20f26bfce4c5a91edfb731673ea2c7f012add28f0c"
+    },
+    {
+      "path": "/tmp/k10-global-carrier-2026-11-17/probe",
+      "bytes": 62221600,
+      "sha256": "b7c8c7bbf28b51c38c4f2836f649bc547d4eb72a2a232b7a8f19b59079660672"
+    }
+  ],
+  "scope": "Only completed ELF binaries/objects in this task staging; all sources/logs retained"
+}

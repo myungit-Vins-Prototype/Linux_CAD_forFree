@@ -138,6 +138,8 @@ Nei pannelli **Unione**, **Intersezione** e **Differenza**, la selezione degli s
 
 **Taglia superfici → Taglia entrambi** permette di scegliere le porzioni da conservare di ciascun corpo e ricucirle in un nuovo risultato. Una lamina chiusa non viene promossa automaticamente a solido; per un volume usare la cucitura quando valida. Le booleane e i tagli lavorano sulle superfici esatte, anche NURBS, nei casi supportati dal kernel. [Esempi e limiti verificati](docs/knifehandle-taglio-reciproco-2026-11-05.md).
 
+**Funzioni → Superfici → Taglia superficie… → Con più superfici** permette di spuntare più strumenti e scegliere una o più regioni del corpo sorgente. Con **Rifila tutti i corpi**, ogni partecipante viene diviso dalle altre superfici e ha il proprio elenco di regioni. Seleziona le parti nella vista o nell’elenco. L’anteprima mostra il risultato in ambra e i contorni delle altre regioni selezionabili. Le scelte vengono memorizzate nel documento.
+
 Il comando **Raggio** comprende quattro schede con illustrazioni: **Costante**, **Conico**, **Variabile** e **Tra facce**. I conici offrono sezioni ellittiche (ρ < 0,5), paraboliche (ρ = 0,5) e iperboliche (ρ > 0,5), controllabili tramite ρ oppure raggio di curvatura al centro della sezione. Il raggio variabile accetta più bordi: quelli tangenti formano un percorso unico con 2–64 punti equidistanti lungo la lunghezza totale. I percorsi disgiunti hanno tabelle indipendenti, visibili selezionando un bordo nell’elenco; ogni percorso ha interpolazione morbida o lineare e inversione del verso. I punti con etichetta R si trascinano nella vista 3D per cambiare i raggi e aggiornare l’anteprima; sui percorsi chiusi i raggi iniziale e finale restano uguali. Il raccordo tra facce richiede due facce adiacenti dello stesso corpo e raccorda i loro bordi condivisi. La propagazione tangente è disattivabile; nel modo variabile resta disattivata. Il pannello si può chiudere anche durante il calcolo dell'anteprima. Il supporto è stato introdotto nel formato nativo 59, mantenendo la lettura dei documenti precedenti.
 
 I pannelli hanno un'intestazione compatta e un menu **⋮** per l'aggancio a sinistra/destra e **Usa tutta l'altezza disponibile**; restano sotto il ribbon. OK e Annulla deselezionano il comando. Nei piani di costruzione ogni riferimento, anche già definito, si rimuove con **×**. Le preferenze vengono conservate; trascinare il pannello permette di sganciarlo e riagganciarlo.
@@ -152,7 +154,7 @@ Il risultato usa NURBS esatte quando possibile e una curva implicita esatta negl
 
 ### Ripetizioni di funzione e riempimento automatico
 
-Nelle ripetizioni lineari e circolari, **Ripeti: Una funzione** permette di variare più parametri numerici con incrementi costanti: `q(i) = q(0) + i * incremento`. Le quote degli schizzi usati direttamente dalla funzione appaiono nella viewport e si scelgono con un clic; l'elenco comprende solo i parametri della funzione e dei suoi schizzi diretti. La variazione è disabilitata per **Il corpo intero**. Le esclusioni mantengono l'indice delle istanze; non tutti i tipi di funzione o combinazioni di valori sono supportati. [Uso delle variazioni](docs/ripetizioni-variabili-2026-11-04.md).
+Nelle ripetizioni lineari e circolari puoi variare più quote o parametri con incrementi costanti `q(i) = q(0) + i * incremento`. Usa **Il corpo intero** per ripetere il risultato della funzione sorgente, anche se crea un corpo autonomo. Usa **Una funzione** per ripetere il materiale aggiunto o sottratto al corpo di base. Le quote degli schizzi diretti si selezionano nella viewport. Le esclusioni conservano l’indice delle istanze. [Uso delle variazioni](docs/ripetizioni-variabili-2026-11-04.md).
 
 **Funzioni → Ripetizione → Riempimento automatico…** dispone corpi o strumenti di funzioni additive/sottrattive dentro uno schizzo chiuso o una faccia piana:
 
@@ -546,11 +548,7 @@ La [politica delle tolleranze](docs/tolerance-policy.md) definisce risoluzione, 
 QT_QPA_PLATFORM=xcb ./build-linux/forgecad
 ```
 
-**Problemi su un portatile Linux con GPU Intel + NVIDIA.** L'applicazione tenta di preferire NVIDIA quando rileva la configurazione EGL del driver. Per provare la GPU integrata:
-
-```sh
-FORGECAD_IGPU=1 ./build-linux/forgecad
-```
+**Grafica ibrida su Linux.** La sessione grafica seleziona il driver OpenGL di ForgeCAD. La scelta del driver OpenGL è indipendente dal rilevamento del backend CUDA.
 
 **Nuovi comandi assenti dal ribbon personalizzato.** Aprirli dal menu **Funzioni → Ripetizione** o **Funzioni → Superfici**, oppure aggiungerli al proprio layout. Riaprire l'app dopo aver aggiornato l'eseguibile.
 

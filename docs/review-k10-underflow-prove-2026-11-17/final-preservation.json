@@ -1,0 +1,30 @@
+{
+  "baseline_files": 8354,
+  "changed_existing": [
+    "CLAUDE.md",
+    "docs/code-review-2026-11-15.md",
+    "docs/review-punti-aperti-2026-11-17.md",
+    "docs/roadmap.md",
+    "kernel/CMakeLists.txt",
+    "kernel/fk_project.cpp",
+    "kernel/fk_quadrature.h",
+    "kernel/tests/test_quadrature_validation.cpp",
+    "tools/generate_architecture.py"
+  ],
+  "preserved_existing": 8345,
+  "new_files_before_package": 54,
+  "previous_packages_verified": 41,
+  "previous_payloads_verified": 5760,
+  "memory_bytes": 16362,
+  "cleanup_bytes_total": 207799680,
+  "source_and_binary_snapshots": "numerical milestone before CI repair; final full build after CI repair recorded separately",
+  "numeric_tests": "13/13 Release+ASan/UBSan; baseline depth0/3 expected failures",
+  "final_integration": "7/7 CTest and5/5 projection; full app updated",
+  "commits_pushed": [
+    "18d0adcc599335407942f7f7acc5d5266071a402",
+    "78d72684e4e6dfa45ace425bb1d8e776a57d41bc"
+  ],
+  "new_ci": "44142011489 in progress, not green",
+  "numeric_changes": "local, not committed",
+  "architecture": "804 nodes/11741 edges/408 TUs, zero errors; template arcLength call resolution limit retained"
+}

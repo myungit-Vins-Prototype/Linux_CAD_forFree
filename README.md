@@ -138,6 +138,8 @@ In **Union**, **Intersection** and **Difference**, tool selection starts active 
 
 **Taglia superfici → Taglia entrambi** (trim surfaces → trim both) lets you retain portions of each body and sew them into a new result. A closed sheet is not automatically promoted to a solid; use sewing to create a volume when valid. Booleans and trims operate on exact surfaces, including NURBS, within the kernel's supported cases. [Verified examples and limits (Italian)](docs/knifehandle-taglio-reciproco-2026-11-05.md).
 
+**Funzioni → Superfici → Taglia superficie… → Con più superfici** lets you select multiple cutting surfaces and retain several regions of the source. Enable **Rifila tutti i corpi** to divide each participant by the other surfaces and choose its regions independently. Select regions in the viewport or in the list. The preview shows the result in amber and outlines the other selectable regions. The document stores the selection.
+
 The **Raggio** command has four illustrated tabs: **Costante** (constant), **Conico** (conic), **Variabile** (variable), and **Tra facce** (between faces). Conics support elliptical (ρ < 0.5), parabolic (ρ = 0.5), and hyperbolic (ρ > 0.5) sections, controlled by ρ or the curvature radius at the section midpoint. Variable fillets accept multiple selected edges: tangent edges form one path with 2–64 stations equally spaced by total arc length. Disconnected paths have independent tables; select an edge in the list to display its path’s table, interpolation and reverse direction controls. Drag the R markers in the 3D view to change radii and update the preview. Closed paths keep their first and last radii equal. Face fillets require two adjacent faces of the same body and round their shared edges. Tangent propagation can be disabled and stays off in variable mode. The panel can close while its preview is computing. Support was introduced in native format 59, retaining the ability to read older documents.
 
 Panels have a compact header and a **⋮** menu for left/right anchoring and **Usa tutta l'altezza disponibile** (use the full available height); they remain below the ribbon. OK and Cancel clear the ribbon command selection. Construction-plane references, including already defined points, can be removed with **×**. Preferences are saved; drag a panel to detach it or snap it to either side.
@@ -542,11 +544,7 @@ The [tolerance policy (Italian)](docs/tolerance-policy.md) defines resolution, c
 QT_QPA_PLATFORM=xcb ./build-linux/forgecad
 ```
 
-**Problems on a Linux laptop with Intel + NVIDIA graphics.** The application attempts to prefer NVIDIA when it detects the driver's EGL configuration. To try the integrated GPU:
-
-```sh
-FORGECAD_IGPU=1 ./build-linux/forgecad
-```
+**Hybrid graphics on Linux.** The desktop graphics session selects the OpenGL driver for ForgeCAD. OpenGL driver selection is independent of CUDA backend detection.
 
 **New commands are missing from a custom ribbon.** Open them through **Funzioni → Ripetizione** or **Funzioni → Superfici**, or add them to your ribbon layout. Restart the application after updating the executable.
 

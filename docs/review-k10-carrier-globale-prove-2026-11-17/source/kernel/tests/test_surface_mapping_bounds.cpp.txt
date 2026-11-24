@@ -1,0 +1,163 @@
+#include "fk_bspline_surface.h"
+#include "fk_cancel.h"
+#include "fk_surface_mapping.h"
+#include "fk_surface_mapping_bounds.h"
+#include "fk_test.h"
+
+#include <atomic>
+#include <cmath>
+#include <limits>
+#include <memory>
+#include <vector>
+
+using namespace ForgeCad::Kernel;
+
+namespace {
+using Status = detail::SurfaceMappingBoundStatus;
+constexpr double budget = 1e-6;
+
+std::vector<double> clamped(int degree, double lo = 0, double hi = 1) {
+    std::vector<double> knots(degree + 1, lo);
+    knots.insert(knots.end(), degree + 1, hi);
+    return knots;
+}
+
+BSplineSurface flatSurface(int degree, Interval u = {0, 1}, Interval v = {0, 1}, double gauge = 1) {
+    std::vector<Vec3> poles;
+    for (int i = 0; i <= degree; ++i) for (int j = 0; j <= degree; ++j)
+        poles.emplace_back(u.lo + u.length() * i / degree, v.lo + v.length() * j / degree, 0);
+    return BSplineSurface(degree, degree, clamped(degree, u.lo, u.hi), clamped(degree, v.lo, v.hi),
+        degree + 1, degree + 1, poles, std::vector<double>(poles.size(), gauge));
+}
+
+BSplineSurface bumpSurface(double height) {
+    const std::vector<double> knots{0, 0, 0, 0, 46. / 256., 47. / 256.,
+        48. / 256., 49. / 256., 50. / 256., 1, 1, 1, 1};
+    std::vector<Vec3> poles;
+    for (int i = 0; i < 9; ++i) for (int j = 0; j < 9; ++j)
+        poles.emplace_back((knots[i + 1] + knots[i + 2] + knots[i + 3]) / 3.,
+            (knots[j + 1] + knots[j + 2] + knots[j + 3]) / 3.,
+            i == 4 && j == 4 ? height : 0.);
+    return BSplineSurface(3, 3, knots, knots, 9, 9, poles);
+}
+
+BSplineSurface curvedSurface(int degree) {
+    // Bernstein coefficients for z = u*v/64 + u^2/32 - v^2/128.
+    // They describe the SAME polynomial for quadratic and cubic surfaces.
+    std::vector<Vec3> poles;
+    for (int i = 0; i <= degree; ++i) for (int j = 0; j <= degree; ++j) {
+        const double u = double(i) / degree, v = double(j) / degree;
+        const double u2 = double(i * (i - 1)) / (degree * (degree - 1));
+        const double v2 = double(j * (j - 1)) / (degree * (degree - 1));
+        poles.emplace_back(u, v, u * v / 64. + u2 / 32. - v2 / 128.);
+    }
+    return BSplineSurface(degree, degree, clamped(degree), clamped(degree), degree + 1, degree + 1, poles);
+}
+
+detail::SurfaceMappingBoundResult bound(const Surface &target, const Surface &image,
+        const Surface &source, SurfaceWrapOptions options = {}, double cap = budget,
+        Interval u = {0, 1}, Interval v = {0, 1}) {
+    return detail::zeroHeightMappingResidualBound(source, target, options, 1, 1, image, u, v, cap);
+}
+
+void certified(const detail::SurfaceMappingBoundResult &result, double cap = budget) {
+    FK_CHECK(result.status == Status::Certified);
+    FK_CHECK(std::isfinite(result.upperBound) && result.upperBound >= 0 && result.upperBound <= cap);
+}
+}
+
+FK_TEST(MappingBoundsFlatNativeDegreesAndConstantWeightGauge) {
+    const Plane source{Frame3()};
+    const auto image = flatSurface(3, {0, 1}, {0, 1}, 5);
+    for (int degree : {2, 3}) {
+        const auto target = flatSurface(degree, {0, 1}, {0, 1}, 7);
+        certified(bound(target, image, source));
+        certified(bound(target, image, source, {}, budget, {.125, .75}, {.25, .875}));
+    }
+}
+
+FK_TEST(MappingBoundsInteriorPeakFailsAndHarmlessPeakCertifies) {
+    const Plane source{Frame3()};
+    const auto image = flatSurface(3);
+    const auto missed = bumpSurface((9. / 4.) * 1e-4);
+    // Independent cardinal-basis oracle: B_4(3/16)^2 = 4/9.
+    // The real residual at this interior point is 100 times the cap.
+    FK_CHECK_NEAR(missed.point(3. / 16., 3. / 16.).z(), 1e-4, 1e-16);
+    FK_CHECK(bound(missed, image, source).status == Status::Failed);
+    const auto harmless = bumpSurface(budget / 16.);
+    // Positive partition of unity bounds the ENTIRE Z residual by the
+    // largest Z pole, budget/16, independently of sampled peak detection.
+    // The remaining margin covers IEEE Greville XY rounding.
+    certified(bound(harmless, image, source));
+    // Also cover narrow spans in the emitted surface, not only the target.
+    FK_CHECK(bound(image, missed, source).status == Status::Failed);
+    certified(bound(image, harmless, source));
+}
+
+FK_TEST(MappingBoundsBilinearAndQuadraticCoefficientOracles) {
+    const Plane source{Frame3()};
+    const auto image = curvedSurface(3), wrongImage = flatSurface(3);
+    constexpr double expectedCenterHeight = (1. / 64. + 1. / 32. - 1. / 128.) / 4.;
+    for (int degree : {2, 3}) {
+        const auto target = curvedSurface(degree);
+        FK_CHECK_NEAR(target.point(.5, .5).z(), expectedCenterHeight, 1e-16);
+        FK_CHECK_NEAR(image.point(.5, .5).z(), expectedCenterHeight, 1e-16);
+        certified(bound(target, image, source));
+        FK_CHECK(bound(target, wrongImage, source).status == Status::Failed);
+    }
+}
+
+FK_TEST(MappingBoundsDiscreteAxisPermutationAndNegativeUV) {
+    // Exact discrete axes, no sin(pi/2): source(u,v)=(-v,u,0).
+    const Plane source{Frame3::fromAxes(Vec3(), Vec3(0, 1, 0), Vec3(-1, 0, 0), Vec3(0, 0, 1))};
+    const auto target = flatSurface(2, {-1, 0}, {0, 1});
+    std::vector<Vec3> poles;
+    for (int i = 0; i < 4; ++i) for (int j = 0; j < 4; ++j)
+        poles.emplace_back(-j / 3., i / 3., 0);
+    const BSplineSurface image(3, 3, clamped(3), clamped(3), 4, 4, poles);
+    certified(bound(target, image, source));
+    FK_CHECK(distance(image.point(.25, .75), Vec3(-.75, .25, 0)) <= 1e-15);
+    const auto wrongImage = flatSurface(3);
+    FK_CHECK(bound(target, wrongImage, source).status == Status::Failed);
+}
+
+FK_TEST(MappingBoundsInvalidInputsFailAndNonzeroOffsetIsUnsupported) {
+    const Plane source{Frame3()};
+    const auto target = flatSurface(2), image = flatSurface(3);
+    const double infinity = std::numeric_limits<double>::infinity();
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    for (double cap : {0., -1., infinity, nan})
+        FK_CHECK(bound(target, image, source, {}, cap).status == Status::Failed);
+    for (Interval query : {Interval{0, infinity}, Interval{nan, 1}, Interval{1, 0}, Interval{-.01, 1}})
+        FK_CHECK(bound(target, image, source, {}, budget, query).status == Status::Failed);
+    SurfaceWrapOptions options;
+    options.shift = {nan, 0};
+    FK_CHECK(bound(target, image, source, options).status == Status::Failed);
+    options = {};
+    options.normalOffset = .001;
+    FK_CHECK(bound(target, image, source, options).status == Status::Unsupported);
+    // Variable rational weights remain outside this polynomial-only delta.
+    std::vector<Vec3> poles;
+    for (int i = 0; i < 3; ++i) for (int j = 0; j < 3; ++j)
+        poles.emplace_back(i / 2., j / 2., 0);
+    std::vector<double> weights(9, 1.);
+    weights[4] = 2.;
+    const BSplineSurface rational(2, 2, clamped(2), clamped(2), 3, 3, poles, weights);
+    FK_CHECK(bound(rational, image, source).status == Status::Unsupported);
+}
+
+FK_TEST(MappingBoundsPresetCancellationRemainsDistinct) {
+    const Plane source{Frame3()};
+    const auto target = flatSurface(2), image = flatSurface(3);
+    const auto token = std::make_shared<std::atomic<bool>>(true);
+    bool cancelled = false;
+    {
+        CancellationScope scope(token);
+        try {
+            (void)bound(target, image, source);
+        } catch (const OperationCancelled &) {
+            cancelled = true;
+        }
+    }
+    FK_CHECK(cancelled);
+}

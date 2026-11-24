@@ -1,0 +1,37 @@
+from pathlib import Path
+import shutil
+T=Path('/tmp/k10-underflow-review-2026-11-17');K=T/'candidate';V=T/'v1';V.mkdir(exist_ok=True)
+for p in list(T.glob('*.log'))+list(T.glob('*.json')):
+ if p.name in ['baseline.json','architecture-consult.json','baseline-probe.json','baseline-probe.log','baseline-probe-compile.json','baseline-probe-compile.log']:continue
+ shutil.copy2(p,V/p.name)
+for n in ['fk_quadrature.h','test_quadrature_validation.cpp']:shutil.copy2(K/n,V/n)
+p=K/'fk_quadrature.h';s=p.read_text();a=s.index('// Un prodotto pesato subnormale');b=s.index('// Regola 7-15 su [a, b]:',a);block=s[a:b];s=s[:a]+s[b:];a=s.index('// Il ripiego usa soltanto');s=s[:a]+block+s[a:];needle='    QuadratureSums result{scaled[0]';assert s.count(needle)==1;s=s.replace(needle,'''    if (quadratureWeightedUnderflow(scaled))
+        throw std::domain_error("quadratura: prodotti pesati persi nel riscalamento");
+'''+needle);p.write_text(s)
+p=K/'test_quadrature_validation.cpp';s=p.read_text();s+='''
+FK_TEST(QuadratureUnrecoverableMixedScaleIsRejected) {
+    // The same rule samples contain a tiny center and cancelling ordinary
+    // pairs. Scaling by max=1 cannot restore the weighted center: reject
+    // rather than publish another finite zero as a successful recovery.
+    const double width = std::ldexp(1., 1023), middle = .5 * width;
+    const double smallest = std::numeric_limits<double>::denorm_min();
+    int calls = 0;
+    const auto scalar = [&](double t) {
+        ++calls;
+        return t == middle ? smallest : t < middle ? 1. : -1.;
+    };
+    double error, absolute;
+    domainFailure([&] { (void)detail::gaussKronrod(scalar, 0., width, error, absolute); });
+    FK_CHECK(calls == 15);
+    calls = 0;
+    const auto vector = [&](double t) {
+        detail::Evaluation<2> result;
+        result.value = {1. / width, scalar(t)};
+        result.magnitude = {1. / width, 1.};
+        return result;
+    };
+    // Passive components do not guide refinement but must remain valid.
+    domainFailure([&] { (void)detail::integrateVector<2>(vector, 0., width, 1e-12, roundoff, 1); });
+    FK_CHECK(calls == 15);
+}
+''';p.write_text(s)

@@ -1,0 +1,50 @@
+{
+  "natural_cross": [
+    "-3/4",
+    "0",
+    "1"
+  ],
+  "normal_exact": [
+    "-3/5",
+    "0",
+    "4/5"
+  ],
+  "normal_length": "5/4",
+  "cases": [
+    {
+      "height": "1152921504606847/576460752303423488",
+      "side": 1,
+      "tangent_squared": "0",
+      "R": "0",
+      "orientation": "6646139978924579641220196407045/1329227995784915872903807060280344576",
+      "actual_error_squared": "0"
+    },
+    {
+      "height": "1152921504606847/576460752303423488",
+      "side": -1,
+      "tangent_squared": "0",
+      "R": "0",
+      "orientation": "-6646139978924579641220196407045/1329227995784915872903807060280344576",
+      "actual_error_squared": "1329227995784915928244039281409/83076749736557242056487941267521536"
+    },
+    {
+      "height": "-1152921504606847/576460752303423488",
+      "side": 1,
+      "tangent_squared": "0",
+      "R": "0",
+      "orientation": "6646139978924579641220196407045/1329227995784915872903807060280344576",
+      "actual_error_squared": "0"
+    },
+    {
+      "height": "-1152921504606847/576460752303423488",
+      "side": -1,
+      "tangent_squared": "0",
+      "R": "0",
+      "orientation": "-6646139978924579641220196407045/1329227995784915872903807060280344576",
+      "actual_error_squared": "1329227995784915928244039281409/83076749736557242056487941267521536"
+    }
+  ],
+  "regression_peak_exact": "2767011611056433/27670116110564327424",
+  "baseline_probe_literal_peak_exact": "4150517416584649/41505174165846491136",
+  "note": "Exact coefficient oracle, independent of kernel basis/normal evaluator. Opposite-side examples have R=B=0 but error2*abs(h), requiring orientation guard."
+}

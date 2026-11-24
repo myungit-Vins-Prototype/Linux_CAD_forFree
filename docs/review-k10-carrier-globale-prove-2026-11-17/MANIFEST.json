@@ -1,0 +1,192 @@
+[
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/baseline-hashes.json",
+    "archive": "baseline-hashes.json",
+    "sha256": "8587781bdf0869c751bb5ca2c39c42e379fa1b7f9f027f62bd100a724c7d209b"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/baseline-output.txt",
+    "archive": "baseline-output.txt",
+    "sha256": "2d2104dce044a8fcdb7a6966abc6beee877d885f01da52cd699344d80ed748cc"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/public-baseline.log",
+    "archive": "public-baseline.log",
+    "sha256": "0db055c017c9451fca4b08e0f529f7ccace8c72092c19cf2feac257d009bd1d9"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/probe.cpp",
+    "archive": "probe.cpp.txt",
+    "sha256": "ca47f0bf6990eb41b75b45bc83f2c04ad54f776b3dde72e586448fbacb754a33"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/ci-status.json",
+    "archive": "ci-status.json",
+    "sha256": "ac535229002ce60e6a2cd3d91f01927f8e9c7dbc7d602f6c95679698288ab4e8"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/ci-job-134247020604-summary.txt",
+    "archive": "ci-job-134247020604-summary.txt",
+    "sha256": "f57db32d11b65a45802f2264d90f1b0d7f5d9acd3e4847d083c47eb3072a0d66"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/ci-job-134247021154-summary.txt",
+    "archive": "ci-job-134247021154-summary.txt",
+    "sha256": "66c0c4373a25164ff38d379e4bae051134bb01f93cd460af46a8699140e30508"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/independent-fraction-oracle.json",
+    "archive": "independent-fraction-oracle.json",
+    "sha256": "b599c50071ca54d03d11ee66948232206065f467235909793d6db42635101048"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/stage-build.log",
+    "archive": "stage-build.log",
+    "sha256": "45778ce7c28262bcd63b978990df50a4d899835759979fbf47f288fb11532823"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/candidate-tests.log",
+    "archive": "candidate-tests.log",
+    "sha256": "f693c515f0ea8d3bb10d2faead4ac132ff2928b330e0c05ba578117573f27d58"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/integrated-runner-build.json",
+    "archive": "integrated-runner-build.json",
+    "sha256": "f93ca90f71b6bfe11426d796ed79446e62f2ea1b6e3cb4ea080a1343b31ab705"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/integrated-runner-build.log",
+    "archive": "integrated-runner-build.log",
+    "sha256": "e8e9aa543282e2fd8989a71c4b96f6cb30d63b875607473d00b613eb925e2a40"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/ctest-mapping.json",
+    "archive": "ctest-mapping.json",
+    "sha256": "ead6eee37e4a85fc688d9c4d76893c040751999ae40f552f77bba25f6cbb9571"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/ctest-mapping.log",
+    "archive": "ctest-mapping.log",
+    "sha256": "1c399461db4fc9177f7b99be030bd9969985ca6e2bae431f95307910b5d2088f"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/integrated-global-tests.log",
+    "archive": "integrated-global-tests.log",
+    "sha256": "f693c515f0ea8d3bb10d2faead4ac132ff2928b330e0c05ba578117573f27d58"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/final-san-build.json",
+    "archive": "final-san-build.json",
+    "sha256": "f25f56f71c176de72c22f268b7c50f5e78137bd059ca9f95a24ac27c2191ecab"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/final-san-build.log",
+    "archive": "final-san-build.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/final-san-tests.json",
+    "archive": "final-san-tests.json",
+    "sha256": "fdffc0348df30f65fcd7c9d8d0542a21f50a79447a63ef1695f7532f74485e07"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/final-san-tests.log",
+    "archive": "final-san-tests.log",
+    "sha256": "f693c515f0ea8d3bb10d2faead4ac132ff2928b330e0c05ba578117573f27d58"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/cleanup.json",
+    "archive": "cleanup.json",
+    "sha256": "41cdbd6ab3f287c946391a6c0b07585004d828909710a754234b76ccd508c105"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/previous-seals-verified.json",
+    "archive": "previous-seals-verified.json",
+    "sha256": "06363fd568ac97f32c7d015b521e994ed338f9b57370d439a7139fa1bacc5579"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/peer-audit.txt",
+    "archive": "peer-audit.txt",
+    "sha256": "3f32552f70f28210c0da18d75c5534ab04d60babc1c2fb283aca8151172a23dd"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/initial-build-partial.json",
+    "archive": "initial-build-partial.json",
+    "sha256": "61adad1f9b011138129f172a5c2bbc3c840f44dcfe0270d88d6a815886c6c9d8"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/architecture-generation.log",
+    "archive": "architecture-generation.log",
+    "sha256": "884a1d62abb40f135c98d5fe3ba83e6e7d6d7d161f029c6dddc385ec230df5d7"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/architecture-generation.json",
+    "archive": "architecture-generation.json",
+    "sha256": "5d389fa6e6651dbc4e7d2f9e9e28a3e3dd4045e69ff9ddcb21439132c6ac69ec"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/architecture-check.log",
+    "archive": "architecture-check.log",
+    "sha256": "e883cff5a946d86881662208f6994f9a6f32ae355c0c5607a08acfd3226d61a1"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/architecture-focus.json",
+    "archive": "architecture-focus.json",
+    "sha256": "9f58e088eaac87be288074a8323341bb0986466b7f64ae1aa55557fc3488fefa"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/FINAL-VERIFICATION.json",
+    "archive": "FINAL-VERIFICATION.json",
+    "sha256": "a97a06b6f67a876acefe8b334b3cad1e040cdedb29d0f177db5697527dc5301b"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/carrier-only.patch.txt",
+    "archive": "carrier-only.patch.txt",
+    "sha256": "bba7b007aa070071dc649725c981aecb4c70dad7fb63227980ee03be483a69d7"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/verify-final.py",
+    "archive": "verify-final.py.txt",
+    "sha256": "5eb73a50c71e0e353e18d4e383350bfc6d38f84f4a212051542312e2617bedf6"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/archive-proofs.py",
+    "archive": "archive-proofs.py.txt",
+    "sha256": "5675a9e56594efcc5766e0133dd1695e8f8b5317716cd29a70588060fbc4b92f"
+  },
+  {
+    "source": "/tmp/k10-global-carrier-2026-11-17/fk_surface_mapping-before.cpp.txt",
+    "archive": "fk_surface_mapping-before.cpp.txt",
+    "sha256": "019423a02a6504b3d6e1d659ba9b3b0707397878d5b8bad3340efd52f2b45d3a"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_mapping_bounds.h",
+    "archive": "source/kernel/fk_surface_mapping_bounds.h.txt",
+    "sha256": "c32973201b3e85f4386310393a7c45a7ba7150830352ca4956b31736421e714b"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_mapping_bounds.cpp",
+    "archive": "source/kernel/fk_surface_mapping_bounds.cpp.txt",
+    "sha256": "c1540c50a1028b0de5e637dee9b2991a26e8827aad1deee2cf7004a79048d154"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_mapping.cpp",
+    "archive": "source/kernel/fk_surface_mapping.cpp.txt",
+    "sha256": "03a220dd02fdb826ed11760ab722dd29f6f9fc144ec7c560429dc864bcf011a3"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/tests/test_mapping_global_validation.cpp",
+    "archive": "source/kernel/tests/test_mapping_global_validation.cpp.txt",
+    "sha256": "932291f070382fcec44695bde905145541b8c0bef87340cfb322753471d70984"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/tests/test_surface_mapping_bounds.cpp",
+    "archive": "source/kernel/tests/test_surface_mapping_bounds.cpp.txt",
+    "sha256": "d36ec354596e582ef4cb890ce96af63c36422fd07f85d8a9abf3141838d0b64c"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/review-k10-carrier-globale-2026-11-17.md",
+    "archive": "source/docs/review-k10-carrier-globale-2026-11-17.md.txt",
+    "sha256": "f27a792a4b1b7eda3834dfbe61955e4dc3e9009696d2c2b3dcf4480dae5a5c82"
+  }
+]

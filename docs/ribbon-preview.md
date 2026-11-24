@@ -65,7 +65,7 @@ Lo Zoom tutto conserva il calcolo originale sull'intero viewport. La gestione de
 
 ```sh
 ctest --test-dir forgecad-release -R '^forgecad_ribbon_preview_tests$' --output-on-failure
-QT_QPA_PLATFORM=xcb FORGECAD_IGPU=1 ./forgecad-release/ribbon-preview/forgecad-ribbon-preview --self-test
+QT_QPA_PLATFORM=xcb ./forgecad-release/ribbon-preview/forgecad-ribbon-preview --self-test
 ```
 
 Il primo comando usa preferenze temporanee e profilo offscreen. La prova nativa richiede una sessione grafica disponibile; su altri sistemi va lasciato il relativo backend Qt. Copertura: contenimento delle etichette in tutte le schede, dimensioni normale/compatta, schede contestuali, scelta manuale, compressione/overflow, uscita schizzo, pannello sotto la ribbon, QAction reali e abilitazione della rotella. La prova nativa confronta anche il framebuffer con ribbon nascosta/visibile: il blur deve modificare la scena sotto le carte e lasciare invariato il distacco tra loro. Verifica inoltre una sfumatura grigio–bianco dopo aver contaminato esplicitamente il blending come QPainter, su otto fotogrammi con viste diverse, blur presente/assente e antialiasing0/4, confrontando i pixel con i colori attesi. Apre e annulla inoltre il pannello reale di una primitiva senza creare geometria.

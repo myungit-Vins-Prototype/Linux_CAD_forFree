@@ -1,0 +1,46 @@
+from pathlib import Path
+import hashlib,json,shutil,platform,subprocess
+root=Path('/home/myungit/Linux_CAD_forFree');stage=Path('/tmp/k10-normal-carrier-2026-11-18');dest=root/'docs/review-k10-carrier-normale-prove-2026-11-18'
+files=['baseline-hashes.json','baseline-probe.log','probe.cpp','public-baseline-build.log','public-baseline-tests.log','fraction-oracle.py','fraction-oracle.json','stage-build.log','candidate-tests.json','candidate-tests.log','integrated-build.json','integrated-build.log','integrated-hashes.json','ctest-mapping.json','ctest-mapping.log','ctest-last.log','san-build.json','san-build.log','san-tests.json','san-tests.log','cleanup.json','previous-seals-verified.json','peer-audit.txt','carrier-only.patch.txt','architecture-generation.log','architecture-generation.json','architecture-check.log','architecture-focus.json','FINAL-VERIFICATION.json','verify-final.py','archive-proofs.py']
+sourcefiles=['kernel/fk_surface_mapping_bounds.h','kernel/fk_surface_mapping_bounds.cpp','kernel/fk_surface_mapping.cpp','kernel/tests/test_mapping_global_validation.cpp','kernel/tests/test_surface_mapping_bounds.cpp','kernel/tests/test_mapping_normal_validation.cpp','kernel/tests/test_surface_mapping_normal_bounds.cpp','kernel/CMakeLists.txt','tools/generate_architecture.py','docs/review-k10-carrier-normale-2026-11-18.md']
+assert all((stage/f).is_file() for f in files)
+assert all((root/f).is_file() for f in sourcefiles)
+assert not dest.exists(),dest
+dest.mkdir();manifest=[]
+def copy(src,name):
+ p=dest/name;p.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(src,p)
+ manifest.append({'source':str(src),'archive':name,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
+for f in files:copy(stage/f,f+'.txt' if Path(f).suffix in {'.cpp','.h','.py'} else f)
+for f in sourcefiles:copy(root/f,'source/'+f+'.txt')
+# Keep baseline source inert, including the exact CMakeLists.txt filename.
+for f in sorted((stage/'before').rglob('*')):
+ if f.is_file():copy(f,'before/'+f.relative_to(stage/'before').as_posix())
+(dest/'environment.json').write_text(json.dumps({'platform':platform.system(),'machine':platform.machine(),'compiler':subprocess.check_output(['c++','--version'],text=True).splitlines()[0],'cmake':subprocess.check_output(['cmake','--version'],text=True).splitlines()[0]},indent=2)+'\n')
+(dest/'MANIFEST.json').write_text(json.dumps(manifest,indent=2)+'\n')
+(dest/'README.txt').write_text('''Prove locali K10: carrier a quota costante nonzero, 18 novembre 2026.
+
+Prima della correzione, il wrap pubblico del box rialzato perde il rilievo
+interno: residuo 1e-4 mm contro 1,22e-10 mm dichiarati. Baseline pubblica 2/3
+gruppi; finale 18/18 Release e ASan/UBSan, app completa e 7/7 CTest PASS.
+La normale naturale, il verso e la regolarita al cutoff esistente entrano nel
+bound continuo; il solido errato e rifiutato conservativamente. Non e una
+ricostruzione dell'offset generale. Famiglie e limiti nel rapporto allegato.
+
+Sanitizer su sette TU; il resto del kernel e Release. Leak detection attiva,
+non una verifica LSan dell'intera app. Nessun test UI. Fonte/binari/grafo e
+43 pacchetti precedenti sono collegati dalla verifica finale. Nuovo lavoro
+locale senza commit/push: la CI precedente non certifica questa patch.
+
+Testo inerte, nessun ELF, libreria o CAD. Il replay richiede toolchain e build
+indicate: non e ermetico. Temporanei binari rimossi come in cleanup.json.
+Le copie before documentano la baseline, non il software corrente.
+''')
+lines=[]
+for p in sorted(dest.rglob('*')):
+ if p.is_file():
+  assert p.name!='CMakeLists.txt' and p.suffix not in {'.cpp','.h','.py'},p
+  lines.append(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.relative_to(dest).as_posix())
+(dest/'SHA256SUMS').write_text('\n'.join(lines)+'\n')
+for line in lines:
+ h,f=line.split(None,1);assert hashlib.sha256((dest/f).read_bytes()).hexdigest()==h
+print('sealed',len(lines),'payloads',sum(p.stat().st_size for p in dest.rglob('*') if p.is_file()),'bytes; SHA256SUMS',hashlib.sha256((dest/'SHA256SUMS').read_bytes()).hexdigest())

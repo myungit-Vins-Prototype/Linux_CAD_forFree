@@ -1,0 +1,506 @@
+#include "fk_surface_mapping_bounds.h"
+#include "fk_bspline_surface.h"
+#include "fk_cancel.h"
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstdint>
+#include <vector>
+
+namespace ForgeCad::Kernel::detail {
+namespace {
+constexpr double infinity = std::numeric_limits<double>::infinity();
+constexpr std::size_t maxPoles = 100000;
+constexpr std::size_t maxVisits = 16384;
+constexpr std::size_t maxCells = 256;
+constexpr int maxDepth = 24;
+struct ProofFailed {};
+struct Unsupported {};
+struct Work {
+    std::size_t left = maxVisits;
+    void visit() { cancellationPoint(); if (!left) throw ProofFailed{}; --left; }
+};
+struct I {
+    double lo = 0, hi = 0;
+    I() = default;
+    explicit I(double value) : lo(value), hi(value) {}
+    I(double first, double last) : lo(first), hi(last) {}
+};
+bool finite(I value) {
+    return std::isfinite(value.lo) && std::isfinite(value.hi) && value.lo <= value.hi;
+}
+bool exact(I value, double number) { return value.lo == number && value.hi == number; }
+I whole() { return {-infinity, infinity}; }
+I outward(double lo, double hi) {
+    if (!std::isfinite(lo) || !std::isfinite(hi) || lo > hi) return whole();
+    return {std::nextafter(lo, -infinity), std::nextafter(hi, infinity)};
+}
+I operator+(I a, I b) {
+    if (!finite(a) || !finite(b)) return whole();
+    if (exact(a, 0)) return b;
+    if (exact(b, 0)) return a;
+    if (a.lo == a.hi && b.lo == b.hi && a.lo == -b.lo) return I(0);
+    return outward(a.lo + b.lo, a.hi + b.hi);
+}
+I operator-(I a, I b) {
+    if (!finite(a) || !finite(b)) return whole();
+    if (exact(b, 0)) return a;
+    if (a.lo == a.hi && b.lo == b.hi && a.lo == b.lo) return I(0);
+    if (exact(a, 0)) return {-b.hi, -b.lo};
+    return outward(a.lo - b.hi, a.hi - b.lo);
+}
+I operator*(I a, I b) {
+    if (!finite(a) || !finite(b)) return whole();
+    if (exact(a, 0) || exact(b, 0)) return I(0);
+    if (exact(a, 1)) return b;
+    if (exact(b, 1)) return a;
+    if (exact(a, -1)) return {-b.hi, -b.lo};
+    if (exact(b, -1)) return {-a.hi, -a.lo};
+    const double products[] = {a.lo * b.lo, a.lo * b.hi, a.hi * b.lo, a.hi * b.hi};
+    for (double value : products) if (!std::isfinite(value)) return whole();
+    return outward(*std::min_element(products, products + 4), *std::max_element(products, products + 4));
+}
+I operator/(I a, I b) {
+    if (!finite(a) || !finite(b) || !(b.lo > 0)) return whole();
+    if (exact(a, 0)) return I(0);
+    if (exact(b, 1)) return a;
+    const double quotients[] = {a.lo / b.lo, a.lo / b.hi, a.hi / b.lo, a.hi / b.hi};
+    for (double value : quotients) if (!std::isfinite(value)) return whole();
+    return outward(*std::min_element(quotients, quotients + 4), *std::max_element(quotients, quotients + 4));
+}
+using P = std::vector<I>;
+template<int N> using VP = std::array<P, N>;
+template<int N> using Point = std::array<I, N>;
+
+P elevated(P values, std::size_t degree) {
+    while (values.size() <= degree) {
+        const auto n = values.size();
+        P next(n + 1);
+        next.front() = values.front(); next.back() = values.back();
+        for (std::size_t i = 1; i < n; ++i) {
+            const I t = I(double(i)) / I(double(n));
+            next[i] = values[i - 1] * t + values[i] * (I(1) - t);
+        }
+        values = std::move(next);
+    }
+    return values;
+}
+P sum(P a, P b, bool subtract = false) {
+    const auto degree = std::max(a.size(), b.size()) - 1;
+    a = elevated(std::move(a), degree); b = elevated(std::move(b), degree);
+    for (std::size_t i = 0; i < a.size(); ++i) a[i] = subtract ? a[i] - b[i] : a[i] + b[i];
+    return a;
+}
+P scaled(P values, I factor) {
+    for (I &value : values) value = value * factor;
+    return values;
+}
+// Local Cox polynomials have degree at most three in this provider.
+// The small binomial integers are exact; their ratios are rounded outward.
+double choose(int n, int k) {
+    std::uint64_t value = 1;
+    for (int i = 1; i <= std::min(k, n - k); ++i) value = value * std::uint64_t(n - i + 1) / std::uint64_t(i);
+    return double(value);
+}
+P product(const P &a, const P &b) {
+    const int m = int(a.size()) - 1, n = int(b.size()) - 1;
+    if (m + n > 21) throw ProofFailed{};
+    P values(std::size_t(m + n + 1));
+    for (int i = 0; i <= m; ++i)
+        for (int j = 0; j <= n; ++j) {
+            const I factor = I(choose(m, i)) * I(choose(n, j)) / I(choose(m + n, i + j));
+            values[std::size_t(i + j)] = values[std::size_t(i + j)] + a[std::size_t(i)] * b[std::size_t(j)] * factor;
+        }
+    return values;
+}
+I hull(const P &values) {
+    I result(infinity, -infinity);
+    for (I value : values) {
+        if (!finite(value)) return whole();
+        result.lo = std::min(result.lo, value.lo); result.hi = std::max(result.hi, value.hi);
+    }
+    return result;
+}
+std::vector<P> basis(const std::vector<double> &knots, int cell, const P &q, int order) {
+    std::vector<P> previous(1, P{I(1)});
+    for (int degree = 1; degree <= order; ++degree) {
+        std::vector<P> current(std::size_t(degree + 1), P{I(0)});
+        for (int r = 0; r <= degree; ++r) {
+            const int i = cell - degree + r;
+            const double a = knots[std::size_t(i)], b = knots[std::size_t(i + degree)];
+            const double c = knots[std::size_t(i + 1)], d = knots[std::size_t(i + degree + 1)];
+            if (r && a < b)
+                current[std::size_t(r)] = sum(current[std::size_t(r)], product(previous[std::size_t(r - 1)],
+                    scaled(sum(q, P{I(a)}, true), I(1) / (I(b) - I(a)))));
+            if (r < degree && c < d)
+                current[std::size_t(r)] = sum(current[std::size_t(r)], product(previous[std::size_t(r)],
+                    scaled(sum(P{I(d)}, q, true), I(1) / (I(d) - I(c)))));
+        }
+        previous = std::move(current);
+    }
+    return previous;
+}
+
+using Tensor = std::array<I, 16>;
+using VectorTensor = std::array<Tensor, 3>;
+using IP = std::array<I, 3>;
+IP point(const Vec3 &p) {
+    IP out;
+    for (int a = 0; a < 3; ++a) {
+        if (!std::isfinite(p[a])) throw ProofFailed{};
+        out[std::size_t(a)] = I(p[a]);
+    }
+    return out;
+}
+I scalar(const IP &a, const IP &b) {
+    I value;
+    for (int k = 0; k < 3; ++k) value = value + a[std::size_t(k)] * b[std::size_t(k)];
+    return value;
+}
+struct Affine { I origin, du, dv; };
+I at(const Affine &f, double u, double v) { return f.origin + f.du * I(u) + f.dv * I(v); }
+// Exact zeros are required to establish the family; uncertain near-zero
+// coefficients never become an angular/UV tolerance.
+struct Mapping { std::array<Affine, 2> uv; I height; };
+Mapping mapping(const Plane &plane, const SurfaceWrapOptions &o, double su, double sv) {
+    const auto &f = plane.frame(); const auto &g = o.sourcePlane;
+    auto delta = point(f.origin()); const auto go = point(g.origin());
+    for (int a = 0; a < 3; ++a) delta[std::size_t(a)] = delta[std::size_t(a)] - go[std::size_t(a)];
+    const auto x = point(f.xDir()), y = point(f.yDir());
+    const auto gx = point(g.xDir()), gy = point(g.yDir()), gz = point(g.zDir());
+    if (!exact(scalar(x, gz), 0) || !exact(scalar(y, gz), 0)) throw Unsupported{};
+    const I height = scalar(delta, gz) + I(o.normalOffset);
+    if (!finite(height) || (!exact(height, 0) && height.lo <= 0 && height.hi >= 0)) throw ProofFailed{};
+    const I c(std::cos(o.angle)), s(std::sin(o.angle));
+    Affine a{I(o.anchor.x()) + (c * scalar(delta, gx) - s * scalar(delta, gy) + I(o.shift.x())) / I(su),
+        (c * scalar(x, gx) - s * scalar(x, gy)) / I(su),
+        (c * scalar(y, gx) - s * scalar(y, gy)) / I(su)};
+    Affine b{I(o.anchor.y()) + (s * scalar(delta, gx) + c * scalar(delta, gy) + I(o.shift.y())) / I(sv),
+        (s * scalar(x, gx) + c * scalar(x, gy)) / I(sv),
+        (s * scalar(y, gx) + c * scalar(y, gy)) / I(sv)};
+    const bool normal = exact(a.dv, 0) && exact(b.du, 0) && !exact(a.du, 0) && !exact(b.dv, 0);
+    const bool swapped = exact(a.du, 0) && exact(b.dv, 0) && !exact(a.dv, 0) && !exact(b.du, 0);
+    if (!normal && !swapped) throw Unsupported{};
+    for (auto f2 : {a, b}) if (!finite(f2.origin) || !finite(f2.du) || !finite(f2.dv)) throw ProofFailed{};
+    return {{a, b}, height};
+}
+bool knotsValid(const std::vector<double> &k, int p, int n) {
+    if (n <= p || k.size() != std::size_t(n + p + 1)) return false;
+    for (std::size_t i = 0; i < k.size(); ++i) {
+        cancellationPoint();
+        if (!std::isfinite(k[i]) || (i && k[i] < k[i - 1])) return false;
+    }
+    if (!(k[std::size_t(p)] < k[std::size_t(n)])) return false;
+    for (int i = p + 1, repeat = 1; i < n; ++i) {
+        repeat = k[std::size_t(i)] == k[std::size_t(i - 1)] ? repeat + 1 : 1;
+        if (repeat > p) return false;
+    }
+    return true;
+}
+void validate(const BSplineSurface &s, bool emitted) {
+    if (s.basis()) throw Unsupported{}; // Do not read recursively or round transformed poles.
+    if ((emitted && (s.uDegree() != 3 || s.vDegree() != 3)) ||
+        (!emitted && (s.uDegree() < 2 || s.uDegree() > 3 || s.vDegree() < 2 || s.vDegree() > 3)) ||
+        s.isUPeriodic() || s.isVPeriodic()) throw Unsupported{};
+    const auto nu = s.uPoleCount(), nv = s.vPoleCount();
+    if (nu <= 0 || nv <= 0 || std::size_t(nu) > maxPoles / std::size_t(nv)) throw ProofFailed{};
+    if (!knotsValid(s.uKnots(), s.uDegree(), nu) || !knotsValid(s.vKnots(), s.vDegree(), nv)) throw ProofFailed{};
+    const double w = s.weight(0, 0);
+    if (!std::isfinite(w) || !(w > 0)) throw ProofFailed{};
+    bool constant = true;
+    for (int i = 0; i < nu; ++i) for (int j = 0; j < nv; ++j) {
+        cancellationPoint();
+        const double wi = s.weight(i, j);
+        if (!std::isfinite(wi) || !(wi > 0)) throw ProofFailed{};
+        constant = constant && wi == w;
+        point(s.pole(i, j));
+    }
+    if (!constant) throw Unsupported{};
+}
+std::vector<int> cells(const std::vector<double> &k, int p, int n, I query) {
+    if (!finite(query) || query.lo < k[std::size_t(p)] || query.hi > k[std::size_t(n)]) throw ProofFailed{};
+    std::vector<int> out;
+    // Begin on the left of the FIRST equal knot, preserving closed-cell
+    // coverage at repeated knots; otherwise begin at the containing cell.
+    const int first = std::max(p, int(std::lower_bound(k.begin() + p, k.begin() + n + 1, query.lo) - k.begin()) - 1);
+    for (int i = first; i < n && k[std::size_t(i)] <= query.hi; ++i) {
+        cancellationPoint();
+        if (k[std::size_t(i)] < k[std::size_t(i + 1)] && query.lo <= k[std::size_t(i + 1)]) {
+            if (out.size() == maxCells) throw ProofFailed{};
+            out.push_back(i);
+        }
+    }
+    if (out.empty()) throw ProofFailed{};
+    return out;
+}
+// Each active target cell polynomial is enclosed on the WHOLE source rectangle.
+// This includes extrapolation outside that cell. Taking the maximum over ALL
+// intersected closed cells is conservative; selecting a midpoint cell is not.
+VectorTensor tensor(const BSplineSurface &s, int cu, int cv, const P &u, const P &v,
+                    const IP &origin, bool swapped) {
+    auto bu = basis(s.uKnots(), cu, u, s.uDegree());
+    auto bv = basis(s.vKnots(), cv, v, s.vDegree());
+    for (auto &b : bu) b = elevated(std::move(b), 3);
+    for (auto &b : bv) b = elevated(std::move(b), 3);
+    VectorTensor out{};
+    for (int i = 0; i <= s.uDegree(); ++i) for (int j = 0; j <= s.vDegree(); ++j) {
+        cancellationPoint();
+        const auto p = point(s.pole(cu - s.uDegree() + i, cv - s.vDegree() + j));
+        for (int a = 0; a < 4; ++a) for (int b = 0; b < 4; ++b) {
+            const I weight = bu[std::size_t(i)][std::size_t(a)] * bv[std::size_t(j)][std::size_t(b)];
+            const auto index = std::size_t(swapped ? b * 4 + a : a * 4 + b);
+            for (int axis = 0; axis < 3; ++axis)
+                out[std::size_t(axis)][index] = out[std::size_t(axis)][index] + (p[std::size_t(axis)] - origin[std::size_t(axis)]) * weight;
+        }
+    }
+    return out;
+}
+// Tensor Bernstein arithmetic for normal invariants. Degrees do not exceed
+// ten per axis: C=Tu cross Tv has degree at most5x5, and C dot C at most10x10.
+struct Polynomial {
+    int u = 0, v = 0;
+    std::vector<I> values{I(0)};
+    Polynomial() = default;
+    Polynomial(int du, int dv) : u(du), v(dv), values(std::size_t((du + 1) * (dv + 1))) {
+        if (du < 0 || dv < 0 || du > 10 || dv > 10) throw ProofFailed{};
+    }
+    I &at(int i, int j) { return values[std::size_t(i * (v + 1) + j)]; }
+    I at(int i, int j) const { return values[std::size_t(i * (v + 1) + j)]; }
+};
+using VectorPolynomial = std::array<Polynomial, 3>;
+Polynomial elevated(Polynomial p, int u, int v) {
+    while (p.u < u) {
+        cancellationPoint();
+        Polynomial q(p.u + 1, p.v);
+        for (int j = 0; j <= p.v; ++j) {
+            q.at(0, j) = p.at(0, j); q.at(q.u, j) = p.at(p.u, j);
+            for (int i = 1; i <= p.u; ++i) {
+                const I t = I(double(i)) / I(double(q.u));
+                q.at(i, j) = p.at(i - 1, j) * t + p.at(i, j) * (I(1) - t);
+            }
+        }
+        p = std::move(q);
+    }
+    while (p.v < v) {
+        cancellationPoint();
+        Polynomial q(p.u, p.v + 1);
+        for (int i = 0; i <= p.u; ++i) {
+            q.at(i, 0) = p.at(i, 0); q.at(i, q.v) = p.at(i, p.v);
+            for (int j = 1; j <= p.v; ++j) {
+                const I t = I(double(j)) / I(double(q.v));
+                q.at(i, j) = p.at(i, j - 1) * t + p.at(i, j) * (I(1) - t);
+            }
+        }
+        p = std::move(q);
+    }
+    return p;
+}
+Polynomial sum(Polynomial a, Polynomial b, bool subtract = false) {
+    const int u = std::max(a.u, b.u), v = std::max(a.v, b.v);
+    a = elevated(std::move(a), u, v); b = elevated(std::move(b), u, v);
+    for (std::size_t k = 0; k < a.values.size(); ++k)
+        a.values[k] = subtract ? a.values[k] - b.values[k] : a.values[k] + b.values[k];
+    return a;
+}
+Polynomial scaled(Polynomial p, I factor) {
+    for (auto &v : p.values) v = v * factor;
+    return p;
+}
+Polynomial product(const Polynomial &a, const Polynomial &b) {
+    Polynomial p(a.u + b.u, a.v + b.v);
+    for (int i = 0; i <= a.u; ++i) for (int k = 0; k <= b.u; ++k) {
+        cancellationPoint();
+        const I fu = I(choose(a.u, i)) * I(choose(b.u, k)) / I(choose(p.u, i + k));
+        for (int j = 0; j <= a.v; ++j) for (int l = 0; l <= b.v; ++l) {
+            const I fv = I(choose(a.v, j)) * I(choose(b.v, l)) / I(choose(p.v, j + l));
+            p.at(i + k, j + l) = p.at(i + k, j + l) + a.at(i, j) * b.at(k, l) * fu * fv;
+        }
+    }
+    return p;
+}
+Polynomial dot(const VectorPolynomial &a, const VectorPolynomial &b) {
+    Polynomial out;
+    for (std::size_t k = 0; k < 3; ++k) out = sum(std::move(out), product(a[k], b[k]));
+    return out;
+}
+VectorPolynomial cross(const VectorPolynomial &a, const VectorPolynomial &b) {
+    VectorPolynomial out;
+    for (int k = 0; k < 3; ++k) {
+        const auto i = std::size_t((k + 1) % 3), j = std::size_t((k + 2) % 3);
+        out[std::size_t(k)] = sum(product(a[i], b[j]), product(a[j], b[i]), true);
+    }
+    return out;
+}
+I hull(const Polynomial &p) { return hull(p.values); }
+double magnitude(I h) {
+    if (!finite(h)) throw ProofFailed{};
+    return std::max(std::abs(h.lo), std::abs(h.hi));
+}
+I squaredUpper(const VectorPolynomial &p) {
+    I result;
+    for (const auto &component : p) { const I m(magnitude(hull(component))); result = result + m * m; }
+    if (!finite(result)) throw ProofFailed{};
+    return result;
+}
+// Derivative poles are differences of ORIGINAL target poles, prior to any
+// centering. These are NATURAL target derivatives; no signed UV rate enters.
+VectorPolynomial derivativeTensor(const BSplineSurface &s, int cu, int cv, const P &u, const P &v,
+                                  bool alongU, bool swapped) {
+    const int pu = s.uDegree(), pv = s.vDegree(), du = pu - int(alongU), dv = pv - int(!alongU);
+    const auto bu = basis(s.uKnots(), cu, u, du), bv = basis(s.vKnots(), cv, v, dv);
+    VectorPolynomial out;
+    for (auto &p : out) p = Polynomial(swapped ? dv : du, swapped ? du : dv);
+    for (int i = 0; i <= du; ++i) for (int j = 0; j <= dv; ++j) {
+        cancellationPoint();
+        const int pi = cu - pu + i, pj = cv - pv + j;
+        const auto a = point(s.pole(pi, pj));
+        const auto b = point(s.pole(pi + int(alongU), pj + int(!alongU)));
+        const auto &knots = alongU ? s.uKnots() : s.vKnots();
+        const int degree = alongU ? pu : pv, first = alongU ? pi : pj;
+        const I factor = I(double(degree)) / (I(knots[std::size_t(first + degree + 1)]) - I(knots[std::size_t(first + 1)]));
+        if (!finite(factor)) throw ProofFailed{};
+        for (int x = 0; x <= du; ++x) for (int y = 0; y <= dv; ++y) {
+            const I basisWeight = bu[std::size_t(i)][std::size_t(x)] * bv[std::size_t(j)][std::size_t(y)];
+            for (std::size_t axis = 0; axis < 3; ++axis) {
+                auto &value = out[axis].at(swapped ? y : x, swapped ? x : y);
+                value = value + (b[axis] - a[axis]) * factor * basisWeight;
+            }
+        }
+    }
+    return out;
+}
+double normalUpper(const VectorTensor &actual, const VectorTensor &wanted,
+                   const BSplineSurface &target, int tu, int tv, const P &uq, const P &vq,
+                   bool swapped, I height) {
+    VectorPolynomial d;
+    for (std::size_t axis = 0; axis < 3; ++axis) {
+        d[axis] = Polynomial(3, 3);
+        for (std::size_t k = 0; k < 16; ++k) d[axis].values[k] = actual[axis][k] - wanted[axis][k];
+    }
+    const auto su = derivativeTensor(target, tu, tv, uq, vq, true, swapped);
+    const auto sv = derivativeTensor(target, tu, tv, uq, vq, false, swapped);
+    const auto c = cross(su, sv);
+    I lowerSquared;
+    for (const auto &component : c) {
+        const I h = hull(component);
+        if (!finite(h)) throw ProofFailed{};
+        const double m = h.lo > 0 ? h.lo : (h.hi < 0 ? -h.hi : 0);
+        lowerSquared = lowerSquared + I(m) * I(m);
+    }
+    if (!finite(lowerSquared)) throw ProofFailed{};
+    const double lowerC = std::nextafter(std::sqrt(std::max(0.0, lowerSquared.lo)), -infinity);
+    if (!(lowerC > 0)) return infinity;
+    // Match the EXISTING relative regularity policy of Surface::normal,
+    // using original-coefficient bounds rather than rounded evaluations.
+    // This does not certify bit-for-bit behavior of that evaluator.
+    const I threshold = I(angularResolution()) * I(std::max(squaredUpper(su).hi, squaredUpper(sv).hi));
+    if (!finite(threshold)) throw ProofFailed{};
+    if (!(lowerC > threshold.hi)) return infinity;
+    const I orientation = hull(scaled(dot(d, c), height));
+    if (!finite(orientation)) throw ProofFailed{};
+    if (orientation.lo < 0) return infinity;
+    const I b2 = squaredUpper(cross(d, c)) / I(lowerC) / I(lowerC);
+    Polynomial h2; h2.values[0] = height * height;
+    const I r(magnitude(hull(sum(dot(d, d), h2, true))));
+    const double lowerH = height.lo > 0 ? height.lo : -height.hi;
+    const I normal = (r + b2) / I(lowerH);
+    const I e2 = b2 + normal * normal;
+    if (!finite(b2) || !finite(normal) || !finite(e2)) throw ProofFailed{};
+    return std::nextafter(std::sqrt(e2.hi), infinity);
+}
+struct Rectangle { Interval u, v; };
+I enclosure(const P &p) { return hull(p); }
+double node(const BSplineSurface &target, const BSplineSurface &image,
+            const std::array<Affine, 2> &map, int iu, int iv, Rectangle r,
+            double budget, int depth, Work &work, const IP &origin, I height) {
+    work.visit();
+    const bool swapped = exact(map[0].du, 0);
+    const P uq{at(map[0], r.u.lo, r.v.lo), at(map[0], r.u.hi, r.v.hi)};
+    const P vq{at(map[1], r.u.lo, r.v.lo), at(map[1], r.u.hi, r.v.hi)};
+    const auto uc = cells(target.uKnots(), target.uDegree(), target.uPoleCount(), enclosure(uq));
+    const auto vc = cells(target.vKnots(), target.vDegree(), target.vPoleCount(), enclosure(vq));
+    if (uc.size() > maxCells / vc.size()) throw ProofFailed{};
+    const auto actual = tensor(image, iu, iv, P{I(r.u.lo), I(r.u.hi)}, P{I(r.v.lo), I(r.v.hi)}, origin, false);
+    double upper = 0;
+    for (int tu : uc) for (int tv : vc) {
+        work.visit();
+        const auto wanted = tensor(target, tu, tv, uq, vq, origin, swapped);
+        if (!exact(height, 0)) {
+            upper = std::max(upper, normalUpper(actual, wanted, target, tu, tv, uq, vq, swapped, height));
+            continue;
+        }
+        I squared;
+        for (int a = 0; a < 3; ++a) {
+            double bound = 0;
+            for (std::size_t k = 0; k < 16; ++k) {
+                const I d = actual[std::size_t(a)][k] - wanted[std::size_t(a)][k];
+                if (!finite(d)) throw ProofFailed{};
+                bound = std::max(bound, std::max(std::abs(d.lo), std::abs(d.hi)));
+            }
+            squared = squared + I(bound) * I(bound);
+        }
+        if (!finite(squared)) throw ProofFailed{};
+        upper = std::max(upper, std::nextafter(std::sqrt(squared.hi), infinity));
+    }
+    if (upper <= budget) return upper;
+    if (depth == maxDepth) throw ProofFailed{};
+    // Alternate source axes, retaining the original anchors in every Cox call.
+    const bool splitU = depth % 2 == 0;
+    const Interval q = splitU ? r.u : r.v;
+    const double mid = .5 * q.lo + .5 * q.hi;
+    if (!(q.lo < mid && mid < q.hi)) throw ProofFailed{};
+    Rectangle left = r, right = r;
+    (splitU ? left.u : left.v).hi = mid;
+    (splitU ? right.u : right.v).lo = mid;
+    return std::max(node(target, image, map, iu, iv, left, budget, depth + 1, work, origin, height),
+                    node(target, image, map, iu, iv, right, budget, depth + 1, work, origin, height));
+}
+std::vector<double> cuts(const std::vector<double> &knots, Interval range) {
+    std::vector<double> out{range.lo};
+    for (double k : knots) if (range.lo < k && k < range.hi && out.back() != k) out.push_back(k);
+    out.push_back(range.hi);
+    return out;
+}
+int containing(const std::vector<double> &k, int degree, int count, Interval r) {
+    int cell = int(std::upper_bound(k.begin(), k.end(), r.lo) - k.begin()) - 1;
+    cell = std::clamp(cell, degree, count - 1);
+    if (!(k[std::size_t(cell)] <= r.lo && r.hi <= k[std::size_t(cell + 1)])) throw ProofFailed{};
+    return cell;
+}
+}
+SurfaceMappingBoundResult constantHeightMappingResidualBound(
+    const Surface &source, const Surface &target, const SurfaceWrapOptions &options,
+    double scaleU, double scaleV, const Surface &image, Interval u, Interval v, double budget) {
+    cancellationPoint();
+    try {
+        if (!std::isfinite(u.lo) || !std::isfinite(u.hi) || !(u.lo < u.hi) ||
+            !std::isfinite(v.lo) || !std::isfinite(v.hi) || !(v.lo < v.hi) ||
+            !std::isfinite(budget) || !(budget > 0) || !std::isfinite(scaleU) || !(scaleU > 0) ||
+            !std::isfinite(scaleV) || !(scaleV > 0) || !std::isfinite(options.angle) ||
+            !std::isfinite(options.normalOffset) || !std::isfinite(options.anchor.x()) ||
+            !std::isfinite(options.anchor.y()) || !std::isfinite(options.shift.x()) || !std::isfinite(options.shift.y())) throw ProofFailed{};
+        const auto *plane = dynamic_cast<const Plane *>(&source);
+        const auto *t = dynamic_cast<const BSplineSurface *>(&target);
+        const auto *f = dynamic_cast<const BSplineSurface *>(&image);
+        if (!plane || !t || !f || options.rigid) throw Unsupported{};
+        const auto mapped = mapping(*plane, options, scaleU, scaleV);
+        const auto &map = mapped.uv;
+        validate(*t, false); validate(*f, true);
+        const auto &uk = f->uKnots(), &vk = f->vKnots();
+        if (u.lo < uk[3] || u.hi > uk[std::size_t(f->uPoleCount())] ||
+            v.lo < vk[3] || v.hi > vk[std::size_t(f->vPoleCount())]) throw ProofFailed{};
+        const auto us = cuts(uk, u), vs = cuts(vk, v);
+        if ((us.size() - 1) > maxVisits / (vs.size() - 1)) throw ProofFailed{};
+        const auto origin = point(t->pole(0, 0)); // Center only; geometry remains original intervals.
+        Work work; double upper = 0;
+        for (std::size_t i = 1; i < us.size(); ++i) for (std::size_t j = 1; j < vs.size(); ++j) {
+            Rectangle r{{us[i - 1], us[i]}, {vs[j - 1], vs[j]}};
+            upper = std::max(upper, node(*t, *f, map,
+                containing(uk, 3, f->uPoleCount(), r.u), containing(vk, 3, f->vPoleCount(), r.v),
+                r, budget, 0, work, origin, mapped.height));
+        }
+        return {SurfaceMappingBoundStatus::Certified, upper};
+    } catch (const Unsupported &) { return {}; }
+      catch (const ProofFailed &) { return {SurfaceMappingBoundStatus::Failed, infinity}; }
+}
+}

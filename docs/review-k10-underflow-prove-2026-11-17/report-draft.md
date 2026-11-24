@@ -1,0 +1,35 @@
+# K10 — underflow dei prodotti pesati, 17 novembre 2026
+
+Dopo il commit/push `18d0adc`, ripresa la quadratura condivisa. Corretto il recupero dei prodotti pesati che diventano subnormali o zero prima di essere moltiplicati per l’ampiezza dell’intervallo. È una continuazione di K10; il conteggio resta **34 rilievi corretti**, K10 parziale.
+
+## Riproduzione verificata prima della modifica
+
+Sorgenti e libreria della baseline del checkpoint congelati mediante hash. Compilatore C++17 Release con `-fno-fast-math -ffp-contract=off`, binary64 e arrotondamento ordinario.
+
+Con `d = 2^-1074` e `H = 2^1023`, la funzione costante `f(t)=d` ha integrale esatto `2^-51`. La regola GK della baseline restituisce valore e integrale assoluto zero, con 15 callback; l’errore stimato è `2^-51`. La versione vettoriale perde indipendentemente valore e magnitudine. Con `f(t)=4d`, la baseline restituisce `9*2^-52` anziché `8*2^-52`: **+12,5%**, ancora finito e diverso da zero.
+
+Riprodotto anche tramite l’API pubblica `arcLength`: B-spline 3D di grado1, nodi `{0,0,H,H}`, poli `(0,0,0)` e `(2^-51,0,0)`. La derivata valutata è esattamente `d`, la lunghezza restituita dalla baseline è zero. Le dimensioni fisiche sono sotto la risoluzione del documento e sotto la tolleranza assoluta predefinita: **questa prova non dimostra un difetto nei normali documenti CAD né una violazione di quel budget predefinito**. Le nuove regressioni chiedono `1e-30` e verificano il risultato con una soglia relativa alla misura; il vecchio oracolo assoluto `1e-12` avrebbe accettato lo zero.
+
+La baseline non è stata sottoposta alla nuova integrazione adattiva con tolleranza stretta: potrebbe espandere l’albero. La dimostrazione della perdita è sul pannello diretto e sulla chiamata pubblica con tolleranza predefinita, entrambe concluse in tempo limitato.
+
+## Correzione integrata
+
+In `fk_quadrature.h`, uno scan dei 15 campioni conserva le espressioni e l’ordine delle somme ordinarie. Controlla i termini centrali K/G, le coppie con segno K/G e le coppie assolute K: per ogni peso positivo `w`, `x != 0 && abs(x) < minNormal/w` segnala un prodotto che perde precisione prima della moltiplicazione per l’ampiezza. Il recupero già presente usa gli stessi campioni e prodotti `frexp/scalbn`, senza callback ripetute. Valori e magnitudini sono analizzati separatamente, anche nelle componenti passive; `controlled` continua a riguardare solamente il raffinamento.
+
+Dopo la normalizzazione viene ripetuto il controllo. Un centro minuscolo accanto a coppie ordinarie che si cancellano può restare minuscolo quando il massimo è1: se il riscalamento non risana i prodotti, si solleva `domain_error`. È un **rifiuto conservativo aggiuntivo** su dinamiche miste, non una garanzia di recuperarle tutte. Il caso misto dei campioni dimostra una perdita della regola discreta, senza attribuirgli un nuovo errore di integrazione continua pubblica.
+
+Prima versione: recuperava le costanti estreme ma mancava quest’ultima guardia; i suoi PASS preliminari non sono usati per dichiarare risolte le scale miste. Dopo audit in sola lettura Sol, aggiunta e verificata la guardia. Tolleranze, profondità30, campionamento, partizioni e contatori della cache restano conservati. Catalogo architetturale aggiornato per header e test.
+
+## Verifiche
+
+- **10/10 gruppi Release PASS**, inclusi i sei precedenti. Nuove regressioni: perdita completa/parziale, segni e inversione, 15 callback, assoluto, valore/magnitudine indipendenti, componenti passive anche con ricorsione effettiva, B-spline nativa e riuso cache, rifiuto delle scale miste non recuperabili.
+- **10/10 ASan/UBSan PASS**, con rilevamento leak abilitato. Strumentati unità `fk_curve_algo.cpp`, main e nuovi test; il resto della libreria rimane Release. Non è una verifica leak dell’intera app.
+- **26 output GK e 8 lunghezze ordinarie byte-identici** fra baseline e candidato. Tre proprietà di massa pubbliche (scatola, cilindro, estrusione razionale: volume/area/baricentro/inerzia) byte-identiche alla baseline ordinaria conservata.
+- **Build completa app e runner mirati PASS**, seriale,58,329s. **4/4 CTest PASS**: quadratura, lunghezza, estensione e derivata B-spline. Dieci casi storici in nove filtri kernel PASS: lunghezze, cache, rumore, massa/cancellazione e loft. Nessun test UI o avvio dell’app ripetuto.
+- Mappa: generazione e controlli finali in corso; non ancora dichiarata verificata.
+
+## Limiti e prosecuzione
+
+Restano stime di errore, ritorno a profondità massima senza stato esplicito, arrotondamenti della normalizzazione, dinamiche miste e underflow del risultato finale non rappresentabile. La guardia non certifica ogni operazione in floating point. Il check delle soglie dell’agente riguarda round-to-nearest; modalità FTZ/DAZ e altri arrotondamenti non sono certificati. L’analisi aggiunge lavoro costante sui 15 campioni: non si rivendica un guadagno di prestazioni.
+
+La mappa, gli hash finali, la pulizia degli artefatti ricreabili e lo stato della CI saranno completati prima della consegna. Nessun CAD originale modificato né processo utente chiuso. Queste modifiche successive al checkpoint restano locali. [Elenco dei punti aperti](review-punti-aperti-2026-11-17.md), [checkpoint e CI](review-checkpoint-push-2026-11-17.md).

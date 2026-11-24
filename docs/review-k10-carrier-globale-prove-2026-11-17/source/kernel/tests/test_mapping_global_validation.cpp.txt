@@ -1,0 +1,180 @@
+#include "fk_body_check.h"
+#include "fk_body_io.h"
+#include "fk_bspline_surface.h"
+#include "fk_classify_uv.h"
+#include "fk_history.h"
+#include "fk_primitives.h"
+#include "fk_sheet.h"
+#include "fk_surface_mapping.h"
+#include "fk_test.h"
+
+#include <algorithm>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+using namespace ForgeCad::Kernel;
+
+namespace {
+constexpr double tolerance = 1e-6;
+constexpr double center = 3. / 16.;
+constexpr double peakPole = (9. / 4.) * 1e-4;
+
+BSplineSurface localizedCarrier(bool bump) {
+    const std::vector<double> knots{0, 0, 0, 0, 46. / 256., 47. / 256.,
+        48. / 256., 49. / 256., 50. / 256., 1, 1, 1, 1};
+    std::vector<Vec3> poles;
+    for (int i = 0; i < 9; ++i) {
+        const double x = (knots[i + 1] + knots[i + 2] + knots[i + 3]) / 3.;
+        for (int j = 0; j < 9; ++j) {
+            const double y = (knots[j + 1] + knots[j + 2] + knots[j + 3]) / 3.;
+            poles.emplace_back(x, y, bump && i == 4 && j == 4 ? peakPole : 0.);
+        }
+    }
+    return BSplineSurface(3, 3, knots, knots, 9, 9, poles);
+}
+
+void unchangedCarrier(const BSplineSurface &actual, const BSplineSurface &before) {
+    FK_CHECK(!actual.basis() && !before.basis());
+    FK_CHECK(actual.uDegree() == before.uDegree() && actual.vDegree() == before.vDegree());
+    FK_CHECK(actual.uKnots() == before.uKnots() && actual.vKnots() == before.vKnots());
+    FK_CHECK(actual.uPoleCount() == before.uPoleCount() && actual.vPoleCount() == before.vPoleCount());
+    for (int i = 0; i < before.uPoleCount(); ++i) for (int j = 0; j < before.vPoleCount(); ++j) {
+        const Vec3 a = actual.pole(i, j), b = before.pole(i, j);
+        for (int k = 0; k < 3; ++k) FK_CHECK(a[k] == b[k]);
+        FK_CHECK(actual.weight(i, j) == before.weight(i, j));
+    }
+}
+
+std::string historyStamp(const BodyHistory &history) {
+    std::ostringstream out;
+    out << history.operandCount();
+    for (auto kind : {EntityKind::Vertex, EntityKind::Edge, EntityKind::Face}) {
+        out << ':' << history.resultSize(kind);
+        for (int i = 0; i < history.resultSize(kind); ++i) {
+            out << '/' << history.isDeclared(kind, i);
+            for (const auto &origin : history.origins(kind, i))
+                out << ',' << origin.operand << ',' << int(origin.kind) << ',' << origin.index
+                    << ',' << int(origin.relation);
+        }
+    }
+    return out.str();
+}
+
+void checkFaceOrigins(const Body &source, const Body &result, const BodyHistory &history) {
+    FK_CHECK(history.operandCount() == 1);
+    for (auto face : result.faces()) {
+        FK_CHECK(history.isDeclared(EntityKind::Face, face.index));
+        const auto &origins = history.origins(EntityKind::Face, face.index);
+        FK_CHECK(origins.size() == 1);
+        if (origins.size() != 1) continue;
+        const auto &origin = origins.front();
+        FK_CHECK(origin.operand == 0 && origin.kind == EntityKind::Face
+            && origin.relation == HistoryRelation::Modified);
+        FK_CHECK(source.contains(FaceId{origin.index}));
+    }
+}
+
+SurfaceWrapOptions wrapOptions() {
+    SurfaceWrapOptions options;
+    options.anchor = {0, 0};
+    options.tolerance = tolerance;
+    return options;
+}
+}
+
+FK_TEST(MappingGlobalNativeBumpHasIndependentInteriorWitness) {
+    const auto target = localizedCarrier(true);
+    // Cardinal cubic B_4 has knots 46..50 / 256. At its center 48/256,
+    // its value is (4 - 6*0^2 + 3*0^3)/6 = 2/3, its derivative is zero.
+    // Tensor-product height is therefore 4/9 of the ONLY nonzero Z pole.
+    // This oracle does not evaluate the production basis or mapping callback.
+    const double expectedHeight = (4. / 9.) * peakPole;
+    FK_CHECK_NEAR(expectedHeight, 1e-4, 1e-19);
+    const Vec3 witness(center, center, expectedHeight);
+    FK_CHECK(distance(target.point(center, center), witness) <= 1e-15);
+    FK_CHECK(distance(target.normal(center, center), Vec3(0, 0, 1)) <= 1e-12);
+    // The peak's entire support lies strictly inside the box footprint;
+    // its boundary is flat, so correct edge/fin checks cannot detect its loss.
+    for (double t : {0., center, 1.}) {
+        FK_CHECK(target.point(0, t).z() == 0. && target.point(1, t).z() == 0.);
+        FK_CHECK(target.point(t, 0).z() == 0. && target.point(t, 1).z() == 0.);
+    }
+}
+
+FK_TEST(MappingGlobalFlatCarrierWithSameKnotsSucceeds) {
+    const auto source = makeBox(Frame3(), 1, 1, .001);
+    const auto sourceBefore = writeBodyBinary(source);
+    const auto target = localizedCarrier(false), targetBefore = target;
+    BodyHistory history;
+    double deviation = -123;
+    const auto options = wrapOptions();
+    // Exceptions are failures: this control prevents blanket rejection of
+    // valid native carriers merely because they have narrow knot spans.
+    const auto result = wrapBodyOnSurface(source, target, options, &history, &deviation);
+    FK_CHECK(!result.isSheet() && result.faces().size() == source.faces().size());
+    FK_CHECK(checkBody(result, {true, true}).empty());
+    FK_CHECK(std::isfinite(deviation) && deviation >= 0 && deviation <= tolerance);
+    checkFaceOrigins(source, result, history);
+    for (auto vertex : result.vertices()) {
+        const auto &origins = history.origins(EntityKind::Vertex, vertex.index);
+        FK_CHECK(history.isDeclared(EntityKind::Vertex, vertex.index) && origins.size() == 1);
+        if (origins.size() != 1) continue;
+        FK_CHECK(origins.front().operand == 0 && origins.front().kind == EntityKind::Vertex);
+        const VertexId parent{origins.front().index};
+        FK_CHECK(source.contains(parent));
+        if (source.contains(parent))
+            FK_CHECK(distance(result.vertex(vertex).point, source.vertex(parent).point) <= tolerance);
+    }
+    FK_CHECK(writeBodyBinary(result) == writeBodyBinary(wrapBodyOnSurface(source, target, options, nullptr)));
+    FK_CHECK(writeBodyBinary(source) == sourceBefore);
+    unchangedCarrier(target, targetBefore);
+}
+
+FK_TEST(MappingGlobalSolidBumpRejectsSpecificUnprovenCarrierBeforePublication) {
+    const auto source = makeBox(Frame3(), 1, 1, .001);
+    const auto sourceBefore = writeBodyBinary(source);
+    const auto target = localizedCarrier(true), targetBefore = target;
+    auto history = sameIndexHistory(source, source);
+    const auto oldHistory = historyStamp(history);
+    double deviation = -123;
+    bool rejected = false;
+    try {
+        (void)wrapBodyOnSurface(source, target, wrapOptions(), &history, &deviation);
+    } catch (const std::domain_error &error) {
+        rejected = true;
+        FK_CHECK(std::string(error.what()).find("residuo globale del carrier") != std::string::npos);
+    }
+    // An unrelated exception escapes to the runner and fails this test.
+    FK_CHECK(rejected);
+    FK_CHECK(deviation == -123 && historyStamp(history) == oldHistory);
+    FK_CHECK(writeBodyBinary(source) == sourceBefore);
+    unchangedCarrier(target, targetBefore);
+}
+
+FK_TEST(MappingGlobalZeroHeightBottomIdentityRetainsTheRealBump) {
+    const auto source = makePlaneSheet(Frame3(Vec3(.5, .5, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), .5);
+    const auto sourceBefore = writeBodyBinary(source);
+    const auto target = localizedCarrier(true), targetBefore = target;
+    BodyHistory history;
+    double deviation = -123;
+    const auto options = wrapOptions();
+    // A sheet at zero normal height has an exact carrier route. It is a
+    // positive reference for the solid's bottom, not a fitted solid control.
+    const auto result = wrapBodyOnSurface(source, target, options, &history, &deviation);
+    FK_CHECK(result.isSheet() && result.faces().size() == 1);
+    FK_CHECK(checkBody(result, {true, true}).empty());
+    FK_CHECK(std::isfinite(deviation) && deviation >= 0 && deviation <= tolerance);
+    checkFaceOrigins(source, result, history);
+    if (result.faces().size() == 1) {
+        const auto face = result.faces().front();
+        FK_CHECK(distance(result.face(face).surface->point(center, center),
+            Vec3(center, center, (4. / 9.) * peakPole)) <= tolerance);
+        FK_CHECK(FaceParameterClassifier(result, face, tolerance).classify({center, center})
+            == PointLocation::Inside);
+    }
+    FK_CHECK(writeBodyBinary(result) == writeBodyBinary(wrapBodyOnSurface(source, target, options, nullptr)));
+    FK_CHECK(writeBodyBinary(source) == sourceBefore);
+    unchangedCarrier(target, targetBefore);
+}

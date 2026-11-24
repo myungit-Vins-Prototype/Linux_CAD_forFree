@@ -1,0 +1,7 @@
+Proposta Sol in sola lettura, non ancora eseguita.
+B-spline razionale grado1, dominio[0,1], poli0/1 sulla stessa retta, pesi{1,2^-40}.
+C(t)=e*t/(1-t+e*t), C'(t)=e/(1-t+e*t)^2 >0, lunghezza esatta1.
+Picco largo circa2^-40 vicino all'estremo1; possibile esaurimento della profondita30.
+Eseguire solo dopo la rigenerazione AST seriale, compilazione con strict-math e watchdog.
+Nessun richiamo artificiale di adaptiveIntegral(depth30), nessuna modifica software aggiuntiva.
+Non attribuire un eventuale errore alle modifiche underflow appena fatte: verificare anche libreria checkpoint se necessario.

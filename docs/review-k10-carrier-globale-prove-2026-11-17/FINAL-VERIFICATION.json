@@ -1,0 +1,43 @@
+{
+  "head": "6294aa37e63c51434fd2754ca7b1398d8a281ffe",
+  "branch": "main",
+  "index_empty": true,
+  "previous_packages": 42,
+  "previous_payloads": 6058,
+  "source_and_binary_hashes": {
+    "kernel/fk_surface_mapping.cpp": "03a220dd02fdb826ed11760ab722dd29f6f9fc144ec7c560429dc864bcf011a3",
+    "kernel/fk_surface_mapping_bounds.h": "c32973201b3e85f4386310393a7c45a7ba7150830352ca4956b31736421e714b",
+    "kernel/fk_surface_mapping_bounds.cpp": "c1540c50a1028b0de5e637dee9b2991a26e8827aad1deee2cf7004a79048d154",
+    "kernel/tests/test_mapping_global_validation.cpp": "932291f070382fcec44695bde905145541b8c0bef87340cfb322753471d70984",
+    "kernel/tests/test_surface_mapping_bounds.cpp": "d36ec354596e582ef4cb890ce96af63c36422fd07f85d8a9abf3141838d0b64c",
+    "kernel/CMakeLists.txt": "d2a6b06caf06462df696003dab0e525db98bf4b73e28ff62454365d7c509f996",
+    "kernel/fk_quadrature.h": "331e2e96b37c8170022aa2341d225f0e2f010728b8b1ec533a92258243c32615",
+    "kernel/tests/test_quadrature_validation.cpp": "a3cf2172efb672250c172be0239e83aedba4715b33d92fe94d45ad03f774d6f7",
+    "tools/generate_architecture.py": "2ab96d31aff0418fab9a2e5c750909e8f7300fb6652f6ab15b94b5c158510d5f",
+    "forgecad-release/forgecad": "6774b6c487d8676a0325d6dd26ee9f43eff7bb56e9e8b6c9f28d227d1cdab57c",
+    "forgecad-release/kernel/libforgekernel.a": "db169a6fef4e87db723852628575705981de7b635a942fd30f8c4374ef74102c",
+    "forgecad-release/kernel/forgekernel_mapping_global_validation_tests": "7b94eb128e0eb6927c2ad3d19b934888e44bb08ba63521d3899e6b9e316db301"
+  },
+  "document_hashes": {
+    "CLAUDE.md": "697cde88be542745cebff73067662e26787ef50820f9d60434eed0ef3ee00a48",
+    "docs/review-k10-carrier-globale-2026-11-17.md": "f27a792a4b1b7eda3834dfbe61955e4dc3e9009696d2c2b3dcf4480dae5a5c82",
+    "docs/review-punti-aperti-2026-11-17.md": "731f5a2a1d9e6834f7a7aa7ed8708bc10ab1f50d1811be7ce80a46d090acd936",
+    "docs/roadmap.md": "7ae99eae5af4a657178fab82d46ece4d26812bf8f9dbc6a6f52dc5b43e439913",
+    "docs/code-review-2026-11-15.md": "25748b8c973544534c30b06364610da257c01b2683490a85ccd6fbd4901601e4",
+    "docs/review-ci-repair-2026-11-17.md": "339f47b20ede6577db36219440014b948385916bb937cece3d9f76e27dde2c11",
+    "docs/review-checkpoint-push-2026-11-17.md": "c08e0a758e86ce0c0c63dc80f8c9d982f7fa76bce9ee46564d43d5325eab7e4c"
+  },
+  "architecture": {
+    "nodes": 808,
+    "edges": 11796,
+    "units": 411,
+    "errors": {},
+    "graph_hash": "730b605c4ee23c939bacf7b18464fa8ff12035a03e530c0e7916a439636c1b44",
+    "html_hash": "7618bf021f6d14056a1b37da1d3ff50fc9952e39aa511527df05cfa204b718dd",
+    "typed_bidirectional_focus": "architecture-focus.json"
+  },
+  "ci_run": 44142011489,
+  "ci_conclusion": "success",
+  "local_tests": "7/7 CTest, 10/10 new Release and ASan/UBSan; other kernel Release",
+  "memory_bytes": 15915
+}

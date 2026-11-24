@@ -4,9 +4,9 @@ Richiesta: variare i parametri nelle ripetizioni lineari/circolari, anche più p
 
 ## Uso
 
-Scegliere **Ripeti: Una funzione**. Nel passaggio **Parametri** le quote dei suoi schizzi diretti compaiono nella viewport anche se lo schizzo è nascosto e senza entrare in modifica. Un clic sul testo o sulla linea di quota aggiunge la variazione e porta il focus sul suo incremento; un secondo clic seleziona la riga esistente. Le quote selezionate sono verdi. I parametri numerici della funzione, come la distanza dell'estrusione, restano nel breve elenco con **Aggiungi**. Ogni riga contiene parametro, valore iniziale, incremento e valore dell'ultima istanza.
+Nelle ripetizioni lineari e circolari, scegli **Il corpo intero** per copiare il risultato di una funzione che crea un corpo, come una primitiva o un’estrusione autonoma. Scegli **Una funzione** per ripetere il materiale aggiunto o sottratto a un corpo di base.
 
-**Il corpo intero** disabilita la variazione e rimuove le quote temporanee. Anche il costruttore rifiuta variazioni su un corpo eventualmente ricevute da file/API. Cambiare sorgente svuota le righe precedenti; passare temporaneamente a corpo conserva la bozza nel widget, ma non la applica né la salva. Chiudere con OK/Annulla rimuove overlay e callback.
+Nel passaggio **Parametri** aggiungi una variazione dall’elenco, oppure clicca una quota degli schizzi diretti nella viewport. Le quote compaiono anche quando lo schizzo è nascosto. Ogni riga mostra valore iniziale, incremento e valore dell’ultima istanza. I due modi conservano le bozze quando passi dall’uno all’altro. Cambiare sorgente azzera le bozze. Chiudere con OK o Annulla rimuove le quote temporanee.
 
 `q(i) = q(0) + i * incremento`, con `i = 0` per l'originale. Il valore iniziale segue quello della sorgente. Il passo lineare/angolare della ripetizione rimane indipendente. Le esclusioni conservano il numero originale: escludere l'istanza 2 non rinumera i valori delle successive. Nelle griglie avanza prima la direzione 1, poi la 2. La colonna **Ultima** mostra il valore dell'ultimo indice nominale, anche se quell'occorrenza è esclusa.
 
@@ -17,6 +17,8 @@ Il catalogo pubblico comprende soltanto i parametri della funzione selezionata e
 La ripetizione di funzione resta limitata ai tipi già supportati dal comando (funzioni additive/sottrattive supportate e booleane unione/differenza). I campi numerici esposti dipendono dal tipo effettivo dell'utensile. Enum, booleani e riferimenti geometrici non sono incrementi numerici.
 
 `cad_pattern_variation` contiene un catalogo comune per elenco, lettura, applicazione e limiti dei parametri, più la ricostruzione del grafo di dipendenze. Ogni istanza parte da copie isolate dei dati; vengono rigenerati i nodi modificati e i loro dipendenti. Seguono appoggi, riferimenti associativi, Pierce e soluzione dei vincoli. Il risultato usa il B-rep e le booleane esistenti, senza ricostruzione da mesh o allargamento delle tolleranze.
+
+Con **Il corpo intero** il kernel rigenera il risultato della funzione sorgente a ogni incremento e lo dispone secondo il passo scelto. Il catalogo comprende i parametri attivi della funzione sorgente e le quote dei suoi schizzi diretti. I parametri di una booleana restano accessibili dai suoi utensili in **Una funzione**.
 
 Per la ripetizione di una funzione si varia lo strumento e si conserva il destinatario fisso. Unioni e differenze rispettano l'operazione attiva, ignorando campi appartenenti ad altre modalità. Risultati vuoti e assenza di occorrenze attive sono errori, salvo il caso già previsto in cui il destinatario contiene l'originale di una funzione precedente.
 
@@ -30,11 +32,21 @@ Gli incrementi tutti nulli riusano il percorso delle copie identiche. Nelle vari
 - La variazione dei conteggi nello schizzo ricrea le copie e rimappa i riferimenti disponibili. Viene rifiutata se elimina entità vincolate/riferite o coinvolge percorsi parziali legacy che non possono essere rimappati in modo affidabile.
 - Restano i limiti geometrici dei costruttori; non tutte le combinazioni di valori generano una forma valida. Il catalogo permette fino a 256 variazioni; il limite delle istanze resta quello della ripetizione esistente.
 
-## Verifiche della revisione richiesta
+## Estensione del 21 novembre
+
+Verificati una primitiva e un’estrusione autonoma con più variazioni,
+ripetizioni lineari e circolari, indici delle occorrenze escluse e
+geometria sorgente invariata. Il pannello Wayland passa in entrambi i
+modi con selezione della quota, conferma, modifica, Undo/Redo,
+riapertura senza cache e rifiuto atomico dei valori non validi.
+Passano le sei suite mirate delle ripetizioni. Il formato del documento
+rimane invariato.
+
+## Verifiche del 4 novembre
 
 - App Linux completa e runner aggiornati. **13/13 CTest PASS**, incluse ripetizioni esistenti/legacy, superfici, riferimenti, documenti, unità, soppressione e tavole collegate.
 - Prove geometriche con volumi analitici: lineari/circolari/griglie, esclusioni, variazioni simultanee diametro/distanza, booleane unione/differenza e conteggi di schizzi.
-- Catalogo della funzione e dei suoi schizzi diretti; rifiuto di corpo intero e riferimenti forzati agli antenati; sorgenti immutate, parametro duplicato/non finito e conteggio frazionario rifiutati. Identità dopo inserimento/eliminazione quote, codec63/firma62, Undo/Redo e cache anteprima.
+- Catalogo della funzione e dei suoi schizzi diretti; rifiuto allora previsto di corpo intero e dei riferimenti forzati agli antenati; sorgenti immutate, parametro duplicato/non finito e conteggio frazionario rifiutati. Identità dopo inserimento/eliminazione quote, codec63/firma62, Undo/Redo e cache anteprima.
 - Test ufficiale del pannello su **Wayland PASS**: cambio funzione/corpo, clic sul testo quota, campo incremento, dati documento identici prima/dopo selezione, conferma/modifica, Undo/Redo, riapertura senza cache, rifiuto atomico di una variazione invalida e cleanup di quote/callback su OK/Annulla.
 - Framebuffer nativo ispezionato: quota diametro disegnata sopra il solido, verde dopo la scelta. La cattura QWidget dell'intera finestra omette gli overlay QPainter; la verifica del rendering usa il framebuffer OpenGL.
 

@@ -1,0 +1,14 @@
+{
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "--parallel",
+    "1",
+    "-R",
+    "^forgekernel_.*(mapping|surface_curve_bounds)"
+  ],
+  "exit_code": 0,
+  "seconds": 6.666218837999622
+}

@@ -1,0 +1,14 @@
+{
+  "exit_code": 0,
+  "seconds": 2.3082237979979254,
+  "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1",
+  "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1",
+  "instrumented": [
+    "fk_surface_mapping.cpp",
+    "fk_surface_mapping_bounds.cpp",
+    "test_mapping_global_validation.cpp",
+    "test_surface_mapping_bounds.cpp",
+    "fk_test_main.cpp"
+  ],
+  "other_kernel": "Release"
+}

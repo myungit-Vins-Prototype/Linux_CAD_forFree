@@ -1,0 +1,15 @@
+exec(open('/tmp/k10-underflow-review-2026-11-17/run.py').read().split("if mode=='candidate':")[0])
+D=T/'depth-trace';B=T/'before/kernel';lib=R/'forgecad-release/kernel/libforgekernel.a'
+flags=['c++','-std=c++17','-O3','-fno-fast-math','-ffp-contract=off']
+run('depth-current-compile',flags+['-I',R/'kernel',T/'depth-probe.cpp',lib,'-o',T/'depth-current'])
+run('depth-current',[T/'depth-current'],timeout=3)
+run('depth-baseline-arc-compile',flags+['-I',B,'-I',R/'kernel','-c',B/'fk_curve_algo.cpp','-o',T/'depth-baseline-arc.o'])
+run('depth-baseline-compile',flags+['-I',B,'-I',R/'kernel',T/'depth-probe.cpp',T/'depth-baseline-arc.o',lib,'-o',T/'depth-baseline'])
+run('depth-baseline',[T/'depth-baseline'],timeout=3)
+assert (T/'depth-current.log').read_bytes()==(T/'depth-baseline.log').read_bytes()
+run('depth-trace-arc-compile',flags+['-I',D,'-I',R/'kernel','-c',D/'fk_curve_algo.cpp','-o',T/'depth-trace-arc.o'])
+run('depth-trace-compile',flags+['-I',D,'-I',R/'kernel',D/'depth-probe.cpp',T/'depth-trace-arc.o',lib,'-o',T/'depth-trace-probe'])
+run('depth-trace',[T/'depth-trace-probe'],timeout=3)
+lines=(T/'depth-trace.log').read_text().splitlines();actual=''.join(l+'\n' for l in lines if not l.startswith('trace '))
+assert actual==(T/'depth-current.log').read_text()
+print('public current/checkpoint/private trace results byte identical',flush=True)

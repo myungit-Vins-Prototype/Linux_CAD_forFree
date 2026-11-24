@@ -1,0 +1,35 @@
+from pathlib import Path
+import subprocess,json,time,sys,os
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-underflow-review-2026-11-17');K=T/'candidate';mode=sys.argv[1]
+def run(name,cmd,expected=0,timeout=120,env=None):
+ start=time.monotonic()
+ with (T/(name+'.log')).open('w') as log:
+  try:r=subprocess.run([str(c) for c in cmd],cwd=R,stdout=log,stderr=subprocess.STDOUT,timeout=timeout,env=env);code=r.returncode
+  except subprocess.TimeoutExpired:code=124
+ data={'argv':[str(c) for c in cmd],'exit':code,'seconds':time.monotonic()-start};(T/(name+'.json')).write_text(json.dumps(data,indent=2));print(name,code,round(data['seconds'],3),flush=True)
+ assert code==expected,(name,code,expected)
+base=['c++','-std=c++17','-O3','-fno-fast-math','-ffp-contract=off','-I',str(K),'-I',str(R/'kernel'),'-I',str(R/'kernel/tests')]
+if mode=='candidate':
+ run('candidate-arc-compile',base+['-c',K/'fk_curve_algo.cpp','-o',T/'arc.o'])
+ run('candidate-tests-compile',base+[R/'kernel/tests/fk_test_main.cpp',K/'test_quadrature_validation.cpp',T/'arc.o',R/'forgecad-release/kernel/libforgekernel.a','-o',T/'candidate-tests'])
+ run('candidate-tests',[T/'candidate-tests'],timeout=30)
+elif mode=='golden':
+ for name in ['quadrature','length']:
+  src=Path('/tmp/k10-quadrature-review/root')/('ordinary-'+name+'.cpp');(T/src.name).write_bytes(src.read_bytes())
+  for version in ['baseline','candidate']:
+   flags=base if version=='candidate' else ['c++','-std=c++17','-O3','-fno-fast-math','-ffp-contract=off','-I',str(R/'kernel')]
+   objs=[T/'arc.o'] if version=='candidate' and name=='length' else []
+   run(version+'-'+name+'-compile',flags+[T/src.name,*objs,R/'forgecad-release/kernel/libforgekernel.a','-o',T/(version+'-'+name)])
+   run(version+'-'+name,[T/(version+'-'+name)])
+  assert (T/('baseline-'+name+'.log')).read_bytes()==(T/('candidate-'+name+'.log')).read_bytes(),name
+ print('goldens byte identical',flush=True)
+
+elif mode=='sanitizer':
+ flags=['c++','-std=c++17','-O1','-g','-fno-fast-math','-ffp-contract=off','-fsanitize=address,undefined','-fno-omit-frame-pointer','-I',str(K),'-I',str(R/'kernel'),'-I',str(R/'kernel/tests')]
+ run('san-arc-compile',flags+['-c',K/'fk_curve_algo.cpp','-o',T/'san-arc.o'])
+ run('san-tests-compile',flags+[R/'kernel/tests/fk_test_main.cpp',K/'test_quadrature_validation.cpp',T/'san-arc.o',R/'forgecad-release/kernel/libforgekernel.a','-o',T/'san-tests'])
+ env=dict(os.environ,ASAN_OPTIONS='detect_leaks=1:halt_on_error=1',UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1')
+ run('san-tests',[T/'san-tests'],timeout=30,env=env)
+elif mode=='baseline-proof':
+ run('baseline-probe-compile',['c++','-std=c++17','-O3','-fno-fast-math','-ffp-contract=off','-I',str(R/'kernel'),T/'baseline.cpp',R/'forgecad-release/kernel/libforgekernel.a','-o',T/'baseline'])
+ run('baseline-probe',[T/'baseline'],timeout=2)

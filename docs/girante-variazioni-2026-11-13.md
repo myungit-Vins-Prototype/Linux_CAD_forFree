@@ -1,5 +1,7 @@
 # Variazioni della ripetizione: esempio girante.prt — 13 novembre 2026
 
+Dal 21 novembre il comando espone le variazioni anche in **Il corpo intero**. Per ripetere l’estrusione autonoma si può scegliere direttamente questo modo e selezionare la quota dello schizzo. Il procedimento seguente documenta il comportamento del 13 novembre e il caso di ripetizione del materiale aggiunto.
+
 Richiesta dell'utente: spiegare l'uso delle variazioni usando il suo modello. Indagine e istruzioni, nessuna modifica al software o al documento originale.
 
 ## Stato effettivo del file

@@ -1,0 +1,242 @@
+[
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/baseline-hashes.json",
+    "archive": "baseline-hashes.json",
+    "sha256": "8b86da070469fb7c40e5b1dc797c40cfd061779538e7bcfe23fd5e37883c03f6"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/baseline-probe.log",
+    "archive": "baseline-probe.log",
+    "sha256": "337a384870bbbcdb39edfd0a670d062df9ab320592e9263bda8538bac72a5962"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/probe.cpp",
+    "archive": "probe.cpp.txt",
+    "sha256": "cf7ef283e70b030efdb15767207899956a329a1f219708ec109ca396e2075828"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/public-baseline-build.log",
+    "archive": "public-baseline-build.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/public-baseline-tests.log",
+    "archive": "public-baseline-tests.log",
+    "sha256": "7d8d580ab494cc9006a3eb018deb74624978a69afa8f6ab46a64238006065a77"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/fraction-oracle.py",
+    "archive": "fraction-oracle.py.txt",
+    "sha256": "1ee678d093917a2eccb3c8f5b01933a4cfe06d1b738b3c51d439e9f2a33daa24"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/fraction-oracle.json",
+    "archive": "fraction-oracle.json",
+    "sha256": "1007c2a15aa43e3eb912121ab68e4cd08659ebccea65144530480f582388bf73"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/stage-build.log",
+    "archive": "stage-build.log",
+    "sha256": "1411893eebd0fd7fd01e9c37ae27f4cb9b7e1ddd02100f7d98d091c2671670a7"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/candidate-tests.json",
+    "archive": "candidate-tests.json",
+    "sha256": "4e0954349af280652e2e03b63ac08f7059bff0c40ac2a40bff87ce34d3302057"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/candidate-tests.log",
+    "archive": "candidate-tests.log",
+    "sha256": "591a1764931355212e0d7de8ecb0bd2e2d75d16c779d5171eb3444c5ef52d5ce"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/integrated-build.json",
+    "archive": "integrated-build.json",
+    "sha256": "6571e3d1fec50ab36dede9cf3c3c0f235e137248d80e7a671a9a594e455560a7"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/integrated-build.log",
+    "archive": "integrated-build.log",
+    "sha256": "9a862935666a4a67bb279f7d40f4da2b728dcf43949c5cabd7c0af057c12cde3"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/integrated-hashes.json",
+    "archive": "integrated-hashes.json",
+    "sha256": "2c4413b716d9079784763dc1ff1b1b154c4140417f273f6771d39a5599ff281b"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/ctest-mapping.json",
+    "archive": "ctest-mapping.json",
+    "sha256": "87381e2227e600974fab548233f8c47993efb437df16eec1691f372111922d99"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/ctest-mapping.log",
+    "archive": "ctest-mapping.log",
+    "sha256": "944f667d51b09f3435c7b27d5eacd10954b177d6384980bc39565a867266152a"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/ctest-last.log",
+    "archive": "ctest-last.log",
+    "sha256": "de0466b0215cd1a434b84e84cc0b809cdb9655a2b971fde842c0b486a3977e22"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/san-build.json",
+    "archive": "san-build.json",
+    "sha256": "c657f755a034adc44ff082a6f0c6ec18838c6d9be67578407a6f3edf813a99d7"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/san-build.log",
+    "archive": "san-build.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/san-tests.json",
+    "archive": "san-tests.json",
+    "sha256": "a9fa0e127c9dfca13067fc625a08880fc4411ec81a6f4b768dfba42f7e6ec5d7"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/san-tests.log",
+    "archive": "san-tests.log",
+    "sha256": "591a1764931355212e0d7de8ecb0bd2e2d75d16c779d5171eb3444c5ef52d5ce"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/cleanup.json",
+    "archive": "cleanup.json",
+    "sha256": "4c613a0c47a6efbc4b1bf616ce1908bb2c6f023e7b69fbfcd59ce72760db86e1"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/previous-seals-verified.json",
+    "archive": "previous-seals-verified.json",
+    "sha256": "39ed6e4109c5f93f5f2d06342b110c4cf1e761fee79b11fca51bc5a554124b3a"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/peer-audit.txt",
+    "archive": "peer-audit.txt",
+    "sha256": "8eefa4351eb2766c1263397df66c1fe0696808a50d6947cdeb6f728d345e26c1"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/carrier-only.patch.txt",
+    "archive": "carrier-only.patch.txt",
+    "sha256": "8415ade227943453d33f9eff9bca21771e3037daccc076a079a552f8fbb81792"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/architecture-generation.log",
+    "archive": "architecture-generation.log",
+    "sha256": "b9abba6152c9412035178ddd7dcc2140d8afd3dc66f93c3f6d3bf8bf7c93fc43"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/architecture-generation.json",
+    "archive": "architecture-generation.json",
+    "sha256": "b61762ad879e17a4db9ee653ec2d31268a04f01d793ad4791b53b232ef56f118"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/architecture-check.log",
+    "archive": "architecture-check.log",
+    "sha256": "fd9b76d0cd092ec8f430e363597dca25329495e57e2b4c6e2001611497dde888"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/architecture-focus.json",
+    "archive": "architecture-focus.json",
+    "sha256": "c7ce39dedeea138dadce83dd0c06a595323b16dea1983ca7c337641e4483d3df"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/FINAL-VERIFICATION.json",
+    "archive": "FINAL-VERIFICATION.json",
+    "sha256": "42fb813355ad387c61ed00e8a00f6c76c95f5805a84705ef6310163d5d54a6a7"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/verify-final.py",
+    "archive": "verify-final.py.txt",
+    "sha256": "d88bc40cf1bf4b396a0c618572de7e25c0a62886b22ea6c700c1cefc31a851a2"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/archive-proofs.py",
+    "archive": "archive-proofs.py.txt",
+    "sha256": "0163b03c3858af34bcb2abb92741b790ce691542c11bbcc4b4cdccfd91d72881"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_mapping_bounds.h",
+    "archive": "source/kernel/fk_surface_mapping_bounds.h.txt",
+    "sha256": "53a5bfc9202357646ea061fb7416e34153010b3d70440204757ab38f810acf69"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_mapping_bounds.cpp",
+    "archive": "source/kernel/fk_surface_mapping_bounds.cpp.txt",
+    "sha256": "b37cd46bf9f24a129c291dd9a636d033e76d98fcbbe7b65d4b857980aaa2c515"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_mapping.cpp",
+    "archive": "source/kernel/fk_surface_mapping.cpp.txt",
+    "sha256": "cd5e20ef42be0d33136215c3da30e722d776f3eb162b2341878a434f6d4020e3"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/tests/test_mapping_global_validation.cpp",
+    "archive": "source/kernel/tests/test_mapping_global_validation.cpp.txt",
+    "sha256": "932291f070382fcec44695bde905145541b8c0bef87340cfb322753471d70984"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/tests/test_surface_mapping_bounds.cpp",
+    "archive": "source/kernel/tests/test_surface_mapping_bounds.cpp.txt",
+    "sha256": "59caf73a56788c139e32ca0df8070df88d13568f28a6bd7c52d19b7e6763e643"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/tests/test_mapping_normal_validation.cpp",
+    "archive": "source/kernel/tests/test_mapping_normal_validation.cpp.txt",
+    "sha256": "06562f6715a11bea708e0307a689ba44b7b89e9df2c69c6ceaca93de5ba6cd0c"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/tests/test_surface_mapping_normal_bounds.cpp",
+    "archive": "source/kernel/tests/test_surface_mapping_normal_bounds.cpp.txt",
+    "sha256": "4ed33946df09d249ef19f9395fb947c9e89ec0338e77cd9979d8f3c744f17c75"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/CMakeLists.txt",
+    "archive": "source/kernel/CMakeLists.txt.txt",
+    "sha256": "16e78d7960f217f8aa6cc8ccdedd0394cf95a72fccc264064a015c52cc2da19f"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/tools/generate_architecture.py",
+    "archive": "source/tools/generate_architecture.py.txt",
+    "sha256": "733749fa1e5d354f6bc86d842f57386be5ddb856ff41a4fc8f482dbe67cb278a"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/review-k10-carrier-normale-2026-11-18.md",
+    "archive": "source/docs/review-k10-carrier-normale-2026-11-18.md.txt",
+    "sha256": "5713f22cfddaf874748cb9a4cc30d5c3130ad75c807da53e3657e6d75416f5f6"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/before/CLAUDE.md.txt",
+    "archive": "before/CLAUDE.md.txt",
+    "sha256": "697cde88be542745cebff73067662e26787ef50820f9d60434eed0ef3ee00a48"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/before/kernel/CMakeLists.txt.txt",
+    "archive": "before/kernel/CMakeLists.txt.txt",
+    "sha256": "d2a6b06caf06462df696003dab0e525db98bf4b73e28ff62454365d7c509f996"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/before/kernel/fk_surface_mapping.cpp.txt",
+    "archive": "before/kernel/fk_surface_mapping.cpp.txt",
+    "sha256": "03a220dd02fdb826ed11760ab722dd29f6f9fc144ec7c560429dc864bcf011a3"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/before/kernel/fk_surface_mapping_bounds.cpp.txt",
+    "archive": "before/kernel/fk_surface_mapping_bounds.cpp.txt",
+    "sha256": "c1540c50a1028b0de5e637dee9b2991a26e8827aad1deee2cf7004a79048d154"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/before/kernel/fk_surface_mapping_bounds.h.txt",
+    "archive": "before/kernel/fk_surface_mapping_bounds.h.txt",
+    "sha256": "c32973201b3e85f4386310393a7c45a7ba7150830352ca4956b31736421e714b"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/before/kernel/tests/test_surface_mapping_bounds.cpp.txt",
+    "archive": "before/kernel/tests/test_surface_mapping_bounds.cpp.txt",
+    "sha256": "d36ec354596e582ef4cb890ce96af63c36422fd07f85d8a9abf3141838d0b64c"
+  },
+  {
+    "source": "/tmp/k10-normal-carrier-2026-11-18/before/tools/generate_architecture.py.txt",
+    "archive": "before/tools/generate_architecture.py.txt",
+    "sha256": "2ab96d31aff0418fab9a2e5c750909e8f7300fb6652f6ab15b94b5c158510d5f"
+  }
+]

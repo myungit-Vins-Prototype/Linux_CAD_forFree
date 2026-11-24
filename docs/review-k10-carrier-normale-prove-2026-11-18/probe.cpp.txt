@@ -1,0 +1,26 @@
+#include "fk_surface_mapping.h"
+#include "fk_bspline_surface.h"
+#include "fk_primitives.h"
+#include "fk_body_io.h"
+#include "fk_body_check.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+int main(){try {
+ const std::vector<double> k{0,0,0,0,46./256,47./256,48./256,49./256,50./256,1,1,1,1};
+ std::vector<Vec3> poles;for(int i=0;i<9;++i)for(int j=0;j<9;++j){double x=0,y=0;for(int a=1;a<=3;++a){x+=k[i+a]/3.;y+=k[j+a]/3.;}poles.emplace_back(x,y,i==4&&j==4?2.25e-4:0.);}
+ const BSplineSurface target(3,3,k,k,9,9,poles);
+ const auto source=makeBox(Frame3(Vec3(0,0,.002),Vec3(0,0,1),Vec3(1,0,0)),1,1,.001);const auto before=writeBodyBinary(source);
+ SurfaceWrapOptions options;options.tolerance=1e-6;double deviation=-1;BodyHistory history;
+ std::cout<<std::setprecision(17)<<"target peak "<<target.point(.1875,.1875).z()<<"\n";
+ auto output=wrapBodyOnSurface(source,target,options,&history,&deviation);
+ std::cout<<"faces "<<output.faces().size()<<" issues "<<checkBody(output,{true,true}).size()<<" declared "<<deviation<<" input_same "<<(before==writeBodyBinary(source))<<"\n";
+ for(auto f:source.faces()) {
+ const auto &plane=static_cast<const Plane&>(*source.face(f).surface);
+ for(double z:{.002,.003}) {const Vec3 p(.1875,.1875,z);const auto uv=plane.frame().toLocal(p);if(std::fabs(uv.z())>1e-12)continue;
+ const auto actual=output.face(f).surface->point(uv.x(),uv.y());const auto expected=target.point(p.x(),p.y())+z*target.normal(p.x(),p.y());
+ std::cout<<"face "<<f.index<<" z "<<z<<" output_z "<<actual.z()<<" residual "<<distance(actual,expected)<<"\n";
+ }
+ }
+ return 0;
+ }catch(const std::exception&e){std::cout<<"exception "<<e.what()<<"\n";return 2;}}

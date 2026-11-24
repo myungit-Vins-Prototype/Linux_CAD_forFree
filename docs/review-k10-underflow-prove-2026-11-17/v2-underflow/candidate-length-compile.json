@@ -1,0 +1,22 @@
+{
+  "argv": [
+    "c++",
+    "-std=c++17",
+    "-O3",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-I",
+    "/tmp/k10-underflow-review-2026-11-17/candidate",
+    "-I",
+    "/home/myungit/Linux_CAD_forFree/kernel",
+    "-I",
+    "/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "/tmp/k10-underflow-review-2026-11-17/ordinary-length.cpp",
+    "/tmp/k10-underflow-review-2026-11-17/arc.o",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+    "-o",
+    "/tmp/k10-underflow-review-2026-11-17/candidate-length"
+  ],
+  "exit": 0,
+  "seconds": 0.9158975790051045
+}

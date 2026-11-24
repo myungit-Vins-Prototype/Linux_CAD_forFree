@@ -1,0 +1,20 @@
+{
+  "argv": [
+    "c++",
+    "-std=c++17",
+    "-O3",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-I",
+    "/tmp/k10-underflow-review-2026-11-17/depth-trace",
+    "-I",
+    "/home/myungit/Linux_CAD_forFree/kernel",
+    "/tmp/k10-underflow-review-2026-11-17/depth-trace/depth-probe.cpp",
+    "/tmp/k10-underflow-review-2026-11-17/depth-trace-arc.o",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+    "-o",
+    "/tmp/k10-underflow-review-2026-11-17/depth-trace-probe"
+  ],
+  "exit": 0,
+  "seconds": 0.815403831002186
+}

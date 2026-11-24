@@ -1,0 +1,17 @@
+{
+  "basis_center": "2/3",
+  "derivative_center": "0",
+  "height_exact_stored_pole": "4150517416584649/41505174165846491136",
+  "height_double": 9.999999999999999e-05,
+  "xy_center_exact": "3/16",
+  "xy_error": "0",
+  "requested_budget": 1e-06,
+  "fit_budget": 2e-08,
+  "height_over_requested": 100.0,
+  "harmless_pole_bound_fraction_of_budget": "1/16",
+  "method": "Fractions on original IEEE pole and exact dyadic knots; no kernel evaluator",
+  "literal_pole_hex": "0x1.d7dbf487fcb92p-13",
+  "regression_product_pole_hex": "0x1.d7dbf487fcb93p-13",
+  "regression_product_peak_exact": "2767011611056433/27670116110564327424",
+  "note": "Initial standalone probe uses literal2.25e-4; regression fixtures use (9/4)*1e-4, differing by one IEEE ULP. Both witnesses exceed the requested cap by approximately100x."
+}

@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "c++",
+    "-std=c++17",
+    "-O3",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-I",
+    "/tmp/k10-underflow-review-2026-11-17/before/kernel",
+    "-I",
+    "/home/myungit/Linux_CAD_forFree/kernel",
+    "-c",
+    "/tmp/k10-underflow-review-2026-11-17/before/kernel/fk_curve_algo.cpp",
+    "-o",
+    "/tmp/k10-underflow-review-2026-11-17/depth-baseline-arc.o"
+  ],
+  "exit": 0,
+  "seconds": 1.4165820490015903
+}

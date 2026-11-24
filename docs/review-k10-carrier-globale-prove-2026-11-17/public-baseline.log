@@ -1,0 +1,7 @@
+[  OK  ] MappingGlobalNativeBumpHasIndependentInteriorWitness
+[  OK  ] MappingGlobalFlatCarrierWithSameKnotsSucceeds
+    /tmp/k10-global-carrier-2026-11-17/test_mapping_global_validation.cpp:150: FK_CHECK(rejected)
+    /tmp/k10-global-carrier-2026-11-17/test_mapping_global_validation.cpp:151: FK_CHECK(deviation == -123 && historyStamp(history) == oldHistory)
+[ FAIL ] MappingGlobalSolidBumpRejectsSpecificUnprovenCarrierBeforePublication (2 controlli falliti)
+[  OK  ] MappingGlobalZeroHeightBottomIdentityRetainsTheRealBump
+3/4 test superati

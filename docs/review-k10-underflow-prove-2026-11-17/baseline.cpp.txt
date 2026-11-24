@@ -1,0 +1,8 @@
+#include "fk_quadrature.h"
+#include "fk_curve_algo.h"
+#include "fk_bspline.h"
+#include <limits>
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+int main(){double tiny=std::numeric_limits<double>::denorm_min(),large=std::ldexp(1.,1023),error,absolute;int calls=0;double v=detail::gaussKronrod([&](double){++calls;return tiny;},0.,large,error,absolute);std::cout<<std::hexfloat<<"scalar "<<v<<" expected "<<std::ldexp(1.,-51)<<" abs "<<absolute<<" error "<<error<<" calls "<<calls<<"\n";detail::Evaluation<2> integral;detail::Values<2> errors,absolutes;detail::gaussKronrod<2>([&](double){detail::Evaluation<2> r;r.value={tiny,1/large};r.magnitude={1/large,tiny};return r;},0.,large,integral,errors,absolutes);std::cout<<"vector "<<integral.value[0]<<" mag "<<integral.magnitude[1]<<" other "<<integral.value[1]<<"\n";double partial=detail::gaussKronrod([&](double){return 4*tiny;},0.,large,error,absolute);std::cout<<"partial "<<partial<<" expected "<<std::ldexp(1.,-49)<<" relative "<<(partial/std::ldexp(1.,-49)-1)<<"\n";BSplineCurve<3> curve(1,{0,0,large,large},{{0,0,0},{std::ldexp(1.,-51),0,0}});std::cout<<"native derivative "<<curve.derivative(large*.5)[0]<<" length "<<arcLength(curve,curve.domain())<<" expected "<<std::ldexp(1.,-51)<<"\n";}

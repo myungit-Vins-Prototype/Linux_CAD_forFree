@@ -1,0 +1,36 @@
+{
+  "total_bytes": 262528056,
+  "files": [
+    {
+      "path": "/tmp/k10-normal-carrier-2026-11-18/final-san",
+      "bytes": 76344352,
+      "sha256": "70dc0d89020a9eacbe24b6b16804a6f32be9a37246b4cb5bb0202823e27bcc53"
+    },
+    {
+      "path": "/tmp/k10-normal-carrier-2026-11-18/candidate",
+      "bytes": 60502440,
+      "sha256": "3ef6615cede0d2fedbbbde44f62a86d6c8a9fbe07831f33660f3031a81ac5518"
+    },
+    {
+      "path": "/tmp/k10-normal-carrier-2026-11-18/mapping.o",
+      "bytes": 255432,
+      "sha256": "e9897e778b0ef4bac1e4b44f112a878f9c4a055b30c7aaa0577bafd4254308a9"
+    },
+    {
+      "path": "/tmp/k10-normal-carrier-2026-11-18/bounds.o",
+      "bytes": 86472,
+      "sha256": "806f61c08239c6ea6647e0d15aade95902be568628a9d5385089cccde1d1dfe0"
+    },
+    {
+      "path": "/tmp/k10-normal-carrier-2026-11-18/public-baseline",
+      "bytes": 62681240,
+      "sha256": "1310897e98ae28791a4f766a4810096a203a584e4cd3c7bf4b4f1570818c2869"
+    },
+    {
+      "path": "/tmp/k10-normal-carrier-2026-11-18/probe",
+      "bytes": 62658120,
+      "sha256": "c0a738c2cf6b3f4f82a54342dfccbd91bee8f5f1810cb78b9874ae3b29475aa8"
+    }
+  ],
+  "scope": "Only completed ELF/objects of this staging; source/logs retained, no user files or active build removed"
+}

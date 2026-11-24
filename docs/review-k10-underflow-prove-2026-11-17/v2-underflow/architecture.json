@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "python3",
+    "/home/myungit/Linux_CAD_forFree/tools/generate_architecture.py",
+    "--build-dir",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release",
+    "--jobs",
+    "1"
+  ],
+  "exit": 0,
+  "seconds": 781.8215107069991
+}

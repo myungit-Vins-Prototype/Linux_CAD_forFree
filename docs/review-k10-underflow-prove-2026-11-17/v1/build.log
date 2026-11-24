@@ -1,0 +1,44 @@
+-- Configuring done (0.6s)
+-- Generating done (0.4s)
+-- Build files have been written to: /home/myungit/Linux_CAD_forFree/forgecad-release
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve_algo.cpp.o
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_profile.cpp.o
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_mass.cpp.o
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft.cpp.o
+[  4%] Linking CXX static library libforgekernel.a
+[ 43%] Built target forgekernel
+[ 43%] Built target forgecad_compute_autogen_timestamp_deps
+[ 43%] Automatic MOC and UIC for target forgecad_compute
+[ 43%] Built target forgecad_compute_autogen
+[ 43%] Built target forgecad_compute
+[ 43%] Impronta dei sorgenti della geometria
+[ 43%] Built target forgecad_autogen_timestamp_deps
+[ 43%] Automatic MOC and UIC for target forgecad
+[ 43%] Built target forgecad_autogen
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_document_io.cpp.o
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_mass.cpp.o
+[ 43%] Linking CXX executable forgecad
+[100%] Built target forgecad
+[100%] Built target forgekernel
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_quadrature_validation_tests.dir/tests/test_quadrature_validation.cpp.o
+[100%] Linking CXX executable forgekernel_quadrature_validation_tests
+[100%] Built target forgekernel_quadrature_validation_tests
+[100%] Built target forgekernel
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_arc_length_validation_tests.dir/tests/test_arc_length_validation.cpp.o
+[100%] Linking CXX executable forgekernel_arc_length_validation_tests
+[100%] Built target forgekernel_arc_length_validation_tests
+[ 90%] Built target forgekernel
+[ 90%] Linking CXX executable forgekernel_sheet_arc_validation_tests
+[100%] Built target forgekernel_sheet_arc_validation_tests
+[100%] Built target forgekernel
+[100%] Building CXX object kernel/CMakeFiles/forgekernel_bspline_derivative_tests.dir/tests/test_bspline_derivatives.cpp.o
+[100%] Linking CXX executable forgekernel_bspline_derivative_tests
+[100%] Built target forgekernel_bspline_derivative_tests
+[ 66%] Built target forgekernel
+[ 66%] Built target forgekernel_occt
+[ 66%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_blend_features.cpp.o
+[ 66%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_boolean.cpp.o
+[ 66%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_curve_algo.cpp.o
+[ 66%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_mass.cpp.o
+[ 66%] Linking CXX executable ../forgekernel_tests
+[100%] Built target forgekernel_tests

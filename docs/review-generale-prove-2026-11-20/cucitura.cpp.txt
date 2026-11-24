@@ -1,0 +1,59 @@
+#include "fk_body_check.h"
+#include "fk_classify.h"
+#include "fk_mass.h"
+#include "fk_primitives.h"
+#include "fk_sew.h"
+#include <algorithm>
+#include <iostream>
+using namespace ForgeCad::Kernel;
+Body copySheet(const Body &box, bool invert) {
+    std::vector<Vec3> pts;
+    std::vector<Body::BuildEdge> ed;
+    std::vector<Body::BuildFace> fs;
+    for (auto v:box.vertices()) pts.push_back(box.vertex(v).point);
+    for (auto e:box.edges()) {
+        const auto &edge=box.edge(e);
+        ed.push_back({box.edgeStart(e).index, box.edgeEnd(e).index, edge.curve,edge.range,edge.tolerance});
+    }
+    for (auto f:box.faces()) {
+        const auto &face=box.face(f);
+        auto &copy=fs.emplace_back(Body::BuildFace{face.surface,face.sense!=invert,{}});
+        for (auto l:face.loops) {
+            auto &loop=copy.loops.emplace_back();
+            for (auto u:box.loopFins(l)) {
+                const auto &fin=box.fin(u);
+                loop.push_back({fin.edge.index,fin.sense!=invert,fin.pcurve,fin.pcurveTolerance});
+            }
+            if (invert) std::reverse(loop.begin(),loop.end());
+        }
+    }
+    return Body::buildSheet(pts,ed,fs);
+}
+
+void run(const char *label, const std::vector<const Body*> &parts, const Vec3 &query) {
+    const auto r=sewSheets(parts,1e-6,true);
+    const auto props=massProperties(r.body);
+    const auto issues=checkBody(r.body,{true,true});
+    const auto c=SolidClassifier(r.body, linearResolution()).classify(query);
+    std::cout<<label<<" closed="<<r.closed<<" solid="<<r.solid<<" shells="<<r.shells
+             <<" regions="<<r.body.regions().size()<<" free_edges="<<r.freeEdges
+             <<" volume="<<props.volume<<" issues="<<issues.size()
+             <<" query_inside="<<(c==PointLocation::Inside)<<" query_outside="<<(c==PointLocation::Outside)<<"\n";
+}
+int main() {
+    const auto place = [](double x, double y, double z) {
+        return Frame3(Vec3(x,y,z),Vec3(0,0,1),Vec3(1,0,0));
+    };
+    const auto a=copySheet(makeBox(Frame3{},2,2,2),false);
+    const auto b=copySheet(makeBox(place(10,0,0),1,1,1),true);
+    const auto bOut=copySheet(makeBox(place(10,0,0),1,1,1),false);
+    const auto cIn=copySheet(makeBox(place(.5,.5,.5),1,1,1),true);
+    const auto cOut=copySheet(makeBox(place(.5,.5,.5),1,1,1),false);
+    run("disjoint mixed A,B", {&a,&b}, {10.5,.5,.5});
+    run("disjoint mixed B,A", {&b,&a}, {10.5,.5,.5});
+    run("disjoint outward", {&a,&bOut}, {10.5,.5,.5});
+    run("isolated reversed B", {&b}, {10.5,.5,.5});
+    run("nested cavity A,C", {&a,&cIn}, {1,1,1});
+    run("nested cavity C,A", {&cIn,&a}, {1,1,1});
+    run("nested outward diagnostic", {&a,&cOut}, {1,1,1});
+}

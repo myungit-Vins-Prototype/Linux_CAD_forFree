@@ -1,0 +1,15 @@
+exec(open('/tmp/k10-underflow-review-2026-11-17/run.py').read().split("if mode=='candidate':")[0])
+if mode=='build':
+ run('build',['cmake','--build',R/'forgecad-release','--parallel','1','--target','forgecad','forgekernel_quadrature_validation_tests','forgekernel_arc_length_validation_tests','forgekernel_sheet_arc_validation_tests','forgekernel_bspline_derivative_tests','forgekernel_tests'],timeout=1800)
+ run('ctest',['ctest','--test-dir',R/'forgecad-release','--output-on-failure','-R','^forgekernel_(quadrature_validation|arc_length_validation|sheet_arc_validation|bspline_derivative)_tests$'],timeout=180)
+ for name in ['ArcLength','CurveLengthCachePreservesQuadratureAndIdentity','QuadratureStopsOnIntegrandNoise','MassOfBoxes','MassOfExtrusions','MassVerticalSplineSkipsNullFlux','MassParallelPreservesResultsAndInput','MassParallelPreservesFirstFailureAndCancellation','LoftSmoothThroughCircles']:
+  run('legacy-'+name,[R/'forgecad-release/kernel/forgekernel_tests',name],timeout=180)
+ # Public mass ordinary output: compare with the checkpoint, without new geometry fixture copies.
+ src=Path('/tmp/k10-quadrature-review/root/ordinary-mass.cpp');(T/src.name).write_bytes(src.read_bytes())
+ run('mass-compile',['c++','-std=c++17','-O3','-fno-fast-math','-ffp-contract=off','-I',R/'kernel',T/src.name,R/'forgecad-release/kernel/libforgekernel.a','-o',T/'mass'])
+ run('mass',[T/'mass'],timeout=30)
+ assert (T/'mass.log').read_bytes()==Path('/tmp/k10-quadrature-review/root/candidate-mass-golden.log').read_bytes()
+ print('mass golden byte identical',flush=True)
+elif mode=='architecture':
+ run('architecture',['python3',R/'tools/generate_architecture.py','--build-dir',R/'forgecad-release','--jobs','1'],timeout=2400)
+ run('architecture-check',['python3',R/'tools/generate_architecture.py','--check'],timeout=60)

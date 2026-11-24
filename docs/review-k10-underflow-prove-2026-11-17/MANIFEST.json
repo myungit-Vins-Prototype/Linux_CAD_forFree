@@ -1,0 +1,1432 @@
+[
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/architecture-before-depth.json",
+    "archive": "architecture-before-depth.json",
+    "sha256": "c59f6b132cca151ed4d16d8c8888b3ebdb012a3b160555eff17a4e90707ca672"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/architecture-check.json",
+    "archive": "architecture-check.json",
+    "sha256": "f65379487c7108fd37c8fec57a49b1b709ec44fda79666d95b38d7bd593526ad"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/architecture-check.log",
+    "archive": "architecture-check.log",
+    "sha256": "e79300a5a296fe1c7074baa944afaac1d37632a2c8120c43a05254b14e3944e9"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/architecture-consult.json",
+    "archive": "architecture-consult.json",
+    "sha256": "3bbca4bf6e599ffd2f3f4a03e82ae5cca9e1e298de8ce86b5bc99020b637716d"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/architecture-final.json",
+    "archive": "architecture-final.json",
+    "sha256": "af162976e455534718a077e0cd79b847c351fafab8eb84e458a96695fc672d81"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/architecture.json",
+    "archive": "architecture.json",
+    "sha256": "a358dc0e8bb235c187bf0b8cd081954801320f58bb741b655dded7ad674c2410"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/architecture.log",
+    "archive": "architecture.log",
+    "sha256": "1a3ae4e092602851123b217c75c96b881bfa6d27e0db171099ee2b6a9427bbda"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-binaries.json",
+    "archive": "baseline-binaries.json",
+    "sha256": "d672ad1fba660faf7564bc752adf82f60b86993174a337c1fa61b2473afc2746"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-depth-test.cpp",
+    "archive": "baseline-depth-test.cpp.txt",
+    "sha256": "a3cf2172efb672250c172be0239e83aedba4715b33d92fe94d45ad03f774d6f7"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-depth-tests-compile.json",
+    "archive": "baseline-depth-tests-compile.json",
+    "sha256": "d3fd38e9408fe5b3debefd70319450459359b4ef3d23598f622ba592b4e3d304"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-depth-tests-compile.log",
+    "archive": "baseline-depth-tests-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-depth-tests.json",
+    "archive": "baseline-depth-tests.json",
+    "sha256": "5ed6bf3e523d4ed3788450ce2bb8158504b290ba0128c82da347f6677b9696b3"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-depth-tests.log",
+    "archive": "baseline-depth-tests.log",
+    "sha256": "7eb388b3295903e1696b48faf2e1e5ce1cac3814dec277e6848f43943077f5d2"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-depth-tests.py",
+    "archive": "baseline-depth-tests.py.txt",
+    "sha256": "cb7fdd5ec3bfdfaaefd1b502d3820be2c557fbd92dc404e696ea038a4735a3bd"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-length-compile.json",
+    "archive": "baseline-length-compile.json",
+    "sha256": "1308966d742a049256a01285382bf871fcb3263c348bd71a0a73eef7ed0498ed"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-length-compile.log",
+    "archive": "baseline-length-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-length.json",
+    "archive": "baseline-length.json",
+    "sha256": "f1cb213afcabdb739d79ae440d98fbc199d124632f7a52d1ddfd0248893401df"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-length.log",
+    "archive": "baseline-length.log",
+    "sha256": "d75973c1d5b3f10fa37f639e55500ad3cc631ba6e3ebf0679cedcee62d869122"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-probe-compile.json",
+    "archive": "baseline-probe-compile.json",
+    "sha256": "10210ebd562a9aef650a9e81cd7f72a210e6b6326946391a52970a66a70304f9"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-probe-compile.log",
+    "archive": "baseline-probe-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-probe.json",
+    "archive": "baseline-probe.json",
+    "sha256": "c71f47d71f47a06d1b53b423b5113a67c7f8ec583407c400f65a677b2750c03a"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-probe.log",
+    "archive": "baseline-probe.log",
+    "sha256": "926dd3c5ad622cadf8bec985ea83a355cfb894b5ac1ae708829d5a6b89b8c34a"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-quadrature-compile.json",
+    "archive": "baseline-quadrature-compile.json",
+    "sha256": "83980bd50e6c682e59c3bf9683be44ae449cfdfa0382ab6f602e58ede4c77fc0"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-quadrature-compile.log",
+    "archive": "baseline-quadrature-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-quadrature.json",
+    "archive": "baseline-quadrature.json",
+    "sha256": "a3bd1ff0f81aeee32466bded543e7faf72b4e9de963345eb09ee579fa2ae45b6"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline-quadrature.log",
+    "archive": "baseline-quadrature.log",
+    "sha256": "40d3f1eaf70847906310933e22a194f6e7034f8838f2eb7063bf570cff503993"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline.cpp",
+    "archive": "baseline.cpp.txt",
+    "sha256": "e93063bdd67edcc997843d446779d47c6e3ec169425f3980c512f1d296ad277c"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/baseline.json",
+    "archive": "baseline.json",
+    "sha256": "fa70f75a4c2a260833add4df6f793a6d312bd3580712fcb86ea863f0f1f48433"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/before/CLAUDE.md",
+    "archive": "before/CLAUDE.md",
+    "sha256": "30cdac7bfc5ef8481989d2da858d5223dbd95a79e586cf8d141d0d837f4384ab"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/before/kernel/fk_curve_algo.cpp",
+    "archive": "before/kernel/fk_curve_algo.cpp.txt",
+    "sha256": "8ceb22befce610f835a9271ca88b497470a5ba2497210d94cbb8867bccfa3400"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/before/kernel/fk_curve_length_cache.h",
+    "archive": "before/kernel/fk_curve_length_cache.h.txt",
+    "sha256": "d9f5a424ffc931bae46b818b6bcff644ca06376dabbb9c301ba8ce423f9aa1e0"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/before/kernel/fk_mass.cpp",
+    "archive": "before/kernel/fk_mass.cpp.txt",
+    "sha256": "8248392ee0b7be25dd2b4217bc0ad29eeaf04c939e4e4940a12d328be45c66aa"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/before/kernel/fk_quadrature.h",
+    "archive": "before/kernel/fk_quadrature.h.txt",
+    "sha256": "f1ec31f8673d753192d7d9646448f30a78f16fb9ec0bac514f74680dc663d3d6"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/before/kernel/tests/test_quadrature_validation.cpp",
+    "archive": "before/kernel/tests/test_quadrature_validation.cpp.txt",
+    "sha256": "fbdf6dde51a2c29b69c88a2d2b53990ff7d88c1c906627035c76f2b58e9ff88b"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/before/tools/generate_architecture.py",
+    "archive": "before/tools/generate_architecture.py.txt",
+    "sha256": "bf84297cf2df1e052ec1d7eb44653933b7836746d769f4335355b5ce5670f497"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/binaries-after-ci-repair.json",
+    "archive": "binaries-after-ci-repair.json",
+    "sha256": "b7f76c868cb161ce8259373bf3b362415d55b534fff470b0ebd0508fd2e1d836"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/binaries-final.json",
+    "archive": "binaries-final.json",
+    "sha256": "fde45721a77390c67ab143728f569025347af561ce0df5c741e8a9bf1c7abe66"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/build.json",
+    "archive": "build.json",
+    "sha256": "0cb9ffe5595fbd2d614939b40833189825a60359c6e91893f1d4082a2c1100c4"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/build.log",
+    "archive": "build.log",
+    "sha256": "5dc30fdc141c2a443dac9962058eb8c04e9c4de93e76738cec18987a06d16e4e"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate/fk_curve_algo.cpp",
+    "archive": "candidate/fk_curve_algo.cpp.txt",
+    "sha256": "8ceb22befce610f835a9271ca88b497470a5ba2497210d94cbb8867bccfa3400"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate/fk_quadrature.h",
+    "archive": "candidate/fk_quadrature.h.txt",
+    "sha256": "331e2e96b37c8170022aa2341d225f0e2f010728b8b1ec533a92258243c32615"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate/test_quadrature_validation.cpp",
+    "archive": "candidate/test_quadrature_validation.cpp.txt",
+    "sha256": "a3cf2172efb672250c172be0239e83aedba4715b33d92fe94d45ad03f774d6f7"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate-arc-compile.json",
+    "archive": "candidate-arc-compile.json",
+    "sha256": "db94a6475744d48478fec0f1874f705cc2ea17f670592d8098eea163fa191d3a"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate-arc-compile.log",
+    "archive": "candidate-arc-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate-length-compile.json",
+    "archive": "candidate-length-compile.json",
+    "sha256": "91fa486273490e3e63d00d1af955af9e322f00c5f902491262d2c5d80b3a110b"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate-length-compile.log",
+    "archive": "candidate-length-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate-length.json",
+    "archive": "candidate-length.json",
+    "sha256": "8641e59dc442d37931de9f10e4919a72da4fe24977dbc2893fb39ceab540580c"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate-length.log",
+    "archive": "candidate-length.log",
+    "sha256": "d75973c1d5b3f10fa37f639e55500ad3cc631ba6e3ebf0679cedcee62d869122"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate-quadrature-compile.json",
+    "archive": "candidate-quadrature-compile.json",
+    "sha256": "c289cc740c5cff0b223046ff0b467bcf2e967b3a0ec7eb446d3e1114778e598f"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate-quadrature-compile.log",
+    "archive": "candidate-quadrature-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate-quadrature.json",
+    "archive": "candidate-quadrature.json",
+    "sha256": "795a0d3b9cbf0d9dddeb0e61bfbfb52ddc698ff2368e2bb8541864137ef6fa5d"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate-quadrature.log",
+    "archive": "candidate-quadrature.log",
+    "sha256": "40d3f1eaf70847906310933e22a194f6e7034f8838f2eb7063bf570cff503993"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate-tests-compile.json",
+    "archive": "candidate-tests-compile.json",
+    "sha256": "88510fe568052c7ae7612cfd0ab2acc8b7f02dcd40ee5f355706d872342a6c75"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate-tests-compile.log",
+    "archive": "candidate-tests-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate-tests.json",
+    "archive": "candidate-tests.json",
+    "sha256": "0bd80abd872a8a04ca5ee50587eba23da87d72ecafbda00cf1706d59851b2eab"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/candidate-tests.log",
+    "archive": "candidate-tests.log",
+    "sha256": "595b7c44a9b3ee0ec535caac0b9cbbda65855c4bed0f1ea154a95ea8b3178187"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/ci-checkpoint.json",
+    "archive": "ci-checkpoint.json",
+    "sha256": "b70460412704d3d13f8838aca4c1bff038fa33cae3dba6725853b4cf88dfd773"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/ci-linux-job.log",
+    "archive": "ci-linux-job.log",
+    "sha256": "e26705effea15ea9e4fe1aa938d936010238d22ae2799a292307dfb2e01b167b"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/ci-macos-job.log",
+    "archive": "ci-macos-job.log",
+    "sha256": "9c45c1616941cffd2b82543f9f5f638676b6a56beaf57821c09e8c1aa91ebb31"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/ci-macos-log-api-result.txt",
+    "archive": "ci-macos-log-api-result.txt",
+    "sha256": "729bacead168b7296c8504073d8f1fc6f16bd1f0b45482d2b387e1ee0fcabbff"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/cleanup-final.json",
+    "archive": "cleanup-final.json",
+    "sha256": "80bcd4ea2514780de51d462a5e830e884f4f5cd0cafe353265acaeb6376c53e1"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/close-docs.py",
+    "archive": "close-docs.py.txt",
+    "sha256": "31b74ef1da908cda6ad9ec989421dfb9db50d7d11bcdb113b37f5af6d0f26be6"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/ctest.json",
+    "archive": "ctest.json",
+    "sha256": "707068d61d48b0f9c6336c1db79cda558d648c1eb287aa189770618e097bb7f7"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/ctest.log",
+    "archive": "ctest.log",
+    "sha256": "3cbb58ece1e3671498498c1d2049d1152a06395d3b22bab9dc9c5a85fcdfb175"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-baseline-arc-compile.json",
+    "archive": "depth-baseline-arc-compile.json",
+    "sha256": "6d4b377d333fee3fb635a764567f828058b6b8f4c1d6b015e11e991ba6bb70c7"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-baseline-arc-compile.log",
+    "archive": "depth-baseline-arc-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-baseline-compile.json",
+    "archive": "depth-baseline-compile.json",
+    "sha256": "ca307e1e86fa46cb9aa4fe77016ff8ecf574743e4b5ca49edcf77f639a047e5f"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-baseline-compile.log",
+    "archive": "depth-baseline-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-baseline.json",
+    "archive": "depth-baseline.json",
+    "sha256": "a7fb3e4ef35efb94ca3ee7efed38e5e4ef455d582767be654d54d31177962216"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-baseline.log",
+    "archive": "depth-baseline.log",
+    "sha256": "3694ad504820cd63f5c1d2ad9d08de60decd326f03cc7026a42ee0ad98e218f5"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-current-compile.json",
+    "archive": "depth-current-compile.json",
+    "sha256": "2d34fd7f94049e15f7aeccc4f8f37b644d6c92e58364ffdad2358f73a63952fb"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-current-compile.log",
+    "archive": "depth-current-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-current.json",
+    "archive": "depth-current.json",
+    "sha256": "39429e723a3508aaa642d5e3377bc5a30f2e758ab3185db840a7bce8c518edd8"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-current.log",
+    "archive": "depth-current.log",
+    "sha256": "3694ad504820cd63f5c1d2ad9d08de60decd326f03cc7026a42ee0ad98e218f5"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-fix.py",
+    "archive": "depth-fix.py.txt",
+    "sha256": "226d4824387b5bb5318430cb8422c871ae3a60340bb4f192282b8f7417deb207"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-plan.txt",
+    "archive": "depth-plan.txt",
+    "sha256": "b6b24dfd351d3c95dae9cbf04910d665fc1347b17361d2596d0432b9b071d709"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-probe.cpp",
+    "archive": "depth-probe.cpp.txt",
+    "sha256": "3b01184b00a0cbfa14385f0307c558cade7b95b0d9e4c260b02799df23398684"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-run.py",
+    "archive": "depth-run.py.txt",
+    "sha256": "981d26b143fc966d87fe5583a8146123bb698b8b9fd284920fec6650c48aca94"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-trace/depth-probe.cpp",
+    "archive": "depth-trace/depth-probe.cpp.txt",
+    "sha256": "89c4d4500dcb86f9865ebb84d5be9428d5d385c129a1e358d9892b94297d580d"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-trace/fk_curve_algo.cpp",
+    "archive": "depth-trace/fk_curve_algo.cpp.txt",
+    "sha256": "8ceb22befce610f835a9271ca88b497470a5ba2497210d94cbb8867bccfa3400"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-trace/fk_quadrature.h",
+    "archive": "depth-trace/fk_quadrature.h.txt",
+    "sha256": "c3f787aa130ab57bd29fa7a92f4ae93b155420f3a94e1ca6a9657782c48d251b"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-trace-arc-compile.json",
+    "archive": "depth-trace-arc-compile.json",
+    "sha256": "cc266b35ad87311a1b94b4aed819891d54984240c4b72e25afc4b7decb56ae2c"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-trace-arc-compile.log",
+    "archive": "depth-trace-arc-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-trace-compile.json",
+    "archive": "depth-trace-compile.json",
+    "sha256": "d341904103c116b8871eacc482a9b3862550d105b9247be2eca8a0849c8975b2"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-trace-compile.log",
+    "archive": "depth-trace-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-trace.json",
+    "archive": "depth-trace.json",
+    "sha256": "38e4fc10939dab7e3d0ee3c52443609c720f531fb134e7f1b335d0b5d80d7ed3"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/depth-trace.log",
+    "archive": "depth-trace.log",
+    "sha256": "1d2a698712b9c5bcfd255e723171e7fd66421c3e6bb88a5cc7fe4301a2cca5db"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/document-draft.py",
+    "archive": "document-draft.py.txt",
+    "sha256": "8bb84c64a3fa2042635218ce079affa2e68b1c589168eb1492d54715f50ae671"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/extend.py",
+    "archive": "extend.py.txt",
+    "sha256": "ddda031591d51cbae3147862c04ba06eb91c4bb4ca8e9f76505a815f02167673"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/final-preservation.json",
+    "archive": "final-preservation.json",
+    "sha256": "5c573b7627efb5d3c7b9a454409071e90481bbc17233e9811fd89ee8b2ac8ae2"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/final-tests.py",
+    "archive": "final-tests.py.txt",
+    "sha256": "1064399e58795c48b1bcc7c35b10a97f468dcee42a7c9b29aceb53f09f77c70a"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/finish.py",
+    "archive": "finish.py.txt",
+    "sha256": "3ee8240f1d864675f784cd4b8a4beeb3642b0f3cb6a44d365dcfa97434ee3a52"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/guard.py",
+    "archive": "guard.py.txt",
+    "sha256": "8771d4882cff98b900bfd7620ea860ed7c26b5f0a947ca914d1e43f133d7b587"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/integrate.py",
+    "archive": "integrate.py.txt",
+    "sha256": "b5a07d95755ae9217af6f6ef019cbe1f0bfd6a314afd5f0bde23accbe3f4bb56"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/integrated-run.py",
+    "archive": "integrated-run.py.txt",
+    "sha256": "0e0ad643d3e9c7194c6c711c30658e2b63815586093b62a2b36b5ee3a7fdf478"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/integrated-sources.json",
+    "archive": "integrated-sources.json",
+    "sha256": "91ab1b79909fc33185a8786532fc518fba6da5d39462809e9ede86a4dc20cc66"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-ArcLength.json",
+    "archive": "legacy-ArcLength.json",
+    "sha256": "07bbc1c6bb8600475e91aa06e682318eb2effed38c9f70e8454e5dbc86d90c85"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-ArcLength.log",
+    "archive": "legacy-ArcLength.log",
+    "sha256": "5aacb6c5522861ccd5e0b062a844dc48682e0fa8dca09ab00d7210e1b6382c41"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-CurveLengthCachePreservesQuadratureAndIdentity.json",
+    "archive": "legacy-CurveLengthCachePreservesQuadratureAndIdentity.json",
+    "sha256": "c180d2c65465d7bdf0de271f4d2abfda0806b6e0382a6281f1c64fd468236e70"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-CurveLengthCachePreservesQuadratureAndIdentity.log",
+    "archive": "legacy-CurveLengthCachePreservesQuadratureAndIdentity.log",
+    "sha256": "58da79cf6646cc487309df963b92595241feeba9ca3cd6ad760007a2660df991"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-LoftSmoothThroughCircles.json",
+    "archive": "legacy-LoftSmoothThroughCircles.json",
+    "sha256": "70e028e8981ca59539e0c851c9e5169a598699200f2539f87124f7e9748fa568"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-LoftSmoothThroughCircles.log",
+    "archive": "legacy-LoftSmoothThroughCircles.log",
+    "sha256": "8ff2e845b9d5c301188f437f1747b4de352575fce2ce91b58c9a666a51fb8abe"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-MassOfBoxes.json",
+    "archive": "legacy-MassOfBoxes.json",
+    "sha256": "922b115967beca407c7a3ed3687d4ce261c26c0741ee1f6a969b81ce76ed6795"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-MassOfBoxes.log",
+    "archive": "legacy-MassOfBoxes.log",
+    "sha256": "3537ae8f2b41d83f676a48cd52cd3b8ab225e2867fe8856898b57bd0c69d32ce"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-MassOfExtrusions.json",
+    "archive": "legacy-MassOfExtrusions.json",
+    "sha256": "1220132d0255b10a507471789ef758ca8cd8215004dcc77f7c3c902092a51da6"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-MassOfExtrusions.log",
+    "archive": "legacy-MassOfExtrusions.log",
+    "sha256": "142794e978bb9e463f4c49e211d589053e4e069720e9114a08fad110d256eddc"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-MassParallelPreservesFirstFailureAndCancellation.json",
+    "archive": "legacy-MassParallelPreservesFirstFailureAndCancellation.json",
+    "sha256": "a8daf316f40ba1e3e7b7f7c22638cc153cf3696710535d52c8ded54e7a77c26b"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-MassParallelPreservesFirstFailureAndCancellation.log",
+    "archive": "legacy-MassParallelPreservesFirstFailureAndCancellation.log",
+    "sha256": "6cd073446f1d1a7c7b672667122724e3bae8354263bd3be0e0978536f118506a"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-MassParallelPreservesResultsAndInput.json",
+    "archive": "legacy-MassParallelPreservesResultsAndInput.json",
+    "sha256": "3abb07f6a3ff2c3a0a6321daa3f625c4ce3da13a2755542c5798e50eca5d715c"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-MassParallelPreservesResultsAndInput.log",
+    "archive": "legacy-MassParallelPreservesResultsAndInput.log",
+    "sha256": "40188a8b63301317ca757c57f86e82ebfdedbec876bacaedc5cf88120146de39"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-MassVerticalSplineSkipsNullFlux.json",
+    "archive": "legacy-MassVerticalSplineSkipsNullFlux.json",
+    "sha256": "41a2d505695802b4789545a9d4b216e887e6b6676b00f094ba989b375af9f6c7"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-MassVerticalSplineSkipsNullFlux.log",
+    "archive": "legacy-MassVerticalSplineSkipsNullFlux.log",
+    "sha256": "c13d8ea820ccdaed937bff225299d1661044b9dcb8b7df29d0a08995eb357b79"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-QuadratureStopsOnIntegrandNoise.json",
+    "archive": "legacy-QuadratureStopsOnIntegrandNoise.json",
+    "sha256": "15f578ce175e399c5f90a970afbae6ffdc1e2dde54490cf414117d2d233460a8"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/legacy-QuadratureStopsOnIntegrandNoise.log",
+    "archive": "legacy-QuadratureStopsOnIntegrandNoise.log",
+    "sha256": "0a8442e9c7b3ab19ee78f0b638d14ed932479d99dbd29332c3bcf1ddbc775691"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/mass-compile.json",
+    "archive": "mass-compile.json",
+    "sha256": "6e9853099840035ee3a808c211fd8c07c2c038f82c165c18d4176c609ccf772e"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/mass-compile.log",
+    "archive": "mass-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/mass.json",
+    "archive": "mass.json",
+    "sha256": "d694e6ca104bbff698f70583af41c149093c648c589acf7e8b295a31dc76d79d"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/mass.log",
+    "archive": "mass.log",
+    "sha256": "4988fc6305671e06d60f377f140870e415dabdcae84de4664d3f9b0c8aaedc8a"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/ordinary-length.cpp",
+    "archive": "ordinary-length.cpp.txt",
+    "sha256": "3a8ab8e9d57414f6391fcfd7bc959c902b153e836e9efe1b3b27331b399573d6"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/ordinary-mass.cpp",
+    "archive": "ordinary-mass.cpp.txt",
+    "sha256": "33b50c6a82b986c0ff80295984293719e2e2c26301bf973b13a9f4c1cdfb9a39"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/ordinary-quadrature.cpp",
+    "archive": "ordinary-quadrature.cpp.txt",
+    "sha256": "21897e25b95314b3d4c24cf4063e17b93400026a32df061f6d8261b7ffde5d7c"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/prepare-depth.py",
+    "archive": "prepare-depth.py.txt",
+    "sha256": "a68a23979538c7265638ba15771ae4e7379e31263730e73945396356a1fbcf13"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/prepare.py",
+    "archive": "prepare.py.txt",
+    "sha256": "4f981be6a39deac16ee0d1f5e6ec29dbf6cd5d97aa8f182dc501c1b774038078"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/previous-seals-final.json",
+    "archive": "previous-seals-final.json",
+    "sha256": "13c7fe716e52c2aa8e2affae822f5099710dfbdca73c28ac2cfee2d39a92534f"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/published-ci-repair.json",
+    "archive": "published-ci-repair.json",
+    "sha256": "b85c3d44b5cfa3550e02c5cd864b86c646d54240066de60bc8d53c321fbce8d5"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/report-draft.md",
+    "archive": "report-draft.md",
+    "sha256": "726c53fc925c8b52ce852f80c7cb39ea729314bfcc3995300edebc768a1720bc"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/run.py",
+    "archive": "run.py.txt",
+    "sha256": "ce51affa99ea4b37ec329abddb6e7d1e32760b9d448f48ed10b005fe29490cda"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/san-arc-compile.json",
+    "archive": "san-arc-compile.json",
+    "sha256": "c8e505d6aa3d7154cad7e0844a0ba38dbb4900ee36e01792f2a8fa93570d0f57"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/san-arc-compile.log",
+    "archive": "san-arc-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/san-tests-compile.json",
+    "archive": "san-tests-compile.json",
+    "sha256": "fd74318c8b86f311aa48aabac9a7489b0c053230df57530645bb0c1c69055157"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/san-tests-compile.log",
+    "archive": "san-tests-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/san-tests.json",
+    "archive": "san-tests.json",
+    "sha256": "89461c172dc5539b65dd2017df5129bb791b78315f55e84d5998f3fd51e34fad"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/san-tests.log",
+    "archive": "san-tests.log",
+    "sha256": "595b7c44a9b3ee0ec535caac0b9cbbda65855c4bed0f1ea154a95ea8b3178187"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/baseline-length-compile.json",
+    "archive": "v1/baseline-length-compile.json",
+    "sha256": "fe153a31d89e9da4cb8e8db107885a0077369e8e94bb496eb3159c84f68a0bec"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/baseline-length-compile.log",
+    "archive": "v1/baseline-length-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/baseline-length.json",
+    "archive": "v1/baseline-length.json",
+    "sha256": "44f3116e776f9529c058788afbfd317f05073ac2575f6fa5b03f29523de9d758"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/baseline-length.log",
+    "archive": "v1/baseline-length.log",
+    "sha256": "d75973c1d5b3f10fa37f639e55500ad3cc631ba6e3ebf0679cedcee62d869122"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/baseline-quadrature-compile.json",
+    "archive": "v1/baseline-quadrature-compile.json",
+    "sha256": "db749372e74e971b2911ac1564932e118386bbddb74c719fb5f84d108cc95c33"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/baseline-quadrature-compile.log",
+    "archive": "v1/baseline-quadrature-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/baseline-quadrature.json",
+    "archive": "v1/baseline-quadrature.json",
+    "sha256": "1bb79f0315a7e7951210ccb2ecef5d4d21eb262c9b5c1c239c528b000bb5faca"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/baseline-quadrature.log",
+    "archive": "v1/baseline-quadrature.log",
+    "sha256": "40d3f1eaf70847906310933e22a194f6e7034f8838f2eb7063bf570cff503993"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/build.json",
+    "archive": "v1/build.json",
+    "sha256": "3a75688aa7112013a304fac705e55efb26dcb4f1281e32b9b1dbebf8505538d6"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/build.log",
+    "archive": "v1/build.log",
+    "sha256": "4af7092f8e86d113496c4625ccdfbb81eda0b46ee12e2aa9dd7279d97bc8c548"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/candidate-arc-compile.json",
+    "archive": "v1/candidate-arc-compile.json",
+    "sha256": "0a21227ba2438e2cd884b18ae3ded527027ec6f06dde685643de3601e19859d0"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/candidate-arc-compile.log",
+    "archive": "v1/candidate-arc-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/candidate-length-compile.json",
+    "archive": "v1/candidate-length-compile.json",
+    "sha256": "f965f77a4db97dd2e47b06ab13e0a9163b1a6818c130b5b9a6b3b3655799d2e3"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/candidate-length-compile.log",
+    "archive": "v1/candidate-length-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/candidate-length.json",
+    "archive": "v1/candidate-length.json",
+    "sha256": "697015f3231197266682d588c8da6066812c7f52d2cc72cade5cb4017e928ae6"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/candidate-length.log",
+    "archive": "v1/candidate-length.log",
+    "sha256": "d75973c1d5b3f10fa37f639e55500ad3cc631ba6e3ebf0679cedcee62d869122"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/candidate-quadrature-compile.json",
+    "archive": "v1/candidate-quadrature-compile.json",
+    "sha256": "dd702c1a0ab45dc04b93d796a9ddf68d944566b2fa984265743b4ea619d84211"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/candidate-quadrature-compile.log",
+    "archive": "v1/candidate-quadrature-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/candidate-quadrature.json",
+    "archive": "v1/candidate-quadrature.json",
+    "sha256": "519f553a8e58a81ffa1e72823e9840a75b1e080de1c387685b538f79d795e716"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/candidate-quadrature.log",
+    "archive": "v1/candidate-quadrature.log",
+    "sha256": "40d3f1eaf70847906310933e22a194f6e7034f8838f2eb7063bf570cff503993"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/candidate-tests-compile.json",
+    "archive": "v1/candidate-tests-compile.json",
+    "sha256": "5c157e099d3f5a3369de12b2267d407e2ac41e40ef83b2ed58d407968d6ea45d"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/candidate-tests-compile.log",
+    "archive": "v1/candidate-tests-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/candidate-tests.json",
+    "archive": "v1/candidate-tests.json",
+    "sha256": "0146c65e927bee8e19c6f58db3441e15df6a417b77b6471ee48ca055fd5978a3"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/candidate-tests.log",
+    "archive": "v1/candidate-tests.log",
+    "sha256": "5ac04aafc83e762d60acf492edaf6554c764c39f8dfc7d4470d6da978dd326d3"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/ctest.json",
+    "archive": "v1/ctest.json",
+    "sha256": "82351a7b4162c8eeffa3c2f8df6d151dc23d3e7eaf6a82502ec0d26d2aa8c965"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/ctest.log",
+    "archive": "v1/ctest.log",
+    "sha256": "2d3a0590e688c86eb98bd1e3df12ddb486378cd247dde1def9c6a72749e8d413"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/fk_quadrature.h",
+    "archive": "v1/fk_quadrature.h.txt",
+    "sha256": "52eb99b226c46dad3626215b8aa030c59e974c2dabe7d0a4bb618ed853fed739"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/integrated-sources.json",
+    "archive": "v1/integrated-sources.json",
+    "sha256": "728dcb8ead804f5adb6b244802223e1279b780a9b1beb8e085f6d19dc8b45152"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-ArcLength.json",
+    "archive": "v1/legacy-ArcLength.json",
+    "sha256": "a0fed6d2aad1d16702fc28e140b73ad86198c0754a2ca97b8b1e14da7e81bffd"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-ArcLength.log",
+    "archive": "v1/legacy-ArcLength.log",
+    "sha256": "5aacb6c5522861ccd5e0b062a844dc48682e0fa8dca09ab00d7210e1b6382c41"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-CurveLengthCachePreservesQuadratureAndIdentity.json",
+    "archive": "v1/legacy-CurveLengthCachePreservesQuadratureAndIdentity.json",
+    "sha256": "21e099f0cdb19dbde1fafdfedfa12bb65020ea39bc3dbc0f223bee7fc53b2125"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-CurveLengthCachePreservesQuadratureAndIdentity.log",
+    "archive": "v1/legacy-CurveLengthCachePreservesQuadratureAndIdentity.log",
+    "sha256": "58da79cf6646cc487309df963b92595241feeba9ca3cd6ad760007a2660df991"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-LoftSmoothThroughCircles.json",
+    "archive": "v1/legacy-LoftSmoothThroughCircles.json",
+    "sha256": "20c76e71c21ddd496d2028a9f8c20572ac407fadc5b93006ccb07eb0ef783153"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-LoftSmoothThroughCircles.log",
+    "archive": "v1/legacy-LoftSmoothThroughCircles.log",
+    "sha256": "8ff2e845b9d5c301188f437f1747b4de352575fce2ce91b58c9a666a51fb8abe"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-MassOfBoxes.json",
+    "archive": "v1/legacy-MassOfBoxes.json",
+    "sha256": "dac26ff21d94447377943b402675cfd3b5433c9e8a12840d82969e17cbf02bd6"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-MassOfBoxes.log",
+    "archive": "v1/legacy-MassOfBoxes.log",
+    "sha256": "3537ae8f2b41d83f676a48cd52cd3b8ab225e2867fe8856898b57bd0c69d32ce"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-MassOfExtrusions.json",
+    "archive": "v1/legacy-MassOfExtrusions.json",
+    "sha256": "f128d36e71e05a0141ca243619b740643b300b641cc8f9d3657c177cfc6a842f"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-MassOfExtrusions.log",
+    "archive": "v1/legacy-MassOfExtrusions.log",
+    "sha256": "142794e978bb9e463f4c49e211d589053e4e069720e9114a08fad110d256eddc"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-MassParallelPreservesFirstFailureAndCancellation.json",
+    "archive": "v1/legacy-MassParallelPreservesFirstFailureAndCancellation.json",
+    "sha256": "83a0a9baf9d770ab7a5db683956095044cd5e103320c7ca5d7e1801f08b4553c"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-MassParallelPreservesFirstFailureAndCancellation.log",
+    "archive": "v1/legacy-MassParallelPreservesFirstFailureAndCancellation.log",
+    "sha256": "6cd073446f1d1a7c7b672667122724e3bae8354263bd3be0e0978536f118506a"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-MassParallelPreservesResultsAndInput.json",
+    "archive": "v1/legacy-MassParallelPreservesResultsAndInput.json",
+    "sha256": "084c7e2f3223de79cb381b61cf5125f595ea3e6a16ff5fe78f86d57c33915fec"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-MassParallelPreservesResultsAndInput.log",
+    "archive": "v1/legacy-MassParallelPreservesResultsAndInput.log",
+    "sha256": "40188a8b63301317ca757c57f86e82ebfdedbec876bacaedc5cf88120146de39"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-MassVerticalSplineSkipsNullFlux.json",
+    "archive": "v1/legacy-MassVerticalSplineSkipsNullFlux.json",
+    "sha256": "83ca40e58acddd0cd20842d1178d170545c83b55c38b192b334bfec81d3f594a"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-MassVerticalSplineSkipsNullFlux.log",
+    "archive": "v1/legacy-MassVerticalSplineSkipsNullFlux.log",
+    "sha256": "c13d8ea820ccdaed937bff225299d1661044b9dcb8b7df29d0a08995eb357b79"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-QuadratureStopsOnIntegrandNoise.json",
+    "archive": "v1/legacy-QuadratureStopsOnIntegrandNoise.json",
+    "sha256": "103d87591dcb0dd6d55fa2f85cf6a2d02047c24875f3ea10b932054d2cc8cb08"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/legacy-QuadratureStopsOnIntegrandNoise.log",
+    "archive": "v1/legacy-QuadratureStopsOnIntegrandNoise.log",
+    "sha256": "0a8442e9c7b3ab19ee78f0b638d14ed932479d99dbd29332c3bcf1ddbc775691"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/mass-compile.json",
+    "archive": "v1/mass-compile.json",
+    "sha256": "eace508c67105cf31be59d04045391535d61871b8c593ed37b6667046b9ec255"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/mass-compile.log",
+    "archive": "v1/mass-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/mass.json",
+    "archive": "v1/mass.json",
+    "sha256": "0322df76d4e502184526028cdf832db360eb6dc4eb87e4556b14dc83d4ab6704"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/mass.log",
+    "archive": "v1/mass.log",
+    "sha256": "4988fc6305671e06d60f377f140870e415dabdcae84de4664d3f9b0c8aaedc8a"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/san-arc-compile.json",
+    "archive": "v1/san-arc-compile.json",
+    "sha256": "51e379f2d14534917725a599be5f27f7ceec8e7a70bec14b1e86bb87bd148e83"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/san-arc-compile.log",
+    "archive": "v1/san-arc-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/san-tests-compile.json",
+    "archive": "v1/san-tests-compile.json",
+    "sha256": "b9f4fd59dcd46cda13055c41ff1cf8c4edfa8254ce9711f61e8a1fde3fa7f825"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/san-tests-compile.log",
+    "archive": "v1/san-tests-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/san-tests.json",
+    "archive": "v1/san-tests.json",
+    "sha256": "212e582d90347c5a6214fffddbcf00a3ddfb7e437724624c1fbea977f56011ab"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/san-tests.log",
+    "archive": "v1/san-tests.log",
+    "sha256": "5ac04aafc83e762d60acf492edaf6554c764c39f8dfc7d4470d6da978dd326d3"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v1/test_quadrature_validation.cpp",
+    "archive": "v1/test_quadrature_validation.cpp.txt",
+    "sha256": "90b4896a057ef5a19de0e0a65522d6dc8081357a91edb81e1176e017edbdbe0b"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/architecture-check.json",
+    "archive": "v2-underflow/architecture-check.json",
+    "sha256": "3ed69d541cf67b06419d252279ebb34e3cd17106ce639b677d8855e4ad9112f8"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/architecture-check.log",
+    "archive": "v2-underflow/architecture-check.log",
+    "sha256": "e79300a5a296fe1c7074baa944afaac1d37632a2c8120c43a05254b14e3944e9"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/architecture.json",
+    "archive": "v2-underflow/architecture.json",
+    "sha256": "cf22452e8a8ecc2d013cc175524193d3a6ace3ceb4bd3cc656b376329e9ad6d1"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/architecture.log",
+    "archive": "v2-underflow/architecture.log",
+    "sha256": "1a3ae4e092602851123b217c75c96b881bfa6d27e0db171099ee2b6a9427bbda"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/baseline-length-compile.json",
+    "archive": "v2-underflow/baseline-length-compile.json",
+    "sha256": "1b8e418cbab0791dbc267cfc5a6cf05ef8c49ffebdfff2e0252d6db0b6db1ffc"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/baseline-length-compile.log",
+    "archive": "v2-underflow/baseline-length-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/baseline-length.json",
+    "archive": "v2-underflow/baseline-length.json",
+    "sha256": "54b0e3f0aec05ba25d9734cbf1526df48ddc84a275acb8e87b495704a97882dc"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/baseline-length.log",
+    "archive": "v2-underflow/baseline-length.log",
+    "sha256": "d75973c1d5b3f10fa37f639e55500ad3cc631ba6e3ebf0679cedcee62d869122"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/baseline-probe-compile.json",
+    "archive": "v2-underflow/baseline-probe-compile.json",
+    "sha256": "10210ebd562a9aef650a9e81cd7f72a210e6b6326946391a52970a66a70304f9"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/baseline-probe-compile.log",
+    "archive": "v2-underflow/baseline-probe-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/baseline-probe.json",
+    "archive": "v2-underflow/baseline-probe.json",
+    "sha256": "c71f47d71f47a06d1b53b423b5113a67c7f8ec583407c400f65a677b2750c03a"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/baseline-probe.log",
+    "archive": "v2-underflow/baseline-probe.log",
+    "sha256": "926dd3c5ad622cadf8bec985ea83a355cfb894b5ac1ae708829d5a6b89b8c34a"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/baseline-quadrature-compile.json",
+    "archive": "v2-underflow/baseline-quadrature-compile.json",
+    "sha256": "a4e291daae6fb767e62d57f26f8f84969e82dded05ce6b8e2e4bdbd0496b8e57"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/baseline-quadrature-compile.log",
+    "archive": "v2-underflow/baseline-quadrature-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/baseline-quadrature.json",
+    "archive": "v2-underflow/baseline-quadrature.json",
+    "sha256": "375c31c0398a5759c5747e0bb8c7e7d773009c50125aec39a2a8ae2df81aa918"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/baseline-quadrature.log",
+    "archive": "v2-underflow/baseline-quadrature.log",
+    "sha256": "40d3f1eaf70847906310933e22a194f6e7034f8838f2eb7063bf570cff503993"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/build.json",
+    "archive": "v2-underflow/build.json",
+    "sha256": "ad14f01af40d3b1d9b469ed3d7b9b096108bda87d0a6f75aeb7e5799cf06e0f5"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/build.log",
+    "archive": "v2-underflow/build.log",
+    "sha256": "5dc30fdc141c2a443dac9962058eb8c04e9c4de93e76738cec18987a06d16e4e"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/candidate-arc-compile.json",
+    "archive": "v2-underflow/candidate-arc-compile.json",
+    "sha256": "9a40e468a108b8b976f49a9c002d1c8bb3f0f8f92260fcbfe2ef5650e997987a"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/candidate-arc-compile.log",
+    "archive": "v2-underflow/candidate-arc-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/candidate-length-compile.json",
+    "archive": "v2-underflow/candidate-length-compile.json",
+    "sha256": "bdfb57bd4a729d2c3d7b9f8a4eb09c11690921ea68ddf4c8e66eed88e8d76f30"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/candidate-length-compile.log",
+    "archive": "v2-underflow/candidate-length-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/candidate-length.json",
+    "archive": "v2-underflow/candidate-length.json",
+    "sha256": "2f213c4b38c08de51142f4548e4e3cb7ba4f13a0b4f962ea087b85265056309f"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/candidate-length.log",
+    "archive": "v2-underflow/candidate-length.log",
+    "sha256": "d75973c1d5b3f10fa37f639e55500ad3cc631ba6e3ebf0679cedcee62d869122"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/candidate-quadrature-compile.json",
+    "archive": "v2-underflow/candidate-quadrature-compile.json",
+    "sha256": "fb4ff9d3786ad7e8b87a9e135c8a6e7471e38353c3a50862a339711c91ddf9fc"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/candidate-quadrature-compile.log",
+    "archive": "v2-underflow/candidate-quadrature-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/candidate-quadrature.json",
+    "archive": "v2-underflow/candidate-quadrature.json",
+    "sha256": "38e15e595ca2c1dd43a32396637440d35aebcd4dca539ff28d7edcb11ef424fa"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/candidate-quadrature.log",
+    "archive": "v2-underflow/candidate-quadrature.log",
+    "sha256": "40d3f1eaf70847906310933e22a194f6e7034f8838f2eb7063bf570cff503993"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/candidate-tests-compile.json",
+    "archive": "v2-underflow/candidate-tests-compile.json",
+    "sha256": "96894ff27e3a8be1763414d68e4c38a374d0b68a2dd3935354c6e11b3c6f5a1c"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/candidate-tests-compile.log",
+    "archive": "v2-underflow/candidate-tests-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/candidate-tests.json",
+    "archive": "v2-underflow/candidate-tests.json",
+    "sha256": "38f72641e154bcc6746ebf955d9d09d6917ffb27203f34ebbc0f908614e35ac3"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/candidate-tests.log",
+    "archive": "v2-underflow/candidate-tests.log",
+    "sha256": "2ceeea082ecdf101bb21f66a93a3fef0e8143ed16e3b9abb9ad61e5e1095e201"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/ctest.json",
+    "archive": "v2-underflow/ctest.json",
+    "sha256": "ffcb1373371f8b747b0c4a532e7085aec7eeaa548707e8b846a0864369a21b80"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/ctest.log",
+    "archive": "v2-underflow/ctest.log",
+    "sha256": "2d3a0590e688c86eb98bd1e3df12ddb486378cd247dde1def9c6a72749e8d413"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/depth-baseline-arc-compile.json",
+    "archive": "v2-underflow/depth-baseline-arc-compile.json",
+    "sha256": "6d4b377d333fee3fb635a764567f828058b6b8f4c1d6b015e11e991ba6bb70c7"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/depth-baseline-arc-compile.log",
+    "archive": "v2-underflow/depth-baseline-arc-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/depth-baseline-compile.json",
+    "archive": "v2-underflow/depth-baseline-compile.json",
+    "sha256": "ca307e1e86fa46cb9aa4fe77016ff8ecf574743e4b5ca49edcf77f639a047e5f"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/depth-baseline-compile.log",
+    "archive": "v2-underflow/depth-baseline-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/depth-baseline.json",
+    "archive": "v2-underflow/depth-baseline.json",
+    "sha256": "a7fb3e4ef35efb94ca3ee7efed38e5e4ef455d582767be654d54d31177962216"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/depth-baseline.log",
+    "archive": "v2-underflow/depth-baseline.log",
+    "sha256": "3694ad504820cd63f5c1d2ad9d08de60decd326f03cc7026a42ee0ad98e218f5"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/depth-current-compile.json",
+    "archive": "v2-underflow/depth-current-compile.json",
+    "sha256": "2d34fd7f94049e15f7aeccc4f8f37b644d6c92e58364ffdad2358f73a63952fb"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/depth-current-compile.log",
+    "archive": "v2-underflow/depth-current-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/depth-current.json",
+    "archive": "v2-underflow/depth-current.json",
+    "sha256": "39429e723a3508aaa642d5e3377bc5a30f2e758ab3185db840a7bce8c518edd8"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/depth-current.log",
+    "archive": "v2-underflow/depth-current.log",
+    "sha256": "3694ad504820cd63f5c1d2ad9d08de60decd326f03cc7026a42ee0ad98e218f5"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/depth-trace-arc-compile.json",
+    "archive": "v2-underflow/depth-trace-arc-compile.json",
+    "sha256": "cc266b35ad87311a1b94b4aed819891d54984240c4b72e25afc4b7decb56ae2c"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/depth-trace-arc-compile.log",
+    "archive": "v2-underflow/depth-trace-arc-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/depth-trace-compile.json",
+    "archive": "v2-underflow/depth-trace-compile.json",
+    "sha256": "d341904103c116b8871eacc482a9b3862550d105b9247be2eca8a0849c8975b2"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/depth-trace-compile.log",
+    "archive": "v2-underflow/depth-trace-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/depth-trace.json",
+    "archive": "v2-underflow/depth-trace.json",
+    "sha256": "38e4fc10939dab7e3d0ee3c52443609c720f531fb134e7f1b335d0b5d80d7ed3"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/depth-trace.log",
+    "archive": "v2-underflow/depth-trace.log",
+    "sha256": "1d2a698712b9c5bcfd255e723171e7fd66421c3e6bb88a5cc7fe4301a2cca5db"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/fk_quadrature.h",
+    "archive": "v2-underflow/fk_quadrature.h.txt",
+    "sha256": "8706d122d360c204edb954efe17400a9569e36c43c7235bcfbfc4df173f05519"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/integrated-sources.json",
+    "archive": "v2-underflow/integrated-sources.json",
+    "sha256": "6a6b07878fe56634e247af8d44885d0ec3c20740ed625a307b3b9611901b177c"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-ArcLength.json",
+    "archive": "v2-underflow/legacy-ArcLength.json",
+    "sha256": "5a46bc1439abef1e7317037cdd404c1b12c0f7dbe9ab2864941dfe18fec1046c"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-ArcLength.log",
+    "archive": "v2-underflow/legacy-ArcLength.log",
+    "sha256": "5aacb6c5522861ccd5e0b062a844dc48682e0fa8dca09ab00d7210e1b6382c41"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-CurveLengthCachePreservesQuadratureAndIdentity.json",
+    "archive": "v2-underflow/legacy-CurveLengthCachePreservesQuadratureAndIdentity.json",
+    "sha256": "3819db86787e546222079dcbda09119087b5d1e7fb08056cbd53e853803bd132"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-CurveLengthCachePreservesQuadratureAndIdentity.log",
+    "archive": "v2-underflow/legacy-CurveLengthCachePreservesQuadratureAndIdentity.log",
+    "sha256": "58da79cf6646cc487309df963b92595241feeba9ca3cd6ad760007a2660df991"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-LoftSmoothThroughCircles.json",
+    "archive": "v2-underflow/legacy-LoftSmoothThroughCircles.json",
+    "sha256": "cec4a593a8239077451919d10b22a3c0dea6bb7436e85443c44f9c7c87dd4b48"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-LoftSmoothThroughCircles.log",
+    "archive": "v2-underflow/legacy-LoftSmoothThroughCircles.log",
+    "sha256": "8ff2e845b9d5c301188f437f1747b4de352575fce2ce91b58c9a666a51fb8abe"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-MassOfBoxes.json",
+    "archive": "v2-underflow/legacy-MassOfBoxes.json",
+    "sha256": "8d4a86c3f31df86f15fde94fb44b3c28a237e2ed6109ac977ce5e93cfe9df1c3"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-MassOfBoxes.log",
+    "archive": "v2-underflow/legacy-MassOfBoxes.log",
+    "sha256": "3537ae8f2b41d83f676a48cd52cd3b8ab225e2867fe8856898b57bd0c69d32ce"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-MassOfExtrusions.json",
+    "archive": "v2-underflow/legacy-MassOfExtrusions.json",
+    "sha256": "1e36e2848975b471f0d850ad02b6f9504119ae22311b5b826a89a525e9e64b3d"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-MassOfExtrusions.log",
+    "archive": "v2-underflow/legacy-MassOfExtrusions.log",
+    "sha256": "142794e978bb9e463f4c49e211d589053e4e069720e9114a08fad110d256eddc"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-MassParallelPreservesFirstFailureAndCancellation.json",
+    "archive": "v2-underflow/legacy-MassParallelPreservesFirstFailureAndCancellation.json",
+    "sha256": "2e3b76a1d35d1fa16386aacacd8885514983990abbf4fb4250b1247ea4345486"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-MassParallelPreservesFirstFailureAndCancellation.log",
+    "archive": "v2-underflow/legacy-MassParallelPreservesFirstFailureAndCancellation.log",
+    "sha256": "6cd073446f1d1a7c7b672667122724e3bae8354263bd3be0e0978536f118506a"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-MassParallelPreservesResultsAndInput.json",
+    "archive": "v2-underflow/legacy-MassParallelPreservesResultsAndInput.json",
+    "sha256": "f7912947905d26e80fe057c9732b3caa12736b5f30c81402d6d567cbce395275"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-MassParallelPreservesResultsAndInput.log",
+    "archive": "v2-underflow/legacy-MassParallelPreservesResultsAndInput.log",
+    "sha256": "40188a8b63301317ca757c57f86e82ebfdedbec876bacaedc5cf88120146de39"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-MassVerticalSplineSkipsNullFlux.json",
+    "archive": "v2-underflow/legacy-MassVerticalSplineSkipsNullFlux.json",
+    "sha256": "abba68c21ce67ba76998cebfd954ef1b3b53ef433044de91fd1c1287e5cdbbbd"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-MassVerticalSplineSkipsNullFlux.log",
+    "archive": "v2-underflow/legacy-MassVerticalSplineSkipsNullFlux.log",
+    "sha256": "c13d8ea820ccdaed937bff225299d1661044b9dcb8b7df29d0a08995eb357b79"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-QuadratureStopsOnIntegrandNoise.json",
+    "archive": "v2-underflow/legacy-QuadratureStopsOnIntegrandNoise.json",
+    "sha256": "596c039a8e59eb21cfdfe446d3704dae04819300a24a6bf78e96230a04a915c4"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/legacy-QuadratureStopsOnIntegrandNoise.log",
+    "archive": "v2-underflow/legacy-QuadratureStopsOnIntegrandNoise.log",
+    "sha256": "0a8442e9c7b3ab19ee78f0b638d14ed932479d99dbd29332c3bcf1ddbc775691"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/mass-compile.json",
+    "archive": "v2-underflow/mass-compile.json",
+    "sha256": "d4df7cc429fefebb1448cc64561b6db41db1459cc604a76862972ed67c3c0735"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/mass-compile.log",
+    "archive": "v2-underflow/mass-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/mass.json",
+    "archive": "v2-underflow/mass.json",
+    "sha256": "73c085099a41353aec0155496142a17a36478889a990979337b71cb525c5ecb6"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/mass.log",
+    "archive": "v2-underflow/mass.log",
+    "sha256": "4988fc6305671e06d60f377f140870e415dabdcae84de4664d3f9b0c8aaedc8a"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/san-arc-compile.json",
+    "archive": "v2-underflow/san-arc-compile.json",
+    "sha256": "8f3a3e35dcaaa55800c92ce5d7b0284b86fc394bebddfead91d9bf5cf5dade11"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/san-arc-compile.log",
+    "archive": "v2-underflow/san-arc-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/san-tests-compile.json",
+    "archive": "v2-underflow/san-tests-compile.json",
+    "sha256": "f578f77caf8d720101e1f21bd5b32089cfe108faae35373ee778d5632ea1b175"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/san-tests-compile.log",
+    "archive": "v2-underflow/san-tests-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/san-tests.json",
+    "archive": "v2-underflow/san-tests.json",
+    "sha256": "db4279a2aa3e02f256f88d873a6dc9e87658335a975a7817f970c171328b3c3e"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/san-tests.log",
+    "archive": "v2-underflow/san-tests.log",
+    "sha256": "2ceeea082ecdf101bb21f66a93a3fef0e8143ed16e3b9abb9ad61e5e1095e201"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/v2-underflow/test_quadrature_validation.cpp",
+    "archive": "v2-underflow/test_quadrature_validation.cpp.txt",
+    "sha256": "76c005d5593a17c75c3c0dfeae1ce73db3e26e080608c0abd519cc53cede4584"
+  },
+  {
+    "source": "/tmp/k10-underflow-review-2026-11-17/verify-final.py",
+    "archive": "verify-final.py.txt",
+    "sha256": "8cec2eaf189e2fd256f563ede18d64307fec3221769b5500828dfd9e80896ed9"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/AGENTS.md",
+    "archive": "workspace/AGENTS.md",
+    "sha256": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/CLAUDE.md",
+    "archive": "workspace/CLAUDE.md",
+    "sha256": "e5d51992fa7ae32a43594b353fecad7ab2484a35c7293efa2d1afacd5bbca3f2"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/code-review-2026-11-15.md",
+    "archive": "workspace/docs/code-review-2026-11-15.md",
+    "sha256": "45037cfda45ae2984321fa0d73acca59ac6e44b8daa83680142e42df55562574"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/history/claude-prima-checkpoint-push-2026-11-17.md",
+    "archive": "workspace/docs/history/claude-prima-checkpoint-push-2026-11-17.md",
+    "sha256": "30cdac7bfc5ef8481989d2da858d5223dbd95a79e586cf8d141d0d837f4384ab"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/history/claude-prima-riparazione-ci-2026-11-17.md",
+    "archive": "workspace/docs/history/claude-prima-riparazione-ci-2026-11-17.md",
+    "sha256": "bc79d1da83a20bce2d249954d52a0d0448ad868ae5dc99195c7e05483108d18a"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/review-checkpoint-push-2026-11-17.md",
+    "archive": "workspace/docs/review-checkpoint-push-2026-11-17.md",
+    "sha256": "57e46e9f1649920c9884009d604f1ea8aa2a62c1db1fd86ddc42455753dcd50f"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/review-k10-underflow-2026-11-17.md",
+    "archive": "workspace/docs/review-k10-underflow-2026-11-17.md",
+    "sha256": "816f08ed7195eac20d2193461b7aa03e5077ccfe4d5d1999d60a03d3d898a047"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/review-punti-aperti-2026-11-17.md",
+    "archive": "workspace/docs/review-punti-aperti-2026-11-17.md",
+    "sha256": "084ca6bf695b50e22d2260b9c398819640311293be76a6c34d599c69c6b28d7d"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/roadmap.md",
+    "archive": "workspace/docs/roadmap.md",
+    "sha256": "72b0a65d5ce1a29152c3155cb8b88547032b3831bfa5a7dca86983d0b700785f"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/CMakeLists.txt",
+    "archive": "workspace/kernel/CMakeLists.txt.txt",
+    "sha256": "1cc796f703b7d96018b42a38fdbf3f781e16fa966033b44e41ddba10d88685cb"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/fk_project.cpp",
+    "archive": "workspace/kernel/fk_project.cpp.txt",
+    "sha256": "478aa85dbdf1982958d8dc85fa50edc9ec885e5a1d17b4cb2e21f183dadc0705"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/fk_quadrature.h",
+    "archive": "workspace/kernel/fk_quadrature.h.txt",
+    "sha256": "331e2e96b37c8170022aa2341d225f0e2f010728b8b1ec533a92258243c32615"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/tests/test_quadrature_validation.cpp",
+    "archive": "workspace/kernel/tests/test_quadrature_validation.cpp.txt",
+    "sha256": "a3cf2172efb672250c172be0239e83aedba4715b33d92fe94d45ad03f774d6f7"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/tools/generate_architecture.py",
+    "archive": "workspace/tools/generate_architecture.py.txt",
+    "sha256": "013be345ca607d8c7a288027b38deec7ef44e47d984b6c381b87ce82472ec68a"
+  }
+]

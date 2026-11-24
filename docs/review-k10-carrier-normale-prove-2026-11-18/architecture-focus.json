@@ -1,0 +1,2377 @@
+{
+  "nodes": [
+    {
+      "id": "kernel/fk_surface_mapping.cpp",
+      "group": "kernel",
+      "description": "Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: conserva i carrier supportati; fin Plane e NURBS2/3 native o istanziate certificate nel continuo al cap prefit. Candidata UV prima della prova, Failed terminale; genealogia, E/S/Q, parametri, versi e budget delle fin dopo assemblaggio anche senza history utente. Residuo globale rispetto alla mappa certificato per Plane a quota costante, UV separabili e target nativi2/3 polinomiali; Failed terminale e carrier finale conservato anche senza history. Bordi3D e altre famiglie restano campionati; nessuna mesh di calcolo.",
+      "lines": 645,
+      "symbols": [
+        "ForgeCad::Kernel::affineImage",
+        "ForgeCad::Kernel::basis2",
+        "ForgeCad::Kernel::checked",
+        "ForgeCad::Kernel::commonSurfaceWrapAnchor",
+        "ForgeCad::Kernel::detail::mapBodyByFunction",
+        "ForgeCad::Kernel::faceWindow",
+        "ForgeCad::Kernel::fitMappedSurface",
+        "ForgeCad::Kernel::fitSurfaceWrapPlacement",
+        "ForgeCad::Kernel::lineImage",
+        "ForgeCad::Kernel::mapBody",
+        "ForgeCad::Kernel::mappedHistory",
+        "ForgeCad::Kernel::placeRigidBody",
+        "ForgeCad::Kernel::require",
+        "ForgeCad::Kernel::unrollFace",
+        "ForgeCad::Kernel::withFaceMapping",
+        "ForgeCad::Kernel::wrapBodyOnFaces",
+        "ForgeCad::Kernel::wrapBodyOnSurface"
+      ]
+    },
+    {
+      "id": "kernel/fk_surface_mapping_bounds.cpp",
+      "group": "kernel",
+      "description": "Certificato tensoriale Bernstein/Cox del residuo globale F(u,v)-T(U,V): coefficienti IEEE originali e intervalli outward, pesi costanti positivi, gradi2/3 nativi non periodici; quota costante e separabilita dimostrate senza epsilon, assi scambiati e negativi, tutte le celle chiuse pertinenti e cap cancellabili. A quota nonzero verifica Tu x Tv naturale, lower e cutoff relativo esistente, verso h(D dot C), componente tangenziale e residuo delle norme; quote variabili, UV obliqui, istanze o pesi variabili restano esclusi.",
+      "lines": 506,
+      "symbols": [
+        "ForgeCad::Kernel::detail::I::I",
+        "ForgeCad::Kernel::detail::Polynomial::Polynomial",
+        "ForgeCad::Kernel::detail::Polynomial::at",
+        "ForgeCad::Kernel::detail::Work::visit",
+        "ForgeCad::Kernel::detail::at",
+        "ForgeCad::Kernel::detail::basis",
+        "ForgeCad::Kernel::detail::cells",
+        "ForgeCad::Kernel::detail::choose",
+        "ForgeCad::Kernel::detail::constantHeightMappingResidualBound",
+        "ForgeCad::Kernel::detail::containing",
+        "ForgeCad::Kernel::detail::cross",
+        "ForgeCad::Kernel::detail::cuts",
+        "ForgeCad::Kernel::detail::derivativeTensor",
+        "ForgeCad::Kernel::detail::dot",
+        "ForgeCad::Kernel::detail::elevated",
+        "ForgeCad::Kernel::detail::enclosure",
+        "ForgeCad::Kernel::detail::exact",
+        "ForgeCad::Kernel::detail::finite",
+        "ForgeCad::Kernel::detail::hull",
+        "ForgeCad::Kernel::detail::knotsValid",
+        "ForgeCad::Kernel::detail::magnitude",
+        "ForgeCad::Kernel::detail::mapping",
+        "ForgeCad::Kernel::detail::node",
+        "ForgeCad::Kernel::detail::normalUpper",
+        "ForgeCad::Kernel::detail::operator*",
+        "ForgeCad::Kernel::detail::operator+",
+        "ForgeCad::Kernel::detail::operator-",
+        "ForgeCad::Kernel::detail::operator/",
+        "ForgeCad::Kernel::detail::outward",
+        "ForgeCad::Kernel::detail::point",
+        "ForgeCad::Kernel::detail::product",
+        "ForgeCad::Kernel::detail::scalar",
+        "ForgeCad::Kernel::detail::scaled",
+        "ForgeCad::Kernel::detail::squaredUpper",
+        "ForgeCad::Kernel::detail::sum",
+        "ForgeCad::Kernel::detail::tensor",
+        "ForgeCad::Kernel::detail::validate",
+        "ForgeCad::Kernel::detail::whole"
+      ]
+    },
+    {
+      "id": "kernel/fk_surface_mapping_bounds.h",
+      "group": "kernel",
+      "description": "Contratto del residuo continuo dell intero carrier: Plane a quota costante anche nonzero, UV affini separabili, NURBS2/3 native polinomiali e candidata cubica; esiti Unsupported, Certified e Failed distinti, cap fisico esterno.",
+      "lines": 22,
+      "symbols": []
+    },
+    {
+      "id": "kernel/tests/test_mapping_global_validation.cpp",
+      "group": "tests",
+      "description": "Regressione pubblica del rilievo NURBS interno perso dal wrap solido: oracolo cardinal cubico indipendente, rifiuto specifico prima della pubblicazione, input e sentinelle invariati; controlli riusciti piatto e lamina con carrier conservato, anche senza history.",
+      "lines": 180,
+      "symbols": [
+        "MappingGlobalFlatCarrierWithSameKnotsSucceeds",
+        "MappingGlobalNativeBumpHasIndependentInteriorWitness",
+        "MappingGlobalSolidBumpRejectsSpecificUnprovenCarrierBeforePublication",
+        "MappingGlobalZeroHeightBottomIdentityRetainsTheRealBump",
+        "checkFaceOrigins",
+        "historyStamp",
+        "localizedCarrier",
+        "unchangedCarrier",
+        "wrapOptions"
+      ]
+    },
+    {
+      "id": "kernel/tests/test_surface_mapping_bounds.cpp",
+      "group": "tests",
+      "description": "Regressioni del certificato globale del carrier: positivi polinomiali2/3 e gauge costante, picchi sopra e sotto cap con oracolo convex hull, permutazione assi e UV negativi, domini e valori invalidi, offset nonzero incluso nel residuo, famiglie escluse e cancellazione distinta.",
+      "lines": 163,
+      "symbols": [
+        "MappingBoundsBilinearAndQuadraticCoefficientOracles",
+        "MappingBoundsDiscreteAxisPermutationAndNegativeUV",
+        "MappingBoundsFlatNativeDegreesAndConstantWeightGauge",
+        "MappingBoundsInteriorPeakFailsAndHarmlessPeakCertifies",
+        "MappingBoundsInvalidInputsFailAndNonzeroOffsetParticipatesInResidual",
+        "MappingBoundsPresetCancellationRemainsDistinct",
+        "bound",
+        "bumpSurface",
+        "certified",
+        "clamped",
+        "curvedSurface",
+        "flatSurface"
+      ]
+    },
+    {
+      "id": "kernel/tests/test_mapping_normal_validation.cpp",
+      "group": "tests",
+      "description": "Regressioni pubbliche del carrier a quota costante nonzero: box rialzato con rilievo nascosto rifiutato prima di history/deviazione, anche con history nulla; flat a quote positive/negative e quadratica ordinaria obbligatoriamente riusciti, input immutati.",
+      "lines": 150,
+      "symbols": [
+        "MappingNormalFlatCarrierAcceptsPositiveAndNegativeHeights",
+        "MappingNormalOrdinaryQuadraticWrapRemainsSuccessful",
+        "MappingNormalRaisedSolidBumpRejectsBeforePublicationWithOrWithoutHistory",
+        "carrierUnchanged",
+        "checkNormalResult",
+        "normalCarrier",
+        "normalHistoryStamp",
+        "normalOptions"
+      ]
+    },
+    {
+      "id": "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+      "group": "tests",
+      "description": "Normale naturale inclinata da oracolo affine indipendente: h positivo/negativo, scambio UV che inverte orientazione, offset esplicito e verso opposto; picchi interni, normale degenere o schiacciata rifiutati, quota variabile Unsupported, cancellazione distinta.",
+      "lines": 163,
+      "symbols": [
+        "MappingNormalBoundsDegenerateNormalFailsAndVariableHeightIsUnsupported",
+        "MappingNormalBoundsMissedInteriorBumpAtNonzeroHeightFails",
+        "MappingNormalBoundsPresetCancellationRemainsDistinct",
+        "MappingNormalBoundsTiltedSignedHeightAndSwappedUVMatchExactCubic",
+        "MappingNormalBoundsWrongOrientedSideFailsIncludingNegativeHeight",
+        "normalBound",
+        "normalCertified",
+        "normalKnots",
+        "parallelSource",
+        "tiltedImage",
+        "tiltedTarget"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "cad_surface_mapping.cpp",
+      "target": "kernel/fk_surface_mapping.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 186,
+          "symbol": "ForgeCad::Kernel::unrollFace",
+          "owner": "ForgeCad::buildSurfaceMapping"
+        },
+        {
+          "line": 230,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "ForgeCad::buildSurfaceMapping"
+        },
+        {
+          "line": 231,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnFaces",
+          "owner": "ForgeCad::buildSurfaceMapping"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_body_check.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 6,
+          "symbol": "fk_body_check.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 5,
+          "symbol": "fk_bspline_surface.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_classify.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 13,
+          "symbol": "fk_classify.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_classify_uv.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 14,
+          "symbol": "fk_classify_uv.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 18,
+          "symbol": "fk_curve_algo.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_curve_fit_bounds.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 19,
+          "symbol": "fk_curve_fit_bounds.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_curve_ops.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 7,
+          "symbol": "fk_curve_ops.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_curve_surface.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 15,
+          "symbol": "fk_curve_surface.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 8,
+          "symbol": "fk_intersect.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_mapping_carrier.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 2,
+          "symbol": "fk_mapping_carrier.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_mapping_fit.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 3,
+          "symbol": "fk_mapping_fit.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_offset.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 9,
+          "symbol": "fk_offset.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_pcurve.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 10,
+          "symbol": "fk_pcurve.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 11,
+          "symbol": "fk_precision.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_quilt_mapping.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 4,
+          "symbol": "fk_quilt_mapping.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_sew.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 16,
+          "symbol": "fk_sew.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_surface_algo.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 12,
+          "symbol": "fk_surface_algo.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_surface_curve_bounds.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 20,
+          "symbol": "fk_surface_curve_bounds.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_surface_mapping.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1,
+          "symbol": "fk_surface_mapping.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_surface_mapping_bounds.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 463,
+          "symbol": "ForgeCad::Kernel::detail::constantHeightMappingResidualBound",
+          "owner": "ForgeCad::Kernel::wrapBodyOnSurface"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_surface_mapping_bounds.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 21,
+          "symbol": "fk_surface_mapping_bounds.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_transform.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 17,
+          "symbol": "fk_transform.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 2,
+          "symbol": "fk_bspline_surface.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping_bounds.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 3,
+          "symbol": "fk_cancel.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping_bounds.cpp",
+      "target": "kernel/fk_surface_mapping_bounds.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1,
+          "symbol": "fk_surface_mapping_bounds.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping_bounds.h",
+      "target": "kernel/fk_surface_mapping.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 2,
+          "symbol": "fk_surface_mapping.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_carrier_validation.cpp",
+      "target": "kernel/fk_surface_mapping.cpp",
+      "kind": "call",
+      "count": 12,
+      "sites": [
+        {
+          "line": 148,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "checkMapped"
+        },
+        {
+          "line": 225,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingCarrierSourceFrameQuarterTurnShiftHolesAndRoundtrip"
+        },
+        {
+          "line": 251,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingCarrierDeclaredLegacyDiagonalPeriodicAndOffset"
+        },
+        {
+          "line": 265,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingCarrierDeclaredLegacyDiagonalPeriodicAndOffset"
+        },
+        {
+          "line": 288,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingCarrierFailureAndCallbackCancellationAreAtomic"
+        },
+        {
+          "line": 297,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingCarrierFailureAndCallbackCancellationAreAtomic"
+        },
+        {
+          "line": 304,
+          "symbol": "ForgeCad::Kernel::detail::mapBodyByFunction",
+          "owner": "MappingCarrierFailureAndCallbackCancellationAreAtomic"
+        },
+        {
+          "line": 319,
+          "symbol": "ForgeCad::Kernel::detail::mapBodyByFunction",
+          "owner": "MappingCarrierFailureAndCallbackCancellationAreAtomic"
+        },
+        {
+          "line": 328,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingCarrierFailureAndCallbackCancellationAreAtomic"
+        },
+        {
+          "line": 411,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingCarrierTolerantSourceDiscrepanciesAreRejectedAtomically"
+        },
+        {
+          "line": 429,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingCarrierSmallSourceVertexDiscrepancyIsReported"
+        },
+        {
+          "line": 459,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingCarrierUnresolvedNaturalBoundaryIsAtomic"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_diagonal_validation.cpp",
+      "target": "kernel/fk_surface_mapping.cpp",
+      "kind": "call",
+      "count": 4,
+      "sites": [
+        {
+          "line": 166,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "checkMapped"
+        },
+        {
+          "line": 264,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingDiagonalExtrusionNestedGeneratorTrimHolesHistoryRoundtrip"
+        },
+        {
+          "line": 346,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingDiagonalFailureCancellationAreAtomicAndTensorIsUnsupported"
+        },
+        {
+          "line": 361,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingDiagonalFailureCancellationAreAtomicAndTensorIsUnsupported"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_global_validation.cpp",
+      "target": "kernel/fk_body_check.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1,
+          "symbol": "fk_body_check.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_global_validation.cpp",
+      "target": "kernel/fk_body_io.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 2,
+          "symbol": "fk_body_io.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_global_validation.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 3,
+          "symbol": "fk_bspline_surface.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_global_validation.cpp",
+      "target": "kernel/fk_classify_uv.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 4,
+          "symbol": "fk_classify_uv.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_global_validation.cpp",
+      "target": "kernel/fk_history.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 5,
+          "symbol": "fk_history.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_global_validation.cpp",
+      "target": "kernel/fk_primitives.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 6,
+          "symbol": "fk_primitives.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_global_validation.cpp",
+      "target": "kernel/fk_sheet.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 7,
+          "symbol": "fk_sheet.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_global_validation.cpp",
+      "target": "kernel/fk_surface_mapping.cpp",
+      "kind": "call",
+      "count": 5,
+      "sites": [
+        {
+          "line": 115,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingGlobalFlatCarrierWithSameKnotsSucceeds"
+        },
+        {
+          "line": 130,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingGlobalFlatCarrierWithSameKnotsSucceeds"
+        },
+        {
+          "line": 144,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingGlobalSolidBumpRejectsSpecificUnprovenCarrierBeforePublication"
+        },
+        {
+          "line": 165,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingGlobalZeroHeightBottomIdentityRetainsTheRealBump"
+        },
+        {
+          "line": 177,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingGlobalZeroHeightBottomIdentityRetainsTheRealBump"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_global_validation.cpp",
+      "target": "kernel/fk_surface_mapping.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 8,
+          "symbol": "fk_surface_mapping.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_global_validation.cpp",
+      "target": "kernel/tests/fk_test.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 9,
+          "symbol": "fk_test.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+      "target": "kernel/fk_surface_mapping.cpp",
+      "kind": "call",
+      "count": 5,
+      "sites": [
+        {
+          "line": 99,
+          "symbol": "ForgeCad::Kernel::detail::mapBodyByFunction",
+          "owner": "identityImage"
+        },
+        {
+          "line": 138,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingNonPlaneCylinderFinalFinsAndNullHistory"
+        },
+        {
+          "line": 141,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingNonPlaneCylinderFinalFinsAndNullHistory"
+        },
+        {
+          "line": 159,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingNonPlaneQuadraticTargetFinalFinsAndNullHistory"
+        },
+        {
+          "line": 162,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingNonPlaneQuadraticTargetFinalFinsAndNullHistory"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_normal_validation.cpp",
+      "target": "kernel/fk_body_check.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1,
+          "symbol": "fk_body_check.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_normal_validation.cpp",
+      "target": "kernel/fk_body_io.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 2,
+          "symbol": "fk_body_io.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_normal_validation.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 3,
+          "symbol": "fk_bspline_surface.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_normal_validation.cpp",
+      "target": "kernel/fk_history.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 4,
+          "symbol": "fk_history.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_normal_validation.cpp",
+      "target": "kernel/fk_primitives.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 5,
+          "symbol": "fk_primitives.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_normal_validation.cpp",
+      "target": "kernel/fk_surface_mapping.cpp",
+      "kind": "call",
+      "count": 5,
+      "sites": [
+        {
+          "line": 92,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingNormalRaisedSolidBumpRejectsBeforePublicationWithOrWithoutHistory"
+        },
+        {
+          "line": 112,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingNormalFlatCarrierAcceptsPositiveAndNegativeHeights"
+        },
+        {
+          "line": 124,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingNormalFlatCarrierAcceptsPositiveAndNegativeHeights"
+        },
+        {
+          "line": 145,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingNormalOrdinaryQuadraticWrapRemainsSuccessful"
+        },
+        {
+          "line": 147,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "MappingNormalOrdinaryQuadraticWrapRemainsSuccessful"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_normal_validation.cpp",
+      "target": "kernel/fk_surface_mapping.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 6,
+          "symbol": "fk_surface_mapping.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_normal_validation.cpp",
+      "target": "kernel/tests/fk_test.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 7,
+          "symbol": "fk_test.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping.cpp",
+      "target": "kernel/fk_surface_mapping.cpp",
+      "kind": "call",
+      "count": 18,
+      "sites": [
+        {
+          "line": 21,
+          "symbol": "ForgeCad::Kernel::unrollFace",
+          "owner": "main"
+        },
+        {
+          "line": 27,
+          "symbol": "ForgeCad::Kernel::unrollFace",
+          "owner": "main"
+        },
+        {
+          "line": 36,
+          "symbol": "ForgeCad::Kernel::unrollFace",
+          "owner": "main"
+        },
+        {
+          "line": 39,
+          "symbol": "ForgeCad::Kernel::unrollFace",
+          "owner": "main"
+        },
+        {
+          "line": 42,
+          "symbol": "ForgeCad::Kernel::unrollFace",
+          "owner": "main"
+        },
+        {
+          "line": 46,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "main"
+        },
+        {
+          "line": 76,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "main"
+        },
+        {
+          "line": 89,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "main"
+        },
+        {
+          "line": 175,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnFaces",
+          "owner": "main"
+        },
+        {
+          "line": 179,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnFaces",
+          "owner": "main"
+        },
+        {
+          "line": 188,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnFaces",
+          "owner": "main"
+        },
+        {
+          "line": 191,
+          "symbol": "ForgeCad::Kernel::fitSurfaceWrapPlacement",
+          "owner": "main"
+        },
+        {
+          "line": 194,
+          "symbol": "ForgeCad::Kernel::fitSurfaceWrapPlacement",
+          "owner": "main"
+        },
+        {
+          "line": 203,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnFaces",
+          "owner": "main"
+        },
+        {
+          "line": 208,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "main"
+        },
+        {
+          "line": 218,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnFaces",
+          "owner": "main"
+        },
+        {
+          "line": 241,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnFaces",
+          "owner": "main"
+        },
+        {
+          "line": 244,
+          "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1,
+          "symbol": "fk_bspline_surface.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping_bounds.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 2,
+          "symbol": "fk_cancel.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping_bounds.cpp",
+      "target": "kernel/fk_surface_mapping.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 3,
+          "symbol": "fk_surface_mapping.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping_bounds.cpp",
+      "target": "kernel/fk_surface_mapping_bounds.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 60,
+          "symbol": "ForgeCad::Kernel::detail::constantHeightMappingResidualBound",
+          "owner": "bound"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping_bounds.cpp",
+      "target": "kernel/fk_surface_mapping_bounds.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 4,
+          "symbol": "fk_surface_mapping_bounds.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping_bounds.cpp",
+      "target": "kernel/tests/fk_test.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 5,
+          "symbol": "fk_test.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1,
+          "symbol": "fk_bspline_surface.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 2,
+          "symbol": "fk_cancel.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+      "target": "kernel/fk_surface_mapping.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 3,
+          "symbol": "fk_surface_mapping.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+      "target": "kernel/fk_surface_mapping_bounds.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 60,
+          "symbol": "ForgeCad::Kernel::detail::constantHeightMappingResidualBound",
+          "owner": "normalBound"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+      "target": "kernel/fk_surface_mapping_bounds.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 4,
+          "symbol": "fk_surface_mapping_bounds.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+      "target": "kernel/tests/fk_test.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 5,
+          "symbol": "fk_test.h",
+          "owner": ""
+        }
+      ]
+    }
+  ],
+  "incoming": {
+    "kernel/fk_surface_mapping.cpp": [
+      {
+        "source": "cad_surface_mapping.cpp",
+        "target": "kernel/fk_surface_mapping.cpp",
+        "kind": "call",
+        "count": 3,
+        "sites": [
+          {
+            "line": 186,
+            "symbol": "ForgeCad::Kernel::unrollFace",
+            "owner": "ForgeCad::buildSurfaceMapping"
+          },
+          {
+            "line": 230,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "ForgeCad::buildSurfaceMapping"
+          },
+          {
+            "line": 231,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnFaces",
+            "owner": "ForgeCad::buildSurfaceMapping"
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_carrier_validation.cpp",
+        "target": "kernel/fk_surface_mapping.cpp",
+        "kind": "call",
+        "count": 12,
+        "sites": [
+          {
+            "line": 148,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "checkMapped"
+          },
+          {
+            "line": 225,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingCarrierSourceFrameQuarterTurnShiftHolesAndRoundtrip"
+          },
+          {
+            "line": 251,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingCarrierDeclaredLegacyDiagonalPeriodicAndOffset"
+          },
+          {
+            "line": 265,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingCarrierDeclaredLegacyDiagonalPeriodicAndOffset"
+          },
+          {
+            "line": 288,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingCarrierFailureAndCallbackCancellationAreAtomic"
+          },
+          {
+            "line": 297,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingCarrierFailureAndCallbackCancellationAreAtomic"
+          },
+          {
+            "line": 304,
+            "symbol": "ForgeCad::Kernel::detail::mapBodyByFunction",
+            "owner": "MappingCarrierFailureAndCallbackCancellationAreAtomic"
+          },
+          {
+            "line": 319,
+            "symbol": "ForgeCad::Kernel::detail::mapBodyByFunction",
+            "owner": "MappingCarrierFailureAndCallbackCancellationAreAtomic"
+          },
+          {
+            "line": 328,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingCarrierFailureAndCallbackCancellationAreAtomic"
+          },
+          {
+            "line": 411,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingCarrierTolerantSourceDiscrepanciesAreRejectedAtomically"
+          },
+          {
+            "line": 429,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingCarrierSmallSourceVertexDiscrepancyIsReported"
+          },
+          {
+            "line": 459,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingCarrierUnresolvedNaturalBoundaryIsAtomic"
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_diagonal_validation.cpp",
+        "target": "kernel/fk_surface_mapping.cpp",
+        "kind": "call",
+        "count": 4,
+        "sites": [
+          {
+            "line": 166,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "checkMapped"
+          },
+          {
+            "line": 264,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingDiagonalExtrusionNestedGeneratorTrimHolesHistoryRoundtrip"
+          },
+          {
+            "line": 346,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingDiagonalFailureCancellationAreAtomicAndTensorIsUnsupported"
+          },
+          {
+            "line": 361,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingDiagonalFailureCancellationAreAtomicAndTensorIsUnsupported"
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_global_validation.cpp",
+        "target": "kernel/fk_surface_mapping.cpp",
+        "kind": "call",
+        "count": 5,
+        "sites": [
+          {
+            "line": 115,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingGlobalFlatCarrierWithSameKnotsSucceeds"
+          },
+          {
+            "line": 130,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingGlobalFlatCarrierWithSameKnotsSucceeds"
+          },
+          {
+            "line": 144,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingGlobalSolidBumpRejectsSpecificUnprovenCarrierBeforePublication"
+          },
+          {
+            "line": 165,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingGlobalZeroHeightBottomIdentityRetainsTheRealBump"
+          },
+          {
+            "line": 177,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingGlobalZeroHeightBottomIdentityRetainsTheRealBump"
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_nonplane_validation.cpp",
+        "target": "kernel/fk_surface_mapping.cpp",
+        "kind": "call",
+        "count": 5,
+        "sites": [
+          {
+            "line": 99,
+            "symbol": "ForgeCad::Kernel::detail::mapBodyByFunction",
+            "owner": "identityImage"
+          },
+          {
+            "line": 138,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingNonPlaneCylinderFinalFinsAndNullHistory"
+          },
+          {
+            "line": 141,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingNonPlaneCylinderFinalFinsAndNullHistory"
+          },
+          {
+            "line": 159,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingNonPlaneQuadraticTargetFinalFinsAndNullHistory"
+          },
+          {
+            "line": 162,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingNonPlaneQuadraticTargetFinalFinsAndNullHistory"
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_normal_validation.cpp",
+        "target": "kernel/fk_surface_mapping.cpp",
+        "kind": "call",
+        "count": 5,
+        "sites": [
+          {
+            "line": 92,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingNormalRaisedSolidBumpRejectsBeforePublicationWithOrWithoutHistory"
+          },
+          {
+            "line": 112,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingNormalFlatCarrierAcceptsPositiveAndNegativeHeights"
+          },
+          {
+            "line": 124,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingNormalFlatCarrierAcceptsPositiveAndNegativeHeights"
+          },
+          {
+            "line": 145,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingNormalOrdinaryQuadraticWrapRemainsSuccessful"
+          },
+          {
+            "line": 147,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingNormalOrdinaryQuadraticWrapRemainsSuccessful"
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_surface_mapping.cpp",
+        "target": "kernel/fk_surface_mapping.cpp",
+        "kind": "call",
+        "count": 18,
+        "sites": [
+          {
+            "line": 21,
+            "symbol": "ForgeCad::Kernel::unrollFace",
+            "owner": "main"
+          },
+          {
+            "line": 27,
+            "symbol": "ForgeCad::Kernel::unrollFace",
+            "owner": "main"
+          },
+          {
+            "line": 36,
+            "symbol": "ForgeCad::Kernel::unrollFace",
+            "owner": "main"
+          },
+          {
+            "line": 39,
+            "symbol": "ForgeCad::Kernel::unrollFace",
+            "owner": "main"
+          },
+          {
+            "line": 42,
+            "symbol": "ForgeCad::Kernel::unrollFace",
+            "owner": "main"
+          },
+          {
+            "line": 46,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "main"
+          },
+          {
+            "line": 76,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "main"
+          },
+          {
+            "line": 89,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "main"
+          },
+          {
+            "line": 175,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnFaces",
+            "owner": "main"
+          },
+          {
+            "line": 179,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnFaces",
+            "owner": "main"
+          },
+          {
+            "line": 188,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnFaces",
+            "owner": "main"
+          },
+          {
+            "line": 191,
+            "symbol": "ForgeCad::Kernel::fitSurfaceWrapPlacement",
+            "owner": "main"
+          },
+          {
+            "line": 194,
+            "symbol": "ForgeCad::Kernel::fitSurfaceWrapPlacement",
+            "owner": "main"
+          },
+          {
+            "line": 203,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnFaces",
+            "owner": "main"
+          },
+          {
+            "line": 208,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "main"
+          },
+          {
+            "line": 218,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnFaces",
+            "owner": "main"
+          },
+          {
+            "line": 241,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnFaces",
+            "owner": "main"
+          },
+          {
+            "line": 244,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "main"
+          }
+        ]
+      }
+    ],
+    "kernel/fk_surface_mapping_bounds.cpp": [
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_surface_mapping_bounds.cpp",
+        "kind": "call",
+        "count": 1,
+        "sites": [
+          {
+            "line": 463,
+            "symbol": "ForgeCad::Kernel::detail::constantHeightMappingResidualBound",
+            "owner": "ForgeCad::Kernel::wrapBodyOnSurface"
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_surface_mapping_bounds.cpp",
+        "target": "kernel/fk_surface_mapping_bounds.cpp",
+        "kind": "call",
+        "count": 1,
+        "sites": [
+          {
+            "line": 60,
+            "symbol": "ForgeCad::Kernel::detail::constantHeightMappingResidualBound",
+            "owner": "bound"
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+        "target": "kernel/fk_surface_mapping_bounds.cpp",
+        "kind": "call",
+        "count": 1,
+        "sites": [
+          {
+            "line": 60,
+            "symbol": "ForgeCad::Kernel::detail::constantHeightMappingResidualBound",
+            "owner": "normalBound"
+          }
+        ]
+      }
+    ],
+    "kernel/fk_surface_mapping_bounds.h": [
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_surface_mapping_bounds.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 21,
+            "symbol": "fk_surface_mapping_bounds.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping_bounds.cpp",
+        "target": "kernel/fk_surface_mapping_bounds.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 1,
+            "symbol": "fk_surface_mapping_bounds.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_surface_mapping_bounds.cpp",
+        "target": "kernel/fk_surface_mapping_bounds.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 4,
+            "symbol": "fk_surface_mapping_bounds.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+        "target": "kernel/fk_surface_mapping_bounds.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 4,
+            "symbol": "fk_surface_mapping_bounds.h",
+            "owner": ""
+          }
+        ]
+      }
+    ],
+    "kernel/tests/test_mapping_global_validation.cpp": [],
+    "kernel/tests/test_surface_mapping_bounds.cpp": [],
+    "kernel/tests/test_mapping_normal_validation.cpp": [],
+    "kernel/tests/test_surface_mapping_normal_bounds.cpp": []
+  },
+  "outgoing": {
+    "kernel/fk_surface_mapping.cpp": [
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_body_check.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 6,
+            "symbol": "fk_body_check.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_bspline_surface.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 5,
+            "symbol": "fk_bspline_surface.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_classify.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 13,
+            "symbol": "fk_classify.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_classify_uv.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 14,
+            "symbol": "fk_classify_uv.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 18,
+            "symbol": "fk_curve_algo.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_curve_fit_bounds.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 19,
+            "symbol": "fk_curve_fit_bounds.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_curve_ops.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 7,
+            "symbol": "fk_curve_ops.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_curve_surface.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 15,
+            "symbol": "fk_curve_surface.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_intersect.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 8,
+            "symbol": "fk_intersect.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_mapping_carrier.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 2,
+            "symbol": "fk_mapping_carrier.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_mapping_fit.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 3,
+            "symbol": "fk_mapping_fit.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_offset.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 9,
+            "symbol": "fk_offset.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_pcurve.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 10,
+            "symbol": "fk_pcurve.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_precision.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 11,
+            "symbol": "fk_precision.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_quilt_mapping.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 4,
+            "symbol": "fk_quilt_mapping.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_sew.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 16,
+            "symbol": "fk_sew.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_surface_algo.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 12,
+            "symbol": "fk_surface_algo.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_surface_curve_bounds.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 20,
+            "symbol": "fk_surface_curve_bounds.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_surface_mapping.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 1,
+            "symbol": "fk_surface_mapping.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_surface_mapping_bounds.cpp",
+        "kind": "call",
+        "count": 1,
+        "sites": [
+          {
+            "line": 463,
+            "symbol": "ForgeCad::Kernel::detail::constantHeightMappingResidualBound",
+            "owner": "ForgeCad::Kernel::wrapBodyOnSurface"
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_surface_mapping_bounds.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 21,
+            "symbol": "fk_surface_mapping_bounds.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping.cpp",
+        "target": "kernel/fk_transform.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 17,
+            "symbol": "fk_transform.h",
+            "owner": ""
+          }
+        ]
+      }
+    ],
+    "kernel/fk_surface_mapping_bounds.cpp": [
+      {
+        "source": "kernel/fk_surface_mapping_bounds.cpp",
+        "target": "kernel/fk_bspline_surface.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 2,
+            "symbol": "fk_bspline_surface.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping_bounds.cpp",
+        "target": "kernel/fk_cancel.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 3,
+            "symbol": "fk_cancel.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_mapping_bounds.cpp",
+        "target": "kernel/fk_surface_mapping_bounds.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 1,
+            "symbol": "fk_surface_mapping_bounds.h",
+            "owner": ""
+          }
+        ]
+      }
+    ],
+    "kernel/fk_surface_mapping_bounds.h": [
+      {
+        "source": "kernel/fk_surface_mapping_bounds.h",
+        "target": "kernel/fk_surface_mapping.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 2,
+            "symbol": "fk_surface_mapping.h",
+            "owner": ""
+          }
+        ]
+      }
+    ],
+    "kernel/tests/test_mapping_global_validation.cpp": [
+      {
+        "source": "kernel/tests/test_mapping_global_validation.cpp",
+        "target": "kernel/fk_body_check.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 1,
+            "symbol": "fk_body_check.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_global_validation.cpp",
+        "target": "kernel/fk_body_io.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 2,
+            "symbol": "fk_body_io.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_global_validation.cpp",
+        "target": "kernel/fk_bspline_surface.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 3,
+            "symbol": "fk_bspline_surface.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_global_validation.cpp",
+        "target": "kernel/fk_classify_uv.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 4,
+            "symbol": "fk_classify_uv.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_global_validation.cpp",
+        "target": "kernel/fk_history.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 5,
+            "symbol": "fk_history.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_global_validation.cpp",
+        "target": "kernel/fk_primitives.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 6,
+            "symbol": "fk_primitives.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_global_validation.cpp",
+        "target": "kernel/fk_sheet.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 7,
+            "symbol": "fk_sheet.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_global_validation.cpp",
+        "target": "kernel/fk_surface_mapping.cpp",
+        "kind": "call",
+        "count": 5,
+        "sites": [
+          {
+            "line": 115,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingGlobalFlatCarrierWithSameKnotsSucceeds"
+          },
+          {
+            "line": 130,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingGlobalFlatCarrierWithSameKnotsSucceeds"
+          },
+          {
+            "line": 144,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingGlobalSolidBumpRejectsSpecificUnprovenCarrierBeforePublication"
+          },
+          {
+            "line": 165,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingGlobalZeroHeightBottomIdentityRetainsTheRealBump"
+          },
+          {
+            "line": 177,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingGlobalZeroHeightBottomIdentityRetainsTheRealBump"
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_global_validation.cpp",
+        "target": "kernel/fk_surface_mapping.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 8,
+            "symbol": "fk_surface_mapping.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_global_validation.cpp",
+        "target": "kernel/tests/fk_test.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 9,
+            "symbol": "fk_test.h",
+            "owner": ""
+          }
+        ]
+      }
+    ],
+    "kernel/tests/test_surface_mapping_bounds.cpp": [
+      {
+        "source": "kernel/tests/test_surface_mapping_bounds.cpp",
+        "target": "kernel/fk_bspline_surface.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 1,
+            "symbol": "fk_bspline_surface.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_surface_mapping_bounds.cpp",
+        "target": "kernel/fk_cancel.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 2,
+            "symbol": "fk_cancel.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_surface_mapping_bounds.cpp",
+        "target": "kernel/fk_surface_mapping.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 3,
+            "symbol": "fk_surface_mapping.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_surface_mapping_bounds.cpp",
+        "target": "kernel/fk_surface_mapping_bounds.cpp",
+        "kind": "call",
+        "count": 1,
+        "sites": [
+          {
+            "line": 60,
+            "symbol": "ForgeCad::Kernel::detail::constantHeightMappingResidualBound",
+            "owner": "bound"
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_surface_mapping_bounds.cpp",
+        "target": "kernel/fk_surface_mapping_bounds.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 4,
+            "symbol": "fk_surface_mapping_bounds.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_surface_mapping_bounds.cpp",
+        "target": "kernel/tests/fk_test.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 5,
+            "symbol": "fk_test.h",
+            "owner": ""
+          }
+        ]
+      }
+    ],
+    "kernel/tests/test_mapping_normal_validation.cpp": [
+      {
+        "source": "kernel/tests/test_mapping_normal_validation.cpp",
+        "target": "kernel/fk_body_check.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 1,
+            "symbol": "fk_body_check.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_normal_validation.cpp",
+        "target": "kernel/fk_body_io.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 2,
+            "symbol": "fk_body_io.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_normal_validation.cpp",
+        "target": "kernel/fk_bspline_surface.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 3,
+            "symbol": "fk_bspline_surface.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_normal_validation.cpp",
+        "target": "kernel/fk_history.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 4,
+            "symbol": "fk_history.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_normal_validation.cpp",
+        "target": "kernel/fk_primitives.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 5,
+            "symbol": "fk_primitives.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_normal_validation.cpp",
+        "target": "kernel/fk_surface_mapping.cpp",
+        "kind": "call",
+        "count": 5,
+        "sites": [
+          {
+            "line": 92,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingNormalRaisedSolidBumpRejectsBeforePublicationWithOrWithoutHistory"
+          },
+          {
+            "line": 112,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingNormalFlatCarrierAcceptsPositiveAndNegativeHeights"
+          },
+          {
+            "line": 124,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingNormalFlatCarrierAcceptsPositiveAndNegativeHeights"
+          },
+          {
+            "line": 145,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingNormalOrdinaryQuadraticWrapRemainsSuccessful"
+          },
+          {
+            "line": 147,
+            "symbol": "ForgeCad::Kernel::wrapBodyOnSurface",
+            "owner": "MappingNormalOrdinaryQuadraticWrapRemainsSuccessful"
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_normal_validation.cpp",
+        "target": "kernel/fk_surface_mapping.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 6,
+            "symbol": "fk_surface_mapping.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_mapping_normal_validation.cpp",
+        "target": "kernel/tests/fk_test.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 7,
+            "symbol": "fk_test.h",
+            "owner": ""
+          }
+        ]
+      }
+    ],
+    "kernel/tests/test_surface_mapping_normal_bounds.cpp": [
+      {
+        "source": "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+        "target": "kernel/fk_bspline_surface.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 1,
+            "symbol": "fk_bspline_surface.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+        "target": "kernel/fk_cancel.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 2,
+            "symbol": "fk_cancel.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+        "target": "kernel/fk_surface_mapping.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 3,
+            "symbol": "fk_surface_mapping.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+        "target": "kernel/fk_surface_mapping_bounds.cpp",
+        "kind": "call",
+        "count": 1,
+        "sites": [
+          {
+            "line": 60,
+            "symbol": "ForgeCad::Kernel::detail::constantHeightMappingResidualBound",
+            "owner": "normalBound"
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+        "target": "kernel/fk_surface_mapping_bounds.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 4,
+            "symbol": "fk_surface_mapping_bounds.h",
+            "owner": ""
+          }
+        ]
+      },
+      {
+        "source": "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+        "target": "kernel/tests/fk_test.h",
+        "kind": "include",
+        "count": 1,
+        "sites": [
+          {
+            "line": 5,
+            "symbol": "fk_test.h",
+            "owner": ""
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "exit_code": 0,
+  "seconds": 54.370202182995854,
+  "instrumented": [
+    "kernel/tests/fk_test_main.cpp",
+    "kernel/tests/test_mapping_global_validation.cpp",
+    "kernel/tests/test_surface_mapping_bounds.cpp",
+    "kernel/tests/test_mapping_normal_validation.cpp",
+    "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+    "kernel/fk_surface_mapping_bounds.cpp",
+    "kernel/fk_surface_mapping.cpp"
+  ],
+  "other_kernel": "Release",
+  "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1",
+  "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1"
+}

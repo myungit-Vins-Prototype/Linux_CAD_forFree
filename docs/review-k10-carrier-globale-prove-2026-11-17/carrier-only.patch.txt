@@ -1,0 +1,845 @@
+--- before/kernel/fk_surface_mapping.cpp
++++ after/kernel/fk_surface_mapping.cpp
+@@ -18,6 +18,7 @@
+ #include "fk_curve_algo.h"
+ #include "fk_curve_fit_bounds.h"
+ #include "fk_surface_curve_bounds.h"
++#include "fk_surface_mapping_bounds.h"
+ #include <algorithm>
+ #include <array>
+ #include <functional>
+@@ -117,7 +118,8 @@
+ }
+ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,double tolerance,
+              BodyHistory *history,double *deviation,const std::function<Vec3(const Vec3 &)> &carrierMap={},const std::vector<Plane> &cuts={},double derivativeFraction=.001,int degree=3,const detail::MappingFaceFunction &faceImage={},
+-             const std::function<std::optional<Body>()> &carrierBody={}) {
++             const std::function<std::optional<Body>()> &carrierBody={},
++             const std::function<detail::SurfaceMappingBoundResult(FaceId, const Surface &, Interval, Interval, double)> &carrierProof={}) {
+     // Guardie locali sul volume sorgente; le degenerazioni non diventano
+     // corpi validi soltanto perche' il fit riesce.
+     Box box;for(auto e:source.edges())box.add(curveBox(*source.edge(e).curve,source.edge(e).range));
+@@ -166,7 +168,7 @@
+         double pcurveTolerance;
+         FinProof proof;
+     };
+-    bool hasCertifiedFin = false;
++    bool hasCertifiedFin = false, hasCertifiedCarrier = false;
+     std::map<int, SurfacePtr> mappedImages;
+     std::map<std::tuple<int, int, bool>, std::vector<FinContract>> finOrigins;
+     for(auto v:source.vertices()){vertexOf[v.index]=int(vertices.size());vertices.push_back(map(source.vertex(v).point));}
+@@ -188,6 +190,17 @@
+         else {
+             try {mapped.surface=fitMappedSurface(*face.surface,window.first,window.second,differentialMap,fitBudget,worst,cuts,derivativeFraction,degree);}
+             catch(const std::domain_error &e){throw std::domain_error("Faccia F"+std::to_string(id.index)+": "+e.what());}
++        }
++        if (carrierProof) {
++            const auto proof = carrierProof(id, *mapped.surface, window.first, window.second, fitBudget);
++            if (proof.status != detail::SurfaceMappingBoundStatus::Unsupported) {
++                require(proof.status == detail::SurfaceMappingBoundStatus::Certified
++                        && std::isfinite(proof.upperBound) && proof.upperBound >= 0
++                        && proof.upperBound <= fitBudget,
++                    "Deformazione: residuo globale del carrier fuori dal budget continuo.");
++                worst = std::max(worst, proof.upperBound);
++                hasCertifiedCarrier = true;
++            }
+         }
+         mappedImages.emplace(id.index, mapped.surface);
+         for(auto loop:face.loops) {
+@@ -253,8 +266,8 @@
+     }
+     Body result=source.isSheet()?Body::buildSheet(vertices,edges,faces):Body::build(vertices,edges,faces);checked(result);
+     BodyHistory preparedHistory;
+-    if (history || hasCertifiedFin) preparedHistory = mappedHistory(source, result);
+-    if (hasCertifiedFin) {
++    if (history || hasCertifiedFin || hasCertifiedCarrier) preparedHistory = mappedHistory(source, result);
++    if (hasCertifiedFin || hasCertifiedCarrier) {
+         const auto origin = [&](EntityKind kind, int index) {
+             const auto &links = preparedHistory.origins(kind, index);
+             require(preparedHistory.isDeclared(kind, index) && links.size() == 1
+@@ -446,6 +459,9 @@
+     },history,deviation);
+     return mapBody(source,map,options.tolerance,history,deviation,{}, {},.001,3,{},[&] {
+         return detail::wrapPlanarBodyOnCarrier(source,target,options,scaleU,scaleV,history,deviation);
++    }, [&](FaceId face, const Surface &image, Interval u, Interval v, double budget) {
++        return detail::zeroHeightMappingResidualBound(*source.face(face).surface,
++            target, options, scaleU, scaleV, image, u, v, budget);
+     });
+ }
+ bool commonSurfaceWrapAnchor(const std::vector<SurfaceTargetFace> &targets,const Frame3 &plane,Vec2 &anchor) {
+--- before/kernel/CMakeLists.txt
++++ after/kernel/CMakeLists.txt
+@@ -131,6 +131,8 @@
+     fk_surface_mapping.cpp
+     fk_surface_curve_bounds.h
+     fk_surface_curve_bounds.cpp
++    fk_surface_mapping_bounds.h
++    fk_surface_mapping_bounds.cpp
+     fk_sheet_join_validation.h
+     fk_sheet_join_validation.cpp
+     fk_affine_surface_fit.h
+@@ -223,7 +225,7 @@
+ # I validatori usano intervalli outward: niente riassociazioni o assunzioni
+ # di finitezza implicite, anche se una configurazione esterna abilita fast-math.
+ set_source_files_properties(fk_mass.cpp fk_profile.cpp fk_curve_algo.cpp fk_loft.cpp fk_sweep_surface_validation.cpp fk_sweep_caps.cpp
+-    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_helix_projection.cpp fk_project.cpp fk_mapping_carrier.cpp fk_surface_mapping.cpp fk_sheet.cpp fk_blend_mitre.cpp fk_blend_surface.cpp fk_blend_section_curve.cpp fk_affine_surface_fit.cpp fk_surface_curve_bounds.cpp fk_sheet_join_validation.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS
++    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_helix_projection.cpp fk_project.cpp fk_mapping_carrier.cpp fk_surface_mapping.cpp fk_sheet.cpp fk_blend_mitre.cpp fk_blend_surface.cpp fk_blend_section_curve.cpp fk_affine_surface_fit.cpp fk_surface_curve_bounds.cpp fk_surface_mapping_bounds.cpp fk_sheet_join_validation.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS
+     "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+ set_target_properties(forgekernel PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+ 
+@@ -806,3 +808,13 @@
+ set_target_properties(forgekernel_quadrature_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+ add_test(NAME forgekernel_quadrature_validation_tests COMMAND forgekernel_quadrature_validation_tests)
+ set_tests_properties(forgekernel_quadrature_validation_tests PROPERTIES TIMEOUT 30)
++
++# Residuo continuo dell'intero carrier Plane a quota zero su NURBS polinomiali.
++add_executable(forgekernel_mapping_global_validation_tests tests/fk_test_main.cpp
++    tests/test_mapping_global_validation.cpp tests/test_surface_mapping_bounds.cpp)
++target_link_libraries(forgekernel_mapping_global_validation_tests PRIVATE forgekernel)
++target_compile_options(forgekernel_mapping_global_validation_tests PRIVATE -Wall -Wextra -Wpedantic
++    $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>)
++set_target_properties(forgekernel_mapping_global_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
++add_test(NAME forgekernel_mapping_global_validation_tests COMMAND forgekernel_mapping_global_validation_tests)
++set_tests_properties(forgekernel_mapping_global_validation_tests PROPERTIES TIMEOUT 180)
+--- before/tools/generate_architecture.py
++++ after/tools/generate_architecture.py
+@@ -253,6 +253,10 @@
+  'kernel/tests/test_mapping_nonplane_validation.cpp': ('tests', 'Regressioni mapping nonPlane: picco del carrier invisibile ai campioni rifiutato, fin finali dei box e carrier razionale effettivo certificate, cap prefit, genealogia anche senza history, input/target immutati, fallimenti atomici e cancellazione.'),
+  'kernel/tests/test_mapping_pcurve_validation.cpp': ('tests', 'Trasferimenti UV su Plane con coordinate grandi e offset: parametri originali, fin finali certificate al budget pubblicato, pesi e wrapper, pose e scale, codec e fallimenti atomici; certificato distinto dal fit 3D campionato.'),
+  'kernel/tests/test_mapping_carrier_validation.cpp': ('tests', 'Regressioni mapping con rilievi del carrier nascosti, bordi e parametri, pesi, scale, pose, fori, genealogia, codec e fallimenti atomici; confronto con il percorso precedente e sanitizer mirati.'),
++ 'kernel/fk_surface_mapping_bounds.h': ('kernel', 'Contratto del residuo continuo dell intero carrier: Plane a quota esattamente zero, UV affini separabili, NURBS2/3 native polinomiali e candidata cubica; esiti Unsupported, Certified e Failed distinti, cap fisico esterno.'),
++ 'kernel/fk_surface_mapping_bounds.cpp': ('kernel', 'Certificato tensoriale Bernstein/Cox del residuo globale F(u,v)-T(U,V): coefficienti IEEE originali e intervalli outward, pesi costanti positivi, gradi2/3 nativi non periodici; quota zero e separabilita dimostrate senza epsilon, assi scambiati e negativi, tutte le celle chiuse pertinenti e cap cancellabili. Nessun certificato per offset normali, UV obliqui, istanze o pesi variabili.'),
++ 'kernel/tests/test_mapping_global_validation.cpp': ('tests', 'Regressione pubblica del rilievo NURBS interno perso dal wrap solido: oracolo cardinal cubico indipendente, rifiuto specifico prima della pubblicazione, input e sentinelle invariati; controlli riusciti piatto e lamina con carrier conservato, anche senza history.'),
++ 'kernel/tests/test_surface_mapping_bounds.cpp': ('tests', 'Regressioni del certificato globale del carrier: positivi polinomiali2/3 e gauge costante, picchi sopra e sotto cap con oracolo convex hull, permutazione assi e UV negativi, domini e valori invalidi, famiglie escluse e cancellazione distinta.'),
+  'kernel/fk_mapping_fit.cpp': ('kernel', 'Fit Hermite cubico/quintico adattivo condiviso dalle mappature: celle NURBS con derivate comuni, stencil locali espliciti, controlli dello scarto e budget geometrici prefissati; griglie/tolleranze valide, callback/jet/poli/residui finiti prima dei massimi e deviazione pubblicata solo dopo costruzione riuscita. Fit campionato, nessuna prova globale o mesh di calcolo.'),
+  'kernel/fk_mapping_fit.h': ('kernel', 'Contratti interni del fit parametrico e della trasformazione B-rep tramite corrispondenza analitica; immagine di faccia a carrier conservato e trasferimento UV esplicito, con ricostruzione Plane sul bordo effettivo e metrica fisica.'),
+  'cad_sketch_offset.cpp': ('sketch', 'Offset dello schizzo: fit NURBS certificato da coefficienti originali nei giunti e nelle copie finali, ricertificazione dei poli effettivi dopo rifilo con domini sorgente conservati, vincoli associativi e fallimenti atomici; altri tipi mantengono il fit campionato.'),
+@@ -266,7 +270,7 @@
+  'kernel/tests/test_planar_flatten_validation.cpp': ('tests', 'Regressioni appiattimento piano con dettagli NURBS nascosti tra campioni: pesi, pose, scale, trim, fori, inversione della mappa, codec, genealogia e atomicita degli output.'),
+  'kernel/fk_quilt_mapping.cpp': ('kernel', 'Appiattimento B-rep con bordo topologico comune; una faccia Plane conserva i coefficienti dei contorni tramite mappa affine e limite di arrotondamento, altri casi usano fit;  Jacobiani e deformazione campionata; origine suggerita e genealogia esplicita. Mappa comune e reversibile piano/quilt tramite coordinate di lunghezza d arco sulle isocurve esatte; una faccia o due facce tangenti con giunzione U, trim e piegatura solida lungo le normali. Monotonia dai poli, origine/metrica esatte sulla giunzione, cache per piegatura e nodi espliciti del fit; offset Plane analitico senza fit di contorni UV superfluo, fin Plane delegate al controllo continuo. Nessuna proiezione per raggi o isometria generale promessa.'),
+  'kernel/fk_quilt_mapping.h': ('kernel', 'Contratti di appiattimento della lamina, misure della deformazione e corrispondenza condivisa flatten/fold per la piegatura B-rep; destinazioni immutabili con genealogia esplicita.'),
+- 'kernel/fk_surface_mapping.cpp': ('kernel', 'Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: conserva i carrier supportati; fin Plane e NURBS2/3 native o istanziate certificate nel continuo al cap prefit. Candidata UV prima della prova, Failed terminale; genealogia, E/S/Q, parametri, versi e budget delle fin dopo assemblaggio anche senza history utente. Bordi3D, carrier rispetto alla mappa e altre famiglie restano campionati; nessuna mesh di calcolo.'),
++ 'kernel/fk_surface_mapping.cpp': ('kernel', 'Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: conserva i carrier supportati; fin Plane e NURBS2/3 native o istanziate certificate nel continuo al cap prefit. Candidata UV prima della prova, Failed terminale; genealogia, E/S/Q, parametri, versi e budget delle fin dopo assemblaggio anche senza history utente. Residuo globale rispetto alla mappa certificato per Plane a quota zero, UV separabili e target nativi2/3 polinomiali; Failed terminale e carrier finale conservato anche senza history. Bordi3D e altre famiglie restano campionati; nessuna mesh di calcolo.'),
+  'kernel/fk_classify_uv.h': ('kernel', 'Classificatore preparato di coordinate UV gia note: trim esatto e budget fisico senza nuova proiezione globale sul carrier; corpo immutabile.'),
+  'kernel/fk_surface_mapping.h': ('kernel', 'Contratti di sviluppo esatto, deformazione o posa rigida per sorgente; appoggio UV o centrato sulla giunzione topologica comune, piano sorgente e budget di fit.'),
+  'kernel/tests/test_surface_mapping.cpp': ('tests', 'Appiattimento NURBS multifaccia, bordo comune, metriche e piano inclinato; sviluppo: aree e lunghezze analitiche piano/cilindro/cono; deformazione volumetrica cilindrica, genealogia, negativi, mesh, binario e STEP.'),
+--- /dev/null
++++ after/kernel/fk_surface_mapping_bounds.h
+@@ -0,0 +1,20 @@
++#pragma once
++#include "fk_surface_mapping.h"
++#include <limits>
++namespace ForgeCad::Kernel::detail {
++enum class SurfaceMappingBoundStatus { Unsupported, Certified, Failed };
++struct SurfaceMappingBoundResult {
++    SurfaceMappingBoundStatus status = SurfaceMappingBoundStatus::Unsupported;
++    double upperBound = std::numeric_limits<double>::infinity();
++};
++// Continuous position bound over the WHOLE source UV rectangle. Recognizes
++// Plane source, exactly zero height in options.sourcePlane, separable affine
++// target UV, native nonperiodic polynomial BSpline target degrees2/3, and native
++// polynomial bicubic image. Equal positive weights count as polynomial.
++// Unsupported is a family boundary. Failed is terminal: invalid input, domain,
++// arithmetic or fixed work limit, or inability to prove the externally set cap.
++// No normal-offset, injectivity, topology or arbitrary-map certificate.
++SurfaceMappingBoundResult zeroHeightMappingResidualBound(
++    const Surface &source, const Surface &target, const SurfaceWrapOptions &options,
++    double scaleU, double scaleV, const Surface &image, Interval u, Interval v, double budget);
++}
+--- /dev/null
++++ after/kernel/fk_surface_mapping_bounds.cpp
+@@ -0,0 +1,346 @@
++#include "fk_surface_mapping_bounds.h"
++#include "fk_bspline_surface.h"
++#include "fk_cancel.h"
++#include <algorithm>
++#include <array>
++#include <cmath>
++#include <cstdint>
++#include <vector>
++
++namespace ForgeCad::Kernel::detail {
++namespace {
++constexpr double infinity = std::numeric_limits<double>::infinity();
++constexpr std::size_t maxPoles = 100000;
++constexpr std::size_t maxVisits = 16384;
++constexpr std::size_t maxCells = 256;
++constexpr int maxDepth = 24;
++struct ProofFailed {};
++struct Unsupported {};
++struct Work {
++    std::size_t left = maxVisits;
++    void visit() { cancellationPoint(); if (!left) throw ProofFailed{}; --left; }
++};
++struct I {
++    double lo = 0, hi = 0;
++    I() = default;
++    explicit I(double value) : lo(value), hi(value) {}
++    I(double first, double last) : lo(first), hi(last) {}
++};
++bool finite(I value) {
++    return std::isfinite(value.lo) && std::isfinite(value.hi) && value.lo <= value.hi;
++}
++bool exact(I value, double number) { return value.lo == number && value.hi == number; }
++I whole() { return {-infinity, infinity}; }
++I outward(double lo, double hi) {
++    if (!std::isfinite(lo) || !std::isfinite(hi) || lo > hi) return whole();
++    return {std::nextafter(lo, -infinity), std::nextafter(hi, infinity)};
++}
++I operator+(I a, I b) {
++    if (!finite(a) || !finite(b)) return whole();
++    if (exact(a, 0)) return b;
++    if (exact(b, 0)) return a;
++    if (a.lo == a.hi && b.lo == b.hi && a.lo == -b.lo) return I(0);
++    return outward(a.lo + b.lo, a.hi + b.hi);
++}
++I operator-(I a, I b) {
++    if (!finite(a) || !finite(b)) return whole();
++    if (exact(b, 0)) return a;
++    if (a.lo == a.hi && b.lo == b.hi && a.lo == b.lo) return I(0);
++    if (exact(a, 0)) return {-b.hi, -b.lo};
++    return outward(a.lo - b.hi, a.hi - b.lo);
++}
++I operator*(I a, I b) {
++    if (!finite(a) || !finite(b)) return whole();
++    if (exact(a, 0) || exact(b, 0)) return I(0);
++    if (exact(a, 1)) return b;
++    if (exact(b, 1)) return a;
++    if (exact(a, -1)) return {-b.hi, -b.lo};
++    if (exact(b, -1)) return {-a.hi, -a.lo};
++    const double products[] = {a.lo * b.lo, a.lo * b.hi, a.hi * b.lo, a.hi * b.hi};
++    for (double value : products) if (!std::isfinite(value)) return whole();
++    return outward(*std::min_element(products, products + 4), *std::max_element(products, products + 4));
++}
++I operator/(I a, I b) {
++    if (!finite(a) || !finite(b) || !(b.lo > 0)) return whole();
++    if (exact(a, 0)) return I(0);
++    if (exact(b, 1)) return a;
++    const double quotients[] = {a.lo / b.lo, a.lo / b.hi, a.hi / b.lo, a.hi / b.hi};
++    for (double value : quotients) if (!std::isfinite(value)) return whole();
++    return outward(*std::min_element(quotients, quotients + 4), *std::max_element(quotients, quotients + 4));
++}
++using P = std::vector<I>;
++template<int N> using VP = std::array<P, N>;
++template<int N> using Point = std::array<I, N>;
++
++P elevated(P values, std::size_t degree) {
++    while (values.size() <= degree) {
++        const auto n = values.size();
++        P next(n + 1);
++        next.front() = values.front(); next.back() = values.back();
++        for (std::size_t i = 1; i < n; ++i) {
++            const I t = I(double(i)) / I(double(n));
++            next[i] = values[i - 1] * t + values[i] * (I(1) - t);
++        }
++        values = std::move(next);
++    }
++    return values;
++}
++P sum(P a, P b, bool subtract = false) {
++    const auto degree = std::max(a.size(), b.size()) - 1;
++    a = elevated(std::move(a), degree); b = elevated(std::move(b), degree);
++    for (std::size_t i = 0; i < a.size(); ++i) a[i] = subtract ? a[i] - b[i] : a[i] + b[i];
++    return a;
++}
++P scaled(P values, I factor) {
++    for (I &value : values) value = value * factor;
++    return values;
++}
++// Local Cox polynomials have degree at most three in this provider.
++// The small binomial integers are exact; their ratios are rounded outward.
++double choose(int n, int k) {
++    std::uint64_t value = 1;
++    for (int i = 1; i <= std::min(k, n - k); ++i) value = value * std::uint64_t(n - i + 1) / std::uint64_t(i);
++    return double(value);
++}
++P product(const P &a, const P &b) {
++    const int m = int(a.size()) - 1, n = int(b.size()) - 1;
++    if (m + n > 21) throw ProofFailed{};
++    P values(std::size_t(m + n + 1));
++    for (int i = 0; i <= m; ++i)
++        for (int j = 0; j <= n; ++j) {
++            const I factor = I(choose(m, i)) * I(choose(n, j)) / I(choose(m + n, i + j));
++            values[std::size_t(i + j)] = values[std::size_t(i + j)] + a[std::size_t(i)] * b[std::size_t(j)] * factor;
++        }
++    return values;
++}
++I hull(const P &values) {
++    I result(infinity, -infinity);
++    for (I value : values) {
++        if (!finite(value)) return whole();
++        result.lo = std::min(result.lo, value.lo); result.hi = std::max(result.hi, value.hi);
++    }
++    return result;
++}
++std::vector<P> basis(const std::vector<double> &knots, int cell, const P &q, int order) {
++    std::vector<P> previous(1, P{I(1)});
++    for (int degree = 1; degree <= order; ++degree) {
++        std::vector<P> current(std::size_t(degree + 1), P{I(0)});
++        for (int r = 0; r <= degree; ++r) {
++            const int i = cell - degree + r;
++            const double a = knots[std::size_t(i)], b = knots[std::size_t(i + degree)];
++            const double c = knots[std::size_t(i + 1)], d = knots[std::size_t(i + degree + 1)];
++            if (r && a < b)
++                current[std::size_t(r)] = sum(current[std::size_t(r)], product(previous[std::size_t(r - 1)],
++                    scaled(sum(q, P{I(a)}, true), I(1) / (I(b) - I(a)))));
++            if (r < degree && c < d)
++                current[std::size_t(r)] = sum(current[std::size_t(r)], product(previous[std::size_t(r)],
++                    scaled(sum(P{I(d)}, q, true), I(1) / (I(d) - I(c)))));
++        }
++        previous = std::move(current);
++    }
++    return previous;
++}
++
++using Tensor = std::array<I, 16>;
++using VectorTensor = std::array<Tensor, 3>;
++using IP = std::array<I, 3>;
++IP point(const Vec3 &p) {
++    IP out;
++    for (int a = 0; a < 3; ++a) {
++        if (!std::isfinite(p[a])) throw ProofFailed{};
++        out[std::size_t(a)] = I(p[a]);
++    }
++    return out;
++}
++I scalar(const IP &a, const IP &b) {
++    I value;
++    for (int k = 0; k < 3; ++k) value = value + a[std::size_t(k)] * b[std::size_t(k)];
++    return value;
++}
++struct Affine { I origin, du, dv; };
++I at(const Affine &f, double u, double v) { return f.origin + f.du * I(u) + f.dv * I(v); }
++// Exact zeros are required to establish the family; uncertain near-zero
++// coefficients never become an angular/UV tolerance.
++std::array<Affine, 2> mapping(const Plane &plane, const SurfaceWrapOptions &o, double su, double sv) {
++    const auto &f = plane.frame(); const auto &g = o.sourcePlane;
++    auto delta = point(f.origin()); const auto go = point(g.origin());
++    for (int a = 0; a < 3; ++a) delta[std::size_t(a)] = delta[std::size_t(a)] - go[std::size_t(a)];
++    const auto x = point(f.xDir()), y = point(f.yDir());
++    const auto gx = point(g.xDir()), gy = point(g.yDir()), gz = point(g.zDir());
++    if (!exact(scalar(delta, gz) + I(o.normalOffset), 0) ||
++        !exact(scalar(x, gz), 0) || !exact(scalar(y, gz), 0)) throw Unsupported{};
++    const I c(std::cos(o.angle)), s(std::sin(o.angle));
++    Affine a{I(o.anchor.x()) + (c * scalar(delta, gx) - s * scalar(delta, gy) + I(o.shift.x())) / I(su),
++        (c * scalar(x, gx) - s * scalar(x, gy)) / I(su),
++        (c * scalar(y, gx) - s * scalar(y, gy)) / I(su)};
++    Affine b{I(o.anchor.y()) + (s * scalar(delta, gx) + c * scalar(delta, gy) + I(o.shift.y())) / I(sv),
++        (s * scalar(x, gx) + c * scalar(x, gy)) / I(sv),
++        (s * scalar(y, gx) + c * scalar(y, gy)) / I(sv)};
++    const bool normal = exact(a.dv, 0) && exact(b.du, 0) && !exact(a.du, 0) && !exact(b.dv, 0);
++    const bool swapped = exact(a.du, 0) && exact(b.dv, 0) && !exact(a.dv, 0) && !exact(b.du, 0);
++    if (!normal && !swapped) throw Unsupported{};
++    for (auto f2 : {a, b}) if (!finite(f2.origin) || !finite(f2.du) || !finite(f2.dv)) throw ProofFailed{};
++    return {a, b};
++}
++bool knotsValid(const std::vector<double> &k, int p, int n) {
++    if (n <= p || k.size() != std::size_t(n + p + 1)) return false;
++    for (std::size_t i = 0; i < k.size(); ++i) {
++        cancellationPoint();
++        if (!std::isfinite(k[i]) || (i && k[i] < k[i - 1])) return false;
++    }
++    if (!(k[std::size_t(p)] < k[std::size_t(n)])) return false;
++    for (int i = p + 1, repeat = 1; i < n; ++i) {
++        repeat = k[std::size_t(i)] == k[std::size_t(i - 1)] ? repeat + 1 : 1;
++        if (repeat > p) return false;
++    }
++    return true;
++}
++void validate(const BSplineSurface &s, bool emitted) {
++    if (s.basis()) throw Unsupported{}; // Do not read recursively or round transformed poles.
++    if ((emitted && (s.uDegree() != 3 || s.vDegree() != 3)) ||
++        (!emitted && (s.uDegree() < 2 || s.uDegree() > 3 || s.vDegree() < 2 || s.vDegree() > 3)) ||
++        s.isUPeriodic() || s.isVPeriodic()) throw Unsupported{};
++    const auto nu = s.uPoleCount(), nv = s.vPoleCount();
++    if (nu <= 0 || nv <= 0 || std::size_t(nu) > maxPoles / std::size_t(nv)) throw ProofFailed{};
++    if (!knotsValid(s.uKnots(), s.uDegree(), nu) || !knotsValid(s.vKnots(), s.vDegree(), nv)) throw ProofFailed{};
++    const double w = s.weight(0, 0);
++    if (!std::isfinite(w) || !(w > 0)) throw ProofFailed{};
++    bool constant = true;
++    for (int i = 0; i < nu; ++i) for (int j = 0; j < nv; ++j) {
++        cancellationPoint();
++        const double wi = s.weight(i, j);
++        if (!std::isfinite(wi) || !(wi > 0)) throw ProofFailed{};
++        constant = constant && wi == w;
++        point(s.pole(i, j));
++    }
++    if (!constant) throw Unsupported{};
++}
++std::vector<int> cells(const std::vector<double> &k, int p, int n, I query) {
++    if (!finite(query) || query.lo < k[std::size_t(p)] || query.hi > k[std::size_t(n)]) throw ProofFailed{};
++    std::vector<int> out;
++    // Begin on the left of the FIRST equal knot, preserving closed-cell
++    // coverage at repeated knots; otherwise begin at the containing cell.
++    const int first = std::max(p, int(std::lower_bound(k.begin() + p, k.begin() + n + 1, query.lo) - k.begin()) - 1);
++    for (int i = first; i < n && k[std::size_t(i)] <= query.hi; ++i) {
++        cancellationPoint();
++        if (k[std::size_t(i)] < k[std::size_t(i + 1)] && query.lo <= k[std::size_t(i + 1)]) {
++            if (out.size() == maxCells) throw ProofFailed{};
++            out.push_back(i);
++        }
++    }
++    if (out.empty()) throw ProofFailed{};
++    return out;
++}
++// Each active target cell polynomial is enclosed on the WHOLE source rectangle.
++// This includes extrapolation outside that cell. Taking the maximum over ALL
++// intersected closed cells is conservative; selecting a midpoint cell is not.
++VectorTensor tensor(const BSplineSurface &s, int cu, int cv, const P &u, const P &v,
++                    const IP &origin, bool swapped) {
++    auto bu = basis(s.uKnots(), cu, u, s.uDegree());
++    auto bv = basis(s.vKnots(), cv, v, s.vDegree());
++    for (auto &b : bu) b = elevated(std::move(b), 3);
++    for (auto &b : bv) b = elevated(std::move(b), 3);
++    VectorTensor out{};
++    for (int i = 0; i <= s.uDegree(); ++i) for (int j = 0; j <= s.vDegree(); ++j) {
++        cancellationPoint();
++        const auto p = point(s.pole(cu - s.uDegree() + i, cv - s.vDegree() + j));
++        for (int a = 0; a < 4; ++a) for (int b = 0; b < 4; ++b) {
++            const I weight = bu[std::size_t(i)][std::size_t(a)] * bv[std::size_t(j)][std::size_t(b)];
++            const auto index = std::size_t(swapped ? b * 4 + a : a * 4 + b);
++            for (int axis = 0; axis < 3; ++axis)
++                out[std::size_t(axis)][index] = out[std::size_t(axis)][index] + (p[std::size_t(axis)] - origin[std::size_t(axis)]) * weight;
++        }
++    }
++    return out;
++}
++struct Rectangle { Interval u, v; };
++I enclosure(const P &p) { return hull(p); }
++double node(const BSplineSurface &target, const BSplineSurface &image,
++            const std::array<Affine, 2> &map, int iu, int iv, Rectangle r,
++            double budget, int depth, Work &work, const IP &origin) {
++    work.visit();
++    const bool swapped = exact(map[0].du, 0);
++    const P uq{at(map[0], r.u.lo, r.v.lo), at(map[0], r.u.hi, r.v.hi)};
++    const P vq{at(map[1], r.u.lo, r.v.lo), at(map[1], r.u.hi, r.v.hi)};
++    const auto uc = cells(target.uKnots(), target.uDegree(), target.uPoleCount(), enclosure(uq));
++    const auto vc = cells(target.vKnots(), target.vDegree(), target.vPoleCount(), enclosure(vq));
++    if (uc.size() > maxCells / vc.size()) throw ProofFailed{};
++    const auto actual = tensor(image, iu, iv, P{I(r.u.lo), I(r.u.hi)}, P{I(r.v.lo), I(r.v.hi)}, origin, false);
++    double upper = 0;
++    for (int tu : uc) for (int tv : vc) {
++        work.visit();
++        const auto wanted = tensor(target, tu, tv, uq, vq, origin, swapped);
++        I squared;
++        for (int a = 0; a < 3; ++a) {
++            double bound = 0;
++            for (std::size_t k = 0; k < 16; ++k) {
++                const I d = actual[std::size_t(a)][k] - wanted[std::size_t(a)][k];
++                if (!finite(d)) throw ProofFailed{};
++                bound = std::max(bound, std::max(std::abs(d.lo), std::abs(d.hi)));
++            }
++            squared = squared + I(bound) * I(bound);
++        }
++        if (!finite(squared)) throw ProofFailed{};
++        upper = std::max(upper, std::nextafter(std::sqrt(squared.hi), infinity));
++    }
++    if (upper <= budget) return upper;
++    if (depth == maxDepth) throw ProofFailed{};
++    // Alternate source axes, retaining the original anchors in every Cox call.
++    const bool splitU = depth % 2 == 0;
++    const Interval q = splitU ? r.u : r.v;
++    const double mid = .5 * q.lo + .5 * q.hi;
++    if (!(q.lo < mid && mid < q.hi)) throw ProofFailed{};
++    Rectangle left = r, right = r;
++    (splitU ? left.u : left.v).hi = mid;
++    (splitU ? right.u : right.v).lo = mid;
++    return std::max(node(target, image, map, iu, iv, left, budget, depth + 1, work, origin),
++                    node(target, image, map, iu, iv, right, budget, depth + 1, work, origin));
++}
++std::vector<double> cuts(const std::vector<double> &knots, Interval range) {
++    std::vector<double> out{range.lo};
++    for (double k : knots) if (range.lo < k && k < range.hi && out.back() != k) out.push_back(k);
++    out.push_back(range.hi);
++    return out;
++}
++int containing(const std::vector<double> &k, int degree, int count, Interval r) {
++    int cell = int(std::upper_bound(k.begin(), k.end(), r.lo) - k.begin()) - 1;
++    cell = std::clamp(cell, degree, count - 1);
++    if (!(k[std::size_t(cell)] <= r.lo && r.hi <= k[std::size_t(cell + 1)])) throw ProofFailed{};
++    return cell;
++}
++}
++SurfaceMappingBoundResult zeroHeightMappingResidualBound(
++    const Surface &source, const Surface &target, const SurfaceWrapOptions &options,
++    double scaleU, double scaleV, const Surface &image, Interval u, Interval v, double budget) {
++    cancellationPoint();
++    try {
++        if (!std::isfinite(u.lo) || !std::isfinite(u.hi) || !(u.lo < u.hi) ||
++            !std::isfinite(v.lo) || !std::isfinite(v.hi) || !(v.lo < v.hi) ||
++            !std::isfinite(budget) || !(budget > 0) || !std::isfinite(scaleU) || !(scaleU > 0) ||
++            !std::isfinite(scaleV) || !(scaleV > 0) || !std::isfinite(options.angle) ||
++            !std::isfinite(options.normalOffset) || !std::isfinite(options.anchor.x()) ||
++            !std::isfinite(options.anchor.y()) || !std::isfinite(options.shift.x()) || !std::isfinite(options.shift.y())) throw ProofFailed{};
++        const auto *plane = dynamic_cast<const Plane *>(&source);
++        const auto *t = dynamic_cast<const BSplineSurface *>(&target);
++        const auto *f = dynamic_cast<const BSplineSurface *>(&image);
++        if (!plane || !t || !f || options.rigid) throw Unsupported{};
++        const auto map = mapping(*plane, options, scaleU, scaleV);
++        validate(*t, false); validate(*f, true);
++        const auto &uk = f->uKnots(), &vk = f->vKnots();
++        if (u.lo < uk[3] || u.hi > uk[std::size_t(f->uPoleCount())] ||
++            v.lo < vk[3] || v.hi > vk[std::size_t(f->vPoleCount())]) throw ProofFailed{};
++        const auto us = cuts(uk, u), vs = cuts(vk, v);
++        if ((us.size() - 1) > maxVisits / (vs.size() - 1)) throw ProofFailed{};
++        const auto origin = point(t->pole(0, 0)); // Center only; geometry remains original intervals.
++        Work work; double upper = 0;
++        for (std::size_t i = 1; i < us.size(); ++i) for (std::size_t j = 1; j < vs.size(); ++j) {
++            Rectangle r{{us[i - 1], us[i]}, {vs[j - 1], vs[j]}};
++            upper = std::max(upper, node(*t, *f, map,
++                containing(uk, 3, f->uPoleCount(), r.u), containing(vk, 3, f->vPoleCount(), r.v),
++                r, budget, 0, work, origin));
++        }
++        return {SurfaceMappingBoundStatus::Certified, upper};
++    } catch (const Unsupported &) { return {}; }
++      catch (const ProofFailed &) { return {SurfaceMappingBoundStatus::Failed, infinity}; }
++}
++}
+--- /dev/null
++++ after/kernel/tests/test_mapping_global_validation.cpp
+@@ -0,0 +1,180 @@
++#include "fk_body_check.h"
++#include "fk_body_io.h"
++#include "fk_bspline_surface.h"
++#include "fk_classify_uv.h"
++#include "fk_history.h"
++#include "fk_primitives.h"
++#include "fk_sheet.h"
++#include "fk_surface_mapping.h"
++#include "fk_test.h"
++
++#include <algorithm>
++#include <sstream>
++#include <stdexcept>
++#include <string>
++#include <vector>
++
++using namespace ForgeCad::Kernel;
++
++namespace {
++constexpr double tolerance = 1e-6;
++constexpr double center = 3. / 16.;
++constexpr double peakPole = (9. / 4.) * 1e-4;
++
++BSplineSurface localizedCarrier(bool bump) {
++    const std::vector<double> knots{0, 0, 0, 0, 46. / 256., 47. / 256.,
++        48. / 256., 49. / 256., 50. / 256., 1, 1, 1, 1};
++    std::vector<Vec3> poles;
++    for (int i = 0; i < 9; ++i) {
++        const double x = (knots[i + 1] + knots[i + 2] + knots[i + 3]) / 3.;
++        for (int j = 0; j < 9; ++j) {
++            const double y = (knots[j + 1] + knots[j + 2] + knots[j + 3]) / 3.;
++            poles.emplace_back(x, y, bump && i == 4 && j == 4 ? peakPole : 0.);
++        }
++    }
++    return BSplineSurface(3, 3, knots, knots, 9, 9, poles);
++}
++
++void unchangedCarrier(const BSplineSurface &actual, const BSplineSurface &before) {
++    FK_CHECK(!actual.basis() && !before.basis());
++    FK_CHECK(actual.uDegree() == before.uDegree() && actual.vDegree() == before.vDegree());
++    FK_CHECK(actual.uKnots() == before.uKnots() && actual.vKnots() == before.vKnots());
++    FK_CHECK(actual.uPoleCount() == before.uPoleCount() && actual.vPoleCount() == before.vPoleCount());
++    for (int i = 0; i < before.uPoleCount(); ++i) for (int j = 0; j < before.vPoleCount(); ++j) {
++        const Vec3 a = actual.pole(i, j), b = before.pole(i, j);
++        for (int k = 0; k < 3; ++k) FK_CHECK(a[k] == b[k]);
++        FK_CHECK(actual.weight(i, j) == before.weight(i, j));
++    }
++}
++
++std::string historyStamp(const BodyHistory &history) {
++    std::ostringstream out;
++    out << history.operandCount();
++    for (auto kind : {EntityKind::Vertex, EntityKind::Edge, EntityKind::Face}) {
++        out << ':' << history.resultSize(kind);
++        for (int i = 0; i < history.resultSize(kind); ++i) {
++            out << '/' << history.isDeclared(kind, i);
++            for (const auto &origin : history.origins(kind, i))
++                out << ',' << origin.operand << ',' << int(origin.kind) << ',' << origin.index
++                    << ',' << int(origin.relation);
++        }
++    }
++    return out.str();
++}
++
++void checkFaceOrigins(const Body &source, const Body &result, const BodyHistory &history) {
++    FK_CHECK(history.operandCount() == 1);
++    for (auto face : result.faces()) {
++        FK_CHECK(history.isDeclared(EntityKind::Face, face.index));
++        const auto &origins = history.origins(EntityKind::Face, face.index);
++        FK_CHECK(origins.size() == 1);
++        if (origins.size() != 1) continue;
++        const auto &origin = origins.front();
++        FK_CHECK(origin.operand == 0 && origin.kind == EntityKind::Face
++            && origin.relation == HistoryRelation::Modified);
++        FK_CHECK(source.contains(FaceId{origin.index}));
++    }
++}
++
++SurfaceWrapOptions wrapOptions() {
++    SurfaceWrapOptions options;
++    options.anchor = {0, 0};
++    options.tolerance = tolerance;
++    return options;
++}
++}
++
++FK_TEST(MappingGlobalNativeBumpHasIndependentInteriorWitness) {
++    const auto target = localizedCarrier(true);
++    // Cardinal cubic B_4 has knots 46..50 / 256. At its center 48/256,
++    // its value is (4 - 6*0^2 + 3*0^3)/6 = 2/3, its derivative is zero.
++    // Tensor-product height is therefore 4/9 of the ONLY nonzero Z pole.
++    // This oracle does not evaluate the production basis or mapping callback.
++    const double expectedHeight = (4. / 9.) * peakPole;
++    FK_CHECK_NEAR(expectedHeight, 1e-4, 1e-19);
++    const Vec3 witness(center, center, expectedHeight);
++    FK_CHECK(distance(target.point(center, center), witness) <= 1e-15);
++    FK_CHECK(distance(target.normal(center, center), Vec3(0, 0, 1)) <= 1e-12);
++    // The peak's entire support lies strictly inside the box footprint;
++    // its boundary is flat, so correct edge/fin checks cannot detect its loss.
++    for (double t : {0., center, 1.}) {
++        FK_CHECK(target.point(0, t).z() == 0. && target.point(1, t).z() == 0.);
++        FK_CHECK(target.point(t, 0).z() == 0. && target.point(t, 1).z() == 0.);
++    }
++}
++
++FK_TEST(MappingGlobalFlatCarrierWithSameKnotsSucceeds) {
++    const auto source = makeBox(Frame3(), 1, 1, .001);
++    const auto sourceBefore = writeBodyBinary(source);
++    const auto target = localizedCarrier(false), targetBefore = target;
++    BodyHistory history;
++    double deviation = -123;
++    const auto options = wrapOptions();
++    // Exceptions are failures: this control prevents blanket rejection of
++    // valid native carriers merely because they have narrow knot spans.
++    const auto result = wrapBodyOnSurface(source, target, options, &history, &deviation);
++    FK_CHECK(!result.isSheet() && result.faces().size() == source.faces().size());
++    FK_CHECK(checkBody(result, {true, true}).empty());
++    FK_CHECK(std::isfinite(deviation) && deviation >= 0 && deviation <= tolerance);
++    checkFaceOrigins(source, result, history);
++    for (auto vertex : result.vertices()) {
++        const auto &origins = history.origins(EntityKind::Vertex, vertex.index);
++        FK_CHECK(history.isDeclared(EntityKind::Vertex, vertex.index) && origins.size() == 1);
++        if (origins.size() != 1) continue;
++        FK_CHECK(origins.front().operand == 0 && origins.front().kind == EntityKind::Vertex);
++        const VertexId parent{origins.front().index};
++        FK_CHECK(source.contains(parent));
++        if (source.contains(parent))
++            FK_CHECK(distance(result.vertex(vertex).point, source.vertex(parent).point) <= tolerance);
++    }
++    FK_CHECK(writeBodyBinary(result) == writeBodyBinary(wrapBodyOnSurface(source, target, options, nullptr)));
++    FK_CHECK(writeBodyBinary(source) == sourceBefore);
++    unchangedCarrier(target, targetBefore);
++}
++
++FK_TEST(MappingGlobalSolidBumpRejectsSpecificUnprovenCarrierBeforePublication) {
++    const auto source = makeBox(Frame3(), 1, 1, .001);
++    const auto sourceBefore = writeBodyBinary(source);
++    const auto target = localizedCarrier(true), targetBefore = target;
++    auto history = sameIndexHistory(source, source);
++    const auto oldHistory = historyStamp(history);
++    double deviation = -123;
++    bool rejected = false;
++    try {
++        (void)wrapBodyOnSurface(source, target, wrapOptions(), &history, &deviation);
++    } catch (const std::domain_error &error) {
++        rejected = true;
++        FK_CHECK(std::string(error.what()).find("residuo globale del carrier") != std::string::npos);
++    }
++    // An unrelated exception escapes to the runner and fails this test.
++    FK_CHECK(rejected);
++    FK_CHECK(deviation == -123 && historyStamp(history) == oldHistory);
++    FK_CHECK(writeBodyBinary(source) == sourceBefore);
++    unchangedCarrier(target, targetBefore);
++}
++
++FK_TEST(MappingGlobalZeroHeightBottomIdentityRetainsTheRealBump) {
++    const auto source = makePlaneSheet(Frame3(Vec3(.5, .5, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), .5);
++    const auto sourceBefore = writeBodyBinary(source);
++    const auto target = localizedCarrier(true), targetBefore = target;
++    BodyHistory history;
++    double deviation = -123;
++    const auto options = wrapOptions();
++    // A sheet at zero normal height has an exact carrier route. It is a
++    // positive reference for the solid's bottom, not a fitted solid control.
++    const auto result = wrapBodyOnSurface(source, target, options, &history, &deviation);
++    FK_CHECK(result.isSheet() && result.faces().size() == 1);
++    FK_CHECK(checkBody(result, {true, true}).empty());
++    FK_CHECK(std::isfinite(deviation) && deviation >= 0 && deviation <= tolerance);
++    checkFaceOrigins(source, result, history);
++    if (result.faces().size() == 1) {
++        const auto face = result.faces().front();
++        FK_CHECK(distance(result.face(face).surface->point(center, center),
++            Vec3(center, center, (4. / 9.) * peakPole)) <= tolerance);
++        FK_CHECK(FaceParameterClassifier(result, face, tolerance).classify({center, center})
++            == PointLocation::Inside);
++    }
++    FK_CHECK(writeBodyBinary(result) == writeBodyBinary(wrapBodyOnSurface(source, target, options, nullptr)));
++    FK_CHECK(writeBodyBinary(source) == sourceBefore);
++    unchangedCarrier(target, targetBefore);
++}
+--- /dev/null
++++ after/kernel/tests/test_surface_mapping_bounds.cpp
+@@ -0,0 +1,163 @@
++#include "fk_bspline_surface.h"
++#include "fk_cancel.h"
++#include "fk_surface_mapping.h"
++#include "fk_surface_mapping_bounds.h"
++#include "fk_test.h"
++
++#include <atomic>
++#include <cmath>
++#include <limits>
++#include <memory>
++#include <vector>
++
++using namespace ForgeCad::Kernel;
++
++namespace {
++using Status = detail::SurfaceMappingBoundStatus;
++constexpr double budget = 1e-6;
++
++std::vector<double> clamped(int degree, double lo = 0, double hi = 1) {
++    std::vector<double> knots(degree + 1, lo);
++    knots.insert(knots.end(), degree + 1, hi);
++    return knots;
++}
++
++BSplineSurface flatSurface(int degree, Interval u = {0, 1}, Interval v = {0, 1}, double gauge = 1) {
++    std::vector<Vec3> poles;
++    for (int i = 0; i <= degree; ++i) for (int j = 0; j <= degree; ++j)
++        poles.emplace_back(u.lo + u.length() * i / degree, v.lo + v.length() * j / degree, 0);
++    return BSplineSurface(degree, degree, clamped(degree, u.lo, u.hi), clamped(degree, v.lo, v.hi),
++        degree + 1, degree + 1, poles, std::vector<double>(poles.size(), gauge));
++}
++
++BSplineSurface bumpSurface(double height) {
++    const std::vector<double> knots{0, 0, 0, 0, 46. / 256., 47. / 256.,
++        48. / 256., 49. / 256., 50. / 256., 1, 1, 1, 1};
++    std::vector<Vec3> poles;
++    for (int i = 0; i < 9; ++i) for (int j = 0; j < 9; ++j)
++        poles.emplace_back((knots[i + 1] + knots[i + 2] + knots[i + 3]) / 3.,
++            (knots[j + 1] + knots[j + 2] + knots[j + 3]) / 3.,
++            i == 4 && j == 4 ? height : 0.);
++    return BSplineSurface(3, 3, knots, knots, 9, 9, poles);
++}
++
++BSplineSurface curvedSurface(int degree) {
++    // Bernstein coefficients for z = u*v/64 + u^2/32 - v^2/128.
++    // They describe the SAME polynomial for quadratic and cubic surfaces.
++    std::vector<Vec3> poles;
++    for (int i = 0; i <= degree; ++i) for (int j = 0; j <= degree; ++j) {
++        const double u = double(i) / degree, v = double(j) / degree;
++        const double u2 = double(i * (i - 1)) / (degree * (degree - 1));
++        const double v2 = double(j * (j - 1)) / (degree * (degree - 1));
++        poles.emplace_back(u, v, u * v / 64. + u2 / 32. - v2 / 128.);
++    }
++    return BSplineSurface(degree, degree, clamped(degree), clamped(degree), degree + 1, degree + 1, poles);
++}
++
++detail::SurfaceMappingBoundResult bound(const Surface &target, const Surface &image,
++        const Surface &source, SurfaceWrapOptions options = {}, double cap = budget,
++        Interval u = {0, 1}, Interval v = {0, 1}) {
++    return detail::zeroHeightMappingResidualBound(source, target, options, 1, 1, image, u, v, cap);
++}
++
++void certified(const detail::SurfaceMappingBoundResult &result, double cap = budget) {
++    FK_CHECK(result.status == Status::Certified);
++    FK_CHECK(std::isfinite(result.upperBound) && result.upperBound >= 0 && result.upperBound <= cap);
++}
++}
++
++FK_TEST(MappingBoundsFlatNativeDegreesAndConstantWeightGauge) {
++    const Plane source{Frame3()};
++    const auto image = flatSurface(3, {0, 1}, {0, 1}, 5);
++    for (int degree : {2, 3}) {
++        const auto target = flatSurface(degree, {0, 1}, {0, 1}, 7);
++        certified(bound(target, image, source));
++        certified(bound(target, image, source, {}, budget, {.125, .75}, {.25, .875}));
++    }
++}
++
++FK_TEST(MappingBoundsInteriorPeakFailsAndHarmlessPeakCertifies) {
++    const Plane source{Frame3()};
++    const auto image = flatSurface(3);
++    const auto missed = bumpSurface((9. / 4.) * 1e-4);
++    // Independent cardinal-basis oracle: B_4(3/16)^2 = 4/9.
++    // The real residual at this interior point is 100 times the cap.
++    FK_CHECK_NEAR(missed.point(3. / 16., 3. / 16.).z(), 1e-4, 1e-16);
++    FK_CHECK(bound(missed, image, source).status == Status::Failed);
++    const auto harmless = bumpSurface(budget / 16.);
++    // Positive partition of unity bounds the ENTIRE Z residual by the
++    // largest Z pole, budget/16, independently of sampled peak detection.
++    // The remaining margin covers IEEE Greville XY rounding.
++    certified(bound(harmless, image, source));
++    // Also cover narrow spans in the emitted surface, not only the target.
++    FK_CHECK(bound(image, missed, source).status == Status::Failed);
++    certified(bound(image, harmless, source));
++}
++
++FK_TEST(MappingBoundsBilinearAndQuadraticCoefficientOracles) {
++    const Plane source{Frame3()};
++    const auto image = curvedSurface(3), wrongImage = flatSurface(3);
++    constexpr double expectedCenterHeight = (1. / 64. + 1. / 32. - 1. / 128.) / 4.;
++    for (int degree : {2, 3}) {
++        const auto target = curvedSurface(degree);
++        FK_CHECK_NEAR(target.point(.5, .5).z(), expectedCenterHeight, 1e-16);
++        FK_CHECK_NEAR(image.point(.5, .5).z(), expectedCenterHeight, 1e-16);
++        certified(bound(target, image, source));
++        FK_CHECK(bound(target, wrongImage, source).status == Status::Failed);
++    }
++}
++
++FK_TEST(MappingBoundsDiscreteAxisPermutationAndNegativeUV) {
++    // Exact discrete axes, no sin(pi/2): source(u,v)=(-v,u,0).
++    const Plane source{Frame3::fromAxes(Vec3(), Vec3(0, 1, 0), Vec3(-1, 0, 0), Vec3(0, 0, 1))};
++    const auto target = flatSurface(2, {-1, 0}, {0, 1});
++    std::vector<Vec3> poles;
++    for (int i = 0; i < 4; ++i) for (int j = 0; j < 4; ++j)
++        poles.emplace_back(-j / 3., i / 3., 0);
++    const BSplineSurface image(3, 3, clamped(3), clamped(3), 4, 4, poles);
++    certified(bound(target, image, source));
++    FK_CHECK(distance(image.point(.25, .75), Vec3(-.75, .25, 0)) <= 1e-15);
++    const auto wrongImage = flatSurface(3);
++    FK_CHECK(bound(target, wrongImage, source).status == Status::Failed);
++}
++
++FK_TEST(MappingBoundsInvalidInputsFailAndNonzeroOffsetIsUnsupported) {
++    const Plane source{Frame3()};
++    const auto target = flatSurface(2), image = flatSurface(3);
++    const double infinity = std::numeric_limits<double>::infinity();
++    const double nan = std::numeric_limits<double>::quiet_NaN();
++    for (double cap : {0., -1., infinity, nan})
++        FK_CHECK(bound(target, image, source, {}, cap).status == Status::Failed);
++    for (Interval query : {Interval{0, infinity}, Interval{nan, 1}, Interval{1, 0}, Interval{-.01, 1}})
++        FK_CHECK(bound(target, image, source, {}, budget, query).status == Status::Failed);
++    SurfaceWrapOptions options;
++    options.shift = {nan, 0};
++    FK_CHECK(bound(target, image, source, options).status == Status::Failed);
++    options = {};
++    options.normalOffset = .001;
++    FK_CHECK(bound(target, image, source, options).status == Status::Unsupported);
++    // Variable rational weights remain outside this polynomial-only delta.
++    std::vector<Vec3> poles;
++    for (int i = 0; i < 3; ++i) for (int j = 0; j < 3; ++j)
++        poles.emplace_back(i / 2., j / 2., 0);
++    std::vector<double> weights(9, 1.);
++    weights[4] = 2.;
++    const BSplineSurface rational(2, 2, clamped(2), clamped(2), 3, 3, poles, weights);
++    FK_CHECK(bound(rational, image, source).status == Status::Unsupported);
++}
++
++FK_TEST(MappingBoundsPresetCancellationRemainsDistinct) {
++    const Plane source{Frame3()};
++    const auto target = flatSurface(2), image = flatSurface(3);
++    const auto token = std::make_shared<std::atomic<bool>>(true);
++    bool cancelled = false;
++    {
++        CancellationScope scope(token);
++        try {
++            (void)bound(target, image, source);
++        } catch (const OperationCancelled &) {
++            cancelled = true;
++        }
++    }
++    FK_CHECK(cancelled);
++}

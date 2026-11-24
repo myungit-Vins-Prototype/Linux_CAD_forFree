@@ -1,0 +1,4 @@
+target peak 9.9999999999999991e-05
+faces 6 issues 0 declared 1.2217977651457162e-10 input_same 1
+face 0 z 0.001 output_z 0.001 residual 0.00010000000000000248
+face 1 z 0 output_z 0 residual 0.00010000000000000243

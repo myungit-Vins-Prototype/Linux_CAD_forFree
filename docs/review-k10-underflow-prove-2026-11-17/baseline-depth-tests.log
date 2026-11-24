@@ -1,0 +1,12 @@
+    /tmp/k10-underflow-review-2026-11-17/baseline-depth-test.cpp:23: FK_CHECK(rejected)
+[ FAIL ] QuadratureScalarReportsDepthExhaustion (1 controlli falliti)
+    /tmp/k10-underflow-review-2026-11-17/baseline-depth-test.cpp:23: FK_CHECK(rejected)
+[ FAIL ] QuadratureVectorReportsDepthExhaustion (1 controlli falliti)
+    /tmp/k10-underflow-review-2026-11-17/baseline-depth-test.cpp:23: FK_CHECK(rejected)
+    /tmp/k10-underflow-review-2026-11-17/baseline-depth-test.cpp:23: FK_CHECK(rejected)
+    /tmp/k10-underflow-review-2026-11-17/baseline-depth-test.cpp:23: FK_CHECK(rejected)
+    /tmp/k10-underflow-review-2026-11-17/baseline-depth-test.cpp:23: FK_CHECK(rejected)
+    /tmp/k10-underflow-review-2026-11-17/baseline-depth-test.cpp:23: FK_CHECK(rejected)
+    /tmp/k10-underflow-review-2026-11-17/baseline-depth-test.cpp:23: FK_CHECK(rejected)
+[ FAIL ] QuadratureNativeRationalArcReportsDepthExhaustion (6 controlli falliti)
+0/3 test superati

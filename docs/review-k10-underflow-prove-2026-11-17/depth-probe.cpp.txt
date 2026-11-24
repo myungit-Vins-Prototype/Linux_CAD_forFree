@@ -1,0 +1,19 @@
+#include "fk_bspline.h"
+#include "fk_curve_algo.h"
+#include "fk_curve_length_cache.h"
+#include <iostream>
+#include <iomanip>
+#include <cmath>
+using namespace ForgeCad::Kernel;
+int main() {
+    for (int exponent : {-20, -40, -48}) {
+        const double weight=std::ldexp(1.,exponent);
+        const BSplineCurve<3> curve(1,{0,0,1,1},{{0,0,0},{1,0,0}},{1,weight});
+        const double endpoints=distance(curve.point(0),curve.point(1));
+        const double length=arcLength(curve,curve.domain(),1e-13);
+        detail::CurveLengthCache cache;
+        const double cached=cache.get(curve,curve.domain(),1e-13);
+        std::cout<<std::setprecision(17)<<"weight=2^"<<exponent<<" endpoints="<<endpoints
+                 <<" length="<<length<<" cache="<<cached<<" error="<<length-1<<std::endl;
+    }
+}

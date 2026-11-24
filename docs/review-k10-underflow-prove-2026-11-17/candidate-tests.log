@@ -1,0 +1,14 @@
+[  OK  ] QuadratureSafeControls
+[  OK  ] QuadratureScalarExtremeFiniteIntegral
+[  OK  ] QuadratureVectorExtremeFiniteValuesAndMagnitudes
+[  OK  ] QuadratureNativeArcLengthAtTinyParameterSpan
+[  OK  ] QuadratureNonfiniteCallbacksAreRejected
+[  OK  ] QuadratureLargeMidpointsAndUnrepresentableIntegrals
+[  OK  ] QuadratureScalarWeightedUnderflow
+[  OK  ] QuadratureVectorWeightedUnderflow
+[  OK  ] QuadratureNativeArcLengthAtHugeParameterSpan
+[  OK  ] QuadratureUnrecoverableMixedScaleIsRejected
+[  OK  ] QuadratureScalarReportsDepthExhaustion
+[  OK  ] QuadratureVectorReportsDepthExhaustion
+[  OK  ] QuadratureNativeRationalArcReportsDepthExhaustion
+13/13 test superati

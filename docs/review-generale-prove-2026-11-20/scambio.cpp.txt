@@ -1,0 +1,32 @@
+#include "fk_iges.h"
+#include "fk_step.h"
+#include "fk_primitives.h"
+#include "fk_mass.h"
+#include "fk_body_check.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+int main() {
+    for (bool tilted : {false,true}) for (double offset : {0.,1e4,1e6,1e7,3e7,1e8,2e8,1e9}) {
+        ExchangeBody x;
+        x.body=makeBox(Frame3(Vec3(1.2*offset,-.9*offset,1.73*offset),tilted?Vec3(1,2,3):Vec3(0,0,1),tilted?Vec3(2,-1,0):Vec3(1,0,0)),1,1,1);
+        for (bool iges : {true,false}) {
+            std::cout<<std::setprecision(12)<<"tilted="<<tilted<<" inputCheck="<<checkBody(x.body,{true,true}).size()<<" inputVolume="<<massProperties(x.body).volume<<" offset="<<offset<<' '<<(iges?"IGES":"STEP")<<' ';
+            try {
+                std::vector<ExchangeBody> output;
+                std::vector<std::string> notes;
+                if(iges) {
+                    IgesWriteOptions o;o.mode=IgesMode::Surfaces;
+                    auto r=readIges(writeIges({x},o),{1});output=std::move(r.bodies);notes=std::move(r.notes);
+                } else {
+                    const auto text=writeStep({x});std::cout<<"entity="<<(text.find("MANIFOLD_SOLID_BREP(")!=std::string::npos)<<" "; auto r=readStep(text,{1});output=std::move(r.bodies);notes=std::move(r.notes);
+                }
+                std::cout<<output.size()<<" bodies notes="<<notes.size();
+                for(const auto &entry:output) {
+                    std::cout<<" sheet="<<entry.body.isSheet()<<" faces="<<entry.body.faces().size()<<" check="<<checkBody(entry.body,{true,true}).size()<<" volume="<<massProperties(entry.body).volume;
+                }
+            } catch(const std::exception &e) { std::cout<<e.what(); }
+            std::cout<<std::endl;
+        }
+    }
+}

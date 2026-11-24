@@ -1,0 +1,51 @@
+--- original.cpp
++++ prova.cpp
+@@ -1,3 +1,5 @@
++#include <iostream>
++#include <iomanip>
+ #include "fk_body_check.h"
+ #include "fk_body_io.h"
+ #include "fk_bspline_surface.h"
+@@ -316,12 +318,19 @@
+     const Vec3 midHeight = origin + .5 * height * boxFrame.zDir();
+     const Vec3 translation = instanced ? Vec3(.125, -.25, .5) : Vec3();
+     const auto placement = Transform3::translation(translation);
+-    for (bool bump : {false, true}) {
++    for (bool rational : {false, true}) for (bool bump : {false, true}) {
+         std::vector<Vec3> poles;
+-        for (int i = 0; i < 4; ++i) for (int j = 0; j < 9; ++j)
+-            poles.emplace_back(i / 3., (vKnots[j + 1] + vKnots[j + 2] + vKnots[j + 3]) / 3.,
+-                bump && j == 4 ? 1.5e-4 : 0.);
+-        const auto base = std::make_shared<BSplineSurface>(3, 3, uKnots, vKnots, 4, 9, poles);
++        std::vector<double> weights;
++        for (int i = 0; i < 4; ++i) for (int j = 0; j < 9; ++j) {
++            double x=i/3.;
++            if (rational) {
++                const double w=1.+.5*i/3.;
++                weights.push_back(w);
++                x=(i/3.+.5*i*(i-1)/6.)/w;
++            }
++            poles.emplace_back(x,(vKnots[j+1]+vKnots[j+2]+vKnots[j+3])/3.,bump&&j==4?1.5e-4:0.);
++        }
++        const auto base=std::make_shared<BSplineSurface>(3,3,uKnots,vKnots,4,9,poles,weights);
+         const auto carrier = instanced ? BSplineSurface(base, placement) : *base;
+         Vec3 jet[4];
+         carrier.evaluate(0, 0, 1, jet);
+@@ -346,13 +355,16 @@
+                 const auto &image = *result.face(result.faces().front()).surface;
+                 const auto *spline = dynamic_cast<const BSplineSurface *>(&image);
+                 FK_CHECK(spline && !spline->basis());
+-                FK_CHECK(distance(image.point(uv.x(), uv.y()), expected) <= deviation + 1e-14);
++                const auto residual = distance(image.point(uv.x(), uv.y()), expected);
++                std::cout << "rational=" << rational << " bump=" << bump << " accepted declared=" << std::setprecision(17) << deviation << " residual=" << residual << std::endl;
++                FK_CHECK(residual <= deviation + 1e-14);
+             }
+         } catch (const std::domain_error &error) {
+             rejected = true;
+             FK_CHECK(std::string(error.what()).find("residuo globale del carrier") != std::string::npos);
+             FK_CHECK(deviation == -123. && normalHistoryStamp(history) == stamp);
+         }
++        if (rejected) std::cout << "rational=" << rational << " bump=" << bump << " rejected" << std::endl;
+         FK_CHECK(rejected == bump);
+     }
+     FK_CHECK(writeBodyBinary(source) == before);

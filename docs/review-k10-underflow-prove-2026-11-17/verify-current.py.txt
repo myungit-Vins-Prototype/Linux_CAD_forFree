@@ -1,0 +1,30 @@
+from pathlib import Path
+import hashlib,json,subprocess,re
+R=Path('/home/myungit/Linux_CAD_forFree');P=R/'docs/review-k10-underflow-prove-2026-11-17';C=R/'docs/review-ci-repair-prove-2026-11-17';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+for p in [P,C]:
+ for line in (p/'SHA256SUMS').read_text().splitlines():h,f=line.split('  ',1);assert sha(p/f)==h
+ meta=json.loads((p/'REPACK.json').read_text());original=p/'ORIGINAL-SHA256SUMS.txt';assert sha(original)==meta['original_seal_sha256']
+ for line in original.read_text().splitlines():h,f=line.split('  ',1);assert sha(p/meta['mapping_for_original_verification'].get(f,f))==h
+seals=json.loads((P/'previous-seals-final.json').read_text());n=0
+for e in seals:
+ s=R/e['seal'];expected=sha(s) if s==C/'SHA256SUMS' else e['sha256'];assert sha(s)==expected
+ for line in s.read_text().splitlines():h,f=line.split('  ',1);assert sha(s.parent/f)==h;n+=1
+ e['sha256']=expected
+assert subprocess.check_output(['git','rev-parse','HEAD','origin/main'],cwd=R,text=True).splitlines()==['6294aa37e63c51434fd2754ca7b1398d8a281ffe']*2
+assert not subprocess.check_output(['git','diff','--cached','--name-only'],cwd=R).strip()
+subprocess.run(['git','diff','--check'],cwd=R,check=True)
+r=subprocess.run(['python3','tools/generate_architecture.py','--check'],cwd=R,check=True,capture_output=True,text=True)
+G=json.loads((R/'docs/architecture/graph.json').read_text());assert not G['analysis']['errors'] and len(G['analysis']['units'])==408
+for f,h in G['hashes'].items():assert sha(R/f)==h,f
+for f,h in json.loads((C/'binaries-final.json').read_text()).items():assert sha(R/f)==h,f
+for f,h in json.loads((P/'integrated-sources.json').read_text()).items():assert sha(R/f)==h,f
+for f,h in json.loads((C/'integrated-sources.json').read_text()).items():assert sha(R/f)==h,f
+ci=json.loads(subprocess.check_output(['gh','run','view','44142011489','--json','status,conclusion,headSha,jobs,url'],cwd=R,text=True));assert ci['headSha']=='78d72684e4e6dfa45ace425bb1d8e776a57d41bc'
+mem=(R/'CLAUDE.md').read_text();assert len(mem.encode())<=16384 and len(re.findall(r'^\*\*',mem,re.M))<=10
+sources=['CLAUDE.md','kernel/fk_quadrature.h','kernel/tests/test_quadrature_validation.cpp','tools/generate_architecture.py','kernel/fk_project.cpp','kernel/CMakeLists.txt','docs/review-k10-underflow-2026-11-17.md','docs/review-checkpoint-push-2026-11-17.md']
+result={'head_and_remote':'6294aa37e63c51434fd2754ca7b1398d8a281ffe','latest_software_commit':ci['headSha'],'metadata_only_last_commit':True,'ci':ci,'verified_previous_packages':len(seals),'verified_previous_payloads':n,'current_previous_seals':seals,'current_source_hashes':{f:sha(R/f) for f in sources},'architecture_check':r.stdout.strip(),'memory_bytes':len(mem.encode()),'numeric_changes_local':True,'current_binary_hashes':json.loads((C/'binaries-final.json').read_text()),'original_payload_preservation':'verified via REPACK mappings for both packages'}
+(P/'CURRENT-VERIFICATION.json').write_text(json.dumps(result,indent=2)+'\n');(P/'verify-current.py.txt').write_bytes(Path(__file__).read_bytes())
+files=sorted(p for p in P.rglob('*') if p.is_file() and p.name!='SHA256SUMS');(P/'SHA256SUMS').write_text(''.join(sha(p)+'  '+str(p.relative_to(P))+'\n' for p in files))
+for line in (P/'SHA256SUMS').read_text().splitlines():h,f=line.split('  ',1);assert sha(P/f)==h
+print('PASS source/binary hashes, 40 prior packages and current CI/numeric proofs including original payloads, graph/config, clean index, pushed metadata HEAD; numeric work remains local')
+print('numeric proof',len(files),'files',sha(P/'SHA256SUMS'));print('CI',ci['status'],ci['conclusion'] or 'pending');print('app',result['current_binary_hashes']['forgecad-release/forgecad']);print('memory',len(mem.encode()))

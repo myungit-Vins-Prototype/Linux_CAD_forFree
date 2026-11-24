@@ -1,0 +1,55 @@
+from pathlib import Path
+import json,hashlib,subprocess,re,os
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-underflow-review-2026-11-17');C=Path('/tmp/ci-review-repair-2026-11-17');P=R/'docs/review-k10-underflow-prove-2026-11-17';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();assert not P.exists()
+# Recheck the final workspace without reinterpreting historical binary hashes as current.
+for f,h in json.loads((T/'integrated-sources.json').read_text()).items():assert sha(R/f)==h,f
+for f,h in json.loads((C/'integrated-sources.json').read_text()).items():assert sha(R/f)==h,f
+for n in ['build','ctest','projection-suite','architecture','architecture-check']:assert json.loads((C/(n+'.json')).read_text())['exit']==0,n
+G=json.loads((R/'docs/architecture/graph.json').read_text());assert not G['analysis']['errors'] and len(G['analysis']['units'])==408
+for f,h in G['hashes'].items():assert sha(R/f)==h,f
+assert G['analysis']['configurationDigest']==sha(R/'forgecad-release/compile_commands.json')
+html=(R/'docs/architecture/index.html').read_text();assert json.loads(re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',html,re.S).group(1))==G
+assert os.readlink(R/'compile_commands.json')==subprocess.check_output(['git','show','HEAD:compile_commands.json'],cwd=R,text=True)
+base=json.loads((T/'baseline.json').read_text());changed=sorted(f for f,h in base.items() if not (R/f).is_file() or sha(R/f)!=h)
+expected={'CLAUDE.md','docs/code-review-2026-11-15.md','docs/review-punti-aperti-2026-11-17.md','docs/roadmap.md','kernel/CMakeLists.txt','kernel/fk_project.cpp','kernel/fk_quadrature.h','kernel/tests/test_quadrature_validation.cpp','tools/generate_architecture.py'};assert set(changed)==expected,changed
+seals=json.loads((R/'docs/review-ui11-menu-cache-prove-2026-11-17/previous-seals.json').read_text())
+for f,h in [('docs/review-ui11-menu-cache-prove-2026-11-17/SHA256SUMS','d8d85019700d803be655a9e18b4f3d1086fd848213199d9d2e3e439107f3affa'),('docs/review-ci-repair-prove-2026-11-17/SHA256SUMS','d9832480dec67a50c7a08c463be15110ea2f30f8359bbc4220eccbae58f9703c')]:seals.append({'seal':f,'sha256':h})
+n=0
+for x in seals:
+ s=R/x['seal'];assert sha(s)==x['sha256'],s
+ for line in s.read_text().splitlines():h,f=line.split('  ',1);assert sha(s.parent/f)==h,(s,f);n+=1
+(T/'previous-seals-final.json').write_text(json.dumps(seals,indent=2))
+# Own temporary ELF only, including relocatable .o; preserve all source/logs/proofs.
+removed=[]
+for p in T.rglob('*'):
+ if p.is_file():
+  assert p.resolve().is_relative_to(T.resolve())
+  with p.open('rb') as f:magic=f.read(8)
+  if magic[:4]==b'\x7fELF' or magic==b'!<arch>\n':removed.append({'path':str(p.relative_to(T)),'bytes':p.stat().st_size,'sha256':sha(p)})
+cleanup={'files':removed,'bytes':sum(x['bytes'] for x in removed)};(T/'cleanup-final.json').write_text(json.dumps(cleanup,indent=2))
+for x in removed:(T/x['path']).unlink()
+ci_cleanup=json.loads((C/'cleanup.json').read_text())['bytes'];total=cleanup['bytes']+ci_cleanup
+p=R/'docs/review-k10-underflow-2026-11-17.md';s=p.read_text();s+=f'\nPulizia finale: rimossi{cleanup["bytes"]}byte di ELF/oggetti di questo staging numerico e{ci_cleanup}byte nello staging CI ({total/1048576:.1f}MiB complessivi). Conservati sorgenti, log, CAD e prove. Eseguibile finale app SHA256 `{sha(R/"forgecad-release/forgecad")}`; nessun processo utente riavviato.\n';p.write_text(s)
+p=R/'CLAUDE.md';s=p.read_text();s=s.replace('prossimo carrier globale.','prossimo carrier globale; puliti'+str(round(total/1048576))+'MiB temporanei.');assert len(s.encode())<=16384 and len(re.findall(r'^\*\*',s,re.M))<=10;p.write_text(s)
+files=[f for f in subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=R).decode().split('\0') if f and (R/f).is_file()];new=sorted(set(files)-set(base));assert all(f.startswith('docs/review-ci-repair-prove-2026-11-17/') or f in ['docs/history/claude-prima-checkpoint-push-2026-11-17.md','docs/history/claude-prima-riparazione-ci-2026-11-17.md','docs/review-checkpoint-push-2026-11-17.md','docs/review-ci-repair-2026-11-17.md','docs/review-k10-underflow-2026-11-17.md'] for f in new),new
+assert not subprocess.check_output(['git','diff','--cached','--name-only'],cwd=R).strip()
+assert subprocess.check_output(['git','rev-parse','HEAD','origin/main'],cwd=R,text=True).splitlines()==['78d72684e4e6dfa45ace425bb1d8e776a57d41bc']*2
+subprocess.run(['git','diff','--check'],cwd=R,check=True)
+for f in ['docs/review-k10-underflow-2026-11-17.md','docs/review-checkpoint-push-2026-11-17.md','docs/review-punti-aperti-2026-11-17.md','docs/review-ci-repair-2026-11-17.md']:
+ p=R/f
+ for link in re.findall(r'\]\(([^)]+)\)',p.read_text()):
+  if not link.startswith('http') and 'review-k10-underflow-prove-2026-11-17' not in link:assert (p.parent/link.split('#')[0]).exists(),(f,link)
+report={'baseline_files':len(base),'changed_existing':changed,'preserved_existing':len(base)-len(changed),'new_files_before_package':len(new),'previous_packages_verified':len(seals),'previous_payloads_verified':n,'memory_bytes':len(s.encode()),'cleanup_bytes_total':total,'source_and_binary_snapshots':'numerical milestone before CI repair; final full build after CI repair recorded separately','numeric_tests':'13/13 Release+ASan/UBSan; baseline depth0/3 expected failures','final_integration':'7/7 CTest and5/5 projection; full app updated','commits_pushed':['18d0adcc599335407942f7f7acc5d5266071a402','78d72684e4e6dfa45ace425bb1d8e776a57d41bc'],'new_ci':'44142011489 in progress, not green','numeric_changes':'local, not committed','architecture':'804 nodes/11741 edges/408 TUs, zero errors; template arcLength call resolution limit retained'}
+(T/'final-preservation.json').write_text(json.dumps(report,indent=2));(T/'binaries-after-ci-repair.json').write_bytes((C/'binaries-final.json').read_bytes())
+P.mkdir();manifest=[]
+def cp(src,relative):
+ data=src.read_bytes();out=P/relative
+ if out.suffix in ['.cpp','.h','.py']:out=out.with_name(out.name+'.txt')
+ data.decode('utf-8');assert data[:4]!=b'\x7fELF';out.parent.mkdir(parents=True,exist_ok=True);out.write_bytes(data);manifest.append({'source':str(src),'archive':str(out.relative_to(P)),'sha256':sha(src)})
+for p in sorted(T.rglob('*')):
+ if p.is_file() and '__pycache__' not in p.parts:cp(p,p.relative_to(T))
+for f in sorted(expected|{'docs/review-k10-underflow-2026-11-17.md','docs/review-checkpoint-push-2026-11-17.md','docs/history/claude-prima-checkpoint-push-2026-11-17.md','docs/history/claude-prima-riparazione-ci-2026-11-17.md','AGENTS.md'}):cp(R/f,Path('workspace')/f)
+(P/'MANIFEST.json').write_text(json.dumps(manifest,indent=2)+'\n');(P/'README.txt').write_text('Prove numeriche K10 e prosecuzione dopo commit18d0adc. Header/test/catalogo numerici restano locali; riparazione CI78d7268 pubblicata separatamente. Fonte baseline verificata: leggere sorgenti/argv/filtri e note sulla ricerca header. V1/V2 sono passaggi preliminari, finale13gruppi con errore esplicito per esaurimento. Nessun ELF o CAD. Script inerti con percorsi originali di sessione; replay richiede ricostruire ambiente e libreria. Snapshot app numerico e finale dopo CI repair distinti. ArcLengthtemplate→integrate non risolto comecall nel grafo, include e sorgente consultati.\n')
+files=sorted(p for p in P.rglob('*') if p.is_file());seal=P/'SHA256SUMS';seal.write_text(''.join(sha(p)+'  '+str(p.relative_to(P))+'\n' for p in files))
+for line in seal.read_text().splitlines():h,f=line.split('  ',1);assert sha(P/f)==h
+print(json.dumps(report,indent=2));print('NEW PROOF',len(files),sum(p.stat().st_size for p in files),sha(seal))

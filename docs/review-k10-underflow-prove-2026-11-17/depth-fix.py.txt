@@ -1,0 +1,50 @@
+from pathlib import Path
+import json,shutil
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-underflow-review-2026-11-17');K=T/'candidate';V=T/'v2-underflow';V.mkdir(exist_ok=True)
+for p in list(T.glob('*.log'))+list(T.glob('*.json')):
+ if p.name in ['baseline.json','architecture-consult.json']:continue
+ shutil.copy2(p,V/p.name)
+for n in ['fk_quadrature.h','test_quadrature_validation.cpp']:shutil.copy2(K/n,V/n)
+G=json.loads((R/'docs/architecture/graph.json').read_text());focus={'kernel/fk_quadrature.h','kernel/fk_curve_algo.cpp','kernel/fk_mass.cpp','kernel/fk_profile.cpp','kernel/fk_curve_length_cache.h'};(T/'architecture-before-depth.json').write_text(json.dumps({'nodes':[n for n in G['nodes'] if n['id'] in focus],'edges':[e for e in G['edges'] if e['source'] in focus or e['target'] in focus]},indent=2))
+p=K/'fk_quadrature.h';s=p.read_text();s=s.replace('''    if (error <= tolerance || error <= 50.0 * 2.220446049250313e-16 * absolute || depth >= 30) return value;''','''    if (error <= tolerance || error <= 50.0 * 2.220446049250313e-16 * absolute) return value;
+    if (depth >= 30) throw std::domain_error("quadratura: profondita massima prima della convergenza");''');s=s.replace('for (std::size_t k = 0; k < controlled && depth < 30; ++k)','for (std::size_t k = 0; k < controlled; ++k)');needle='    if (accepted) return p.integral;';assert s.count(needle)==1;s=s.replace(needle,needle+'\n    if (depth >= 30) throw std::domain_error("quadratura: profondita massima prima della convergenza");');p.write_text(s)
+p=K/'test_quadrature_validation.cpp';s=p.read_text();s+='''
+FK_TEST(QuadratureScalarReportsDepthExhaustion) {
+    int calls = 0;
+    const double threshold = 1. / 3;
+    const auto discontinuous = [&](double t) { ++calls; return t >= threshold ? 1. : 0.; };
+    domainFailure([&] { (void)detail::integrate(discontinuous, 0., 1., 1e-12); });
+    // A single unresolved interval descends; no exponential full-tree test.
+    FK_CHECK(calls > 15 && calls < 2000);
+}
+FK_TEST(QuadratureVectorReportsDepthExhaustion) {
+    int calls = 0;
+    const double threshold = 1. / 3;
+    const auto discontinuous = [&](double t) {
+        ++calls;
+        detail::Evaluation<2> result;
+        result.value = {t >= threshold ? 1. : 0., 1.};
+        result.magnitude = {1., 1.};
+        return result;
+    };
+    domainFailure([&] { (void)detail::integrateVector<2>(discontinuous, 0., 1., 1e-12, roundoff, 1); });
+    FK_CHECK(calls > 15 && calls < 2000);
+}
+FK_TEST(QuadratureNativeRationalArcReportsDepthExhaustion) {
+    // All these curves trace the same straight unit segment monotonically.
+    // Only the positive rational parameterization differs; derivatives are finite.
+    const BSplineCurve<3> control(1, {0, 0, 1, 1}, {{0, 0, 0}, {1, 0, 0}}, {1, std::ldexp(1., -20)});
+    finiteNear(arcLength(control, control.domain(), 1e-13), 1., 1e-12);
+    for (int exponent : {-40, -48}) {
+        const BSplineCurve<3> curve(1, {0, 0, 1, 1}, {{0, 0, 0}, {1, 0, 0}}, {1, std::ldexp(1., exponent)});
+        finiteNear(distance(curve.point(0), curve.point(1)), 1., 0.);
+        FK_CHECK(isFinite(curve.derivative(0)) && isFinite(curve.derivative(1)));
+        domainFailure([&] { (void)arcLength(curve, curve.domain(), 1e-13); });
+        detail::CurveLengthCache cache;
+        domainFailure([&] { (void)cache.get(curve, curve.domain(), 1e-13); });
+        // A rejected request must not turn into a successful cached value.
+        domainFailure([&] { (void)cache.get(curve, curve.domain(), 1e-13); });
+    }
+}
+''';p.write_text(s)
+print('depth candidate prepared; cap/tolerances unchanged')

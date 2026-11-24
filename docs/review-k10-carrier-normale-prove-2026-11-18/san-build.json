@@ -1,0 +1,26 @@
+{
+  "command": [
+    "c++",
+    "-std=c++17",
+    "-O1",
+    "-g",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-fsanitize=address,undefined",
+    "-fno-omit-frame-pointer",
+    "-Ikernel",
+    "-Ikernel/tests",
+    "kernel/tests/fk_test_main.cpp",
+    "kernel/tests/test_mapping_global_validation.cpp",
+    "kernel/tests/test_surface_mapping_bounds.cpp",
+    "kernel/tests/test_mapping_normal_validation.cpp",
+    "kernel/tests/test_surface_mapping_normal_bounds.cpp",
+    "kernel/fk_surface_mapping_bounds.cpp",
+    "kernel/fk_surface_mapping.cpp",
+    "forgecad-release/kernel/libforgekernel.a",
+    "-o",
+    "/tmp/k10-normal-carrier-2026-11-18/final-san"
+  ],
+  "exit_code": 0,
+  "seconds": 25.53771595697617
+}
