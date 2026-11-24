@@ -6,6 +6,7 @@
 #include "fk_mass.h"
 #include "fk_offset.h"
 #include "fk_profile.h"
+#include "fk_primitives.h"
 #include "fk_revolve.h"
 #include "fk_thicken.h"
 #include "fk_offset_support.h"
@@ -23,6 +24,73 @@ Body groove() {
         chain.segments.push_back(
             {std::make_shared<Line<2>>(points[i - 1], points[i] - points[i - 1]), {0., distance(points[i - 1], points[i])}});
     return makeSheetRevolution(Frame3{}, {chain}, kTwoPi);
+}
+Body perforatedTray(double excursion = 0.) {
+    // Il fondo bicubico resta coincidente con i lati sul perimetro.
+    // Il rilievo asimmetrico rende non planari i tre contorni interni.
+    const auto box = makeBox(Frame3{}, 30., 30., 12.);
+    const std::vector<double> knots{0., 0., 0., 0., 30., 30., 30., 30.};
+    std::vector<Vec3> poles;
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 4; ++j)
+            poles.emplace_back(10. * i, 10. * j, (i == 1 && j == 2) ? .4 : 0.);
+    const auto floor = std::make_shared<BSplineSurface>(3, 3, knots, knots, 4, 4, poles);
+    std::vector<Vec3> points;
+    for (auto vertex : box.vertices()) points.push_back(box.vertex(vertex).point);
+    std::vector<Body::BuildEdge> edges;
+    for (auto id : box.edges()) {
+        const auto &edge = box.edge(id);
+        edges.push_back({box.edgeStart(id).index, box.edgeEnd(id).index, edge.curve, edge.range, edge.tolerance});
+    }
+    std::vector<Body::BuildFace> faces;
+    for (auto id : box.faces()) {
+        const auto &face = box.face(id);
+        const auto *plane = dynamic_cast<const Plane *>(face.surface.get());
+        const double vertical = (face.sense ? 1. : -1.) * plane->frame().zDir().z();
+        if (vertical > .5) continue;
+        const bool bottom = vertical < -.5;
+        auto &copy = faces.emplace_back(Body::BuildFace{bottom ? SurfacePtr(floor) : face.surface,
+                                                       bottom ? false : face.sense, {}});
+        for (auto loop : face.loops) {
+            auto &contour = copy.loops.emplace_back();
+            for (auto fid : box.loopFins(loop)) {
+                const auto &fin = box.fin(fid);
+                const auto &edge = box.edge(fin.edge);
+                CurvePtr<2> uv = fin.pcurve;
+                if (bottom) {
+                    const auto a = edge.curve->point(edge.range.lo), b = edge.curve->point(edge.range.hi);
+                    uv = std::make_shared<Line<2>>(Vec2{a.x(), a.y()}, Vec2{b.x() - a.x(), b.y() - a.y()});
+                }
+                contour.push_back({fin.edge.index, fin.sense, uv, 0.});
+            }
+        }
+        if (!bottom) continue;
+        for (double x : {excursion == 0. ? 5. : 2.4, 12., 19.}) {
+            const std::vector<Vec2> corners{{x, 11.}, {x + 4., 11.}, {x + 4., 20.}, {x, 20.}};
+            const int base = int(points.size());
+            for (const auto &p : corners) points.push_back(floor->point(p.x(), p.y()));
+            auto &hole = copy.loops.emplace_back();
+            for (int i = 0; i < 4; ++i) {
+                const int next = (i + 1) % 4;
+                const auto a = corners[i], b = corners[next];
+                const Interval range{0., distance(a, b)};
+                CurvePtr<2> uv = std::make_shared<Line<2>>(a, b - a);
+                if (x == 2.4 && i == 3) {
+                    uv = std::make_shared<BSplineCurve<2>>(3,
+                        std::vector<double>{0., 0., 0., 0., range.hi, range.hi, range.hi, range.hi},
+                        std::vector<Vec2>{a, a + (b - a) / 3. - Vec2{excursion / 6., 0.},
+                            a + 2. * (b - a) / 3. + Vec2{excursion / 6., 0.}, b});
+                }
+                const auto edge = fitCurve([&](double t) {
+                    const auto p = uv->point(t);
+                    return floor->point(p.x(), p.y());
+                }, range, uv->breakpoints(range), 1e-10);
+                hole.push_back({int(edges.size()), true, uv, 0.});
+                edges.push_back({base + i, base + next, edge, range, 0.});
+            }
+        }
+    }
+    return Body::buildSheet(points, edges, faces);
 }
 void valid(const Body &body, bool solid) {
     FK_CHECK(body.isSheet() != solid);
@@ -118,6 +186,34 @@ FK_TEST(OpenOffsetShowerHeadTwoPointFive) {
         ++fitted;
     }
     FK_CHECK(fitted == 4);
+    FK_CHECK(writeBodyBinary(sheet) == before);
+}
+
+FK_TEST(OpenOffsetThickenCurvedFloorWithThreeSlots) {
+    const auto sheet = perforatedTray();
+    const auto before = writeBodyBinary(sheet);
+    FK_CHECK(checkBody(sheet, {true, true}).empty());
+    ThickenOptions options;
+    options.thickness = 2.;
+    options.side = ThickenSide::Backward;
+    BodyHistory history;
+    const auto solid = thickenSheet(sheet, {}, options, &history);
+    valid(solid, true);
+    FK_CHECK(solid.shells().size() == 1);
+    FK_CHECK(checkBody(solid, {true, true}).empty());
+    for (auto face : sheet.faces()) {
+        FK_CHECK(history.descendants(EntityKind::Face, 0, face.index).size() == 2);
+        for (std::size_t i = 1; i < sheet.face(face).loops.size(); ++i)
+            for (auto fin : sheet.loopFins(sheet.face(face).loops[i]))
+                FK_CHECK(history.generated(EntityKind::Face, EntityKind::Edge, 0, sheet.fin(fin).edge.index).size() == 1);
+    }
+    SolidClassifier classify(solid, linearResolution());
+    for (double x : {7., 14., 21.})
+        for (double z : {.2, 1., 1.8})
+            FK_CHECK(classify.classify({x, 15., z}) == PointLocation::Outside);
+    for (double x : {4., 10., 17., 26.})
+        for (double z : {.2, 1., 1.8})
+            FK_CHECK(classify.classify({x, 15., z}) == PointLocation::Inside);
     FK_CHECK(writeBodyBinary(sheet) == before);
 }
 
@@ -239,4 +335,25 @@ FK_TEST(OpenOffsetRejectsOnlyRetainedFold) {
     };
     FK_CHECK_THROWS(validate(0.));
     validate(1.);
+}
+
+FK_TEST(OpenOffsetTrimExcursion) {
+    ThickenOptions options;
+    options.thickness = 2.;
+    options.side = ThickenSide::Backward;
+    const auto contained = perforatedTray(4.);
+    FK_CHECK(checkBody(contained, {true, true}).empty());
+    valid(thickenSheet(contained, {}, options), true);
+
+    // Gli estremi e il punto medio UV restano identici. Aumentando
+    // l'escursione cubica, il foro attraversa il bordo rifilato del fondo.
+    const auto crossing = perforatedTray(8.);
+    FK_CHECK(checkBody(crossing, {true, true}).empty());
+    bool rejectedAtTrim = false;
+    try {
+        (void)thickenSheet(crossing, {}, options);
+    } catch (const std::domain_error &error) {
+        rejectedAtTrim = std::string(error.what()) == "spessore: il foro incontra il bordo del supporto rifilato";
+    }
+    FK_CHECK(rejectedAtTrim);
 }

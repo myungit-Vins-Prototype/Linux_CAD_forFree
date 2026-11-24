@@ -1,5 +1,6 @@
 #include "fk_helix_projection.h"
 #include "fk_cancel.h"
+#include "fk_angular_bounds.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -88,46 +89,6 @@ V projected(V a, const Frame3 &f, bool point) {
         a = subtract(a, vector(f.origin()));
     return {dot(a, vector(f.xDir())), dot(a, vector(f.yDir())), I(0)};
 }
-std::pair<I, I> sineCosine(I angle) {
-    if (!finite(angle))
-        throw std::domain_error("proiezione elica: fase non finita");
-    const double center = 0.5 * angle.lo + 0.5 * angle.hi;
-    const double quarter = std::nearbyint(center / kHalfPi);
-    if (!std::isfinite(quarter) || std::abs(quarter) > 0x1p50)
-        throw std::domain_error("proiezione elica: riduzione della fase non risolta");
-    // Exact binary bounds for mathematical pi/2. Machin's identity gives
-    // 8*atan(1/5)-2*atan(1/239); alternating sums of 24 and 8 terms lie
-    // strictly between these endpoints (checked independently with Fraction).
-    const I halfPi(0x1.921fb54442d18p+0, 0x1.921fb54442d19p+0);
-    const I r = angle - I(quarter) * halfPi;
-    if (absoluteUpper(r) > 1)
-        throw std::domain_error("proiezione elica: fase troppo larga per il certificato");
-    const I minusSquare = I(0) - r * r;
-    I sine, cosine, sineTerm = r, cosineTerm(1);
-    for (int k = 0; k < 16; ++k) {
-        cancellationPoint();
-        sine = sine + sineTerm;
-        cosine = cosine + cosineTerm;
-        sineTerm = sineTerm * minusSquare / I(double((2 * k + 2) * (2 * k + 3)));
-        cosineTerm = cosineTerm * minusSquare / I(double((2 * k + 1) * (2 * k + 2)));
-    }
-    // Degree 31/30 Taylor remainders on |r|<=1 are bounded by 1/32!,
-    // strictly less than the exact binary padding 2^-100 used here.
-    const I tail(-0x1p-100, 0x1p-100);
-    sine = sine + tail;
-    cosine = cosine + tail;
-    const auto q = static_cast<std::int64_t>(quarter);
-    switch ((q % 4 + 4) % 4) {
-    case 0:
-        return {sine, cosine};
-    case 1:
-        return {cosine, I(0) - sine};
-    case 2:
-        return {I(0) - sine, I(0) - cosine};
-    default:
-        return {I(0) - cosine, sine};
-    }
-}
 struct Data {
     Interval range;
     HelixSpec spec;
@@ -143,7 +104,9 @@ struct Data {
     }
     std::pair<V, V> jet(double t) const {
         const I parameter(t), radius = I(spec.radius) + I(slope) * parameter;
-        const auto [sine, cosine] = sineCosine(I(spec.startAngle) + I(sense) * parameter);
+        const auto phase = boundedSineCosine(I(spec.startAngle) + I(sense) * parameter);
+        if (!phase) throw std::domain_error("proiezione elica: riduzione della fase non risolta");
+        const auto &[sine, cosine] = *phase;
         const V radial = add(scale(x, cosine), scale(y, sine));
         const V derivative = scale(add(scale(x, I(0) - sine), scale(y, cosine)), I(sense));
         const V point = add(add(origin, scale(radial, radius)), scale(z, I(rise) * parameter));

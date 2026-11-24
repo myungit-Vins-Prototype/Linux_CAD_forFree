@@ -43,6 +43,12 @@ int main(int argc, char **argv) {
         if (!ok) std::cout << " (" << fktest::failures << " controlli falliti)";
         std::cout << std::endl;
     }
+    if (run == 0) {
+        std::cerr << "Nessun test eseguito";
+        if (filter) std::cerr << " per il filtro '" << filter << "'";
+        std::cerr << std::endl;
+        return 1;
+    }
     std::cout << run - failed << "/" << run << " test superati" << std::endl;
     return failed == 0 ? 0 : 1;
 }

@@ -30,13 +30,16 @@ struct SewResult {
 // giacciono sul suo supporto e dentro il suo intervallo assiale.
 // I versi delle facce diventano coerenti attraverso gli edge comuni. Se ogni
 // edge ha due facce e `makeSolid`, il risultato e' un solido con la normale
-// uscente (se il volume viene negativo le facce si girano); altrimenti una
+// verso il vuoto: gusci esterni e isole uscenti, cavita' entranti; altrimenti una
 // lamina. Gli edge che si toccano solo entro la tolleranza diventano
 // tolleranti. std::domain_error se il body non e' valido.
 SewResult sewSheets(const std::vector<const Body *> &bodies, double tolerance, bool makeSolid, BodyHistory *history = nullptr);
 
 // Le facce `faces` di `body` come lamina a parte (con gli edge comuni tra loro).
 Body facesAsSheet(const Body &body, const std::vector<FaceId> &faces, BodyHistory *history = nullptr);
+
+// Copia facce che formano già una frontiera chiusa, con curve e tolleranze.
+Body closedFacesAsSolid(const Body &body, const std::vector<FaceId> &faces);
 
 }
 

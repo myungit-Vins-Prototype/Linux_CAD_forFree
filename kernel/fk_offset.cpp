@@ -19,12 +19,15 @@
 
 #include "fk_bspline_basis.h"
 #include "fk_boolean.h"
+#include "fk_body_check.h"
 #include "fk_bspline_surface.h"
 #include "fk_classify.h"
+#include "fk_classify_uv.h"
 #include "fk_curve_algo.h"
 #include "fk_exchange.h"
 #include "fk_intersect.h"
 #include "fk_parallel.h"
+#include "fk_planar_blend_trim.h"
 #include "fk_pcurve.h"
 #include "fk_surface.h"
 #include "fk_sheet.h"
@@ -177,6 +180,7 @@ void requireOffsetBelowCurvature(const Surface &surface, double d, const Interva
     std::vector<double> us = surface.uBreakpoints(uw), vs = surface.vBreakpoints(vw);
     for (int k = 0; k <= 64; ++k) us.push_back(uw.lo + uw.length() * k / 64.0), vs.push_back(vw.lo + vw.length() * k / 64.0);
     double worst = 0.0;
+    Vec2 worstUV;
     for (double u : us)
         for (double v : vs) {
             Vec3 s[9];
@@ -192,7 +196,11 @@ void requireOffsetBelowCurvature(const Surface &surface, double d, const Interva
             if (!(area > 0.0)) continue;
             const double K = (L * N - M * M) / area, H = (E * N - 2.0 * F * M + G * L) / (2.0 * area);
             const double root = std::sqrt(std::max(0.0, H * H - K));
-            for (double k : {H + root, H - root}) worst = std::max(worst, d * k);
+            const double ratio = std::max(d * (H + root), d * (H - root));
+            if (ratio > worst) {
+                worst = ratio;
+                worstUV = Vec2(u, v);
+            }
         }
     // worst = |d| / raggio minimo dalla parte dello spostamento.
     if (worst >= 1.0) {
@@ -200,7 +208,7 @@ void requireOffsetBelowCurvature(const Surface &surface, double d, const Interva
         message.precision(4);
         message << "offset: distanza " << std::fabs(d) << " oltre il raggio di curvatura della faccia (minimo " << std::fabs(d) / worst
                 << " da quella parte): la superficie a distanza si ripiega";
-        throw std::domain_error(message.str());
+        throw OffsetCurvatureError(message.str(), std::fabs(d) / worst, worstUV);
     }
 }
 
@@ -291,7 +299,7 @@ std::vector<double> offsetParameterBreaks(const Surface &surface, const Interval
     return breaks;
 }
 
-SurfacePtr offsetBSplineC2(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
+SurfacePtr offsetBSplineC2(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections) {
     requireContinuousNormals(static_cast<const BSplineSurface &>(surface), d, uw, vw, tolerance);
     const std::vector<double> uSegments = sortedBreaks(uw, offsetParameterBreaks(surface, uw, true, preserveEndSections), 1e-9 * uw.length());
     const std::vector<double> vSegments = sortedBreaks(vw, offsetParameterBreaks(surface, vw, false, preserveEndSections), 1e-9 * vw.length());
@@ -518,7 +526,7 @@ SurfacePtr offsetBSplineC2(const Surface &surface, double d, const Interval &uw,
 // sono della cella. Nodi interni tripli: C0 garantita, C1 dove O lo e'. Le
 // celle si controllano in parallelo; si dividono solo nelle direzioni in cui
 // sbagliano (lo scarto lungo i bordi della cella dice quale).
-SurfacePtr offsetBSpline(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
+SurfacePtr offsetBSpline(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections) {
     requireContinuousNormals(static_cast<const BSplineSurface &>(surface), d, uw, vw, tolerance);
     const auto O = [&](double u, double v) { return surface.point(u, v) + d * surface.normal(u, v); };
     std::vector<double> us = sortedBreaks(uw, offsetParameterBreaks(surface, uw, true, preserveEndSections), 1e-9 * uw.length());
@@ -656,7 +664,7 @@ CurvePtr<3> exactExtrusionOffset(const ExtrusionSurface &surface, double d, doub
             : std::numeric_limits<double>::infinity();
         if (error <= 0.01 * tolerance) {
             const double radius = circle.radius() + (dot(axis, surface.direction()) > 0.0 ? d : -d);
-            if (!(radius > linearResolution())) throw std::domain_error("offset: raggio della sezione non positivo");
+            if (!(radius > linearResolution())) throw OffsetCurvatureError("offset: raggio della sezione non positivo", circle.radius());
             return std::make_shared<Circle<3>>(circle.center(), circle.xAxis(), circle.yAxis(), radius);
         }
     }
@@ -1408,7 +1416,7 @@ static SurfacePtr offsetSurfaceImpl(const Surface &surface, double d, const Inte
     }
     case SurfaceType::Cylinder: {
         const auto &c = static_cast<const CylindricalSurface &>(surface);
-        if (!(c.radius() + d > tolerance)) throw std::domain_error("offset: il raggio del cilindro diventa nullo o negativo");
+        if (!(c.radius() + d > tolerance)) throw OffsetCurvatureError("offset: il raggio del cilindro diventa nullo o negativo", c.radius());
         result = std::make_shared<CylindricalSurface>(c.frame(), c.radius() + d);
         break;
     }
@@ -1422,7 +1430,7 @@ static SurfacePtr offsetSurfaceImpl(const Surface &surface, double d, const Inte
     }
     case SurfaceType::Sphere: {
         const auto &s = static_cast<const SphericalSurface &>(surface);
-        if (!(s.radius() + d > tolerance)) throw std::domain_error("offset: il raggio della sfera diventa nullo o negativo");
+        if (!(s.radius() + d > tolerance)) throw OffsetCurvatureError("offset: il raggio della sfera diventa nullo o negativo", s.radius());
         result = std::make_shared<SphericalSurface>(s.frame(), s.radius() + d);
         break;
     }
@@ -1455,7 +1463,9 @@ static SurfacePtr offsetSurfaceImpl(const Surface &surface, double d, const Inte
         const int sign = radialSign(t.minorRadius());
         if (!sign) throw std::domain_error("offset: il dominio del toro sorgente contiene una singolarita'");
         const double radius = t.minorRadius() + sign * d;
-        if (!(radius > tolerance) || radialSign(radius) != sign)
+        if (!(radius > tolerance))
+            throw OffsetCurvatureError("offset: il dominio del toro a distanza si ripiega o diventa singolare", t.minorRadius());
+        if (radialSign(radius) != sign)
             throw std::domain_error("offset: il dominio del toro a distanza si ripiega o diventa singolare");
         result = std::make_shared<ToroidalSurface>(t.frame(), t.majorRadius(), radius);
         break;
@@ -1550,7 +1560,37 @@ SurfacePtr offsetSurface(const Surface &surface, double d, const Interval &uw, c
     return offsetSurfaceImpl(surface, d, uw, vw, tolerance, true);
 }
 
-OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, double distanceValue, double tolerance, bool preserveSeams, double joinAngle) {
+// Il peggior campione della finestra di fit puo' essere fuori dal trim.
+static std::optional<Vec3> curvatureSourcePoint(const Body &body, FaceId id, const OffsetCurvatureError &failure) {
+    const Face &face = body.face(id);
+    try {
+        if (failure.uv) {
+            const Vec2 uv = *failure.uv;
+            if (FaceParameterClassifier(body, id, linearResolution()).classify(uv) != PointLocation::Outside)
+                return face.surface->point(uv.x(), uv.y());
+            return {};
+        }
+        // Per cilindro/sfera/sezione circolare il limite del raggio e'
+        // uniforme. Una SP-curva e' sul trim anche senza una finestra UV.
+        for (LoopId loop : face.loops)
+            for (FinId id : body.loopFins(loop)) {
+                const Fin &fin = body.fin(id);
+                if (!fin.pcurve) continue;
+                const Interval range = body.edge(fin.edge).range;
+                const Vec2 uv = fin.pcurve->point(range.lo + 0.5 * range.length());
+                return face.surface->point(uv.x(), uv.y());
+            }
+    } catch (const std::exception &) {
+        // La localizzazione e' facoltativa: conserva la causa numerica.
+    }
+    return {};
+}
+
+static OffsetResult offsetFacesImpl(const Body &input, const std::vector<FaceId> &faces, double distanceValue,
+                                    double tolerance, bool preserveSeams, double joinAngle,
+                                    const std::vector<std::pair<EdgeId, EdgeId>> &collapsedRails,
+                                    const std::vector<EdgeId> *exposedRails = nullptr,
+                                    std::vector<EdgeId> *emittedRails = nullptr) {
     if (faces.empty()) throw std::domain_error("offset: nessuna faccia scelta");
     if (!(std::fabs(distanceValue) > 0.0)) throw std::domain_error("offset: distanza nulla");
     const detail::PhaseTimer total("offset: totale");
@@ -1576,14 +1616,16 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         const detail::PhaseTimer timer("offset: divisione sulle pieghe (facce rifilate)");
         splitCreases = splitTrimmedCreases(body, faces, distanceValue, tolerance, split, splitHistory);
     }
+    if ((splitPatches || splitCreases) && (!collapsedRails.empty() || exposedRails))
+        throw std::domain_error("offset: divisione delle facce durante la contrazione del raccordo");
     if (splitPatches) {
-        OffsetResult result = offsetFaces(split, split.faces(), distanceValue, tolerance, preserveSeams, joinAngle);
+        OffsetResult result = offsetFacesImpl(split, split.faces(), distanceValue, tolerance, preserveSeams, joinAngle, {});
         result.history = BodyHistory::compose(splitHistory, result.history, 0);
         result.notes.push_back("Facce del loft divise sulle discontinuita interne prima dell'offset");
         return result;
     }
     if (splitCreases) {
-        OffsetResult result = offsetFaces(split, split.faces(), distanceValue, tolerance, preserveSeams, joinAngle);
+        OffsetResult result = offsetFacesImpl(split, split.faces(), distanceValue, tolerance, preserveSeams, joinAngle, {});
         result.history = BodyHistory::compose(splitHistory, result.history, 0);
         result.notes.push_back("Facce divise sulle pieghe interne (normale discontinua lungo una linea di nodo) prima dell'offset");
         return result;
@@ -1604,6 +1646,7 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         Interval u, v;
         SurfacePtr result;
         std::string failure;
+        std::optional<OffsetCurvatureError> curvature;
     };
     std::vector<SurfaceJob> surfaceJobs;
     for (int index : selected) {
@@ -1704,7 +1747,7 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         };
         u = widen(u, surface.uDomain(), surface.isUPeriodic(), seamU);
         v = widen(v, surface.vDomain(), surface.isVPeriodic(), seamV);
-        surfaceJobs.push_back({index, u, v, nullptr, {}});
+        surfaceJobs.push_back({index, u, v, nullptr, {}, {}});
     }
     std::optional<detail::PhaseTimer> surfaceTimer;
     surfaceTimer.emplace("offset: superfici a distanza");
@@ -1713,11 +1756,18 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         const Face &face = body.face(FaceId{job.index});
         try {
             job.result = offsetSurface(*face.surface, face.sense ? distanceValue : -distanceValue, job.u, job.v, tolerance);
+        } catch (const OffsetCurvatureError &failure) {
+            job.curvature = failure;
         } catch (const std::exception &e) {
             job.failure = e.what();
         }
     });
     for (SurfaceJob &job : surfaceJobs) {
+        if (job.curvature) {
+            const auto &failure = *job.curvature;
+            throw OffsetCurvatureError("faccia " + std::to_string(job.index + 1) + ": " + failure.what(),
+                                       failure.radius, {}, curvatureSourcePoint(body, FaceId{job.index}, failure));
+        }
         if (!job.failure.empty()) throw std::domain_error("faccia " + std::to_string(job.index + 1) + ": " + job.failure);
         offsets[job.index] = job.result;
     }
@@ -2078,12 +2128,24 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         }
         result.sharpEdges = 0;
     }
+    if (!collapsedRails.empty()) {
+        const auto rawRail = [&](EdgeId source) {
+            const auto &uses = edges.at(source.index).fins;
+            if (uses.size() != 1)
+                throw std::domain_error("offset: appoggio del raccordo collassato ambiguo");
+            return rawEdge.at({source.index, body.finFace(uses.front()).index});
+        };
+        std::vector<std::pair<int, int>> pairs;
+        pairs.reserve(collapsedRails.size());
+        for (const auto &[a, b] : collapsedRails) pairs.emplace_back(rawRail(a), rawRail(b));
+        detail::sewModel(model, linearResolution(), pairs);
+    }
     edgeTimer.reset();
     detail::AssemblyMap emitted;
     const bool certified = !planeContracts.empty() || std::any_of(curveJobs.begin(), curveJobs.end(), [](const CurveJob &job) { return bool(job.certificate.bound); });
     {
         const detail::PhaseTimer timer("offset: assemblaggio");
-        result.body = detail::assembleBody(model, false, &result.notes, certified ? &emitted : nullptr);
+        result.body = detail::assembleBody(model, false, &result.notes, (certified || exposedRails) ? &emitted : nullptr);
     }
     for (const auto &job : curveJobs) if (job.certificate.bound) {
         cancellationPoint();
@@ -2095,12 +2157,75 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         requireCertifiedOffsetCurve(actual.curve, actual.range, job.certificate, tolerance);
     }
     requireEmittedPlanePCurves(model,result.body,emitted,planeContracts,tolerance);
+    if (exposedRails) {
+        std::vector<EdgeId> mapped;
+        for (EdgeId source : *exposedRails) {
+            const auto &uses = edges.at(source.index).fins;
+            if (uses.size() != 1)
+                throw std::domain_error("offset: bordo esposto del raccordo ambiguo");
+            const auto edge = emitted.edges.at(rawEdge.at({source.index, body.finFace(uses.front()).index}));
+            if (!edge.valid() || !result.body.isLaminar(edge))
+                throw std::domain_error("offset: bordo esposto del raccordo perso nell'assemblaggio");
+            mapped.push_back(edge);
+        }
+        *emittedRails = std::move(mapped);
+    }
     result.history = offsetFaceHistory(input, result.body, faceSources);
     for (ShellId s : result.body.shells()) {
         (void)s;
         ++result.shells;
     }
     return result;
+}
+
+OffsetResult offsetFaces(const Body &body, const std::vector<FaceId> &faces, double distance, double tolerance,
+                         bool preserveSeams, double joinAngle) {
+    try {
+        return offsetFacesImpl(body, faces, distance, tolerance, preserveSeams, joinAngle, {});
+    } catch (const OffsetCurvatureError &) {
+        const auto all = body.faces();
+        const auto boundaryCount = [](const Body &sheet) {
+            const auto edges = sheet.edges();
+            return std::count_if(edges.begin(), edges.end(), [&](EdgeId edge) { return sheet.isLaminar(edge); });
+        };
+        if (!preserveSeams || !body.isSheet() || faces.size() != all.size() ||
+            !std::all_of(all.begin(), all.end(), [&](FaceId face) {
+                return std::find(faces.begin(), faces.end(), face) != faces.end();
+            }) || boundaryCount(body) == 0)
+            throw;
+        try {
+            Body sheet = body;
+            if (computePCurves(sheet) > 0)
+                throw std::domain_error("offset: SP-curve non calcolabili");
+            std::optional<OffsetResult> recovered;
+            const auto collapse = detail::findPlanarBlendCollapse(sheet, distance);
+            if (!collapse.rails.empty()) {
+                recovered = detail::offsetWithCollapsedRails(sheet, collapse.faces, distance, tolerance, joinAngle, collapse.rails);
+            } else {
+                const auto trim = detail::findPlanarBlendTrim(sheet, distance);
+                if (trim.support.valid())
+                    recovered = detail::offsetWithPlanarBlendTrim(sheet, trim, distance, tolerance, tolerance, joinAngle);
+            }
+            if (recovered && recovered->body.shells().size() == body.shells().size() &&
+                boundaryCount(recovered->body) == boundaryCount(body) && checkBody(recovered->body, {true, true}).empty())
+                return std::move(*recovered);
+        } catch (const std::domain_error &) {
+            // Mantieni la localizzazione dell'errore originale se il recupero non si chiude.
+        }
+        throw;
+    }
+}
+
+OffsetResult detail::offsetWithCollapsedRails(const Body &body, const std::vector<FaceId> &faces, double distance,
+                                              double tolerance, double joinAngle,
+                                              const std::vector<std::pair<EdgeId, EdgeId>> &rails) {
+    return offsetFacesImpl(body, faces, distance, tolerance, false, joinAngle, rails);
+}
+
+OffsetResult detail::offsetWithExposedRails(const Body &body, const std::vector<FaceId> &faces, double distance,
+                                           double tolerance, double joinAngle, const std::vector<EdgeId> &rails,
+                                           std::vector<EdgeId> &emittedRails) {
+    return offsetFacesImpl(body, faces, distance, tolerance, false, joinAngle, {}, &rails, &emittedRails);
 }
 
 // Offset con intersezione dei supporti e contrazione dei raccordi collassati.
@@ -2146,7 +2271,12 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
             return {};
         const auto shifted = [&](FaceId f, const SurfacePtr &surface) {
             const double d = specs.at(f.index).distance * (body.face(f).sense ? 1. : -1.);
-            return d == 0.0 ? surface : offsetSurface(*surface, d, surface->uDomain(), surface->vDomain(), tolerance);
+            try {
+                return d == 0.0 ? surface : offsetSurface(*surface, d, surface->uDomain(), surface->vDomain(), tolerance);
+            } catch (const OffsetCurvatureError &failure) {
+                const auto point = specs.at(f.index).replacement ? std::nullopt : curvatureSourcePoint(body, f, failure);
+                throw OffsetCurvatureError(failure.what(), failure.radius, {}, point);
+            }
         };
         return replacementSectionCircle(source, *shifted(first, a), *shifted(second, b));
     };
@@ -2596,18 +2726,43 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
             const double margin = 64.0 * kMachineEpsilon * std::max({1.0, std::fabs(range.lo), std::fabs(range.hi)});
             range.lo -= margin; range.hi += margin;
         };
+        const Interval trimmedV = vr;
         pad(ur); pad(vr);
         if (face.surface->isUPeriodic() && ur.length() >= 0.98 * face.surface->uPeriod())
             ur = face.surface->uDomain();
         if (face.surface->isVPeriodic() && vr.length() >= 0.98 * face.surface->vPeriod())
             vr = face.surface->vDomain();
-        if (continueSupports) {
-            auto trim = raw;
-            trim.surface = targetSupport;
-            detail::requireRegularOffsetTrim(model, trim, signedDistance, ur, vr, tolerance);
+        try {
+            if (continueSupports) {
+                auto trim = raw;
+                trim.surface = targetSupport;
+                detail::requireRegularOffsetTrim(model, trim, signedDistance, ur, vr, tolerance);
+            }
+            if (planeSupport)
+                raw.surface = planeSupport;
+            else if (spec.distance == 0.0)
+                raw.surface = targetSupport;
+            else {
+                auto fitSupport = targetSupport;
+                if (targetSupport->type() == SurfaceType::Revolution) {
+                    const auto &revolution = static_cast<const RevolutionSurface &>(*targetSupport);
+                    const auto *meridian = dynamic_cast<const BSplineCurve<3> *>(revolution.meridian().get());
+                    const auto domain = revolution.vDomain();
+                    // La giunzione puo' cadere sul prolungamento del meridiano.
+                    // Estendi il tratto sorgente prima del fit certificato, cosi'
+                    // anche il supporto emesso include il contorno rifilato.
+                    if (meridian && (trimmedV.lo < domain.lo || trimmedV.hi > domain.hi)) {
+                        auto extended = std::make_shared<BSplineCurve<3>>(extendBSpline(*meridian, vr.lo, vr.hi));
+                        fitSupport = std::make_shared<RevolutionSurface>(extended, revolution.axisPoint(),
+                                                                         revolution.axisDirection());
+                    }
+                }
+                raw.surface = offsetSurfaceImpl(*fitSupport, signedDistance, ur, vr, tolerance, false, !continueSupports);
+            }
+        } catch (const OffsetCurvatureError &failure) {
+            const auto point = spec.replacement ? std::nullopt : curvatureSourcePoint(body, FaceId{index}, failure);
+            throw OffsetCurvatureError(failure.what(), failure.radius, {}, point);
         }
-        raw.surface = planeSupport ? planeSupport : (spec.distance == 0.0 ? targetSupport
-                                           : offsetSurfaceImpl(*targetSupport, signedDistance, ur, vr, tolerance, false, !continueSupports));
         if (spec.distance == 0.0 && raw.surface->type() == SurfaceType::BSpline)
             raw.surface = std::make_shared<BSplineSurface>(extendBSplineSurface(static_cast<const BSplineSurface &>(*raw.surface), ur, vr));
         for (const auto &loop : raw.loops) for (const auto &fin : loop) {

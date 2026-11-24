@@ -7,10 +7,12 @@
 
 #include "fk_bspline.h"
 #include "fk_bspline_isoline.h"
+#include "fk_intersect.h"
 #include "fk_precision.h"
 #include "fk_parallel.h"
 #include "fk_quadrature.h"
 #include "fk_surface_algo.h"
+#include "fk_surface_curve_bounds.h"
 
 namespace ForgeCad::Kernel {
 namespace {
@@ -127,7 +129,7 @@ struct FinTrack {
 
 class FaceIntegrator {
 public:
-    FaceIntegrator(const Body &body, FaceId face, const Vec3 &reference, double scale, double tolerance);
+    FaceIntegrator(const Body &body, FaceId face, const Vec3 &reference, double scale, double tolerance, double trimBudget = 0.0);
 
     // Integrali nello spazio dei parametri, sul dominio della faccia con
     // l'orientamento di (u, v): \iint_D f du dv per gli 11 integrandi.
@@ -162,7 +164,8 @@ private:
     std::vector<std::vector<Walk>> walks_;
 };
 
-FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &reference, double scale, double tolerance)
+FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &reference, double scale, double tolerance,
+                               double trimBudget)
     : reference_(reference), scale_(scale), tolerance_(tolerance) {
     const Face &face = body.face(faceId);
     if (!face.surface) throw std::invalid_argument("massProperties: faccia senza superficie");
@@ -215,7 +218,14 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
             track.acceptance = 10.0 * std::max(edge.tolerance, linearResolution()) + 1e-9 * scale_;
 
             const CurvePtr<2> pcurve = fin.pcurve && swap ? std::make_shared<SwappedCurve>(fin.pcurve) : fin.pcurve;
-            if (pcurve && fin.pcurveTolerance <= kMassPCurveTolerance) {
+            const bool useMassPCurve = pcurve && fin.pcurveTolerance <= kMassPCurveTolerance;
+            bool certifiedTrim = false;
+            if (pcurve && !useMassPCurve && fin.pcurveTolerance <= trimBudget) {
+                const auto proof = detail::surfaceCurveResidualBound(
+                    edge.curve, face.surface, fin.pcurve, edge.range, trimBudget);
+                certifiedTrim = proof.status == detail::SurfaceCurveBoundStatus::Certified;
+            }
+            if (useMassPCurve || certifiedTrim) {
                 // SP-curve esatta, o approssimata molto da vicino (curve
                 // d'intersezione tracciate): niente inversione, solo lo
                 // srotolamento. Un edge che sta sulla superficie solo entro la
@@ -375,12 +385,25 @@ FaceEvaluation FaceIntegrator::inner(double u, double v) const {
         isoline->evaluate(v, jet);
         return integrand(jet);
     };
+    bool indivisibleSpan = false;
     for (std::size_t i = 0; i + 1 < breaks.size(); ++i) {
-        const FaceEvaluation piece = detail::integrateVector<kFaceValues>(
-            [&](double s) { return at(s); }, breaks[i], breaks[i + 1], tolerance_, kInnerRoundoff);
-        for (std::size_t k = 0; k < kFaceValues; ++k) {
-            total.value[k] += piece.value[k];
-            total.magnitude[k] += piece.magnitude[k];
+        const double lo = breaks[i], hi = breaks[i + 1];
+        const double middle = detail::quadratureMiddle(lo, hi);
+        if (lo != hi && (middle == lo || middle == hi)) {
+            indivisibleSpan = true;
+            break;
+        }
+    }
+    if (indivisibleSpan) {
+        total = detail::integrateVectorPartition<kFaceValues>(at, breaks, tolerance_, kInnerRoundoff);
+    } else {
+        for (std::size_t i = 0; i + 1 < breaks.size(); ++i) {
+            const FaceEvaluation piece = detail::integrateVector<kFaceValues>(
+                at, breaks[i], breaks[i + 1], tolerance_, kInnerRoundoff);
+            for (std::size_t k = 0; k < kFaceValues; ++k) {
+                total.value[k] += piece.value[k];
+                total.magnitude[k] += piece.magnitude[k];
+            }
         }
     }
     if (v < v0_)
@@ -521,7 +544,40 @@ LoopValues FaceIntegrator::finIntegral(const FinTrack &track) const {
         return out;
     };
     LoopValues total{};
-    const std::vector<double> breaks = track.curve->breakpoints(track.range);
+    auto breaks = track.curve->breakpoints(track.range);
+    if (track.pcurve) {
+        const auto knots = track.pcurve->breakpoints(track.range);
+        breaks.insert(breaks.end(), knots.begin(), knots.end());
+        const auto *spline = dynamic_cast<const BSplineCurve<2> *>(track.pcurve.get());
+        const bool affineSpans = dynamic_cast<const Line<2> *>(track.pcurve.get())
+            || (spline && spline->degree() == 1 && spline->weights().empty());
+        if (affineSpans && dynamic_cast<const BSplineSurface *>(surface_)) {
+            // La primitiva di Green dipende dai jet del supporto. Per le
+            // campate affini si calcolano anche i passaggi sui nodi U e V.
+            for (std::size_t i = 0; i + 1 < knots.size(); ++i) {
+                cancellationPoint();
+                const double t0 = knots[i], t1 = knots[i + 1];
+                if (!(t1 > t0)) continue;
+                const Vec2 from = track.pcurve->point(t0) + track.shift;
+                Vec2 end[1];
+                track.pcurve->evaluateLeft(t1, 0, end);
+                const Vec2 to = end[0] + track.shift;
+                for (int axis = 0; axis < 2; ++axis) {
+                    const Interval range{std::min(from[axis], to[axis]), std::max(from[axis], to[axis])};
+                    if (!(range.hi > range.lo)) continue;
+                    const auto cuts = axis == 0 ? surface_->uBreakpoints(range) : surface_->vBreakpoints(range);
+                    for (double coordinate : cuts) {
+                        if (!(coordinate > range.lo && coordinate < range.hi)) continue;
+                        const double fraction = (coordinate - from[axis]) / (to[axis] - from[axis]);
+                        const double t = t0 + fraction * (t1 - t0);
+                        if (t > t0 && t < t1) breaks.push_back(t);
+                    }
+                }
+            }
+        }
+        std::sort(breaks.begin(), breaks.end());
+        breaks.erase(std::unique(breaks.begin(), breaks.end()), breaks.end());
+    }
     for (std::size_t i = 0; i + 1 < breaks.size(); ++i) {
         spanWidth = breaks[i + 1] - breaks[i];
         const LoopEvaluation piece = detail::integrateVector<kLoopValues>(f, breaks[i], breaks[i + 1], tolerance_, kLoopRoundoff, kFaceValues);
@@ -645,52 +701,24 @@ FaceValues FaceIntegrator::domainIntegrals() {
     return result;
 }
 
-// Punto di riferimento (centro dei vertici e dei punti medi degli edge) e
-// dimensione del body.
+// I punti medi danno una scala locale anche ai bordi chiusi con vertici coincidenti.
+void addEdgeMidpoint(Box &box, const Edge &edge) {
+    if (edge.curve && edge.range.isFinite())
+        box.add(edge.curve->point(0.5 * (edge.range.lo + edge.range.hi)));
+}
+
 void referenceFrame(const Body &body, Vec3 &reference, double &scale) {
-    std::vector<Vec3> points;
-    for (VertexId v : body.vertices()) points.push_back(body.vertex(v).point);
-    for (EdgeId e : body.edges()) {
-        const Edge &edge = body.edge(e);
-        if (edge.curve && edge.range.isFinite()) points.push_back(edge.curve->point(0.5 * (edge.range.lo + edge.range.hi)));
-    }
-    Vec3 lo(1e300, 1e300, 1e300), hi(-1e300, -1e300, -1e300);
-    for (const Vec3 &p : points)
-        for (int i = 0; i < 3; ++i) {
-            lo[i] = std::min(lo[i], p[i]);
-            hi[i] = std::max(hi[i], p[i]);
-        }
-    if (points.empty()) {
-        reference = Vec3();
-        scale = 1.0;
-        return;
-    }
-    reference = 0.5 * (lo + hi);
-    scale = std::max(distance(lo, hi), 1e-3);
+    Box box;
+    for (VertexId v : body.vertices()) box.add(body.vertex(v).point);
+    for (EdgeId e : body.edges()) addEdgeMidpoint(box, body.edge(e));
+    reference = box.isEmpty() ? Vec3() : 0.5 * (box.lo + box.hi);
+    scale = box.isEmpty() ? 1.0 : std::max(box.diagonal(), 1e-3);
 }
 
-}
-
-MassProperties massProperties(const Body &body, double relativeTolerance) {
-    if (body.isSheet()) throw std::domain_error("massProperties: una lamina non ha volume (usare faceArea)");
-    Vec3 reference;
-    double scale;
-    referenceFrame(body, reference, scale);
-    FaceValues flux{};
-    double area = 0.0;
-    const auto faces = body.faces();
-    const auto integrateFace = [&](FaceId f) {
-        return FaceIntegrator(body, f, reference, scale, relativeTolerance).domainIntegrals();
-    };
-    const auto accumulate = [&](FaceId f, const FaceValues &values) {
-        const double s = body.face(f).sense ? 1.0 : -1.0;
-        area += values[0];
-        if (!body.region(body.shell(body.face(f).shell).region).solid) return;
-        for (std::size_t k = 1; k < kFaceValues; ++k) flux[k] += s * values[k];
-    };
-    // Quadrature indipendenti, riduzione nello stesso ordine seriale: nessuna
-    // variazione delle tolleranze o dell'ordine delle somme in virgola mobile.
-    // Corpi piccoli e worker gia' paralleli conservano il percorso locale.
+// Quadrature indipendenti; riduzione e primo errore nell'ordine topologico.
+template<class Integrate, class Accumulate>
+void orderedFaceIntegrals(const std::vector<FaceId> &faces, const Integrate &integrateFace,
+                          const Accumulate &accumulate) {
     if (faces.size() >= 8 && parallelDepth == 0 && threadCount(0) > 1) {
         std::vector<FaceValues> values(faces.size());
         std::vector<std::exception_ptr> failures(faces.size());
@@ -702,16 +730,103 @@ MassProperties massProperties(const Body &body, double relativeTolerance) {
         for (std::size_t i = 0; i < faces.size(); ++i) {
             // Anche in caso di piu' facce invalide si conserva il primo errore
             // secondo l'ordine originale, dopo aver raggiunto tutti i worker.
+            cancellationPoint();
             if (failures[i]) std::rethrow_exception(failures[i]);
             accumulate(faces[i], values[i]);
         }
     } else {
-        for (FaceId f : faces) accumulate(f, integrateFace(f));
+        for (FaceId f : faces) {
+            cancellationPoint();
+            accumulate(f, integrateFace(f));
+        }
     }
 
+}
+
+FaceValues bodyIntegrals(const Body &body, double relativeTolerance, Vec3 &reference) {
+    if (body.isSheet()) throw std::domain_error("massProperties: una lamina non ha volume (usare faceArea)");
+    double scale;
+    referenceFrame(body, reference, scale);
+    FaceValues flux{};
+    const auto faces = body.faces();
+    const auto integrateFace = [&](FaceId f) {
+        return FaceIntegrator(body, f, reference, scale, relativeTolerance).domainIntegrals();
+    };
+    const auto accumulate = [&](FaceId f, const FaceValues &values) {
+        const double s = body.face(f).sense ? 1.0 : -1.0;
+        flux[0] += values[0];
+        if (!body.region(body.shell(body.face(f).shell).region).solid) return;
+        for (std::size_t k = 1; k < kFaceValues; ++k) flux[k] += s * values[k];
+    };
+    orderedFaceIntegrals(faces, integrateFace, accumulate);
+
+    return flux;
+}
+
+}
+
+double detail::shellSignedVolume(const Body &body, ShellId shell, double sewingTolerance) {
+    const auto &faces = body.shell(shell).faces;
+    Box box;
+    for (FaceId id : faces) {
+        const Face &face = body.face(id);
+        for (LoopId loop : face.loops) {
+            const VertexId vertex = body.loop(loop).isolatedVertex;
+            if (vertex.valid()) box.add(body.vertex(vertex).point);
+            for (FinId fin : body.loopFins(loop)) {
+                const Fin &data = body.fin(fin);
+                box.add(body.vertex(data.vertex).point);
+                const Edge &edge = body.edge(data.edge);
+                if (sewingTolerance > 0.0 && edge.curve && edge.range.isFinite()) {
+                    const Box bounds = curveBox(*edge.curve, edge.range);
+                    box.add(bounds.lo);
+                    box.add(bounds.hi);
+                } else {
+                    addEdgeMidpoint(box, edge);
+                }
+            }
+        }
+        if (face.loops.empty() && face.surface) {
+            const Interval u = face.surface->uDomain(), v = face.surface->vDomain();
+            if (u.isFinite() && v.isFinite()) {
+                box.add(face.surface->point(u.lo, 0.5 * (v.lo + v.hi)));
+                box.add(face.surface->point(0.5 * (u.lo + u.hi), 0.5 * (v.lo + v.hi)));
+            }
+        }
+    }
+    if (box.isEmpty()) throw std::domain_error("shellSignedVolume: shell senza riferimento geometrico");
+    const Vec3 reference = 0.5 * (box.lo + box.hi);
+    const double scale = std::max(box.diagonal(), 1e-3);
+    const auto integrate = [&](double tolerance, double trimBudget) {
+        long double volume = 0.0L, magnitude = 0.0L;
+        orderedFaceIntegrals(faces, [&](FaceId id) {
+            return FaceIntegrator(body, id, reference, scale, tolerance, trimBudget).domainIntegrals();
+        }, [&](FaceId id, const FaceValues &values) {
+            const double flux = values[1];
+            volume += body.face(id).sense ? flux : -flux;
+            magnitude += std::abs(flux);
+        });
+        return std::isfinite(volume) && std::abs(volume) > tolerance * magnitude ? double(volume) : 0.0;
+    };
+    const double trimBudget = sewingTolerance > 0.0 ? std::min(sewingTolerance, 1e-5 * box.diagonal()) : 0.0;
+    double volume = integrate(1e-5, trimBudget);
+    // Un volume sottile rispetto al guscio puo' risentire di cancellazioni
+    // anche dentro la quadratura di una singola faccia.
+    const double fallbackScale = sewingTolerance > 0.0 ? box.diagonal() : scale;
+    if (!std::isfinite(volume) || !std::isfinite(fallbackScale)
+        || std::abs(volume) <= 1e-3L * fallbackScale * fallbackScale * fallbackScale)
+        volume = integrate(1e-12, 0.0);
+    if (!std::isfinite(volume) || volume == 0.0)
+        throw std::domain_error("shellSignedVolume: orientamento della shell indeterminato");
+    return volume;
+}
+
+MassProperties massProperties(const Body &body, double relativeTolerance) {
+    Vec3 reference;
+    const FaceValues flux = bodyIntegrals(body, relativeTolerance, reference);
     MassProperties result;
     result.volume = flux[1];
-    result.area = area;
+    result.area = flux[0];
     if (!(std::fabs(result.volume) > 0.0)) return result;
     const Vec3 d(flux[2] / result.volume, flux[3] / result.volume, flux[4] / result.volume);
     result.centroid = reference + d;

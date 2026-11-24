@@ -364,7 +364,10 @@ void subdivideCurve(const Curve<3> &curve, double a, double b, const Vec3 &pa, c
                     const std::vector<double> &knots, int depth, std::vector<double> &out) {
     const auto inside = std::upper_bound(knots.begin(), knots.end(), b) - std::lower_bound(knots.begin(), knots.end(), a);
     const double chordLength = distance(pa, pb);
-    bool split = (depth < 1 && chordLength <= options.deflection) || inside > 10;  // curva chiusa: almeno due tratti
+    // Una curva chiusa richiede almeno due tratti. Il lato di un triangolo
+    // piano è già esatto e si suddivide solo se lo chiede il lato massimo.
+    bool split = (depth < 1 && chordLength <= options.deflection && curve.type() != CurveType::Line)
+        || inside > 10;
     split = split || (options.maxEdgeLength > 0.0 && chordLength > options.maxEdgeLength);
     if (!split && depth < 20) {
         for (double s : {0.25, 0.5, 0.75})
@@ -1476,6 +1479,42 @@ void FaceTessellator::refine() {
 }
 
 FaceMesh FaceTessellator::run() {
+    // Una faccia esattamente triangolare con lati già campionati non richiede
+    // earcut. Il filtraggio dei quasi-collineari può perdere la faccia sottile
+    // pur lasciando intatti i tre bordi che la collegano alle altre facce.
+    if (surface_.type() == SurfaceType::Plane && face_.loops.size() == 1) {
+        const auto fins = body_.loopFins(face_.loops.front());
+        if (fins.size() == 3) {
+            const auto &frame = static_cast<const Plane &>(surface_).frame();
+            const Vec3 normal = face_.sense ? frame.zDir() : -frame.zDir();
+            std::array<Vec3, 3> points;
+            std::array<Vec2, 3> parameters;
+            bool straight = true;
+            for (int i = 0; i < 3; ++i) {
+                const Fin &fin = body_.fin(fins[i]);
+                const Edge &edge = body_.edge(fin.edge);
+                const auto &samples = edgeSamples_.at(std::size_t(fin.edge.index));
+                if (samples.size() != 2 || !edge.curve || edge.curve->type() != CurveType::Line
+                    || !fin.pcurve || fin.pcurve->type() != CurveType::Line || edge.tolerance != 0.0) {
+                    straight = false;
+                    break;
+                }
+                points[i] = body_.vertex(body_.finStart(fins[i])).point;
+                const double start = fin.sense ? samples.front() : samples.back();
+                parameters[i] = fin.pcurve->point(start);
+            }
+            if (straight && dot(cross(points[1] - points[0], points[2] - points[0]), normal) > 0.0) {
+                FaceMesh mesh;
+                mesh.face = faceId_;
+                mesh.points.assign(points.begin(), points.end());
+                mesh.parameters.assign(parameters.begin(), parameters.end());
+                mesh.normals.assign(3, normal);
+                mesh.triangles.push_back({0, 1, 2});
+                return mesh;
+            }
+        }
+    }
+
     buildRings();
     chooseWindow();
     for (const LoopRing &ring : rings_) cutRing(ring);

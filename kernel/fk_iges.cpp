@@ -6,7 +6,6 @@
 #include <cctype>
 #include <cmath>
 #include <cstdio>
-#include <ctime>
 #include <exception>
 #include <functional>
 #include <limits>
@@ -22,11 +21,11 @@
 #include "fk_exchange.h"
 #include "fk_hermite.h"
 #include "fk_intersect.h"
+#include "fk_mass.h"
 #include "fk_nurbs.h"
 #include "fk_parallel.h"
 #include "fk_surface.h"
 #include "fk_surface_algo.h"
-#include "fk_tessellate.h"
 
 namespace ForgeCad::Kernel {
 namespace {
@@ -81,13 +80,8 @@ public:
         return add(e);
     }
     std::string file(const IgesWriteOptions &options, double maxCoordinate) const {
-        std::string stamp = options.timeStamp;
-        if (stamp.empty()) {
-            char buffer[32];
-            const std::time_t now = std::time(nullptr);
-            std::strftime(buffer, sizeof buffer, "%Y%m%d.%H%M%S", std::localtime(&now));
-            stamp = buffer;
-        }
+        const std::string stamp = options.timeStamp.empty()
+            ? detail::formatLocalTimestamp("%Y%m%d.%H%M%S") : options.timeStamp;
         std::vector<std::string> start{"ForgeCAD IGES 5.3"};
         const std::vector<std::string> global = {
             "1H,", "1H;", hollerith(options.fileName), hollerith(options.fileName + ".igs"), hollerith("ForgeCAD"), hollerith("ForgeCAD kernel"),
@@ -886,19 +880,6 @@ bool colourOf(const IgesFile &file, const Directory &d, double rgb[3]) {
     return true;
 }
 
-// Volume con segno dalla tassellazione (per girare i solidi cuciti al contrario).
-double roughVolume(const Body &body) {
-    Box box;
-    for (VertexId v : body.vertices()) box.add(body.vertex(v).point);
-    TessellationOptions options;
-    options.deflection = 1e-3 * std::max(box.diagonal(), 1e-3);
-    double volume = 0.0;
-    for (const FaceMesh &mesh : tessellate(body, options).faces)
-        for (const std::array<int, 3> &tri : mesh.triangles)
-            volume += dot(mesh.points[std::size_t(tri[0])], cross(mesh.points[std::size_t(tri[1])], mesh.points[std::size_t(tri[2])])) / 6.0;
-    return volume;
-}
-
 // Verso di una faccia dai suoi loop nello spazio (u, v) (le superfici limitate
 // 144 non lo dicono; i loop seguono il verso della faccia nel solido): il loop
 // esterno gira in senso antiorario attorno alla normale della faccia. Sui loop
@@ -1559,7 +1540,9 @@ IgesReadResult readIges(const std::string &content, const IgesReadOptions &optio
                     ++k;
                 }
                 if (reoriented) body = assembleBody(piece, closed, nullptr);
-                if (closed && roughVolume(body) < 0.0) {
+                if (closed && body.shells().size() != 1)
+                    throw std::domain_error("IGES: componente chiusa con numero di shell inatteso");
+                if (closed && detail::shellSignedVolume(body, body.shells().front()) < 0.0) {
                     for (RawFace &face : piece.faces) {
                         face.sense = !face.sense;
                         for (auto &loop : face.loops) {
@@ -1576,6 +1559,8 @@ IgesReadResult readIges(const std::string &content, const IgesReadOptions &optio
                 for (int k = 0; k < 3; ++k) exchange.color[k] = component.colour[std::size_t(k)];
                 item.body = std::move(exchange);
                 item.valid = true;
+            } catch (const OperationCancelled &) {
+                throw;
             } catch (const std::exception &failure) {
                 item.failure = failure.what();
             }

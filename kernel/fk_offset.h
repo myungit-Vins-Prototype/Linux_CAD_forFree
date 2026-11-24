@@ -3,7 +3,10 @@
 #define FORGECAD_FK_OFFSET_H
 
 #include <functional>
+#include <optional>
+#include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "fk_bspline.h"
@@ -33,6 +36,18 @@
 // Gli altri fit e le verifiche campionate non certificano l'errore sul continuo
 // per callback arbitrarie (migrazione K10 ancora da completare).
 namespace ForgeCad::Kernel {
+
+// La posizione viene legata alla faccia sorgente prima di uscire dall'offset.
+class OffsetCurvatureError final : public std::domain_error {
+public:
+    OffsetCurvatureError(const std::string &message, double radius, std::optional<Vec2> uv = {},
+                         std::optional<Vec3> sourcePoint = {})
+        : std::domain_error(message), radius(radius), uv(uv), sourcePoint(sourcePoint) {}
+
+    double radius;
+    std::optional<Vec2> uv;
+    std::optional<Vec3> sourcePoint;
+};
 
 // La superficie a distanza `distance` lungo Su x Sv, sulla finestra `u` x `v`
 // (limita anche la verifica di regolarita' dei supporti toroidali).
@@ -70,6 +85,8 @@ struct OffsetResult {
 // lungo gli spigoli vivi: bordi rifilati condivisi e vertici comuni a tutte
 // le facce incidenti. Se non converge entro tolleranza, l'operazione fallisce
 // esplicitamente (non restituisce una cucitura aperta o fuori tolleranza).
+// Su un'intera lamina aperta, una fascia chiusa con appoggio planare
+// certificato puo' contrarsi o rifilarsi al superamento del raggio.
 // Le facce B-spline rettangolari con discontinuita' interne vengono divise
 // in pezze regolari e i nuovi bordi partecipano allo stesso trim/cuci.
 // Il default false conserva il comportamento dei chiamanti del kernel;
@@ -84,6 +101,17 @@ struct OffsetResult {
 // piccole di uno sweep lungo una spline solo C1). 0: solo gli edge tangenti.
 OffsetResult offsetFaces(const Body &body, const std::vector<FaceId> &faces, double distance, double tolerance = linearResolution(), bool preserveSeams = false,
                          double joinAngle = 0.0);
+
+namespace detail {
+// Offset delle facce superstiti. Ogni coppia lega due bordi sorgente gia'
+// identificati ai lati della stessa fascia interna collassata.
+OffsetResult offsetWithCollapsedRails(const Body &body, const std::vector<FaceId> &faces, double distance,
+                                      double tolerance, double joinAngle, const std::vector<std::pair<EdgeId, EdgeId>> &rails);
+// Mappa esplicita dai bordi esposti dalla selezione alla lamina a distanza.
+OffsetResult offsetWithExposedRails(const Body &body, const std::vector<FaceId> &faces, double distance,
+                                   double tolerance, double joinAngle, const std::vector<EdgeId> &rails,
+                                   std::vector<EdgeId> &emittedRails);
+}
 
 // Offset per faccia di un contorno chiuso, con intersezione dei supporti.
 // Specificare ogni faccia viva una sola volta. Distanza zero: supporto

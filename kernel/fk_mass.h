@@ -41,6 +41,15 @@ MassProperties massProperties(const Body &body, double relativeTolerance = 1e-12
 // Area di una faccia.
 double faceArea(const Body &body, FaceId face, double relativeTolerance = 1e-12);
 
+namespace detail {
+// Volume orientato di una singola shell chiusa nel suo riferimento locale.
+// Un segno numericamente indeterminato produce una diagnosi. In cucitura,
+// sewingTolerance abilita il budget preliminare certificato dei trim;
+// l'eventuale quadratura fine conserva il criterio strict delle masse.
+double shellSignedVolume(const Body &body, ShellId shell, double sewingTolerance = 0.0);
+
+}
+
 }
 
 #endif

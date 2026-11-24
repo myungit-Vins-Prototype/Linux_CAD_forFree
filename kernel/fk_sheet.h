@@ -17,6 +17,7 @@ namespace detail {
 // Selezione comune al rifilo e all'estensione: distanza dalle facce limitate,
 // conservando il primo pezzo in caso di parita'. Richiede pezzi non vuoti.
 std::size_t closestSheetPiece(const std::vector<Body> &pieces, const Vec3 &keep);
+std::size_t closestSheetPiece(const std::vector<const Body *> &pieces, const Vec3 &keep);
 }
 
 // Taglio: la lamina si divide lungo le curve in cui la attraversa `tool`

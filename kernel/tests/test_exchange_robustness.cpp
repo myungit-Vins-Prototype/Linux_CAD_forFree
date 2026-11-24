@@ -1,5 +1,8 @@
 #include "fk_test.h"
 #include "fk_body_io.h"
+#include "fk_body_check.h"
+#include "fk_boolean.h"
+#include "fk_iges.h"
 #include "fk_bspline_surface.h"
 #include "fk_mass.h"
 #include "fk_primitives.h"
@@ -7,7 +10,11 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
+#include <future>
 #include <new>
+#include <map>
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 
@@ -178,6 +185,76 @@ std::string truncatedSurface(bool validKnots) {
 }
 }
 
+FK_TEST(ExchangeAutomaticTimestampsUseLocalTimeInConcurrentExports) {
+    const auto containsStepStamp = [](const std::string &output, const std::string &stamp) {
+        return output.find("FILE_NAME('model','" + stamp + "',") != std::string::npos;
+    };
+    const auto containsIgesStamps = [](const std::string &output, const std::string &stamp) {
+        const std::string token = std::to_string(stamp.size()) + "H" + stamp;
+        return output.find(token + ",") != std::string::npos
+            && output.find(token + ";") != std::string::npos;
+    };
+    StepWriteOptions stepOptions;
+    stepOptions.timeStamp = "1998-07-06T05:04:03";
+    IgesWriteOptions igesOptions;
+    igesOptions.timeStamp = "19980706.050403";
+    FK_CHECK(containsStepStamp(writeStep({}, stepOptions), stepOptions.timeStamp));
+    FK_CHECK(containsIgesStamps(writeIges({}, igesOptions), igesOptions.timeStamp));
+
+    // Un chiamante può avere ancora un calendario UTC restituito dalla libreria C.
+    // L'export deve lasciarlo intatto anche su libc che condividono il buffer con localtime.
+    const std::time_t epoch = 0;
+    for (bool step : {true, false}) {
+        const std::tm *utc = std::gmtime(&epoch);
+        FK_CHECK(utc && utc->tm_year == 70);
+        if (step) writeStep({});
+        else writeIges({});
+        FK_CHECK(utc->tm_year == 70 && utc->tm_mon == 0 && utc->tm_mday == 1);
+    }
+
+    struct Export {
+        std::time_t before;
+        std::string output;
+        std::time_t after;
+    };
+    std::vector<std::future<std::vector<Export>>> workers;
+    std::promise<void> begin;
+    const std::shared_future<void> start = begin.get_future();
+    for (int worker = 0; worker < 6; ++worker) {
+        const bool step = worker % 2 == 0;
+        workers.push_back(std::async(std::launch::async, [start, step] {
+            start.wait();
+            std::vector<Export> exports;
+            for (int i = 0; i < 128; ++i) {
+                const auto before = std::time(nullptr);
+                std::string output = step ? writeStep({}) : writeIges({});
+                exports.push_back({before, std::move(output), std::time(nullptr)});
+            }
+            return exports;
+        }));
+    }
+    begin.set_value();
+    std::vector<std::vector<Export>> exports;
+    for (auto &worker : workers) exports.push_back(worker.get());
+    // Oracolo sequenziale, a worker terminati. Accetta anche il cambio di secondo.
+    for (std::size_t worker = 0; worker < exports.size(); ++worker) {
+        const bool step = worker % 2 == 0;
+        const char *format = step ? "%Y-%m-%dT%H:%M:%S" : "%Y%m%d.%H%M%S";
+        for (const Export &item : exports[worker]) {
+            bool matched = false;
+            for (auto time = item.before; time <= item.after && !matched; ++time) {
+                char expected[32];
+                const std::tm *local = std::localtime(&time);
+                if (local && std::strftime(expected, sizeof expected, format, local)) {
+                    matched = step ? containsStepStamp(item.output, expected)
+                                   : containsIgesStamps(item.output, expected);
+                }
+            }
+            FK_CHECK(matched);
+        }
+    }
+}
+
 FK_TEST(ExchangeRejectsDeepStepSyntax) {
     for (const std::string &open : {std::string("("), std::string("T(")}) {
         for (int depth : {100, 100000}) {
@@ -267,4 +344,234 @@ FK_TEST(ExchangePreservesDistinctMappedItemsAndDeduplicatesVisits) {
     const auto result = readStep(mapped, {1});
     FK_CHECK(result.notes.empty() && result.bodies.size() == 2);
     for (const auto &b : result.bodies) FK_CHECK_NEAR(massProperties(b.body).volume, 6., 1e-10);
+}
+
+// Le pose di controllo isolano la cancellazione nell'orientamento delle shell.
+FK_TEST(ExchangePreservesTranslatedTiltedCubeOrientation) {
+    for (bool tilted : {false, true}) for (double offset : {0., 3e7}) {
+        const Frame3 frame(Vec3(1.2 * offset, -.9 * offset, 1.73 * offset),
+                           tilted ? Vec3(1,2,3) : Vec3(0,0,1),
+                           tilted ? Vec3(2,-1,0) : Vec3(1,0,0));
+        ExchangeBody input;
+        input.name = "posed cube";
+        input.body = makeBox(frame, 1, 1, 1);
+        FK_CHECK(checkBody(input.body, {true,true}).empty());
+        const auto expected = massProperties(input.body);
+        FK_CHECK_NEAR(expected.volume, 1., 1e-7);
+        const auto check = [&](const auto &result) {
+            FK_CHECK(result.notes.empty());
+            FK_CHECK(result.bodies.size() == 1);
+            if (result.bodies.size() != 1) return;
+            const Body &body = result.bodies.front().body;
+            FK_CHECK(!body.isSheet());
+            FK_CHECK(body.faces().size() == 6);
+            FK_CHECK(checkBody(body, {true,true}).empty());
+            const auto actual = massProperties(body);
+            // Budget del round trip a circa 5e7 mm, con volume firmato.
+            FK_CHECK_NEAR(actual.volume, expected.volume, 1e-7);
+            for (int axis = 0; axis < 3; ++axis)
+                FK_CHECK_NEAR(actual.centroid[axis], expected.centroid[axis], 1e-7);
+        };
+        const auto step = writeStep({input});
+        FK_CHECK(step.find("MANIFOLD_SOLID_BREP(") != std::string::npos);
+        check(readStep(step, {1}));
+        IgesWriteOptions options;
+        options.mode = IgesMode::Surfaces;
+        check(readIges(writeIges({input}, options), {1}));
+    }
+}
+
+FK_TEST(ExchangeStepPreservesCavityShellAndDisjointSolids) {
+    // La cavita' deve restare un vuoto della stessa regione, non un solido.
+    const Body outer = makeBox(Frame3(), 3, 3, 3);
+    const Body inner = makeBox(Frame3(Vec3(1,1,1), Vec3(0,0,1), Vec3(1,0,0)), 1, 1, 1);
+    const Body cavity = booleanOperation(outer, inner, BooleanOperation::Subtract);
+    FK_CHECK(cavity.shells().size() == 2);
+    FK_CHECK(checkBody(cavity, {true,true}).empty());
+    FK_CHECK_NEAR(massProperties(cavity).volume, 26., 1e-10);
+    const Body separate = makeBox(Frame3(Vec3(10,0,0), Vec3(0,0,1), Vec3(1,0,0)), 1, 1, 1);
+    const Body collection = Body::collect({&cavity, &separate});
+    for (bool disjoint : {false, true}) {
+        ExchangeBody input;
+        input.body = disjoint ? collection : cavity;
+        const auto text = writeStep({input});
+        FK_CHECK(text.find("BREP_WITH_VOIDS(") != std::string::npos);
+        const auto result = readStep(text, {1});
+        FK_CHECK(result.notes.empty());
+        FK_CHECK(result.bodies.size() == (disjoint ? 2u : 1u));
+        double volume = 0.;
+        int cavityCount = 0, cubeCount = 0;
+        for (const auto &entry : result.bodies) {
+            FK_CHECK(!entry.body.isSheet());
+            FK_CHECK(checkBody(entry.body, {true,true}).empty());
+            const double v = massProperties(entry.body).volume;
+            volume += v;
+            if (entry.body.shells().size() == 2) {
+                ++cavityCount;
+                FK_CHECK_NEAR(v, 26., 1e-10);
+                FK_CHECK(entry.body.faces().size() == 12);
+            } else {
+                ++cubeCount;
+                FK_CHECK_NEAR(v, 1., 1e-10);
+                FK_CHECK(entry.body.faces().size() == 6);
+            }
+        }
+        FK_CHECK(cavityCount == 1 && cubeCount == (disjoint ? 1 : 0));
+        FK_CHECK_NEAR(volume, disjoint ? 27. : 26., 1e-10);
+    }
+}
+
+FK_TEST(ExchangePreservesThinTiltedSolid) {
+    for (double offset : {0., 3e7}) {
+        const Frame3 frame(Vec3(1.2 * offset, -.9 * offset, 1.73 * offset), Vec3(1,2,3), Vec3(2,-1,0));
+        ExchangeBody input;
+        input.body = makeBox(frame, 1, 1, .001);
+        FK_CHECK(checkBody(input.body, {true,true}).empty());
+        const double budget = offset == 0. ? 1e-12 : 1e-8;
+        FK_CHECK_NEAR(massProperties(input.body).volume, .001, budget);
+        const auto check = [&](const auto &result) {
+            FK_CHECK(result.notes.empty());
+            FK_CHECK(result.bodies.size() == 1);
+            if (result.bodies.size() != 1) return;
+            const Body &body = result.bodies.front().body;
+            FK_CHECK(!body.isSheet() && body.faces().size() == 6);
+            FK_CHECK(checkBody(body, {true,true}).empty());
+            FK_CHECK_NEAR(massProperties(body).volume, .001, budget);
+        };
+        check(readStep(writeStep({input}), {1}));
+        IgesWriteOptions options;
+        options.mode = IgesMode::Surfaces;
+        check(readIges(writeIges({input}, options), {1}));
+    }
+}
+
+namespace {
+// Ricostruisce le shell in una sola regione, eventualmente invertendo
+// insieme normale e contorni. Nessuna classificazione corregge la fixture.
+Body singleRegion(const std::vector<std::pair<const Body *, bool>> &inputs) {
+    std::vector<Vec3> vertices;
+    std::vector<Body::BuildEdge> edges;
+    std::vector<Body::BuildFace> faces;
+    for (const auto &input : inputs) {
+        const Body &body = *input.first;
+        const bool reverse = input.second;
+        std::map<int, int> vertexIndex, edgeIndex;
+        for (VertexId vertex : body.vertices()) {
+            vertexIndex[vertex.index] = int(vertices.size());
+            vertices.push_back(body.vertex(vertex).point);
+        }
+        for (EdgeId edge : body.edges()) {
+            edgeIndex[edge.index] = int(edges.size());
+            const auto &source = body.edge(edge);
+            edges.push_back({vertexIndex.at(body.edgeStart(edge).index),
+                             vertexIndex.at(body.edgeEnd(edge).index),
+                             source.curve, source.range, source.tolerance});
+        }
+        for (FaceId face : body.faces()) {
+            const auto &source = body.face(face);
+            Body::BuildFace target;
+            target.surface = source.surface;
+            target.sense = reverse ? !source.sense : source.sense;
+            for (LoopId loop : source.loops) {
+                auto fins = body.loopFins(loop);
+                if (reverse) std::reverse(fins.begin(), fins.end());
+                std::vector<Body::BuildFin> cycle;
+                for (FinId fin : fins) {
+                    const auto &f = body.fin(fin);
+                    cycle.push_back({edgeIndex.at(f.edge.index), reverse ? !f.sense : f.sense,
+                                     f.pcurve, f.pcurveTolerance});
+                }
+                target.loops.push_back(std::move(cycle));
+            }
+            faces.push_back(std::move(target));
+        }
+    }
+    return Body::build(vertices, edges, faces);
+}
+}
+
+FK_TEST(ExchangeStepDiagnosesUncontainedInwardShell) {
+    ExchangeBody input;
+    const Body outward = makeBox(Frame3(), 1, 1, 1);
+    input.body = singleRegion({{&outward, true}});
+    FK_CHECK(checkBody(input.body, {true,true}).empty());
+    FK_CHECK_NEAR(massProperties(input.body).volume, -1., 1e-12);
+    bool diagnosed = false;
+    try {
+        (void)writeStep({input});
+    } catch (const std::domain_error &error) {
+        const std::string message = error.what();
+        diagnosed = message.find("STEP:") != std::string::npos
+            && message.find("shell") != std::string::npos
+            && message.find("esterna") != std::string::npos;
+    }
+    // Nessun catch generico: errori di geometria, allocazione o altro tipo
+    // restano fallimenti del runner, non diagnosi valide del caso richiesto.
+    FK_CHECK(diagnosed);
+}
+
+
+FK_TEST(ExchangeStepRejectsCavityInConcaveExteriorNotch) {
+    const Body box = makeBox(Frame3(), 4, 4, 4);
+    const Body cutter = makeBox(Frame3(Vec3(1,1,-1), Vec3(0,0,1), Vec3(1,0,0)), 2, 4, 6);
+    const Body concave = booleanOperation(box, cutter, BooleanOperation::Subtract);
+    FK_CHECK(concave.shells().size() == 1);
+    FK_CHECK(checkBody(concave, {true,true}).empty());
+    FK_CHECK_NEAR(massProperties(concave).volume, 40., 1e-10);
+    // Il cubo e' interamente nella tacca aperta, quindi fuori dal materiale,
+    // ma il suo box [1.5,2.5]x[2,3]x[1,2] e' interno al box [0,4]^3.
+    const Body falseVoid = makeBox(Frame3(Vec3(1.5,2,1), Vec3(0,0,1), Vec3(1,0,0)), 1, 1, 1);
+    FK_CHECK_NEAR(massProperties(booleanOperation(concave, falseVoid, BooleanOperation::Intersect)).volume, 0., 1e-12);
+    ExchangeBody input;
+    input.body = singleRegion({{&concave, false}, {&falseVoid, true}});
+    FK_CHECK(input.body.shells().size() == 2);
+    const auto shells = input.body.shells();
+    FK_CHECK(input.body.shell(shells[0]).region == input.body.shell(shells[1]).region);
+    FK_CHECK(checkBody(input.body, {true,true}).empty());
+    FK_CHECK_NEAR(massProperties(input.body).volume, 39., 1e-10);
+    bool diagnosed = false;
+    try {
+        (void)writeStep({input});
+    } catch (const std::domain_error &error) {
+        const std::string message = error.what();
+        diagnosed = message.find("STEP:") != std::string::npos
+            && message.find("shell") != std::string::npos
+            && message.find("esterna") != std::string::npos;
+    }
+    FK_CHECK(diagnosed);
+}
+
+FK_TEST(ExchangeStepDiagnosesZeroVolumeClosedShell) {
+    const std::vector<Vec3> vertices{{0,0,0}, {1,0,0}, {0,1,0}};
+    std::vector<Body::BuildEdge> edges;
+    for (int i = 0; i < 3; ++i) {
+        const int end = (i + 1) % 3;
+        const Vec3 direction = vertices[end] - vertices[i];
+        edges.push_back({i, end, std::make_shared<Line<3>>(vertices[i], direction),
+                         {0., norm(direction)}, 0.});
+    }
+    // Due facce esattamente coincidenti, con normali e co-edge opposti:
+    // shell topologicamente chiusa, volume nullo per identita' geometrica.
+    Body::BuildFace front, back;
+    front.surface = back.surface = std::make_shared<Plane>(Frame3());
+    front.sense = true;
+    front.loops = {{{0,true,{},0}, {1,true,{},0}, {2,true,{},0}}};
+    back.sense = false;
+    back.loops = {{{2,false,{},0}, {1,false,{},0}, {0,false,{},0}}};
+    ExchangeBody input;
+    input.body = Body::build(vertices, edges, {front, back});
+    FK_CHECK(!input.body.isSheet());
+    FK_CHECK(input.body.shells().size() == 1 && input.body.faces().size() == 2);
+    for (EdgeId edge : input.body.edges()) FK_CHECK(!input.body.isLaminar(edge));
+    FK_CHECK_NEAR(massProperties(input.body).volume, 0., 0.);
+    bool diagnosed = false;
+    try {
+        (void)writeStep({input});
+    } catch (const std::domain_error &error) {
+        const std::string message = error.what();
+        diagnosed = message.find("orientamento") != std::string::npos
+            && message.find("shell") != std::string::npos;
+    }
+    // Altri tipi d'eccezione non soddisfano il contratto sul segno incerto.
+    FK_CHECK(diagnosed);
 }

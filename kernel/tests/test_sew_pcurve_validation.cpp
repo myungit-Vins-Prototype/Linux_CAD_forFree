@@ -4,6 +4,11 @@
 #include "fk_cancel.h"
 #include "fk_curve_fit_bounds.h"
 #include "fk_history.h"
+#include "fk_classify.h"
+#include "fk_mass.h"
+#include "fk_primitives.h"
+#include "fk_revolve.h"
+#include <cmath>
 #include "fk_pcurve.h"
 #include "fk_sew.h"
 #include "fk_surface.h"
@@ -22,6 +27,200 @@ void require(bool value, const char *message) {
   if (!value)
     throw std::runtime_error(message);
 }
+
+// Reverse the exact fixture's normals and boundary traversal together.
+Body boxSheet(Vec3 origin, double side, bool invert) {
+  const Body box = makeBox(Frame3(origin, {0,0,1}, {1,0,0}),side,side,side);
+  if (!invert) return facesAsSheet(box,box.faces());
+  std::vector<Vec3> points;
+  std::vector<Body::BuildEdge> edges;
+  std::vector<Body::BuildFace> faces;
+  for (auto v:box.vertices()) points.push_back(box.vertex(v).point);
+  for (auto e:box.edges()) {
+    const auto &edge=box.edge(e);
+    edges.push_back({box.edgeStart(e).index,box.edgeEnd(e).index,edge.curve,edge.range,edge.tolerance});
+  }
+  for (auto f:box.faces()) {
+    const auto &face=box.face(f);
+    auto &copy=faces.emplace_back(Body::BuildFace{face.surface,!face.sense,{}});
+    for (auto l:face.loops) {
+      auto &loop=copy.loops.emplace_back();
+      for (auto u:box.loopFins(l)) {
+        const auto &fin=box.fin(u);
+        loop.push_back({fin.edge.index,!fin.sense,fin.pcurve,fin.pcurveTolerance});
+      }
+      std::reverse(loop.begin(),loop.end());
+    }
+  }
+  return Body::buildSheet(points,edges,faces);
+}
+void multishellCase(int depth, unsigned mask, const std::vector<int> &order) {
+  std::vector<Body> sheets;
+  sheets.push_back(boxSheet({0,0,0},2,mask&1));
+  sheets.push_back(boxSheet(depth ? Vec3{.5,.5,.5}:Vec3{10,0,0},1,mask&2));
+  if (depth==2) sheets.push_back(boxSheet({.75,.75,.75},.5,mask&4));
+  std::vector<const Body*> operands;
+  for (int i:order) operands.push_back(&sheets.at(i));
+  BodyHistory history;
+  const auto r=sewSheets(operands,1e-6,true,&history);
+  require(r.closed && r.solid && r.freeEdges==0,"closed shells did not produce a solid");
+  require(r.shells==int(sheets.size()) && r.body.shells().size()==sheets.size(),"shell lost by sewing");
+  require(checkBody(r.body,{true,true}).empty(),"invalid sewn topology or geometry");
+  const double expected=depth==0?9:depth==1?7:7.125;
+  const double volume=massProperties(r.body).volume;
+  if (std::abs(volume-expected)>1e-8)
+    throw std::runtime_error("volume="+std::to_string(volume)+" expected="+std::to_string(expected));
+  const SolidClassifier classifier(r.body,linearResolution());
+  require(classifier.classify({.25,.25,.25})==PointLocation::Inside,"outer material outside");
+  require(classifier.classify({20,20,20})==PointLocation::Outside,"exterior inside");
+  require(classifier.classify(depth?Vec3{.6,.6,.6}:Vec3{10.5,.5,.5})==
+          (depth?PointLocation::Outside:PointLocation::Inside),"cavity or disjoint component misclassified");
+  if (depth==2) require(classifier.classify({1,1,1})==PointLocation::Inside,"depth-two material island outside");
+  require(history.operandCount()==int(operands.size()),"genealogy lost operand");
+  for (auto f:r.body.faces()) {
+    require(history.isDeclared(EntityKind::Face,f.index),"face genealogy not declared");
+    const auto &origins=history.origins(EntityKind::Face,f.index);
+    require(origins.size()==1,"face origin not unique");
+    const auto &o=origins.front();
+    require(o.kind==EntityKind::Face && o.operand>=0 && o.operand<int(operands.size()) &&
+            operands[o.operand]->contains(FaceId(o.index)),"face origin invalid");
+    require(r.body.face(f).surface==operands[o.operand]->face(FaceId(o.index)).surface,
+            "face origin reassociated to another surface");
+  }
+  for (std::size_t i=0;i<operands.size();++i)
+    for (auto f:operands[i]->faces())
+      require(history.descendants(EntityKind::Face,int(i),f.index).size()==1,"source face lost or duplicated");
+}
+
+
+void crossingPrismsRejected() {
+  const Body a=makeBox(Frame3({-2,-.5,-.5},{0,0,1},{1,0,0}),4,1,1);
+  const Body b=makeBox(Frame3({-.5,-2,-.25},{0,0,1},{1,0,0}),1,4,.5);
+  // Every vertex is outside the other prism, but their interiors overlap.
+  for (const auto &pair:std::vector<std::pair<const Body*,const Body*>>{{&a,&b},{&b,&a}}) {
+    const SolidClassifier classifier(*pair.second,linearResolution());
+    for (auto v:pair.first->vertices())
+      require(classifier.classify(pair.first->vertex(v).point)==PointLocation::Outside,
+              "crossing fixture has a vertex in the other prism");
+  }
+  require(SolidClassifier(a,linearResolution()).classify({0,0,0})==PointLocation::Inside &&
+          SolidClassifier(b,linearResolution()).classify({0,0,0})==PointLocation::Inside,
+          "crossing fixture interiors do not overlap");
+  for (bool reverse:{false,true}) {
+    BodyHistory history=makeHistory({&a},a); // Failure must clear existing output.
+    bool rejected=false;
+    try { sewSheets(reverse?std::vector<const Body*>{&b,&a}:std::vector<const Body*>{&a,&b},1e-6,true,&history); }
+    catch (const std::domain_error &) {rejected=true;}
+    require(rejected,"crossing closed shells accepted as disjoint or nested solids");
+    require(history.operandCount()==0 && history.resultSize(EntityKind::Face)==0 &&
+            history.resultSize(EntityKind::Edge)==0 && history.resultSize(EntityKind::Vertex)==0,
+            "rejected crossing published partial genealogy");
+  }
+}
+void concentricSphereCavity(unsigned mask, bool reverse) {
+  const Vec3 center{3,-2,4};
+  const Frame3 frame(center,{0,0,1},{1,0,0});
+  Body outer=makeSphere(frame,2), inner=makeSphere(frame,1);
+  require(outer.faces().size()==1 && inner.faces().size()==1 &&
+          outer.edges().empty() && inner.edges().empty(),"sphere fixture is not a closed edge-free face");
+  const auto outerFace=outer.faces().front(), innerFace=inner.faces().front();
+  const bool outward=outer.face(outerFace).sense;
+  if (mask&1) outer.face(outerFace).sense=!outer.face(outerFace).sense;
+  if (mask&2) inner.face(innerFace).sense=!inner.face(innerFace).sense;
+  BodyHistory history;
+  const auto result=sewSheets(reverse?std::vector<const Body*>{&inner,&outer}:
+                                     std::vector<const Body*>{&outer,&inner},1e-6,true,&history);
+  require(result.closed && result.solid && result.freeEdges==0 && result.shells==2,
+          "closed edge-free sphere shells lost during sewing");
+  require(checkBody(result.body,{true,true}).empty(),"sphere cavity invalid");
+  const auto mass=massProperties(result.body);
+  require(std::abs(mass.volume-4*kPi*7/3)<1e-8,"sphere cavity volume incorrect");
+  require(distance(mass.centroid,center)<1e-9,"sphere cavity centroid incorrect");
+  const SolidClassifier classifier(result.body,linearResolution());
+  require(classifier.classify(center)==PointLocation::Outside,"sphere cavity center is material");
+  require(classifier.classify(center+Vec3{1.5,0,0})==PointLocation::Inside,"sphere wall is outside");
+  require(classifier.classify(center+Vec3{3,0,0})==PointLocation::Outside,"sphere exterior is material");
+  for (auto f:result.body.faces()) {
+    const auto &face=result.body.face(f);
+    const bool isOuter=face.surface==outer.face(outerFace).surface;
+    require(face.surface==(isOuter?outer.face(outerFace).surface:inner.face(innerFace).surface),
+            "sphere sewing changed support surface");
+    require(face.sense==(isOuter?outward:!outward),"sphere cavity normal orientation incorrect");
+    const auto &origins=history.origins(EntityKind::Face,f.index);
+    require(history.isDeclared(EntityKind::Face,f.index) && origins.size()==1 &&
+            origins.front().operand==(isOuter?(reverse?1:0):(reverse?0:1)),
+            "sphere cavity face genealogy incorrect");
+  }
+}
+
+
+void obliqueSpherePair(double separation, bool touching) {
+  const Vec3 direction=normalized(Vec3{1,2,3});
+  const Vec3 innerCenter=separation*direction;
+  const Body outer=makeSphere(Frame3(),2);
+  const Body inner=makeSphere(Frame3(innerCenter,{0,0,1},{1,0,0}),1);
+  for (bool reverse:{false,true}) {
+    const std::vector<const Body*> operands=reverse?
+        std::vector<const Body*>{&inner,&outer}:std::vector<const Body*>{&outer,&inner};
+    BodyHistory history=makeHistory({&outer},outer);
+    if (touching) {
+      bool rejected=false;
+      try {sewSheets(operands,1e-6,true,&history);}
+      catch (const std::domain_error &) {rejected=true;}
+      require(rejected,"oblique point-tangent sphere shells accepted");
+      require(history.operandCount()==0 && history.resultSize(EntityKind::Face)==0 &&
+              history.resultSize(EntityKind::Edge)==0 && history.resultSize(EntityKind::Vertex)==0,
+              "point-tangent sphere rejection published genealogy");
+      continue;
+    }
+    const auto result=sewSheets(operands,1e-6,true,&history);
+    require(result.closed && result.solid && result.shells==2 && result.freeEdges==0,
+            "separated or strictly nested spheres rejected");
+    require(checkBody(result.body,{true,true}).empty(),"oblique sphere pair invalid");
+    const bool nested=separation<1;
+    const auto mass=massProperties(result.body);
+    require(std::abs(mass.volume-4*kPi*(nested?7:9)/3)<1e-8,
+            "oblique valid sphere volume incorrect");
+    const Vec3 centroid=(nested?-1.0/7:1.0/9)*innerCenter;
+    require(distance(mass.centroid,centroid)<1e-9,"oblique sphere centroid incorrect");
+    const SolidClassifier classifier(result.body,linearResolution());
+    require(classifier.classify(innerCenter)==(nested?PointLocation::Outside:PointLocation::Inside),
+            "oblique sphere center classification incorrect");
+    require(classifier.classify(-1.5*direction)==PointLocation::Inside,
+            "oblique outer sphere material classified outside");
+  }
+}
+
+
+void disjointShellsWithNestedBounds() {
+  // Same U-shaped domain as the exchange robustness fixture, built directly
+  // as a prism so this sewing regression does not depend on a Boolean.
+  const Body concave=makePrism(Frame3(),
+      {{0,0},{4,0},{4,4},{3,4},{3,1},{1,1},{1,4},{0,4}}, {},4);
+  const Body cube=makeBox(Frame3({1.5,2,1},{0,0,1},{1,0,0}),1,1,1);
+  require(std::abs(massProperties(concave).volume-40)<1e-9,"U-prism fixture volume incorrect");
+  for (auto v:cube.vertices())
+    for (int axis=0;axis<3;++axis)
+      require(cube.vertex(v).point[axis]>0 && cube.vertex(v).point[axis]<4,
+              "cube bounds are not strictly inside U-prism bounds");
+  for (bool reverse:{false,true}) {
+    const auto result=sewSheets(reverse?std::vector<const Body*>{&cube,&concave}:
+                                       std::vector<const Body*>{&concave,&cube},1e-6,true);
+    require(result.closed && result.solid && result.shells==2 && result.freeEdges==0,
+            "disjoint shells with nested bounds did not produce two closed shells");
+    require(checkBody(result.body,{true,true}).empty(),"nested-bounds sewing invalid");
+    require(std::abs(massProperties(result.body).volume-41)<1e-9,
+            "nested AABB cube mistaken for a cavity");
+    const SolidClassifier classifier(result.body,linearResolution());
+    require(classifier.classify({2,2.5,1.5})==PointLocation::Inside,
+            "cube in concave exterior notch classified as a void");
+    require(classifier.classify({2,3.5,1.5})==PointLocation::Outside,
+            "free notch space classified as material");
+    require(classifier.classify({.5,2,2})==PointLocation::Inside,
+            "U-prism material classified outside");
+  }
+}
+
 struct Options {
   bool affine = false, reverseInputs = false, reverseTarget = false,
        trim = false;
@@ -485,6 +684,26 @@ int main(int argc, char **argv) {
       std::cout << " FAIL unexpected cancellation\n";
     }
   };
+  run("disjoint_shells_with_nested_AABB",[] {disjointShellsWithNestedBounds();});
+  run("oblique_spheres_internal_point_tangency_rejected",[] {obliqueSpherePair(1,true);});
+  run("oblique_spheres_external_point_tangency_rejected",[] {obliqueSpherePair(3,true);});
+  run("oblique_spheres_strictly_nested_valid",[] {obliqueSpherePair(.5,false);});
+  run("oblique_spheres_disjoint_valid",[] {obliqueSpherePair(3.1,false);});
+  run("crossing_prisms_all_vertices_outside_rejected",[] {crossingPrismsRejected();});
+  for (unsigned mask=0;mask<4;++mask)
+    for (bool reverse:{false,true})
+      run("concentric_spheres_orientation"+std::to_string(mask)+(reverse?"_BA":"_AB"),
+          [&] {concentricSphereCavity(mask,reverse);});
+  // Exhaust every component orientation and operand permutation.
+  for (int depth=0;depth<=2;++depth)
+    for (unsigned mask=0;mask<(depth==2?8u:4u);++mask) {
+      std::vector<int> order=depth==2?std::vector<int>{0,1,2}:std::vector<int>{0,1};
+      do {
+        std::string name="multishell_depth"+std::to_string(depth)+"_orientation"+std::to_string(mask)+"_order";
+        for (int i:order) name+=std::to_string(i);
+        run(name,[&] {multishellCase(depth,mask,order);});
+      } while (std::next_permutation(order.begin(),order.end()));
+    }
   std::vector<std::pair<std::string, Options>> cases = {
       {"nonaffine_polynomial", {}},
       {"nonaffine_reverse_inputs", {false, true}},

@@ -1,6 +1,7 @@
 #include "fk_surface_mapping.h"
 #include "fk_mapping_carrier.h"
 #include "fk_mapping_fit.h"
+#include "fk_mapping_trim_witness.h"
 #include "fk_quilt_mapping.h"
 #include "fk_bspline_surface.h"
 #include "fk_body_check.h"
@@ -18,10 +19,12 @@
 #include "fk_curve_algo.h"
 #include "fk_curve_fit_bounds.h"
 #include "fk_surface_curve_bounds.h"
+#include "fk_surface_mapping_bounds.h"
 #include <algorithm>
 #include <array>
 #include <functional>
 #include <map>
+#include <limits>
 #include <set>
 #include <tuple>
 #include <stdexcept>
@@ -115,9 +118,15 @@ Body placeRigidBody(const Body &source,const SurfaceWrapOptions &options,
     auto result=transformBody(source,Transform3::fromFrame(target)*Transform3::fromFrame(sourceFrame).inverted(),history);
     checked(result);if(deviation)*deviation=0.;return result;
 }
+// A continuous certificate and any directly measured residual use the same
+// physical budget. Only a certificate enables the whole-carrier postcondition.
+using CarrierCheck = std::function<detail::SurfaceMappingBoundResult(
+    FaceId, const Surface &, Interval, Interval, double, double &)>;
+
 Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,double tolerance,
              BodyHistory *history,double *deviation,const std::function<Vec3(const Vec3 &)> &carrierMap={},const std::vector<Plane> &cuts={},double derivativeFraction=.001,int degree=3,const detail::MappingFaceFunction &faceImage={},
-             const std::function<std::optional<Body>()> &carrierBody={}) {
+             const std::function<std::optional<Body>()> &carrierBody={},
+             const CarrierCheck &carrierProof={}) {
     // Guardie locali sul volume sorgente; le degenerazioni non diventano
     // corpi validi soltanto perche' il fit riesce.
     Box box;for(auto e:source.edges())box.add(curveBox(*source.edge(e).curve,source.edge(e).range));
@@ -166,7 +175,7 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
         double pcurveTolerance;
         FinProof proof;
     };
-    bool hasCertifiedFin = false;
+    bool hasCertifiedFin = false, hasCertifiedCarrier = false;
     std::map<int, SurfacePtr> mappedImages;
     std::map<std::tuple<int, int, bool>, std::vector<FinContract>> finOrigins;
     for(auto v:source.vertices()){vertexOf[v.index]=int(vertices.size());vertices.push_back(map(source.vertex(v).point));}
@@ -184,11 +193,47 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
         Body::BuildFace mapped;mapped.sense=face.sense;
         const auto image=faceImage?faceImage(id):detail::MappingFaceImage{};
         const bool planeImage = image.surface && image.surface->type() == SurfaceType::Plane;
-        if(image.surface){mapped.surface=image.surface;mapped.sense=image.sense;}
-        else {
-            try {mapped.surface=fitMappedSurface(*face.surface,window.first,window.second,differentialMap,fitBudget,worst,cuts,derivativeFraction,degree);}
-            catch(const std::domain_error &e){throw std::domain_error("Faccia F"+std::to_string(id.index)+": "+e.what());}
+        double faceDeviation = 0.;
+        const auto fit = [&](double tolerance) {
+            faceDeviation = 0.;
+            try {
+                return fitMappedSurface(*face.surface, window.first, window.second, differentialMap,
+                    tolerance, faceDeviation, cuts, derivativeFraction, degree);
+            } catch (const std::domain_error &e) {
+                throw std::domain_error("Faccia F" + std::to_string(id.index) + ": " + e.what());
+            }
+        };
+        if (image.surface) {
+            mapped.surface = image.surface;
+            mapped.sense = image.sense;
+        } else {
+            mapped.surface = fit(fitBudget);
         }
+        if (carrierProof) {
+            const auto verify = [&] {
+                return carrierProof(id, *mapped.surface, window.first, window.second, fitBudget, faceDeviation);
+            };
+            auto proof = verify();
+            if (proof.status != detail::SurfaceMappingBoundStatus::Unsupported) {
+                // A sampled fit can stop just above the continuous budget.
+                // Refit the candidate once with headroom, then prove it against
+                // the original budget before recording any deviation.
+                if (proof.status == detail::SurfaceMappingBoundStatus::Failed && !image.surface) {
+                    auto refined = fit(.5 * fitBudget);
+                    if (!sameSurfaceParameterization(*mapped.surface, *refined)) {
+                        mapped.surface = std::move(refined);
+                        proof = verify();
+                    }
+                }
+                require(proof.status == detail::SurfaceMappingBoundStatus::Certified
+                        && std::isfinite(proof.upperBound) && proof.upperBound >= 0
+                        && proof.upperBound <= fitBudget,
+                    "Deformazione: residuo globale del carrier fuori dal budget continuo.");
+                faceDeviation = std::max(faceDeviation, proof.upperBound);
+                hasCertifiedCarrier = true;
+            }
+        }
+        worst = std::max(worst, faceDeviation);
         mappedImages.emplace(id.index, mapped.surface);
         for(auto loop:face.loops) {
             std::vector<Body::BuildFin> fins;
@@ -253,8 +298,8 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
     }
     Body result=source.isSheet()?Body::buildSheet(vertices,edges,faces):Body::build(vertices,edges,faces);checked(result);
     BodyHistory preparedHistory;
-    if (history || hasCertifiedFin) preparedHistory = mappedHistory(source, result);
-    if (hasCertifiedFin) {
+    if (history || hasCertifiedFin || hasCertifiedCarrier) preparedHistory = mappedHistory(source, result);
+    if (hasCertifiedFin || hasCertifiedCarrier) {
         const auto origin = [&](EntityKind kind, int index) {
             const auto &links = preparedHistory.origins(kind, index);
             require(preparedHistory.isDeclared(kind, index) && links.size() == 1
@@ -431,7 +476,7 @@ Body wrapBodyOnSurface(const Body &source, const Surface &target, const SurfaceW
         cancellationPoint();const Vec3 p=options.sourcePlane.toLocal(point);
         const double x=c*p.x()-s*p.y()+options.shift.x(),y=s*p.x()+c*p.y()+options.shift.y();
         const double u=options.anchor.x()+x/scaleU,v=options.anchor.y()+y/scaleV;
-        require((target.isUPeriodic()||target.uDomain().contains(u,1e-12))&&(target.isVPeriodic()||target.vDomain().contains(v,1e-12)),"Deformazione: corpo oltre il dominio della superficie destinazione.");
+        require((target.isUPeriodic()||target.uDomain().contains(u,detail::wrapTargetParameterSlack))&&(target.isVPeriodic()||target.vDomain().contains(v,detail::wrapTargetParameterSlack)),"Deformazione: corpo oltre il dominio della superficie destinazione.");
         return target.point(u,v)+(p.z()+options.normalOffset)*target.normal(u,v);
     };
     if(options.rigid)return placeRigidBody(source,options,[&](const Vec2 &center) {
@@ -446,6 +491,9 @@ Body wrapBodyOnSurface(const Body &source, const Surface &target, const SurfaceW
     },history,deviation);
     return mapBody(source,map,options.tolerance,history,deviation,{}, {},.001,3,{},[&] {
         return detail::wrapPlanarBodyOnCarrier(source,target,options,scaleU,scaleV,history,deviation);
+    }, [&](FaceId face, const Surface &image, Interval u, Interval v, double budget, double &) {
+        return detail::planarMappingResidualBound(*source.face(face).surface,
+            target, options, scaleU, scaleV, image, u, v, budget);
     });
 }
 bool commonSurfaceWrapAnchor(const std::vector<SurfaceTargetFace> &targets,const Frame3 &plane,Vec2 &anchor) {
@@ -476,8 +524,128 @@ bool commonSurfaceWrapAnchor(const std::vector<SurfaceTargetFace> &targets,const
 }
 using PointMap=std::function<Vec3(const Vec3 &)>;
 using PlacementMap=std::function<Frame3(const Vec2 &)>;
+// These projected boxes only suggest witnesses; no rejection relies on their
+// conservativeness. A real contact must fail at a point of one source edge.
+static std::optional<Interval> projectedBoxRange(const Box &box,const Vec3 &origin,
+                                                 const Vec3 &axis,double physicalMargin) {
+    if(box.isEmpty()||!isFinite(box.lo)||!isFinite(box.hi))return {};
+    double lo=INFINITY,hi=-INFINITY,scale=1.;
+    for(int corner=0;corner<8;++corner) {
+        const Vec3 point(corner&1?box.hi.x():box.lo.x(),corner&2?box.hi.y():box.lo.y(),
+                         corner&4?box.hi.z():box.lo.z());
+        const double coordinate=dot(point-origin,axis);
+        lo=std::min(lo,coordinate);hi=std::max(hi,coordinate);
+        for(int k=0;k<3;++k)scale=std::max({scale,std::abs(point[k]),std::abs(origin[k])});
+    }
+    const double margin=physicalMargin+128.*std::numeric_limits<double>::epsilon()*scale;
+    if(!std::isfinite(lo-margin)||!std::isfinite(hi+margin))return {};
+    return Interval{lo-margin,hi+margin};
+}
+static std::vector<Interval> projectedGaps(const std::vector<Box> &boxes,const Vec3 &origin,
+                                           const Vec3 &axis,double physicalMargin) {
+    std::vector<Interval> coverage;
+    for(const auto &box:boxes) {
+        cancellationPoint();
+        const auto range=projectedBoxRange(box,origin,axis,physicalMargin);
+        if(!range)return {};
+        coverage.push_back(*range);
+    }
+    if(coverage.empty())return {};
+    std::sort(coverage.begin(),coverage.end(),[](Interval a,Interval b){return a.lo<b.lo;});
+    std::vector<Interval> gaps;double covered=coverage.front().hi;
+    for(std::size_t i=1;i<coverage.size();++i) {
+        if(covered<coverage[i].lo)gaps.push_back({covered,coverage[i].lo});
+        covered=std::max(covered,coverage[i].hi);
+    }
+    return gaps;
+}
+static void checkEdgeGapWitness(const Edge &edge,double first,Interval gap,
+                                 const std::function<double(const Vec3 &)> &coordinate,const PointMap &map) {
+    double lo=edge.range.lo,hi=edge.range.hi;
+    const double middle=.5*gap.lo+.5*gap.hi;
+    for(int step=0;step<64;++step) {
+        cancellationPoint();const double parameter=.5*lo+.5*hi;
+        if(!(lo<parameter&&parameter<hi))break;
+        const auto point=edge.curve->point(parameter);const double value=coordinate(point);
+        if(!std::isfinite(value))break;
+        if(gap.lo<value&&value<gap.hi){(void)map(point);break;}
+        if((value<middle)==(first<middle))lo=parameter;else hi=parameter;
+    }
+}
+static void checkCurvedGapWitness(const Edge &edge,Interval gap,const Vec3 &normal,double offset,double precision,
+                                   const std::function<double(const Vec3 &)> &coordinate,const PointMap &map) {
+    std::vector<double> parameters{edge.range.lo,edge.range.hi};
+    try {
+        for(double limit:{gap.lo,gap.hi}) {
+            cancellationPoint();
+            const auto roots=planeRoots<3>(*edge.curve,edge.range,normal,limit+offset,precision);
+            parameters.insert(parameters.end(),roots.parameters.begin(),roots.parameters.end());
+            for(const auto &span:roots.coincident) {
+                parameters.push_back(span.lo);
+                parameters.push_back(span.hi);
+            }
+        }
+    } catch(const std::domain_error &) {
+        return; // This curve has no usable plane-root provider.
+    }
+    parameters.erase(std::remove_if(parameters.begin(),parameters.end(),[&](double t) {
+        return !std::isfinite(t)||t<edge.range.lo||t>edge.range.hi;
+    }),parameters.end());
+    std::sort(parameters.begin(),parameters.end());
+    for(std::size_t i=1;i<parameters.size();++i) {
+        cancellationPoint();
+        const double t=.5*parameters[i-1]+.5*parameters[i];
+        if(!(parameters[i-1]<t&&t<parameters[i]))continue;
+        const auto point=edge.curve->point(t);
+        const double value=coordinate(point);
+        if(gap.lo<value&&value<gap.hi)(void)map(point);
+    }
+}
+static void checkProjectedGapWitnesses(const Body &source,const std::vector<Box> &boxes,
+                                       const Frame3 &sourceChart,const Frame3 &targetChart,
+                                       double tolerance,double precision,const PointMap &map) {
+    const auto edges=source.edges();
+    for(int axis=0;axis<2;++axis) {
+        const auto gaps=projectedGaps(boxes,targetChart.origin(),axis==0?targetChart.xDir():targetChart.yDir(),
+            4.*std::max({precision,linearResolution(),tolerance}));
+        if(gaps.empty())continue;
+        const auto &origin=sourceChart.origin();
+        const auto &normal=axis==0?sourceChart.xDir():sourceChart.yDir();
+        const auto coordinate=[&](const Vec3 &point){return dot(point-origin,normal);};
+        const double offset=dot(normal,origin);
+        for(auto id:edges) {
+            cancellationPoint();const auto &edge=source.edge(id);
+            if(!edge.range.isFinite())continue;
+            const double a=coordinate(edge.curve->point(edge.range.lo)),b=coordinate(edge.curve->point(edge.range.hi));
+            if(!std::isfinite(a)||!std::isfinite(b))continue;
+            // Ordered gaps: evaluate endpoints once per edge/axis and visit
+            // only gaps strictly enclosed by that same edge's endpoint image.
+            auto gap=std::upper_bound(gaps.begin(),gaps.end(),std::min(a,b),
+                [](double value,Interval interval){return value<interval.lo;});
+            for(;gap!=gaps.end()&&gap->hi<std::max(a,b);++gap)
+                checkEdgeGapWitness(edge,a,*gap,coordinate,map);
+            if(detail::isStraightMappingEdge(*edge.curve)||!std::isfinite(offset))continue;
+            std::optional<Interval> range;
+            try {
+                range=projectedBoxRange(curveBox(*edge.curve,edge.range),origin,normal,0.);
+            } catch(const std::domain_error &) {
+                continue;
+            }
+            if(!range)continue;
+            // A curved edge can enter and leave on one side of a gap.
+            const double lo=range->lo,hi=range->hi;
+            gap=std::upper_bound(gaps.begin(),gaps.end(),lo,
+                [](double value,Interval interval){return value<interval.hi;});
+            for(;gap!=gaps.end()&&gap->lo<hi;++gap) {
+                if(std::min(a,b)<gap->lo&&gap->hi<std::max(a,b))continue;
+                checkCurvedGapWitness(edge,*gap,normal,offset,precision,coordinate,map);
+            }
+        }
+    }
+}
 static void withFaceMapping(const std::vector<SurfaceTargetFace> &targets,const SurfaceWrapOptions &options,
-                            const std::function<void(const PointMap &,const PlacementMap &,const PointMap &)> &use,double extension=0.) {
+                            const std::function<void(const PointMap &,const PlacementMap &,const PointMap &,const CarrierCheck &)> &use,double extension=0.,
+                            const Body *source=nullptr) {
     require(!targets.empty()&&targets.size()<=255,"Deformazione: scegliere da 1 a 255 facce destinazione.");
     require(options.tolerance>=1e-9&&options.tolerance<=.01&&std::isfinite(options.tolerance),"Deformazione: tolleranza non valida.");
     require(isFinite(options.anchor)&&isFinite(options.shift)&&std::isfinite(options.angle)&&
@@ -499,17 +667,26 @@ static void withFaceMapping(const std::vector<SurfaceTargetFace> &targets,const 
     Vec3 d[4];first.surface->evaluate(options.anchor.x(),options.anchor.y(),1,d);
     require(norm(d[2])>1e-12&&norm(d[1])>1e-12,"Deformazione: appoggio singolare.");
     const double orientation=first.sense?1.:-1.;
-    const auto axisU=normalized(d[2]),axisV=orientation*normalized(d[1]);
     const auto direction=orientation*first.surface->normal(options.anchor.x(),options.anchor.y());
-    require(dot(cross(axisU,axisV),direction)>1e-8,"Deformazione: appoggio degenere.");
+    const auto axisU=normalized(d[2]),axisV=cross(direction,axisU);
+    // Source X/Y are physical orthogonal distances in the support plane.
+    // Normalizing Sv alone would shear that plane on oblique UV charts,
+    // despite an unchanged target geometry (and unlike rigid placement).
+    // Retain the regularity cutoff of the original UV chart.
+    require(orientation*dot(normalized(d[1]),axisV)>1e-8,"Deformazione: appoggio degenere.");
     struct Contact {Vec3 point,normal;};
     std::map<std::tuple<double,double,bool>,Contact> contacts;
-    const auto contact=[&](double x,double y,bool carrier=false) {
-        const auto key=std::make_tuple(x,y,carrier);const auto found=contacts.find(key);
-        if(found!=contacts.end())return found->second;
+    enum class ContactUse { Trimmed, Carrier, Witness };
+    const auto contact=[&](double x,double y,ContactUse use) {
+        const bool carrier=use==ContactUse::Carrier,witness=use==ContactUse::Witness;
+        const auto key=std::make_tuple(x,y,carrier);
+        if(!witness) {
+            const auto found=contacts.find(key);
+            if(found!=contacts.end())return found->second;
+        }
         // Limite della cache, non un vincolo sulla geometria ammissibile.
         // Fit e cancellazione mantengono i propri limiti di lavoro.
-        if(contacts.size()>=200000)contacts.clear();
+        if(!witness&&contacts.size()>=200000)contacts.clear();
         const auto base=d[0]+x*axisU+y*axisV;
         bool have=false,haveExtension=false,ambiguousExtension=false;Contact selected,extended;
         for(auto &patch:patches) {
@@ -529,7 +706,7 @@ static void withFaceMapping(const std::vector<SurfaceTargetFace> &targets,const 
                 const auto point=base+t*direction;
                 auto uv=patch.seed;
                 if(!invertPoint(surface,point,uv,precision,std::max(1.,patch.bounds.diagonal())))continue;
-                patch.seed=uv;
+                if(!witness)patch.seed=uv;
                 const bool outside=patch.classifier.classify(uv)==PointLocation::Outside;
                 const auto normal=(face.sense?1.:-1.)*surface.normal(uv.x(),uv.y());
                 // Una falda rivolta dalla parte opposta non appartiene al
@@ -553,11 +730,12 @@ static void withFaceMapping(const std::vector<SurfaceTargetFace> &targets,const 
         }
         if(!have&&carrier&&haveExtension&&!ambiguousExtension){selected=extended;have=true;}
         require(have,"Deformazione: un punto non incontra le facce destinazione; controllare vuoti, estensione e verso dell'appoggio.");
-        contacts.emplace(key,selected);return selected;
+        if(!witness)contacts.emplace(key,selected);
+        return selected;
     };
     const double cosine=std::cos(options.angle),sine=std::sin(options.angle);
-    const auto located=[&](const Vec3 &p) {
-        try {return contact(cosine*p.x()-sine*p.y()+options.shift.x(),sine*p.x()+cosine*p.y()+options.shift.y());}
+    const auto located=[&](const Vec3 &p,ContactUse use=ContactUse::Trimmed) {
+        try {return contact(cosine*p.x()-sine*p.y()+options.shift.x(),sine*p.x()+cosine*p.y()+options.shift.y(),use);}
         catch(const std::domain_error &e) {
             std::ostringstream message;message<<e.what()<<std::setprecision(12)
                 <<" Punto nel piano sorgente: X="<<p.x()<<", Y="<<p.y()<<", Z="<<p.z()<<" mm.";
@@ -579,19 +757,80 @@ static void withFaceMapping(const std::vector<SurfaceTargetFace> &targets,const 
     };
     const auto carrierMap=[&](const Vec3 &point) {
         const auto p=options.sourcePlane.toLocal(point);
-        const auto hit=contact(cosine*p.x()-sine*p.y()+options.shift.x(),sine*p.x()+cosine*p.y()+options.shift.y(),true);
+        const auto hit=contact(cosine*p.x()-sine*p.y()+options.shift.x(),sine*p.x()+cosine*p.y()+options.shift.y(),ContactUse::Carrier);
         return hit.point+(p.z()+options.normalOffset)*hit.normal;
     };
-    use(map,placement,carrierMap);
+    CarrierCheck check;
+    if(source&&!options.rigid) {
+        // Both checks use the same coordinates as the trimmed contact query.
+        const auto &plane=options.sourcePlane;
+        const auto x=cosine*plane.xDir()-sine*plane.yDir();
+        const auto y=sine*plane.xDir()+cosine*plane.yDir();
+        const auto origin=plane.origin()-options.shift.x()*x-options.shift.y()*y;
+        const auto sourceChart=Frame3::fromAxes(origin,x,y,plane.zDir());
+        const auto targetChart=Frame3::fromAxes(d[0],axisU,axisV,direction);
+        bool continuousCoverage = false;
+        if (options.angle == 0. && options.shift.x() == 0. && options.shift.y() == 0.) {
+            Vec2 gapCenter;
+            const auto coverage = detail::certifyMappingTrimCoverage(*source, targets, sourceChart, targetChart,
+                                                                     precision, &gapCenter);
+            continuousCoverage = coverage == detail::MappingTrimCoverage::Covered;
+            if (coverage == detail::MappingTrimCoverage::Uncovered) {
+                const auto base = sourceChart.toGlobal(Vec3(gapCenter.x(), gapCenter.y(), 0.));
+                auto point = base;
+                for (const auto &ray : {sourceChart.zDir(), -sourceChart.zDir()}) {
+                    double t;
+                    if (firstRayHit(*source, base, ray, precision, t)) {
+                        point = base + t * ray;
+                        break;
+                    }
+                }
+                const auto p = plane.toLocal(point);
+                std::ostringstream message;
+                message << "Deformazione: un punto non incontra le facce destinazione; copertura continua dei trim."
+                        << std::setprecision(12) << " Punto nel piano sorgente: X=" << p.x()
+                        << ", Y=" << p.y() << ", Z=" << p.z() << " mm.";
+                throw std::domain_error(message.str());
+            }
+        }
+        if(patches.size()>1 && !continuousCoverage) {
+            std::vector<Box> boxes;
+            for(const auto &patch:patches)boxes.push_back(patch.bounds);
+            checkProjectedGapWitnesses(*source,boxes,sourceChart,targetChart,options.tolerance,precision,map);
+        }
+        // The arrangement probes coverage only, independently of the fit cache and inversion seeds.
+        detail::checkMappingTrimCoverage(*source,targets,sourceChart,targetChart,precision,
+            [&](const Vec3 &point) { (void)located(options.sourcePlane.toLocal(point),ContactUse::Witness); });
+        const bool hasSplinePatches = patches.size() > 1 && std::any_of(targets.begin(), targets.end(),
+            [](const SurfaceTargetFace &target) {
+                return target.body->face(target.face).surface->type() == SurfaceType::BSpline;
+            });
+        if (hasSplinePatches) {
+            check = [&, sourceChart, targetChart](FaceId face, const Surface &image, Interval u, Interval v,
+                                                  double budget, double &deviation) {
+                const auto proof = detail::projectedMappingResidualBound(
+                    *source, face, targets, options, targetChart, image, u, v, budget);
+                if (proof.status == detail::SurfaceMappingBoundStatus::Unsupported) {
+                    const double measured = detail::measureMappingKnotResidual(
+                        *source, face, targets, sourceChart, targetChart, image, u, v, precision, map);
+                    require(std::isfinite(measured) && measured <= budget,
+                            "Deformazione: residuo del carrier sopra il budget su una pezza NURBS.");
+                    deviation = std::max(deviation, measured);
+                }
+                return proof;
+            };
+        }
+    }
+    use(map,placement,carrierMap,check);
 }
 Body wrapBodyOnFaces(const Body &source,const std::vector<SurfaceTargetFace> &targets,
                      const SurfaceWrapOptions &options,BodyHistory *history,double *deviation) {
     Body result;
     Box bounds;for(auto id:source.edges()){const auto &edge=source.edge(id);bounds.add(curveBox(*edge.curve,edge.range));}
-    withFaceMapping(targets,options,[&](const PointMap &map,const PlacementMap &placement,const PointMap &carrierMap) {
+    withFaceMapping(targets,options,[&](const PointMap &map,const PlacementMap &placement,const PointMap &carrierMap,const CarrierCheck &check) {
         result=options.rigid?placeRigidBody(source,options,placement,history,deviation)
-                            :mapBody(source,map,options.tolerance,history,deviation,carrierMap);
-    },bounds.isEmpty()?0.:bounds.diagonal());
+                            :mapBody(source,map,options.tolerance,history,deviation,carrierMap,{},.001,3,{},{},check);
+    },bounds.isEmpty()?0.:bounds.diagonal(),&source);
     return result;
 }
 bool fitSurfaceWrapPlacement(const std::vector<Vec2> &points,const std::vector<SurfaceTargetFace> &targets,
@@ -618,7 +857,7 @@ bool fitSurfaceWrapPlacement(const std::vector<Vec2> &points,const std::vector<S
     if(options.quilt) {
         SurfaceQuiltMap quilt(targets,options.anchor);const double c=std::cos(options.angle),s=std::sin(options.angle);
         search([&](const Vec2 &point){const auto p=quilt.fold(Vec3(c*point.x()-s*point.y()+options.shift.x(),s*point.x()+c*point.y()+options.shift.y(),0));return Frame3(p,Vec3(0,0,1),Vec3(1,0,0));});
-    } else withFaceMapping(targets,options,[&](const PointMap &,const PlacementMap &placement,const PointMap &){search(placement);});
+    } else withFaceMapping(targets,options,[&](const PointMap &,const PlacementMap &placement,const PointMap &,const CarrierCheck &){search(placement);});
     if(found) {
         const double c=std::cos(options.angle),s=std::sin(options.angle);
         options.shift+=Vec2(c*selected.x()-s*selected.y(),s*selected.x()+c*selected.y());

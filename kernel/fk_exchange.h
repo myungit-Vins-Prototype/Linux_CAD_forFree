@@ -2,6 +2,7 @@
 #define FORGECAD_FK_EXCHANGE_H
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "fk_topology.h"
@@ -73,6 +74,9 @@ struct RawModel {
 std::string formatReal(double x);
 std::size_t parseReal(const char *begin, const char *end, double &value);
 
+// Ora locale corrente, formattata secondo il formato di scambio.
+std::string formatLocalTimestamp(const char *format);
+
 // Identita' emesse dall'assemblaggio: uno slot per entita' del modello grezzo;
 // gli edge di cucitura eliminati e i punti inutilizzati restano non validi.
 struct AssemblyMap { std::vector<VertexId> points; std::vector<EdgeId> edges; std::vector<FaceId> faces; };
@@ -84,6 +88,9 @@ Body assembleBody(const RawModel &model, bool solid, std::vector<std::string> *n
 // delle facce resi coerenti attraverso gli edge comuni. Vero se il risultato e'
 // chiuso (ogni edge in due facce).
 bool sewModel(RawModel &model, double tolerance);
+// Con coppie esplicite, unisce solo gli edge e gli estremi indicati.
+// I due tratti devono coincidere e avere estremi non ambigui.
+bool sewModel(RawModel &model, double tolerance, const std::vector<std::pair<int, int>> &pairs);
 
 }
 

@@ -258,6 +258,20 @@ FK_TEST(SewSheetsIntoSolid) {
         return makeSheetExtrusion(Frame3(Vec3(0, 0, 4), Vec3(0, -1, 0), Vec3(1, 0, 0)), profile.chains, -3.0);
     };
     const Body left = lid(0.0, 1.2), right = lid(1.2, 2.0);
+    const SewResult partial = sewSheets({&cup, &left}, 1e-6, true);
+    FK_CHECK(!partial.solid && partial.freeEdges == 4);
+    int laminar = 0;
+    for (EdgeId id : partial.body.edges()) {
+        if (!partial.body.isLaminar(id)) continue;
+        ++laminar;
+        const Edge &edge = partial.body.edge(id);
+        for (double t : {edge.range.lo, edge.range.hi}) {
+            const Vec3 point = edge.curve->point(t);
+            FK_CHECK(point.x() >= 1.2 - 1e-10);
+            FK_CHECK_NEAR(point.z(), 4.0, 1e-10);
+        }
+    }
+    FK_CHECK(laminar == partial.freeEdges);
     const SewResult closed = sewSheets({&cup, &left, &right}, 1e-6, true);
     FK_CHECK(closed.closed && closed.solid);
     checkValid(closed.body);
@@ -578,8 +592,15 @@ FK_TEST(OffsetInwardBeyondCurvatureIsExplained) {
     std::string message;
     try {
         offsetFaces(loft, loft.faces(), -3.0, 1e-7, true);
-    } catch (const std::domain_error &failure) {
+    } catch (const OffsetCurvatureError &failure) {
         message = failure.what();
+        FK_CHECK(failure.radius > 1.0 && failure.radius < 2.0);
+        if (failure.sourcePoint) {
+            bool onSource = false;
+            for (FaceId face : loft.faces())
+                onSource = onSource || classifyPointOnFace(loft, face, *failure.sourcePoint, 1e-7) != PointLocation::Outside;
+            FK_CHECK(onSource);
+        }
     }
     FK_CHECK(message.find("raggio di curvatura") != std::string::npos);
     const OffsetResult inward = offsetFaces(loft, loft.faces(), -1.4, 1e-7, true);

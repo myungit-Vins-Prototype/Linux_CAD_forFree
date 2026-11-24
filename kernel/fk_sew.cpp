@@ -4,9 +4,13 @@
 #include <cmath>
 #include <limits>
 #include <map>
+#include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 
+#include "fk_boolean.h"
+#include "fk_classify.h"
 #include "fk_curve_algo.h"
 #include "fk_history.h"
 #include "fk_exchange.h"
@@ -265,9 +269,101 @@ void splitAtJunctions(detail::RawModel &model, const std::vector<int> &edgeBody,
         }
 }
 
+// Le shell con bordi disgiunti sono esterne o annidate. Ogni guscio
+// contenitore cambia il lato del materiale, anche per un'isola in una cavita'.
+struct SewnShell {
+    ShellId id;
+    Vec3 point;
+    const SphericalSurface *sphere;
+    Box box;
+    std::vector<Box> faceBoxes;
+    std::optional<SolidClassifier> classifier;
+    std::optional<Body> sheet;
+    bool reverse;
+};
+
+// Una sfera intera puo' toccarne un'altra in un solo punto, senza
+// produrre alcuna curva di sezione. Due centri e i raggi decidono anche
+// il contenimento per qualsiasi orientamento delle parametrizzazioni.
+const SphericalSurface *wholeSphere(const Body &body, ShellId id) {
+    const auto &faces = body.shell(id).faces;
+    if (faces.size() != 1) return nullptr;
+    const Face &face = body.face(faces.front());
+    for (LoopId loop : face.loops)
+        if (body.loop(loop).first.valid()) return nullptr;
+    return dynamic_cast<const SphericalSurface *>(face.surface.get());
+}
+
+void classifySpheres(SewnShell &a, SewnShell &b, double tolerance) {
+    const double r = a.sphere->radius(), s = b.sphere->radius();
+    const double d = distance(a.sphere->frame().origin(), b.sphere->frame().origin());
+    if (d > r + s + tolerance) return;
+    if (d + tolerance >= std::abs(r - s)) throw std::domain_error("cucitura: gusci sferici a contatto o intersecanti");
+    auto &inner = r < s ? a : b;
+    inner.reverse = !inner.reverse;
+}
+
+std::set<int> shellsToReverse(const Body &body, double tolerance) {
+    const auto ids = body.shells();
+    if (ids.size() == 1)
+        return detail::shellSignedVolume(body, ids.front(), tolerance) < 0.0
+            ? std::set<int>{ids.front().index} : std::set<int>{};
+
+    std::vector<SewnShell> shells;
+    for (ShellId id : ids) {
+        const bool inward = detail::shellSignedVolume(body, id, tolerance) < 0.0;
+        SewnShell shell{id, shellBoundaryPoint(body, id), wholeSphere(body, id), {}, {}, {}, {}, inward};
+        for (FaceId face : body.shell(id).faces) {
+            shell.faceBoxes.push_back(faceBox(body, face).padded(tolerance));
+            shell.box.add(shell.faceBoxes.back());
+        }
+        shells.push_back(std::move(shell));
+    }
+    const auto sheet = [&](SewnShell &s) -> const Body & {
+        if (!s.sheet) s.sheet = facesAsSheet(body, body.shell(s.id).faces);
+        return *s.sheet;
+    };
+    const auto contains = [&](SewnShell &s, const Vec3 &p) {
+        if (!s.classifier) s.classifier.emplace(body, s.id, tolerance);
+        const auto side = s.classifier->classify(p);
+        if (side == PointLocation::Boundary) throw std::domain_error("cucitura: gusci a contatto");
+        return side == PointLocation::Inside;
+    };
+    BooleanOptions options;
+    options.tolerance = tolerance;
+    for (std::size_t i = 0; i < shells.size(); ++i) {
+        auto &a = shells[i];
+        for (std::size_t j = i + 1; j < shells.size(); ++j) {
+            cancellationPoint();
+            auto &b = shells[j];
+            if (!a.box.overlaps(b.box)) continue;
+            if (a.sphere && b.sphere) {
+                classifySpheres(a, b, tolerance);
+                continue;
+            }
+            bool near = false;
+            for (const auto &box : a.faceBoxes) {
+                near = std::any_of(b.faceBoxes.begin(), b.faceBoxes.end(),
+                                   [&](const Box &other) { return box.overlaps(other); });
+                if (near) break;
+            }
+            if (near && !bodySectionCurvesWithOrigins(sheet(a), sheet(b), options).empty())
+                throw std::domain_error("cucitura: i contorni dei gusci si intersecano");
+            const bool aInB = contains(b, a.point), bInA = contains(a, b.point);
+            if (aInB && bInA) throw std::domain_error("cucitura: contenimento dei gusci incoerente");
+            if (aInB) a.reverse = !a.reverse;
+            if (bInA) b.reverse = !b.reverse;
+        }
+    }
+    std::set<int> reversed;
+    for (const auto &shell : shells)
+        if (shell.reverse) reversed.insert(shell.id.index);
+    return reversed;
+}
+
 }  // namespace
 
-Body facesAsSheet(const Body &body, const std::vector<FaceId> &faces, BodyHistory *history) {
+static Body copyFaceSubset(const Body &body, const std::vector<FaceId> &faces, bool solid, BodyHistory *history) {
     if (history) *history = {};
     if (faces.empty()) throw std::domain_error("nessuna faccia scelta");
     std::vector<int> edgeBody;
@@ -299,7 +395,7 @@ Body facesAsSheet(const Body &body, const std::vector<FaceId> &faces, BodyHistor
         used.faces.push_back(std::move(face));
     }
     detail::AssemblyMap assembled;
-    Body result = detail::assembleBody(used,false,nullptr,history?&assembled:nullptr);
+    Body result = detail::assembleBody(used,solid,nullptr,history?&assembled:nullptr);
     if (history) {
         BodyHistory declared = makeHistory({&body}, result);
         const auto built = result.faces();
@@ -321,6 +417,14 @@ Body facesAsSheet(const Body &body, const std::vector<FaceId> &faces, BodyHistor
         *history = std::move(declared);
     }
     return result;
+}
+
+Body facesAsSheet(const Body &body, const std::vector<FaceId> &faces, BodyHistory *history) {
+    return copyFaceSubset(body, faces, false, history);
+}
+
+Body closedFacesAsSolid(const Body &body, const std::vector<FaceId> &faces) {
+    return copyFaceSubset(body, faces, true, nullptr);
 }
 
 SewResult sewSheets(const std::vector<const Body *> &bodies, double tolerance, bool makeSolid, BodyHistory *history) {
@@ -355,54 +459,34 @@ SewResult sewSheets(const std::vector<const Body *> &bodies, double tolerance, b
             for (const detail::RawFin &fin : loop) ++uses[fin.edge];
     for (const auto &[edge, n] : uses)
         if (n == 1) ++result.freeEdges;
+    detail::AssemblyMap assembled;
     {
         const detail::PhaseTimer timer("cucitura: assemblaggio");
-        result.body = detail::assembleBody(model, result.solid, &result.notes);
+        result.body = detail::assembleBody(model, result.solid, &result.notes, result.solid || history ? &assembled : nullptr);
     }
-    bool inverted = false;
     if (result.solid) {
-        const detail::PhaseTimer timer("cucitura: verso del solido (volume)");
-        // Serve il segno, non il tensore di inerzia alla massima precisione.
-        // Per volumi piccoli rispetto alla scala geometrica (gusci sottili,
-        // cancellazioni fra cavita') si ripete con la precisione originale.
-        Box bounds;
-        for(VertexId v:result.body.vertices())bounds.add(result.body.vertex(v).point);
-        for(EdgeId e:result.body.edges()) {
-            const auto &edge=result.body.edge(e);
-            const Box box=curveBox(*edge.curve,edge.range);bounds.add(box.lo);bounds.add(box.hi);
-        }
-        double volume=massProperties(result.body,1e-5).volume;
-        const double scale=std::pow(bounds.diagonal(),3);
-        if(!std::isfinite(volume) || !std::isfinite(scale) || std::fabs(volume)<=1e-3*scale)
-            volume=massProperties(result.body).volume;
-        if(!std::isfinite(volume))throw std::domain_error("cucitura: volume non finito");
-        inverted = volume < 0.0;
-    }
-    if (inverted) {
-        const detail::PhaseTimer timer("cucitura: facce girate e nuovo assemblaggio");
-        // Normali verso l'interno: tutte le facce si girano.
-        for (detail::RawFace &face : model.faces) {
-            face.sense = !face.sense;
-            for (auto &loop : face.loops) {
-                std::reverse(loop.begin(), loop.end());
-                for (detail::RawFin &fin : loop) fin.sense = !fin.sense;
+        const detail::PhaseTimer timer("cucitura: verso dei gusci");
+        const auto reversed = shellsToReverse(result.body, tolerance);
+        if (!reversed.empty()) {
+            for (std::size_t i = 0; i < model.faces.size(); ++i) {
+                if (!reversed.count(result.body.face(assembled.faces.at(i)).shell.index)) continue;
+                detail::RawFace &face = model.faces[i];
+                face.sense = !face.sense;
+                for (auto &loop : face.loops) {
+                    std::reverse(loop.begin(), loop.end());
+                    for (detail::RawFin &fin : loop) fin.sense = !fin.sense;
+                }
             }
+            result.notes.clear();
+            result.body = detail::assembleBody(model, true, &result.notes, &assembled);
         }
-        result.notes.clear();
-        result.body = detail::assembleBody(model, true, &result.notes);
     }
-    for (ShellId s : result.body.shells()) {
-        (void)s;
-        ++result.shells;
-    }
+    result.shells = int(result.body.shells().size());
     if (history) {
         BodyHistory declared = makeHistory(bodies, result.body);
-        const auto faces = result.body.faces();
-        {
-            // Il rimpiazzo cambia i contorni in loco, conservando ordine e supporto delle facce.
-            if (faces.size() != origins.size()) throw std::logic_error("sewSheets: mappa delle facce incoerente");
-            for (std::size_t i = 0; i < faces.size(); ++i) declared.declareOrigins(EntityKind::Face, faces[i].index, {origins[i]});
-        }
+        if (assembled.faces.size() != origins.size()) throw std::logic_error("sewSheets: mappa delle facce incoerente");
+        for (std::size_t i = 0; i < origins.size(); ++i)
+            declared.declareOrigins(EntityKind::Face, assembled.faces[i].index, {origins[i]});
         *history = std::move(declared);
     }
     return result;

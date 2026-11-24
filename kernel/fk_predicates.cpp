@@ -1,5 +1,9 @@
 #include "fk_predicates.h"
 
+#include <algorithm>
+#include <array>
+#include <cfenv>
+#include <limits>
 #include <vector>
 
 namespace ForgeCad::Kernel {
@@ -73,6 +77,12 @@ public:
         return result;
     }
 
+    double estimate() const {
+        double result = 0.;
+        for (double term : terms_) result += term;
+        return result;
+    }
+
     int sign() const { return terms_.empty() ? 0 : (terms_.back() > 0.0 ? 1 : -1); }
 
 private:
@@ -80,7 +90,71 @@ private:
 };
 
 Expansion difference(double a, double b) { return Expansion(a) - Expansion(b); }
+// Lower bound on the least significant bit of a nonzero binary64 input.
+int lowestBit(double value) {
+    return value == 0. ? 0 : std::ilogb(std::abs(value)) - 52;
+}
 
+bool boundedExpansionInput(double value) {
+    return std::abs(value) <= 0x1p128;
+}
+
+
+}
+
+std::optional<Vec2> detail::exactRationalBezierPoint(const Vec2 *poles, const double *weights,
+                                                    std::size_t count, double parameter) {
+    if (count < 2 || count > 9 || !(0. < parameter && parameter < 1.) || std::fegetround() != FE_TONEAREST)
+        return {};
+    double complement, lost;
+    twoSum(1., -parameter, complement, lost);
+    if (lost != 0.) return {};
+
+    int weightBit = 0, poleBit = 0;
+    for (std::size_t i = 0; i < count; ++i) {
+        if (!(weights[i] > 0.) || !boundedExpansionInput(weights[i]) ||
+            !boundedExpansionInput(poles[i].x()) || !boundedExpansionInput(poles[i].y()))
+            return {};
+        weightBit = std::min(weightBit, lowestBit(weights[i]));
+        poleBit = std::min({poleBit, lowestBit(poles[i].x()), lowestBit(poles[i].y())});
+    }
+    // Each de Casteljau level adds at most one factor of parameter or
+    // complement. Products and their FMA residuals stay on a normal
+    // binary lattice. The input magnitude cap leaves room for all sums.
+    constexpr int minBit = std::numeric_limits<double>::min_exponent - 1;
+    weightBit += int(count - 1) * std::min(lowestBit(parameter), lowestBit(complement));
+    if (weightBit + poleBit < minBit) return {};
+
+    const Expansion left(complement), right(parameter);
+    std::array<std::array<Expansion, 3>, 9> values;
+    for (std::size_t i = 0; i < count; ++i) {
+        const Expansion weight(weights[i]);
+        values[i] = {Expansion(poles[i].x()) * weight, Expansion(poles[i].y()) * weight, weight};
+    }
+    for (std::size_t length = count; length > 1; --length)
+        for (std::size_t i = 0; i + 1 < length; ++i)
+            for (std::size_t j = 0; j < values[i].size(); ++j)
+                values[i][j] = values[i][j] * left + values[i + 1][j] * right;
+
+    const auto &w = values[0][2];
+    Vec2 result;
+    for (std::size_t j = 0; j < 2; ++j) {
+        const auto &numerator = values[0][j];
+        const double nearest = numerator.estimate() / w.estimate();
+        // Candidate division is rounded. Only the exact product identity
+        // can publish a Cartesian coordinate.
+        bool found = false;
+        for (double candidate : {nearest, std::nextafter(nearest, -INFINITY), std::nextafter(nearest, INFINITY)}) {
+            if (!boundedExpansionInput(candidate) || weightBit + lowestBit(candidate) < minBit ||
+                (numerator - Expansion(candidate) * w).sign() != 0)
+                continue;
+            result[j] = candidate;
+            found = true;
+            break;
+        }
+        if (!found) return {};
+    }
+    return result;
 }
 
 int orient2d(const Vec2 &a, const Vec2 &b, const Vec2 &c) {

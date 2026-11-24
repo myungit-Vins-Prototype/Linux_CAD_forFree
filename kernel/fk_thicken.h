@@ -2,6 +2,9 @@
 #ifndef FORGECAD_FK_THICKEN_H
 #define FORGECAD_FK_THICKEN_H
 
+#include <stdexcept>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "fk_topology.h"
@@ -16,6 +19,15 @@ class BodyHistory;
 // opposta, o meta' per parte.
 enum class ThickenSide { Forward = 0, Backward = 1, Both = 2 };
 
+class ThickenCreaseError final : public std::domain_error {
+public:
+    ThickenCreaseError(const std::string &message, CurvePtr<3> curve, Interval range)
+        : std::domain_error(message), curve(std::move(curve)), range(range) {}
+
+    CurvePtr<3> curve;
+    Interval range;
+};
+
 struct ThickenOptions {
     double thickness = 1.0;  // > 0
     ThickenSide side = ThickenSide::Forward;
@@ -23,9 +35,11 @@ struct ThickenOptions {
     // e pareti rigate lungo la normale ai bordi. Su una faccia Plane le
     // pareti dei bordi supportati conservano curve e parametri originali
     // mediante traslazione ed estrusione, con arrotondamenti ordinari.
-    // Le facce devono essere unite
-    // da spigoli tangenti; lo spessore non puo' superare il raggio di
-    // curvatura dalla parte in cui va.
+    // Nel percorso tangente, al limite esatto del raggio una fascia interna
+    // supportata puo' contrarsi a spigoli fra le facce superstiti. Una
+    // fascia chiusa riconosciuta con appoggio planare puo' essere rimossa
+    // oltre il raggio, rifilando le facce adiacenti sul piano a distanza.
+    // Le altre singolarita' dell'offset producono un errore di curvatura.
     // Lungo una direzione (useDirection vero): copia traslata della superficie
     // e pareti estruse lungo la direzione (esatte: piani per i bordi rettilinei,
     // superfici estruse per gli altri). Ogni retta parallela alla direzione

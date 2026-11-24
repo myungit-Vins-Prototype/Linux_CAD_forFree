@@ -115,3 +115,18 @@ FK_TEST(SurfaceParameterizationUnknownAndCancellation) {
     catch(const OperationCancelled &){cancelled=true;}
     FK_CHECK(cancelled);
 }
+
+FK_TEST(ClosedExtrusionBreakpointsTerminateAtLargePeriodicIndices) {
+    const auto profile = std::make_shared<BSplineCurve<3>>(1, std::vector<double>{0, 0, .5, 1, 1},
+        std::vector<Vec3>{{0, 0, 0}, {1, 0, 0}, {0, 0, 0}});
+    const ExtrusionSurface surface(profile, Vec3(0, 1, 0));
+    FK_CHECK(surface.isUPeriodic());
+    const std::vector<double> expected{-1.25, -1., -.5, 0., .5, 1., 1.25};
+    FK_CHECK(surface.uBreakpoints({-1.25, 1.25}) == expected);
+    for (double t : {0x1p53, -0x1p53}) {
+        FK_CHECK(surface.uBreakpoints({t, t}) == std::vector<double>{t});
+        FK_CHECK_THROWS(surface.uBreakpoints({t, std::nextafter(t, std::numeric_limits<double>::infinity())}));
+    }
+    FK_CHECK_THROWS(surface.uBreakpoints({0, 100001}));
+    FK_CHECK_THROWS(surface.uBreakpoints({2, 1}));
+}

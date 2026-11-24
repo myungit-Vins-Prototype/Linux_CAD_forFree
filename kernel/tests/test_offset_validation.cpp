@@ -1,8 +1,13 @@
+#include "fk_body_check.h"
+#include "fk_body_io.h"
 #include "fk_cancel.h"
+#include "fk_classify.h"
 #include "fk_curve_ops.h"
 #include "fk_extrude.h"
 #include "fk_mass.h"
 #include "fk_offset.h"
+#include "fk_revolve.h"
+#include "fk_shell.h"
 #include "fk_surface.h"
 #include "fk_test.h"
 using namespace ForgeCad::Kernel;
@@ -122,6 +127,58 @@ FK_TEST(OffsetValidationAnalyticExtrusionAndRevolution) {
     RevolutionSurface revLine(line, Vec3(), Vec3(0, 0, 1));
     auto lineOut = offsetSurface(revLine, .1, {0, kTwoPi}, {-1, 1}, 1e-7);
     FK_CHECK(distance(lineOut->point(.2, .4), revLine.point(.2, .4) + .1 * revLine.normal(.2, .4)) < 1e-7);
+}
+
+FK_TEST(OffsetValidationShellExtendsRevolutionMeridian) {
+    auto meridian = std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0, 0, 0, 0, 1, 1, 1, 1},
+        std::vector<Vec2>{{7, 0}, {9.6, 8.0 / 3}, {10, 16.0 / 3}, {13, 8}});
+    const auto line = [](const Vec2 &a, const Vec2 &b) {
+        return ProfileSegment{std::make_shared<Line<2>>(a, b - a), {0, distance(a, b)}};
+    };
+    const auto profile = buildProfile({line({0, 0}, meridian->point(0)), {meridian, {0, 1}},
+                                      line(meridian->point(1), {0, 8}), line({0, 8}, {0, 0})}, 1e-9);
+    const Frame3 frame(Vec3(1, 2, 4), Vec3(.3, .5, 1), Vec3(1, 0, 0));
+    const Body source = makeRevolution(frame, profile.regions.at(0));
+    FaceId opening, wall;
+    for (FaceId id : source.faces()) {
+        const auto &surface = *source.face(id).surface;
+        if (surface.type() == SurfaceType::Revolution) wall = id;
+        if (surface.type() == SurfaceType::Plane &&
+            distance(static_cast<const Plane &>(surface).frame().origin(), frame.origin()) < 1e-8)
+            opening = id;
+    }
+    FK_CHECK(opening.valid() && wall.valid());
+    if (!opening.valid() || !wall.valid()) return;
+    const auto before = writeBodyBinary(source);
+    BodyHistory history;
+    const Body shell = shellBody(source, {opening}, 1.0, &history);
+    FK_CHECK(writeBodyBinary(source) == before);
+    FK_CHECK(!shell.isSheet() && shell.shells().size() == 1);
+    FK_CHECK(checkBody(shell, {true, true}).empty());
+    for (EdgeId edge : shell.edges()) FK_CHECK(!shell.isLaminar(edge));
+    const double volume = massProperties(shell).volume;
+    FK_CHECK(volume > 0 && volume < massProperties(source).volume);
+    SolidClassifier classifier(shell, 1e-6);
+    FK_CHECK(classifier.classify(frame.toGlobal(Vec3(0, 0, .05))) == PointLocation::Outside);
+    FK_CHECK(classifier.classify(frame.toGlobal(Vec3(6.8, 0, .05))) == PointLocation::Inside);
+
+    const auto &outer = source.face(wall);
+    const auto domain = outer.surface->vDomain();
+    bool measured = false;
+    for (FaceId id : shell.faces()) {
+        const auto &face = shell.face(id);
+        if (face.surface->type() != SurfaceType::Revolution || face.surface == outer.surface ||
+            !history.isDeclared(EntityKind::Face, id.index)) continue;
+        for (const auto &origin : history.origins(EntityKind::Face, id.index)) {
+            if (origin.operand != 0 || origin.kind != EntityKind::Face || origin.index != wall.index) continue;
+            FK_CHECK(face.surface->vDomain().lo < domain.lo - .01);
+            const Vec3 expected = outer.surface->point(.6, .5) -
+                (outer.sense ? 1.0 : -1.0) * outer.surface->normal(.6, .5);
+            FK_CHECK_NEAR(distance(face.surface->point(.6, .5), expected), 0, 1e-7);
+            measured = true;
+        }
+    }
+    FK_CHECK(measured);
 }
 
 FK_TEST(OffsetValidationRotatedCircularConstructions) {

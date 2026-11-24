@@ -21,6 +21,7 @@
 #include <tuple>
 
 #include "fk_body_check.h"
+#include "fk_bspline_surface.h"
 #include "fk_classify.h"
 #include "fk_classify_uv.h"
 #include "fk_cycle_point_index.h"
@@ -245,7 +246,8 @@ class BooleanBuilder {
 public:
     BooleanBuilder(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options,
                    bool enableBoundary = false)
-        : operation_(operation), tolerance_(options.tolerance), unify_(options.unifySameDomain), threads_(options.threads) {
+        : operation_(operation), tolerance_(options.tolerance), unify_(options.unifySameDomain), threads_(options.threads),
+          refineToolFaceBounds_(options.refineToolFaceBounds && operation == BooleanOperation::Subtract) {
         enableBoundary_ = enableBoundary;
         bodies_[0] = a;
         bodies_[1] = b;
@@ -326,6 +328,8 @@ private:
         std::exception_ptr error;
     };
     // Tagli di ogni faccia (pezzi degli archi d'intersezione) dopo il passo 1.
+    void refineFacePairs(std::vector<std::pair<FaceId, FaceId>> &pairs);
+    std::map<int, PointLocation> classifySeparatedToolFaces(const SolidClassifier &target) const;
     void computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]);
     // Dagli archi di arcs_ ai tagli di ogni faccia (seconda parte di computeCuts).
     void collectCuts(std::map<int, std::vector<Piece>> (&cuts)[2]);
@@ -365,6 +369,8 @@ private:
     bool unify_ = true;
     bool recordHistory_ = false;
     int threads_ = 0;
+    bool refineToolFaceBounds_ = false;
+    std::set<int> possibleToolFaces_;
     std::map<int, Box> boxes_[2];
     Box bounds_[2];
     FaceBoxIndex faceIndex_[2];
@@ -1958,6 +1964,119 @@ void BooleanBuilder::pairRadially(const std::vector<Vec3> &, std::vector<Body::B
     }
 }
 
+// Una lastra fra due quote racchiude il supporto piano o i poli
+// della spline. Si scartano soltanto coppie con inviluppi disgiunti.
+struct FaceSlab {
+    Vec3 normal;
+    Interval range;
+};
+
+FaceSlab planeSlab(const Plane &plane) {
+    const auto normal = plane.frame().zDir();
+    const double level = dot(normal, plane.frame().origin());
+    return {normal, {level, level}};
+}
+
+bool overlapsSlab(const Box &box, const FaceSlab &slab, double margin) {
+    if (box.isEmpty()) return false;
+    const Vec3 center = .5 * (box.lo + box.hi), half = .5 * (box.hi - box.lo);
+    const auto &n = slab.normal;
+    const double projection = dot(center, n);
+    const double radius = std::abs(n.x()) * half.x() + std::abs(n.y()) * half.y() + std::abs(n.z()) * half.z();
+    const double guard = margin + 128 * kMachineEpsilon
+        * std::max({1., norm(center), norm(half), std::abs(slab.range.lo), std::abs(slab.range.hi)});
+    return projection - radius <= slab.range.hi + guard && projection + radius >= slab.range.lo - guard;
+}
+
+void BooleanBuilder::refineFacePairs(std::vector<std::pair<FaceId, FaceId>> &pairs) {
+    const auto &tool = bodies_[1];
+    std::map<int, FaceSlab> slabs;
+    for (const FaceId id : tool.faces()) {
+        cancellationPoint();
+        const auto &face = tool.face(id);
+        if (const auto *plane = dynamic_cast<const Plane *>(face.surface.get())) {
+            slabs.emplace(id.index, planeSlab(*plane));
+            continue;
+        }
+        const auto *spline = dynamic_cast<const BSplineSurface *>(face.surface.get());
+        if (!spline || face.loops.size() != 1 || spline->uPoleCount() != 4 || spline->vPoleCount() != 4) continue;
+        const auto fins = tool.loopFins(face.loops.front());
+        if (fins.size() != 3) continue;
+        const auto point = [&](int i) { return tool.vertex(tool.finStart(fins[i])).point; };
+        const Vec3 area = cross(point(1) - point(0), point(2) - point(0));
+        if (norm(area) <= linearResolution() * linearResolution()) continue;
+        const Vec3 normal = normalized(area);
+        Interval range{std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
+        for (int i = 0; i < spline->uPoleCount(); ++i)
+            for (int j = 0; j < spline->vPoleCount(); ++j) {
+                const double level = dot(normal, spline->pole(i, j));
+                range.lo = std::min(range.lo, level);
+                range.hi = std::max(range.hi, level);
+            }
+        slabs.emplace(id.index, FaceSlab{normal, range});
+    }
+    const double margin = tolerance_ + vertexTolerance_;
+    pairs.erase(std::remove_if(pairs.begin(), pairs.end(), [&](const auto &pair) {
+        cancellationPoint();
+        const auto [a, b] = pair;
+        const auto &target = *bodies_[0].face(a).surface;
+        const auto &toolBox = boxes_[1].at(b.index);
+        if (const auto *plane = dynamic_cast<const Plane *>(&target))
+            if (!overlapsSlab(toolBox, planeSlab(*plane), margin)) return true;
+        const auto slab = slabs.find(b.index);
+        if (slab == slabs.end()) return false;
+        if (!overlapsSlab(boxes_[0].at(a.index), slab->second, margin)) return true;
+        const auto *spline = dynamic_cast<const BSplineSurface *>(&target);
+        if (!spline) return false;
+        const auto tree = spline->cachedPatchTree();
+        if (tree->nodes.empty()) return false;
+        const auto overlaps = [&](auto &&descend, int index) -> bool {
+            const auto &node = tree->nodes[index];
+            const Box box{node.lo, node.hi};
+            if (!box.padded(margin).overlaps(toolBox) || !overlapsSlab(box, slab->second, margin)) return false;
+            return node.leaf >= 0 || descend(descend, node.first) || descend(descend, node.second);
+        };
+        return !overlaps(overlaps, 0);
+    }), pairs.end());
+    possibleToolFaces_.clear();
+    for (const auto &pair : pairs) possibleToolFaces_.insert(pair.second.index);
+}
+
+std::map<int, PointLocation> BooleanBuilder::classifySeparatedToolFaces(const SolidClassifier &target) const {
+    const auto &tool = bodies_[1];
+    std::set<int> separated;
+    for (const FaceId id : tool.faces())
+        if (!possibleToolFaces_.count(id.index)) separated.insert(id.index);
+    std::map<int, PointLocation> locations;
+    while (!separated.empty()) {
+        cancellationPoint();
+        const FaceId seed(*separated.begin());
+        separated.erase(separated.begin());
+        std::vector<FaceId> component{seed};
+        for (std::size_t i = 0; i < component.size(); ++i) {
+            cancellationPoint();
+            for (const LoopId loop : tool.face(component[i]).loops)
+                for (const FinId fin : tool.loopFins(loop)) {
+                    const auto &edge = tool.edge(tool.fin(fin).edge);
+                    const FinId opposite = edge.forward == fin ? edge.backward : edge.forward;
+                    if (!opposite.valid()) continue;
+                    const auto adjacent = tool.finFace(opposite);
+                    if (separated.erase(adjacent.index)) component.push_back(adjacent);
+                }
+        }
+        const auto &face = tool.face(seed);
+        if (face.loops.empty()) continue;
+        const auto fins = tool.loopFins(face.loops.front());
+        if (fins.empty()) continue;
+        // Nessun supporto della componente incontra una faccia bersaglio.
+        // La posizione rispetto al solido è quindi costante per continuità.
+        const auto location = target.classify(tool.vertex(tool.finStart(fins.front())).point);
+        if (location == PointLocation::Boundary) continue;
+        for (const FaceId id : component) locations.emplace(id.index, location);
+    }
+    return locations;
+}
+
 void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
     // Coppie di facce i cui box si toccano, in parallelo (il tracciamento tra
     // B-spline puo' prendere secondi per coppia).
@@ -1979,6 +2098,7 @@ void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
     }
     if(!accelerated)for (FaceId fa : first)
         for (FaceId fb : faceIndex_[1].query(boxes_[0].at(fa.index))) pairs.emplace_back(fa, fb);
+    if (refineToolFaceBounds_) refineFacePairs(pairs);
     std::vector<PairResult> results(pairs.size());
     const auto compute = [&](std::size_t i) {
         try {
@@ -2471,14 +2591,21 @@ Body BooleanBuilder::run(BodyHistory *history) {
     }
     std::unique_ptr<SolidClassifier> classifiers[2];
     for (const FaceResult &job : faceResults)
-        if (!classifiers[job.body]) classifiers[job.body] = std::make_unique<SolidClassifier>(bodies_[1 - job.body], tolerance_);
+        if (!classifiers[job.body])
+            classifiers[job.body] = std::make_unique<SolidClassifier>(bodies_[1 - job.body], tolerance_, refineToolFaceBounds_);
+    const auto separated = refineToolFaceBounds_ && classifiers[1] && !sheetResult
+        ? classifySeparatedToolFaces(*classifiers[1]) : std::map<int, PointLocation>{};
     parallelFor(faceResults.size(), workers(faceResults.size()), [&](std::size_t i) {
         FaceResult &job = faceResults[i];
         try {
+            if (refineToolFaceBounds_ && job.body == 1 && !boxes_[1].at(job.face.index).overlaps(bounds_[0])) return;
+            const auto known = job.body == 1 ? separated.find(job.face.index) : separated.end();
+            if (known != separated.end() && known->second == PointLocation::Outside) return;
             const auto found = cuts[job.body].find(job.face.index);
             const std::vector<Piece> none;
             for (SubFace &subFace : buildSubFaces(job.body, job.face, found != cuts[job.body].end() ? found->second : none)) {
-                const Location location = classify(subFace, *classifiers[job.body], history ? &subFace.coincidentFaces : nullptr);
+                const Location location = known != separated.end() ? Location::In
+                    : classify(subFace, *classifiers[job.body], history ? &subFace.coincidentFaces : nullptr);
                 if (adjacentOnly_ && (location == Location::In || location == Location::OnSame)) throw std::domain_error("uniteDisjointBodies: interni non disgiunti");
                 if (keep(job.body, location))
                     job.kept.emplace_back(std::move(subFace), operation_ == BooleanOperation::Subtract && job.body == 1);

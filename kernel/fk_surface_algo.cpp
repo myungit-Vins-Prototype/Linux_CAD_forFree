@@ -666,6 +666,11 @@ void torusCandidates(const ToroidalSurface &torus, const Vec3 &p, Candidates &ca
     const double dr = rho - torus.majorRadius();
     const double v0 = (dr != 0.0 || local.z() != 0.0) ? std::atan2(local.z(), dr) : vRange.lo;
     candidates.considerInterior(u0, v0);
+    // A spindle torus can have a negative signed radial coordinate.
+    // Its opposite meridian is centered at R on that signed axis, and
+    // the query has coordinate -rho there.
+    if (torus.minorRadius() > torus.majorRadius())
+        candidates.considerInterior(u0 + kPi, std::atan2(local.z(), -rho - torus.majorRadius()));
 }
 
 }

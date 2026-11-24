@@ -13,8 +13,8 @@
 #include <set>
 #include <cmath>
 #include <cstdio>
-#include <ctime>
 #include <map>
+#include <memory>
 #include <limits>
 #include <sstream>
 #include <stdexcept>
@@ -26,7 +26,8 @@
 #include "fk_intersect.h"
 #include "fk_nurbs.h"
 #include "fk_surface.h"
-#include "fk_tessellate.h"
+#include "fk_mass.h"
+#include "fk_classify.h"
 #include "fk_exchange.h"
 #include "fk_surface_algo.h"
 #include "fk_transform.h"
@@ -318,27 +319,6 @@ int writeSurface(StepWriter &w, const Surface &surface, const Interval &uRange, 
     throw std::domain_error("STEP: tipo di superficie non scrivibile");
 }
 
-// Segno del volume racchiuso da ciascuna shell (dalla tassellazione: serve
-// solo a distinguere le shell esterne da quelle dei vuoti).
-std::map<int, double> shellVolumes(const Body &body) {
-    Box box;
-    for (VertexId v : body.vertices()) box.add(body.vertex(v).point);
-    std::map<int, double> volume;
-    TessellationOptions options;
-    options.deflection = 1e-3 * std::max(box.diagonal(), 1e-3);
-    const Tessellation t = tessellate(body, options);
-    for (const FaceMesh &mesh : t.faces) {
-        const int shell = body.face(mesh.face).shell.index;
-        double v = 0.0;
-        for (const std::array<int, 3> &tri : mesh.triangles) {
-            const Vec3 &a = mesh.points[std::size_t(tri[0])], &b = mesh.points[std::size_t(tri[1])], &c = mesh.points[std::size_t(tri[2])];
-            v += dot(a, cross(b, c)) / 6.0;
-        }
-        volume[shell] += v;
-    }
-    return volume;
-}
-
 }  // namespace
 
 std::string writeStep(const std::vector<ExchangeBody> &bodies, const StepWriteOptions &options) {
@@ -386,6 +366,13 @@ std::string writeStep(const std::vector<ExchangeBody> &bodies, const StepWriteOp
             representation = w.add("GEOMETRICALLY_BOUNDED_WIREFRAME_SHAPE_REPRESENTATION(" + text(name) + "," + StepWriter::list(all) + "," +
                                    StepWriter::ref(context) + ")");
         } else {
+            // CLOSED_SHELL descrive il verso uscente. Per i vuoti il verso
+            // materiale viene applicato da ORIENTED_CLOSED_SHELL(...,.F.).
+            std::map<int, double> shellVolumes;
+            for (ShellId shell : body.shells()) {
+                if (!body.region(body.shell(shell).region).solid) continue;
+                shellVolumes.emplace(shell.index, detail::shellSignedVolume(body, shell));
+            }
             // Vertici e edge.
             std::map<int, int> vertexOf, edgeOf;
             for (VertexId v : body.vertices()) {
@@ -403,6 +390,8 @@ std::string writeStep(const std::vector<ExchangeBody> &bodies, const StepWriteOp
             std::map<int, std::vector<int>> facesOf;
             for (FaceId f : body.faces()) {
                 const Face &face = body.face(f);
+                const auto volume = shellVolumes.find(face.shell.index);
+                const bool cavity = volume != shellVolumes.end() && volume->second < 0.0;
                 // Il tratto (u, v) della faccia per le curve base di estrusioni e rivoluzioni: dal box dei parametri dei suoi edge.
                 Interval uRange{1e300, -1e300}, vRange{1e300, -1e300};
                 for (LoopId l : face.loops)
@@ -427,7 +416,7 @@ std::string writeStep(const std::vector<ExchangeBody> &bodies, const StepWriteOp
                     const Loop &loop = body.loop(l);
                     if (loop.isolatedVertex.valid()) {
                         const int vl = w.add("VERTEX_LOOP(''," + StepWriter::ref(vertexOf.at(loop.isolatedVertex.index)) + ")");
-                        bounds.push_back(w.add("FACE_BOUND(''," + StepWriter::ref(vl) + ",.T.)"));
+                        bounds.push_back(w.add("FACE_BOUND(''," + StepWriter::ref(vl) + (cavity ? ",.F.)" : ",.T.)")));
                         continue;
                     }
                     std::vector<int> oriented;
@@ -435,9 +424,9 @@ std::string writeStep(const std::vector<ExchangeBody> &bodies, const StepWriteOp
                         oriented.push_back(w.add("ORIENTED_EDGE('',*,*," + StepWriter::ref(edgeOf.at(body.fin(fin).edge.index)) + "," +
                                                  (body.fin(fin).sense ? ".T." : ".F.") + ")"));
                     const int el = w.add("EDGE_LOOP(''," + StepWriter::list(oriented) + ")");
-                    bounds.push_back(w.add("FACE_BOUND(''," + StepWriter::ref(el) + ",.T.)"));
+                    bounds.push_back(w.add("FACE_BOUND(''," + StepWriter::ref(el) + (cavity ? ",.F.)" : ",.T.)")));
                 }
-                const bool sameSense = face.sense != flipped;
+                const bool sameSense = (face.sense != flipped) != cavity;
                 facesOf[face.shell.index].push_back(w.add("ADVANCED_FACE(''," + StepWriter::list(bounds) + "," + StepWriter::ref(surface) + "," +
                                                           (sameSense ? ".T." : ".F.") + ")"));
             }
@@ -450,31 +439,44 @@ std::string writeStep(const std::vector<ExchangeBody> &bodies, const StepWriteOp
                 all.push_back(origin);
                 representation = w.add("MANIFOLD_SURFACE_SHAPE_REPRESENTATION(" + text(name) + "," + StepWriter::list(all) + "," + StepWriter::ref(context) + ")");
             } else {
-                // Shell esterne (volume positivo) con i vuoti (negativo) che stanno nel loro box.
-                const std::map<int, double> volumes = shellVolumes(body);
-                std::map<int, Box> boxes;
-                for (FaceId f : body.faces())
-                    for (LoopId l : body.face(f).loops)
-                        for (FinId fin : body.loopFins(l)) boxes[body.face(f).shell.index].add(body.vertex(body.fin(fin).vertex).point);
+                // Il segno e calcolato sul B-rep in coordinate locali, senza mesh.
+                // Le shell aperte non partecipano alla classificazione del volume.
                 std::vector<int> outer, voids;
                 std::vector<int> openShells;
                 for (const auto &[shell, faces] : facesOf) {
                     if (!body.region(body.shell(ShellId(shell)).region).solid)
                         openShells.push_back(w.add("OPEN_SHELL(''," + StepWriter::list(faces) + ")"));
-                    else (volumes.count(shell) && volumes.at(shell) < 0.0 ? voids : outer).push_back(shell);
+                    else (shellVolumes.at(shell) < 0.0 ? voids : outer).push_back(shell);
                 }
                 if (!openShells.empty()) items.push_back(w.add("SHELL_BASED_SURFACE_MODEL(''," + StepWriter::list(openShells) + ")"));
+                // I box conservativi servono al classificatore per accelerare i
+                // raggi, ma non provano il contenimento di una shell nell'altra.
+                std::map<int, SolidClassifier> classifiers;
                 std::map<int, std::vector<int>> voidsOf;
                 for (int v : voids) {
-                    int best = outer.empty() ? -1 : outer.front();
-                    double smallest = 1e300;
+                    const Vec3 point = shellBoundaryPoint(body, ShellId(v));
+                    for (int axis = 0; axis < 3; ++axis)
+                        if (!std::isfinite(point[axis]))
+                            throw std::domain_error("STEP: punto della shell di cavita non finito");
+                    int best = -1;
+                    double smallest = std::numeric_limits<double>::infinity();
                     for (int o : outer) {
-                        const Box &b = boxes[o], &inner = boxes[v];
-                        const bool contains = b.lo.x() <= inner.lo.x() && b.lo.y() <= inner.lo.y() && b.lo.z() <= inner.lo.z() && b.hi.x() >= inner.hi.x()
-                                           && b.hi.y() >= inner.hi.y() && b.hi.z() >= inner.hi.z();
-                        if (contains && b.diagonal() < smallest) smallest = b.diagonal(), best = o;
+                        if (body.shell(ShellId(o)).region != body.shell(ShellId(v)).region) continue;
+                        const auto classifier = classifiers.try_emplace(o, body, ShellId(o), linearResolution()).first;
+                        // Un risultato indeterminato lancia: non assegnare il
+                        // vuoto a un altro esterno dopo una classificazione fallita.
+                        const PointLocation location = classifier->second.classify(point);
+                        if (location == PointLocation::Boundary)
+                            throw std::domain_error("STEP: shell di cavita a contatto con la shell esterna");
+                        const double volume = shellVolumes.at(o);
+                        if (location == PointLocation::Inside && volume < smallest) {
+                            smallest = volume;
+                            best = o;
+                        }
                     }
-                    if (best >= 0) voidsOf[best].push_back(v);
+                    if (best < 0)
+                        throw std::domain_error("STEP: shell di cavita senza shell esterna contenitrice");
+                    voidsOf[best].push_back(v);
                 }
                 for (int o : outer) {
                     const int shell = w.add("CLOSED_SHELL(''," + StepWriter::list(facesOf.at(o)) + ")");
@@ -515,13 +517,8 @@ std::string writeStep(const std::vector<ExchangeBody> &bodies, const StepWriteOp
     }
     if (!styled.empty()) w.add("MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION(''," + StepWriter::list(styled) + "," + StepWriter::ref(context) + ")");
 
-    std::string stamp = options.timeStamp;
-    if (stamp.empty()) {
-        char buffer[32];
-        const std::time_t now = std::time(nullptr);
-        std::strftime(buffer, sizeof buffer, "%Y-%m-%dT%H:%M:%S", std::localtime(&now));
-        stamp = buffer;
-    }
+    const std::string stamp = options.timeStamp.empty()
+        ? detail::formatLocalTimestamp("%Y-%m-%dT%H:%M:%S") : options.timeStamp;
     const char *schema = options.schema == StepSchema::AP203 ? "CONFIG_CONTROL_DESIGN"
                        : options.schema == StepSchema::AP214 ? "AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }"
                                                              : "AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF { 1 0 10303 442 1 1 4 }";

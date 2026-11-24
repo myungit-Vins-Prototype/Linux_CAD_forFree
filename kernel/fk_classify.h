@@ -53,6 +53,9 @@ struct RayFaceIndex {
 bool firstRayHit(const Body &body, const Vec3 &origin, const Vec3 &direction, double tolerance, double &t,
                  FaceId *face = nullptr, const RayFaceIndex *index = nullptr, const Interval *window = nullptr);
 
+// Un punto del contorno della shell per la classificazione rispetto ad altre shell.
+Vec3 shellBoundaryPoint(const Body &body, ShellId shell);
+
 // Box che contiene la faccia.
 Box faceBox(const Body &body, FaceId face);
 
@@ -64,6 +67,8 @@ public:
     // La preparazione delle facce e' utile per molte interrogazioni sullo stesso
     // corpo (campiture); il percorso occasionale conserva il costo precedente.
     SolidClassifier(const Body &body, double tolerance, bool prepareFaces = false);
+    // Classifica rispetto alla sola shell; ShellId nullo seleziona tutte le facce.
+    SolidClassifier(const Body &body, ShellId shell, double tolerance, bool prepareFaces = false);
     PointLocation classify(const Vec3 &point) const;
     PointLocation classifyFace(FaceId face, const Vec3 &point) const;
 

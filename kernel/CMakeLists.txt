@@ -71,6 +71,15 @@ add_library(forgekernel STATIC
     fk_classify.h
     fk_classify_uv.h
     fk_classify.cpp
+    fk_quantize.h
+    fk_quantize.cpp
+    fk_sheet_gyroid.h
+    fk_sheet_gyroid.cpp
+    fk_tpms_spline.h
+    fk_tpms_spline.cpp
+    fk_tpms_batch.h
+    fk_tpms_cells.h
+    fk_tpms_field.h
     fk_cancel.h
     fk_parallel.h
     fk_body_io.h
@@ -129,8 +138,13 @@ add_library(forgekernel STATIC
     fk_surface_refit.cpp
     fk_body_collection.cpp
     fk_surface_mapping.cpp
+    fk_surface_bound_math.h
     fk_surface_curve_bounds.h
     fk_surface_curve_bounds.cpp
+    fk_surface_mapping_bounds.h
+    fk_surface_mapping_bounds.cpp
+    fk_mapping_trim_witness.h
+    fk_mapping_trim_witness.cpp
     fk_sheet_join_validation.h
     fk_sheet_join_validation.cpp
     fk_affine_surface_fit.h
@@ -150,6 +164,8 @@ add_library(forgekernel STATIC
     fk_curve_projection.cpp
     fk_open_offset.h
     fk_open_offset.cpp
+    fk_ruled_wall.h
+    fk_ruled_wall.cpp
     fk_offset_support.h
     fk_offset_support.cpp
     fk_sew.h
@@ -162,6 +178,8 @@ add_library(forgekernel STATIC
     fk_fill.cpp
     fk_project.h
     fk_project.cpp
+    fk_planar_blend_trim.h
+    fk_planar_blend_trim.cpp
     fk_thicken.h
     fk_thicken.cpp
     fk_shell.h
@@ -174,6 +192,7 @@ add_library(forgekernel STATIC
     fk_hermite.cpp
     fk_helix.h
     fk_helix.cpp
+    fk_angular_bounds.h
     fk_helix_projection.h
     fk_helix_projection.cpp
     fk_sweep.h
@@ -223,7 +242,7 @@ target_compile_options(forgekernel PUBLIC
 # I validatori usano intervalli outward: niente riassociazioni o assunzioni
 # di finitezza implicite, anche se una configurazione esterna abilita fast-math.
 set_source_files_properties(fk_mass.cpp fk_profile.cpp fk_curve_algo.cpp fk_loft.cpp fk_sweep_surface_validation.cpp fk_sweep_caps.cpp
-    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_helix_projection.cpp fk_project.cpp fk_mapping_carrier.cpp fk_surface_mapping.cpp fk_sheet.cpp fk_blend_mitre.cpp fk_blend_surface.cpp fk_blend_section_curve.cpp fk_affine_surface_fit.cpp fk_surface_curve_bounds.cpp fk_sheet_join_validation.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS
+    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_helix_projection.cpp fk_project.cpp fk_mapping_carrier.cpp fk_surface_mapping.cpp fk_sheet.cpp fk_blend_mitre.cpp fk_blend_surface.cpp fk_blend_section_curve.cpp fk_affine_surface_fit.cpp fk_surface_curve_bounds.cpp fk_surface_mapping_bounds.cpp fk_mapping_trim_witness.cpp fk_offset_support.cpp fk_sheet_join_validation.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS
     "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
 set_target_properties(forgekernel PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
@@ -237,6 +256,12 @@ if(FORGECAD_BUILD_OCCT_TESTS)
 endif()
 
 # Offset/spessore di lamine e continuazione dei supporti, senza OCCT.
+add_executable(forgekernel_quantize_tests tests/fk_test_main.cpp tests/test_quantize.cpp)
+target_link_libraries(forgekernel_quantize_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_quantize_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_quantize_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_quantize_tests COMMAND forgekernel_quantize_tests)
+
 add_executable(forgekernel_open_offset_tests tests/fk_test_main.cpp tests/test_open_offset.cpp)
 target_link_libraries(forgekernel_open_offset_tests PRIVATE forgekernel)
 target_compile_options(forgekernel_open_offset_tests PRIVATE -Wall -Wextra -Wpedantic)
@@ -806,3 +831,14 @@ target_compile_options(forgekernel_quadrature_validation_tests PRIVATE -Wall -We
 set_target_properties(forgekernel_quadrature_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_quadrature_validation_tests COMMAND forgekernel_quadrature_validation_tests)
 set_tests_properties(forgekernel_quadrature_validation_tests PROPERTIES TIMEOUT 30)
+
+# Residuo continuo del mapping di una sorgente piana a quota affine.
+add_executable(forgekernel_mapping_global_validation_tests tests/fk_test_main.cpp
+    tests/test_mapping_global_validation.cpp tests/test_surface_mapping_bounds.cpp
+    tests/test_mapping_normal_validation.cpp tests/test_surface_mapping_normal_bounds.cpp)
+target_link_libraries(forgekernel_mapping_global_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_mapping_global_validation_tests PRIVATE -Wall -Wextra -Wpedantic
+    $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>)
+set_target_properties(forgekernel_mapping_global_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_mapping_global_validation_tests COMMAND forgekernel_mapping_global_validation_tests)
+set_tests_properties(forgekernel_mapping_global_validation_tests PROPERTIES TIMEOUT 180)

@@ -54,6 +54,10 @@ struct BooleanOptions {
     // lavori fra piani restano in sequenza), 1 = in sequenza. Le richieste
     // esplicite sono rispettate. Il risultato non dipende dal numero.
     int threads = 0;
+    // Per sottrazioni con molti supporti spline locali. Affina i box col
+    // convesso dei poli e classifica insieme le facce del tagliente per cui
+    // è esclusa un'intersezione col bersaglio.
+    bool refineToolFaceBounds = false;
 };
 
 // history facoltativa: facce dichiarate rispetto ad A/B, anche dopo la

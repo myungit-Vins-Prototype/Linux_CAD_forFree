@@ -13,11 +13,14 @@
 
 #include "fk_bspline.h"
 #include "fk_bspline_surface.h"
+#include "fk_body_check.h"
 #include "fk_classify.h"
 #include "fk_exchange.h"
 #include "fk_offset.h"
 #include "fk_open_offset.h"
 #include "fk_pcurve.h"
+#include "fk_planar_blend_trim.h"
+#include "fk_ruled_wall.h"
 #include "fk_parallel.h"
 #include "fk_sew.h"
 #include "fk_surface.h"
@@ -38,22 +41,6 @@ Vec3 faceNormalAt(const Body &body, FaceId f, const Vec3 &p) {
     const SurfaceProjection at = projectPoint(*face.surface, p);
     const Vec3 n = normalAt(*face.surface, at.u, at.v);
     return face.sense ? n : -n;
-}
-
-// Coppia di curve resa compatibile: stessi nodi (stesso grado, stesso dominio).
-void makeCompatible(BSplineCurve<3> &a, BSplineCurve<3> &b) {
-    std::vector<double> values;
-    for (const BSplineCurve<3> *c : {&a, &b}) {
-        const std::vector<double> &k = c->knots();
-        for (std::size_t i = std::size_t(c->degree()) + 1; i < std::size_t(c->poleCount()); ++i) values.push_back(k[i]);
-    }
-    std::sort(values.begin(), values.end());
-    values.erase(std::unique(values.begin(), values.end()), values.end());
-    for (double u : values) {
-        const int target = std::max(a.multiplicity(u), b.multiplicity(u));
-        if (a.multiplicity(u) < target) a = a.insertKnot(u, target - a.multiplicity(u));
-        if (b.multiplicity(u) < target) b = b.insertKnot(u, target - b.multiplicity(u));
-    }
 }
 
 // Bordo libero (edge con una sola fin tra le facce scelte) con la faccia a cui appartiene.
@@ -185,68 +172,23 @@ std::vector<double> normalBreaks(const Body &sheet, FaceId face, const Edge &edg
     return breaks;
 }
 
-// Lungo la normale: le due superfici a distanza s0 < s1 (0 = la superficie
-// stessa) e le pareti rigate lungo la normale ai bordi liberi.
-Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, double s0, double s1, double tolerance, double offsetTolerance, BodyHistory *history) {
-    std::vector<FaceId> faces = sheet.faces();
-    // Facce unite da spigoli tangenti o quasi: lungo una piega le superfici a
-    // distanza si staccano o si attraversano di spessore x angolo. Fino a 2
-    // gradi (le pieghe di uno sweep lungo una spline solo C1) lo scarto si
-    // assorbe nella cucitura; oltre, errore.
-    double crease = 0.0;
-    std::optional<detail::PhaseTimer> creaseTimer;
-    creaseTimer.emplace("spessore: pieghe tra le facce");
-    for (EdgeId e : sheet.edges()) {
-        if (sheet.isLaminar(e)) continue;
-        const Edge &edge = sheet.edge(e);
-        const FaceId a = sheet.finFace(edge.forward), b = sheet.finFace(edge.backward);
-        double angle = 0.0;
-        for (int k = 1; k <= 3; ++k) {
-            const Vec3 p = edge.curve->point(edge.range.lo + edge.range.length() * k / 4.0);
-            angle = std::max(angle, std::asin(std::min(1.0, norm(cross(faceNormalAt(sheet, a, p), faceNormalAt(sheet, b, p))))));
-        }
-        if (angle > 2.0 * M_PI / 180.0 && detail::canOffsetOpenSheet(sheet,tolerance))
-            return detail::thickenOpenSheet(sheet,s0,s1,std::min(tolerance,linearResolution()),history);
-        if (angle > 2.0 * M_PI / 180.0)
-            throw std::domain_error("spessore lungo la normale: le facce formano uno spigolo vivo (E" + std::to_string(e.index)
-                                    + "); usa lo spessore lungo una direzione o separa le facce");
-        crease = std::max(crease, angle);
-    }
-    creaseTimer.reset();
-    BodyHistory lowerHistory,upperHistory;
-    const auto side = [&](double s, double accuracy, BodyHistory &emitted) -> Body {
-        if (s == 0.0) {if(history)emitted=detail::indexHistory(sheet,sheet,HistoryRelation::Same);return sheet;}
-        const detail::PhaseTimer timer("spessore: una superficie a distanza");
-        auto offset=offsetFaces(sheet, faces, s, accuracy, false, 2.0 * M_PI / 180.0);
-        if(history)emitted=std::move(offset.history);
-        return std::move(offset.body);
-    };
-    Body lower, upper;
-    double accuracy = 0.0;  // quella usata per le superfici a distanza
-    // Il salto dei nodi solo G1 per lo spessore cresce con lo spessore: prima
-    // tolleranze proporzionali (5e-5 e 2e-5 per mm), poi via via piu' strette.
-    const double scale = std::max(1.0, std::max(std::fabs(s0), std::fabs(s1)));
-    const std::vector<double> accuracies = offsetTolerance > 0.0 ? std::vector<double>{offsetTolerance}
-                                                                 : std::vector<double>{5e-5 * scale, 2e-5 * scale, 1e-5, 1e-6, 1e-7};
-    for (std::size_t k = 0; k < accuracies.size(); ++k) {
-        try {
-            lower = side(s0, accuracies[k], lowerHistory);
-            upper = side(s1, accuracies[k], upperHistory);
-            accuracy = accuracies[k];
-            break;
-        } catch (const std::domain_error &) {
-            if (k + 1 == accuracies.size()) throw;  // la causa vera (curvatura, spigoli) con la tolleranza piu' stretta
-        }
-    }
-    std::vector<Body> walls;
-    std::vector<BodyHistory> wallHistories;
-    const auto addWall=[&](Body piece,EdgeId edge) {
-        if(history)wallHistories.push_back(detail::generatedFaces(sheet,piece,{{0,EntityKind::Edge,edge.index,HistoryRelation::Generated}}));
-        walls.push_back(std::move(piece));
+struct NormalWalls {
+    std::vector<Body> sheets;
+    std::vector<BodyHistory> histories;
+    double sewTolerance = 0.0;
+};
+
+NormalWalls normalWalls(const Body &sheet, const std::vector<FreeEdge> &free, double s0, double s1,
+                        double tolerance, double accuracy, double crease, bool recordHistory) {
+    NormalWalls result;
+    const auto addWall = [&](Body piece, EdgeId edge) {
+        if (recordHistory)
+            result.histories.push_back(detail::generatedFaces(sheet, piece,
+                {{0, EntityKind::Edge, edge.index, HistoryRelation::Generated}}));
+        result.sheets.push_back(std::move(piece));
     };
     double wallAccuracy = 0.0;
-    std::optional<detail::PhaseTimer> wallTimer;
-    wallTimer.emplace("spessore: pareti");
+    const detail::PhaseTimer wallTimer("spessore: pareti");
     for (const FreeEdge &item : free) {
         const Edge &edge = sheet.edge(item.edge);
         // Tratti del bordo tra le pieghe che attraversa: una parete per tratto
@@ -348,30 +290,126 @@ Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, do
                 }
             }
             BSplineCurve<3> c0 = *f0, c1 = *f1;
-            makeCompatible(c0, c1);
-            const int n = c0.poleCount();
-            std::vector<Vec3> poles(std::size_t(2 * n));
-            for (int i = 0; i < n; ++i) {
-                poles[std::size_t(2 * i)] = c0.poles()[std::size_t(i)];
-                poles[std::size_t(2 * i + 1)] = c1.poles()[std::size_t(i)];
-            }
-            const auto ruled = std::make_shared<BSplineSurface>(3, 1, c0.knots(), std::vector<double>{0.0, 0.0, 1.0, 1.0}, n, 2, std::move(poles));
+            const auto ruled = detail::cubicRuledWallSurface(c0, c1);
             const CurvePtr<3> a = s0 == 0.0 ? edge.curve : CurvePtr<3>(std::make_shared<BSplineCurve<3>>(c0));
             const CurvePtr<3> b = s1 == 0.0 ? edge.curve : CurvePtr<3>(std::make_shared<BSplineCurve<3>>(c1));
             addWall(wall(a, b, range, ruled),item.edge);
         }
     }
-    wallTimer.reset();
     // Pieghe tra le facce o dentro una faccia (dove un bordo le attraversa):
     // le parti a distanza si scostano al piu' di spessore x angolo.
-    const double sewTolerance = 10.0 * tolerance + 1.5 * std::max(std::fabs(s0), std::fabs(s1)) * crease + 2.0 * wallAccuracy;
-    // La pelle superiore ha gia' la normale uscente. Usarla come prima
-    // lamina orienta la cucitura nel verso corretto e evita di rimontare
-    // tutto il solido per girare le facce dopo il controllo del volume.
-    std::vector<const Body *> sheets{&upper, &lower};
-    for (const Body &w : walls) sheets.push_back(&w);
-    std::vector<const BodyHistory *> sources{&upperHistory,&lowerHistory};for(const auto &h:wallHistories)sources.push_back(&h);
-    return sewSolid(sheets,sewTolerance,"la superficie ispessita lungo la normale",sources,history);
+    result.sewTolerance = 10.0 * tolerance + 1.5 * std::max(std::fabs(s0), std::fabs(s1)) * crease + 2.0 * wallAccuracy;
+    return result;
+}
+
+// Lungo la normale: le due superfici a distanza s0 < s1 (0 = la superficie
+// stessa) e le pareti rigate lungo la normale ai bordi liberi.
+Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, double s0, double s1, double tolerance, double offsetTolerance, BodyHistory *history) {
+    std::vector<FaceId> faces = sheet.faces();
+    // Facce unite da spigoli tangenti o quasi: lungo una piega le superfici a
+    // distanza si staccano o si attraversano di spessore x angolo. Fino a 2
+    // gradi (le pieghe di uno sweep lungo una spline solo C1) lo scarto si
+    // assorbe nella cucitura; oltre, errore.
+    double crease = 0.0;
+    std::optional<detail::PhaseTimer> creaseTimer;
+    creaseTimer.emplace("spessore: pieghe tra le facce");
+    for (EdgeId e : sheet.edges()) {
+        if (sheet.isLaminar(e)) continue;
+        const Edge &edge = sheet.edge(e);
+        const FaceId a = sheet.finFace(edge.forward), b = sheet.finFace(edge.backward);
+        double angle = 0.0;
+        for (int k = 1; k <= 3; ++k) {
+            const Vec3 p = edge.curve->point(edge.range.lo + edge.range.length() * k / 4.0);
+            angle = std::max(angle, std::asin(std::min(1.0, norm(cross(faceNormalAt(sheet, a, p), faceNormalAt(sheet, b, p))))));
+        }
+        if (angle > 2.0 * M_PI / 180.0) {
+            if (auto body = detail::tryThickenOpenSheet(sheet, s0, s1, tolerance, history))
+                return std::move(*body);
+            throw ThickenCreaseError("spessore lungo la normale: le facce formano uno spigolo vivo (E" + std::to_string(e.index)
+                                     + "); usa lo spessore lungo una direzione o separa le facce", edge.curve, edge.range);
+        }
+        crease = std::max(crease, angle);
+    }
+    creaseTimer.reset();
+    bool contracted = false;
+    bool trimmed = false;
+    std::map<double, detail::PlanarBlendCollapse> collapseCandidates;
+    std::map<double, detail::PlanarBlendTrim> trimCandidates;
+    const auto side = [&](double s, double accuracy, BodyHistory &emitted) -> Body {
+        if (s == 0.0) {if(history)emitted=detail::indexHistory(sheet,sheet,HistoryRelation::Same);return sheet;}
+        const detail::PhaseTimer timer("spessore: una superficie a distanza");
+        constexpr double joinAngle = 2.0 * kPi / 180.0;
+        std::optional<OffsetResult> offset;
+        try {
+            offset = offsetFaces(sheet, faces, s, accuracy, false, joinAngle);
+        } catch (const OffsetCurvatureError &) {
+            try {
+                auto candidate = collapseCandidates.find(s);
+                if (candidate == collapseCandidates.end())
+                    candidate = collapseCandidates.emplace(s, detail::findPlanarBlendCollapse(sheet, s)).first;
+                const auto &layer = candidate->second;
+                if (!layer.rails.empty())
+                    offset = detail::offsetWithCollapsedRails(sheet, layer.faces, s, accuracy, joinAngle, layer.rails);
+                else {
+                    auto trim = trimCandidates.find(s);
+                    if (trim == trimCandidates.end())
+                        trim = trimCandidates.emplace(s, detail::findPlanarBlendTrim(sheet, s)).first;
+                    if (trim->second.support.valid()) {
+                        offset = detail::offsetWithPlanarBlendTrim(sheet, trim->second, s, accuracy, tolerance, joinAngle);
+                        trimmed = true;
+                    }
+                }
+            } catch (const std::domain_error &) {
+                // Mantieni la diagnosi di curvatura se gli appoggi non si chiudono.
+            }
+            if (!offset) throw;
+            contracted = true;
+        }
+        if (history) emitted = std::move(offset->history);
+        return std::move(offset->body);
+    };
+    // Il salto dei nodi solo G1 per lo spessore cresce con lo spessore: prima
+    // tolleranze proporzionali (5e-5 e 2e-5 per mm), poi via via piu' strette.
+    const double scale = std::max(1.0, std::max(std::fabs(s0), std::fabs(s1)));
+    const std::vector<double> accuracies = offsetTolerance > 0.0 ? std::vector<double>{offsetTolerance}
+                                                                 : std::vector<double>{5e-5 * scale, 2e-5 * scale, 1e-5, 1e-6, 1e-7};
+    std::exception_ptr trimSewFailure;
+    for (std::size_t k = 0; k < accuracies.size(); ++k) {
+        contracted = false;
+        trimmed = false;
+        Body lower, upper;
+        BodyHistory lowerHistory, upperHistory;
+        const double accuracy = accuracies[k];
+        try {
+            lower = side(s0, accuracy, lowerHistory);
+            upper = side(s1, accuracy, upperHistory);
+        } catch (const std::domain_error &) {
+            if (k + 1 != accuracies.size()) continue;
+            if (trimSewFailure) std::rethrow_exception(trimSewFailure);
+            throw;
+        }
+        const auto walls = normalWalls(sheet, free, s0, s1, tolerance, accuracy, crease, history != nullptr);
+        // La pelle superiore ha gia' la normale uscente. Usarla come prima
+        // lamina orienta la cucitura nel verso corretto.
+        std::vector<const Body *> sheets{&upper, &lower};
+        for (const Body &wall : walls.sheets) sheets.push_back(&wall);
+        std::vector<const BodyHistory *> sources{&upperHistory, &lowerHistory};
+        for (const auto &wall : walls.histories) sources.push_back(&wall);
+
+        BodyHistory sewnHistory;
+        try {
+            Body result = sewSolid(sheets, walls.sewTolerance, "la superficie ispessita lungo la normale", sources,
+                                   history ? &sewnHistory : nullptr);
+            if (contracted && (result.shells().size() != sheet.shells().size() || !checkBody(result, {true, true}).empty()))
+                throw std::domain_error("spessore: la contrazione del raccordo non forma un solido valido");
+            if (history) *history = std::move(sewnHistory);
+            return result;
+        } catch (const std::domain_error &) {
+            if (!trimmed || k + 1 == accuracies.size()) throw;
+            trimSewFailure = std::current_exception();
+        }
+    }
+    throw std::logic_error("spessore: nessuna precisione disponibile");
 }
 
 // Lungo una direzione w: la superficie traslata di s0 w e di s1 w e le pareti

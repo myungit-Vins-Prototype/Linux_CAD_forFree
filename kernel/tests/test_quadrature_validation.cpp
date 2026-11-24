@@ -244,3 +244,186 @@ FK_TEST(QuadratureLargeMidpointsAndUnrepresentableIntegrals) {
     };
     domainFailure([&] { (void)detail::integrate(oscillating, 0., 4., 1e-12); });
 }
+
+FK_TEST(QuadratureScalarWeightedUnderflow) {
+    const double smallest = std::numeric_limits<double>::denorm_min();
+    const double width = std::ldexp(1., 1023), expected = std::ldexp(1., -51);
+    for (double sign : {-1., 1.}) for (bool reverse : {false, true}) {
+        int calls = 0;
+        double error, absolute;
+        const double actual = detail::gaussKronrod([&](double) { ++calls; return sign * smallest; },
+            reverse ? width : 0., reverse ? 0. : width, error, absolute);
+        FK_CHECK(calls == 15);
+        FK_CHECK(actual != 0.0);
+        finiteNear(actual, (reverse ? -sign : sign) * expected, expected * 1e-14);
+        finiteNear(absolute, expected, expected * 1e-14);
+        FK_CHECK(std::isfinite(error) && error >= 0 && error <= expected * 1e-14);
+        const double adaptive = detail::integrate([&](double) { return sign * smallest; },
+            reverse ? width : 0., reverse ? 0. : width, 1e-30);
+        finiteNear(adaptive, (reverse ? -sign : sign) * expected, expected * 1e-14);
+    }
+    // Old K15 yields 9*2^-52 instead of 8*2^-52: 12.5% error,
+    // even though the result is finite and nonzero.
+    const double fourSmallest = 4 * smallest;
+    double nonzeroError, nonzeroAbsolute;
+    finiteNear(detail::gaussKronrod([&](double) { return fourSmallest; }, 0., width,
+        nonzeroError, nonzeroAbsolute), 4 * expected, expected * 1e-14);
+    finiteNear(nonzeroAbsolute, 4 * expected, expected * 1e-14);
+    // Nonzero subnormal weighted products, not just complete loss to zero.
+    const double tinyNormal = std::numeric_limits<double>::min();
+    finiteNear(detail::integrate([&](double) { return tinyNormal; }, 0., width, 1e-12), 2., 1e-14);
+    finiteNear(detail::integrate([](double) { return 0.; }, 0., width, 0.), 0., 0.);
+}
+FK_TEST(QuadratureVectorWeightedUnderflow) {
+    const double smallest = std::numeric_limits<double>::denorm_min();
+    const double width = std::ldexp(1., 1023), expected = std::ldexp(1., -51);
+    const auto callback = [&](double) {
+        detail::Evaluation<4> result;
+        result.value = {smallest, -smallest, 1. / width, 0.};
+        result.magnitude = {1. / width, smallest, smallest, 0.};
+        return result;
+    };
+    for (bool reverse : {false, true}) {
+        int calls = 0;
+        detail::Evaluation<4> actual;
+        detail::Values<4> error, absolute;
+        detail::gaussKronrod<4>([&](double t) { ++calls; return callback(t); },
+            reverse ? width : 0., reverse ? 0. : width, actual, error, absolute);
+        FK_CHECK(calls == 15);
+        const double sign = reverse ? -1 : 1;
+        finiteNear(actual.value[0], sign * expected, expected * 1e-14);
+        finiteNear(actual.value[1], -sign * expected, expected * 1e-14);
+        finiteNear(actual.value[2], sign, 1e-14);
+        finiteNear(actual.magnitude[0], 1, 1e-14);
+        finiteNear(actual.magnitude[1], expected, expected * 1e-14);
+        finiteNear(actual.magnitude[2], expected, expected * 1e-14);
+        finiteNear(absolute[0], expected, expected * 1e-14);
+        finiteNear(absolute[1], expected, expected * 1e-14);
+        finiteNear(actual.value[3], 0, 0);
+        finiteNear(actual.magnitude[3], 0, 0);
+        for (std::size_t i = 0; i < 4; ++i) FK_CHECK(std::isfinite(error[i]) && error[i] >= 0);
+        const auto adaptive = detail::integrateVector<4>(callback, reverse ? width : 0.,
+            reverse ? 0. : width, 1e-12, roundoff, 1);
+        for (std::size_t i = 0; i < 4; ++i) {
+            FK_CHECK(adaptive.value[i] == actual.value[i]);
+            FK_CHECK(adaptive.magnitude[i] == actual.magnitude[i]);
+        }
+    }
+    int activeCalls = 0, combinedCalls = 0;
+    const auto active = [&](double t) {
+        ++activeCalls;
+        detail::Evaluation<1> result;
+        result.value[0] = result.magnitude[0] = std::pow(t / width, 14);
+        return result;
+    };
+    const auto reference = detail::integrateVector<1>(active, 0., width, 1e-12, roundoff);
+    const auto combined = [&](double t) {
+        ++combinedCalls;
+        detail::Evaluation<2> result;
+        result.value = {std::pow(t / width, 14), smallest};
+        result.magnitude = {result.value[0], smallest};
+        return result;
+    };
+    const auto result = detail::integrateVector<2>(combined, 0., width, 1e-12, roundoff, 1);
+    FK_CHECK(activeCalls > 15 && combinedCalls == activeCalls);
+    FK_CHECK(result.value[0] == reference.value[0]);
+    finiteNear(result.value[1], expected, expected * 1e-14);
+    finiteNear(result.magnitude[1], expected, expected * 1e-14);
+}
+FK_TEST(QuadratureNativeArcLengthAtHugeParameterSpan) {
+    const double width = std::ldexp(1., 1023), expected = std::ldexp(1., -51);
+    for (double factor : {1., 4.}) {
+        const BSplineCurve<3> curve(1, {0, 0, width, width}, {{0, 0, 0}, {factor * expected, 0, 0}});
+        FK_CHECK(curve.derivative(width * .5)[0] == factor * std::numeric_limits<double>::denorm_min());
+        finiteNear(distance(curve.point(0), curve.point(width)), factor * expected, expected * 1e-14);
+        finiteNear(arcLength(curve, curve.domain(), 1e-30), factor * expected, expected * 1e-14);
+        detail::CurveLengthCache cache;
+        finiteNear(cache.get(curve, curve.domain(), 1e-30), factor * expected, expected * 1e-14);
+        finiteNear(cache.get(curve, curve.domain(), 1e-30), factor * expected, expected * 1e-14);
+        FK_CHECK(cache.statistics().integrations == 1 && cache.statistics().hits >= 1);
+    }
+}
+
+FK_TEST(QuadratureUnrecoverableMixedScaleIsRejected) {
+    // The same rule samples contain a tiny center and cancelling ordinary
+    // pairs. Scaling by max=1 cannot restore the weighted center: reject
+    // rather than publish another finite zero as a successful recovery.
+    const double width = std::ldexp(1., 1023), middle = .5 * width;
+    const double smallest = std::numeric_limits<double>::denorm_min();
+    int calls = 0;
+    const auto scalar = [&](double t) {
+        ++calls;
+        return t == middle ? smallest : t < middle ? 1. : -1.;
+    };
+    double error, absolute;
+    domainFailure([&] { (void)detail::gaussKronrod(scalar, 0., width, error, absolute); });
+    FK_CHECK(calls == 15);
+    calls = 0;
+    const auto vector = [&](double t) {
+        detail::Evaluation<2> result;
+        result.value = {1. / width, scalar(t)};
+        result.magnitude = {1. / width, 1.};
+        return result;
+    };
+    // Passive components do not guide refinement but must remain valid.
+    domainFailure([&] { (void)detail::integrateVector<2>(vector, 0., width, 1e-12, roundoff, 1); });
+    FK_CHECK(calls == 15);
+}
+
+FK_TEST(QuadratureScalarReportsDepthExhaustion) {
+    int calls = 0;
+    const double threshold = 1. / 3;
+    const auto discontinuous = [&](double t) { ++calls; return t >= threshold ? 1. : 0.; };
+    domainFailure([&] { (void)detail::integrate(discontinuous, 0., 1., 1e-12); });
+    // A single unresolved interval descends; no exponential full-tree test.
+    FK_CHECK(calls > 15 && calls < 2000);
+}
+FK_TEST(QuadratureVectorReportsDepthExhaustion) {
+    int calls = 0;
+    const double threshold = 1. / 3;
+    const auto discontinuous = [&](double t) {
+        ++calls;
+        detail::Evaluation<2> result;
+        result.value = {t >= threshold ? 1. : 0., 1.};
+        result.magnitude = {1., 1.};
+        return result;
+    };
+    domainFailure([&] { (void)detail::integrateVector<2>(discontinuous, 0., 1., 1e-12, roundoff, 1); });
+    FK_CHECK(calls > 15 && calls < 2000);
+}
+FK_TEST(QuadratureNativeRationalArcReportsDepthExhaustion) {
+    // All these curves trace the same straight unit segment monotonically.
+    // Only the positive rational parameterization differs; derivatives are finite.
+    const BSplineCurve<3> control(1, {0, 0, 1, 1}, {{0, 0, 0}, {1, 0, 0}}, {1, std::ldexp(1., -20)});
+    finiteNear(arcLength(control, control.domain(), 1e-13), 1., 1e-12);
+    for (int exponent : {-40, -48}) {
+        const BSplineCurve<3> curve(1, {0, 0, 1, 1}, {{0, 0, 0}, {1, 0, 0}}, {1, std::ldexp(1., exponent)});
+        finiteNear(distance(curve.point(0), curve.point(1)), 1., 0.);
+        FK_CHECK(isFinite(curve.derivative(0)) && isFinite(curve.derivative(1)));
+        domainFailure([&] { (void)arcLength(curve, curve.domain(), 1e-13); });
+        detail::CurveLengthCache cache;
+        domainFailure([&] { (void)cache.get(curve, curve.domain(), 1e-13); });
+        // A rejected request must not turn into a successful cached value.
+        domainFailure([&] { (void)cache.get(curve, curve.domain(), 1e-13); });
+    }
+}
+
+FK_TEST(QuadraturePartitionKeepsAnIndivisiblePanelWithinTheTotalBudget) {
+    const double end = std::nextafter(1.0, 2.0);
+    const auto f = [end](double t) {
+        const double value = t == end ? 1000.0 : 1.0;
+        return detail::Evaluation<1>{{value}, {value}};
+    };
+    const auto result = detail::integrateVectorPartition<1>(f, {0.0, 1.0, end}, 1e-12, roundoff);
+    finiteNear(result.value[0], 1.0, 1e-12);
+    FK_CHECK(result.value[0] > 1.0);  // The small panel still contributes.
+}
+
+FK_TEST(QuadraturePartitionRejectsAnIndivisiblePanelBeyondTheTotalBudget) {
+    const double end = std::nextafter(1.0, 2.0);
+    const auto f = [end](double t) {
+        const double value = t == end ? 1000.0 : 1.0;
+        return detail::Evaluation<1>{{value}, {value}};
+    };
+    domainFailure([&] { detail::integrateVectorPartition<1>(f, {1.0, end}, 1e-12, roundoff); });
+}

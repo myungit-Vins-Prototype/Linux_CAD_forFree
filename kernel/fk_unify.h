@@ -9,7 +9,8 @@
 // ShapeUpgrade_UnifySameDomain di OCCT (l'app la applica dopo ogni booleana):
 //  - facce adiacenti sulla stessa superficie (lo stesso oggetto, oppure piani
 //    coincidenti con la stessa normale) diventano una faccia: gli edge tra di
-//    loro spariscono e i loop si ricollegano girando attorno ai vertici;
+//    loro spariscono e i loop si ricollegano girando attorno ai vertici.
+//    Le facce piane restano separate se la fusione ripete un vertice sul contorno;
 //  - due edge che si incontrano in un vertice usato solo da loro e stanno
 //    sulla stessa curva (lo stesso oggetto con i tratti contigui, rette
 //    allineate, lo stesso cerchio) diventano un edge e il vertice sparisce.

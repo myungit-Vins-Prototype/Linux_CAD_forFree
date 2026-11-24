@@ -6,6 +6,7 @@
 #include <functional>
 #include <map>
 #include <stdexcept>
+#include <unordered_set>
 
 #include "fk_curve_algo.h"
 #include "fk_pcurve.h"
@@ -283,7 +284,35 @@ static Body unifyBody(const Body &body, double tolerance, BodyHistory *history, 
     };
     std::map<int, std::vector<FaceId>> groups;
     for (std::size_t i = 0; i < faceIds.size(); ++i) groups[find(int(i))].push_back(faceIds[i]);
-    for (const auto &[root, members] : groups) {
+    // Un gruppo piano puo' avere un foro che tocca il perimetro in
+    // un vertice anche se ogni faccia e il solido sono regolari.
+    // In quel caso conserva le facce e i bordi che le separano.
+    const auto pinchedPlanarBoundary = [&](const std::vector<FaceId> &members) {
+        if (members.size() < 2 || body.face(members.front()).surface->type() != SurfaceType::Plane)
+            return false;
+        std::unordered_set<int> starts;
+        for (FaceId face : members)
+            for (LoopId loop : body.face(face).loops)
+                for (FinId fin : body.loopFins(loop)) {
+                    if (internal.at(body.fin(fin).edge.index)) continue;
+                    if (!starts.insert(body.finStart(fin).index).second) return true;
+                }
+        return false;
+    };
+    std::vector<std::vector<FaceId>> patches;
+    patches.reserve(groups.size());
+    for (auto &[root, members] : groups) {
+        if (!pinchedPlanarBoundary(members)) {
+            patches.push_back(std::move(members));
+            continue;
+        }
+        for (FaceId face : members) {
+            for (LoopId loop : body.face(face).loops)
+                for (FinId fin : body.loopFins(loop)) internal[body.fin(fin).edge.index] = false;
+            patches.push_back({face});
+        }
+    }
+    for (const auto &members : patches) {
         const Face &representative = body.face(members.front());
         Body::BuildFace built;
         built.surface = representative.surface;

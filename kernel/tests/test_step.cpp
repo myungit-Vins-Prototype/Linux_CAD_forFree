@@ -41,6 +41,8 @@ std::vector<std::pair<std::string, Body>> sampleBodies() {
     const Frame3 base(Vec3(0, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0));
     const Body box = makeBox(base, 4.0, 3.0, 2.0);
     bodies.push_back({"box", box});
+    const Body inner = makeBox(Frame3(Vec3(1, 1, 0.5), Vec3(0, 0, 1), Vec3(1, 0, 0)), 1.0, 1.0, 1.0);
+    bodies.push_back({"cavita", booleanOperation(box, inner, BooleanOperation::Subtract)});
     bodies.push_back({"cilindro", makeCylinder(Frame3(Vec3(6, 0, 0), normalized(Vec3(0, 1, 1)), Vec3(1, 0, 0)), 1.0, 3.0)});
     bodies.push_back({"sfera", makeSphere(Frame3(Vec3(0, 6, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 1.5)});
     bodies.push_back({"toro", makeTorus(Frame3(Vec3(8, 6, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 2.0, 0.5)});

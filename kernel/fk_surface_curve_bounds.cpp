@@ -1,18 +1,17 @@
 #include "fk_surface_curve_bounds.h"
+#include "fk_surface_bound_math.h"
 #include "fk_bspline.h"
 #include "fk_bspline_surface.h"
 #include "fk_cancel.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <cstdint>
 #include <utility>
 #include <stdexcept>
 #include <vector>
 
 namespace ForgeCad::Kernel::detail {
 namespace {
-constexpr double infinity = std::numeric_limits<double>::infinity();
 // Fixed work/storage limits, independent of the requested geometric budget.
 constexpr std::size_t maxScalars = 2000000;
 constexpr std::size_t maxVisits = 16384;
@@ -27,107 +26,19 @@ struct Work {
         --remaining;
     }
 };
-struct I {
-    double lo = 0, hi = 0;
-    I() = default;
-    explicit I(double value) : lo(value), hi(value) {}
-    I(double first, double last) : lo(first), hi(last) {}
-};
-bool finite(I value) {
-    return std::isfinite(value.lo) && std::isfinite(value.hi) && value.lo <= value.hi;
-}
-bool exact(I value, double number) { return value.lo == number && value.hi == number; }
-I whole() { return {-infinity, infinity}; }
-I outward(double lo, double hi) {
-    if (!std::isfinite(lo) || !std::isfinite(hi) || lo > hi) return whole();
-    return {std::nextafter(lo, -infinity), std::nextafter(hi, infinity)};
-}
-I operator+(I a, I b) {
-    if (!finite(a) || !finite(b)) return whole();
-    if (exact(a, 0)) return b;
-    if (exact(b, 0)) return a;
-    if (a.lo == a.hi && b.lo == b.hi && a.lo == -b.lo) return I(0);
-    return outward(a.lo + b.lo, a.hi + b.hi);
-}
-I operator-(I a, I b) {
-    if (!finite(a) || !finite(b)) return whole();
-    if (exact(b, 0)) return a;
-    if (a.lo == a.hi && b.lo == b.hi && a.lo == b.lo) return I(0);
-    if (exact(a, 0)) return {-b.hi, -b.lo};
-    return outward(a.lo - b.hi, a.hi - b.lo);
-}
-I operator*(I a, I b) {
-    if (!finite(a) || !finite(b)) return whole();
-    if (exact(a, 0) || exact(b, 0)) return I(0);
-    if (exact(a, 1)) return b;
-    if (exact(b, 1)) return a;
-    if (exact(a, -1)) return {-b.hi, -b.lo};
-    if (exact(b, -1)) return {-a.hi, -a.lo};
-    const double products[] = {a.lo * b.lo, a.lo * b.hi, a.hi * b.lo, a.hi * b.hi};
-    for (double value : products) if (!std::isfinite(value)) return whole();
-    return outward(*std::min_element(products, products + 4), *std::max_element(products, products + 4));
-}
-I operator/(I a, I b) {
-    if (!finite(a) || !finite(b) || !(b.lo > 0)) return whole();
-    if (exact(a, 0)) return I(0);
-    if (exact(b, 1)) return a;
-    const double quotients[] = {a.lo / b.lo, a.lo / b.hi, a.hi / b.lo, a.hi / b.hi};
-    for (double value : quotients) if (!std::isfinite(value)) return whole();
-    return outward(*std::min_element(quotients, quotients + 4), *std::max_element(quotients, quotients + 4));
-}
-using P = std::vector<I>;
+using surface_bounds::I;
+using surface_bounds::P;
+using surface_bounds::infinity;
+using surface_bounds::scaled;
+using surface_bounds::sum;
+using surface_bounds::hull;
 template<int N> using VP = std::array<P, N>;
 template<int N> using Point = std::array<I, N>;
 
-P elevated(P values, std::size_t degree) {
-    while (values.size() <= degree) {
-        const auto n = values.size();
-        P next(n + 1);
-        next.front() = values.front(); next.back() = values.back();
-        for (std::size_t i = 1; i < n; ++i) {
-            const I t = I(double(i)) / I(double(n));
-            next[i] = values[i - 1] * t + values[i] * (I(1) - t);
-        }
-        values = std::move(next);
-    }
-    return values;
-}
-P sum(P a, P b, bool subtract = false) {
-    const auto degree = std::max(a.size(), b.size()) - 1;
-    a = elevated(std::move(a), degree); b = elevated(std::move(b), degree);
-    for (std::size_t i = 0; i < a.size(); ++i) a[i] = subtract ? a[i] - b[i] : a[i] + b[i];
-    return a;
-}
-P scaled(P values, I factor) {
-    for (I &value : values) value = value * factor;
-    return values;
-}
-// Degrees never exceed 21 in the supported rational residual. The binomial
-// integers are exact (<2^53); only their ratio needs outward rounding.
-double choose(int n, int k) {
-    std::uint64_t value = 1;
-    for (int i = 1; i <= std::min(k, n - k); ++i) value = value * std::uint64_t(n - i + 1) / std::uint64_t(i);
-    return double(value);
-}
 P product(const P &a, const P &b) {
-    const int m = int(a.size()) - 1, n = int(b.size()) - 1;
-    if (m + n > 21) throw ProofFailed{};
-    P values(std::size_t(m + n + 1));
-    for (int i = 0; i <= m; ++i)
-        for (int j = 0; j <= n; ++j) {
-            const I factor = I(choose(m, i)) * I(choose(n, j)) / I(choose(m + n, i + j));
-            values[std::size_t(i + j)] = values[std::size_t(i + j)] + a[std::size_t(i)] * b[std::size_t(j)] * factor;
-        }
-    return values;
+    return surface_bounds::product<21, ProofFailed>(a, b);
 }
-I hull(const P &values) {
-    I result(infinity, -infinity);
-    for (I value : values) {
-        if (!finite(value)) return whole();
-        result.lo = std::min(result.lo, value.lo); result.hi = std::max(result.hi, value.hi);
-    }
-    return result;
-}
+
 // Polar form, retaining original parameter anchors. It also encloses
 // roundoff slivers outside [0,1]; no rounded Bezier conversion is trusted.
 P restrictP(const P &original, I first, I last) {

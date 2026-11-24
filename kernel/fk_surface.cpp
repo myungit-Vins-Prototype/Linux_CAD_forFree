@@ -251,17 +251,28 @@ double ExtrusionSurface::wrap(double u) const {
 
 std::vector<double> ExtrusionSurface::uBreakpoints(const Interval &range) const {
     if (!wraps_) return curve_->breakpoints(range);
-    // Nodi della curva ripetuti in ogni periodo toccato da range.
+    cancellationPoint();
+    if (!range.isFinite() || range.lo > range.hi)
+        throw std::invalid_argument("ExtrusionSurface: intervallo periodico non valido");
+    if (range.lo == range.hi) return {range.lo};
     const Interval domain = curve_->domain();
-    const std::vector<double> base = curve_->breakpoints(domain);
-    std::vector<double> result{range.lo};
-    const double first = std::floor((range.lo - domain.lo) / period_), last = std::floor((range.hi - domain.lo) / period_);
-    for (double k = first; k <= last; ++k)
+    const double first = std::floor((range.lo - domain.lo) / period_);
+    const double last = std::floor((range.hi - domain.lo) / period_);
+    // Same turn budget as BSplineSurface. Beyond the integer precision of
+    // double, adjacent turns cannot be placed unambiguously.
+    if (!(period_ > 0.) || !std::isfinite(period_) || !std::isfinite(first) || !std::isfinite(last)
+        || std::abs(first) >= 0x1p53 || std::abs(last) >= 0x1p53 || last - first > 100000)
+        throw std::invalid_argument("ExtrusionSurface: intervallo periodico troppo esteso");
+    const auto base = curve_->breakpoints(domain);
+    std::vector<double> result{range.lo, range.hi};
+    for (int offset = 0; offset <= static_cast<int>(last - first); ++offset) {
+        cancellationPoint();
+        const double turn = first + offset;
         for (double b : base) {
-            const double t = b + k * period_;
+            const double t = b + turn * period_;
             if (t > range.lo && t < range.hi) result.push_back(t);
         }
-    result.push_back(range.hi);
+    }
     std::sort(result.begin(), result.end());
     result.erase(std::unique(result.begin(), result.end()), result.end());
     return result;

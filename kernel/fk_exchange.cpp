@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <ctime>
 #include <unordered_map>
 
 #include <algorithm>
@@ -11,6 +12,7 @@
 #include <cmath>
 #include <exception>
 #include <map>
+#include <numeric>
 #include <limits>
 #include <set>
 #include <stdexcept>
@@ -37,6 +39,22 @@
 #include "fk_timing.h"
 
 namespace ForgeCad::Kernel::detail {
+
+std::string formatLocalTimestamp(const char *format) {
+    const std::time_t now = std::time(nullptr);
+    if (now == std::time_t(-1)) throw std::runtime_error("STEP/IGES: ora corrente non disponibile");
+    std::tm local{};
+#if defined(_WIN32)
+    const bool converted = ::localtime_s(&local, &now) == 0;
+#else
+    const bool converted = ::localtime_r(&now, &local) != nullptr;
+#endif
+    if (!converted) throw std::runtime_error("STEP/IGES: ora locale non disponibile");
+    char buffer[32];
+    const std::size_t length = std::strftime(buffer, sizeof buffer, format, &local);
+    if (length == 0) throw std::runtime_error("STEP/IGES: timestamp non rappresentabile");
+    return std::string(buffer, length);
+}
 
 std::string formatReal(double x) {
     if (x == 0.0) return "0.";
@@ -830,11 +848,11 @@ CurvePtr<2> sewnPCurve(const RawEdge &source, const RawEdge &target,
 
 } // namespace
 
-bool sewModel(RawModel &model, double tolerance) {
-    // Vertici uniti: ordinati in x, confronti solo vicini.
+namespace {
+void mergeNearbyPoints(const RawModel &model, double tolerance, std::vector<int> &target) {
     const std::size_t n = model.points.size();
-    std::vector<int> order(n), target(n);
-    for (std::size_t k = 0; k < n; ++k) order[k] = int(k), target[k] = int(k);
+    std::vector<int> order(n);
+    std::iota(order.begin(), order.end(), 0);
     std::sort(order.begin(), order.end(), [&](int a, int b) { return model.points[std::size_t(a)].x() < model.points[std::size_t(b)].x(); });
     // Celle 3D: evita la scansione quadratica dei punti con la stessa x.
     // Mantieni ordine e rappresentanti della precedente fusione greedy.
@@ -885,6 +903,52 @@ bool sewModel(RawModel &model, double tolerance) {
                 if (target[std::size_t(b)] == b && distance(model.points[std::size_t(a)], model.points[std::size_t(b)]) <= tolerance) target[std::size_t(b)] = a;
             }
         }
+    }
+}
+} // namespace
+
+bool sewModel(RawModel &model, double tolerance) {
+    return sewModel(model, tolerance, {});
+}
+
+bool sewModel(RawModel &model, double tolerance, const std::vector<std::pair<int, int>> &pairs) {
+    std::vector<int> target(model.points.size());
+    std::iota(target.begin(), target.end(), 0);
+    std::map<int, int> mates;
+    if (!pairs.empty()) {
+        const auto root = [&](int i) {
+            while (target[std::size_t(i)] != i) {
+                target[std::size_t(i)] = target[std::size_t(target[std::size_t(i)])];
+                i = target[std::size_t(i)];
+            }
+            return i;
+        };
+        const auto join = [&](int a, int b) {
+            a = root(a);
+            b = root(b);
+            if (distance(model.points[a], model.points[b]) > tolerance)
+                throw std::domain_error("cucitura: estremi dei bordi indicati fuori tolleranza");
+            target[std::size_t(std::max(a, b))] = std::min(a, b);
+        };
+        const auto near = [&](int a, int b) { return distance(model.points[a], model.points[b]) <= tolerance; };
+        for (const auto &[first, second] : pairs) {
+            cancellationPoint();
+            if (first == second || !mates.emplace(first, second).second || !mates.emplace(second, first).second)
+                throw std::domain_error("cucitura: coppia di bordi ambigua");
+            const auto &a = model.edges.at(first), &b = model.edges.at(second);
+            const bool direct = near(a.start, b.start) && near(a.end, b.end);
+            const bool reverse = near(a.start, b.end) && near(a.end, b.start);
+            if (direct == reverse)
+                throw std::domain_error("cucitura: corrispondenza ambigua fra gli estremi dei bordi indicati");
+            join(a.start, direct ? b.start : b.end);
+            join(a.end, direct ? b.end : b.start);
+        }
+        for (int &i : target) i = root(i);
+        for (std::size_t i = 0; i < target.size(); ++i)
+            if (distance(model.points[i], model.points[target[i]]) > tolerance)
+                throw std::domain_error("cucitura: gruppo di estremi dei bordi indicati fuori tolleranza");
+    } else {
+        mergeNearbyPoints(model, tolerance, target);
     }
     for (RawEdge &e : model.edges) {
         e.start = target[std::size_t(e.start)];
@@ -995,6 +1059,8 @@ bool sewModel(RawModel &model, double tolerance) {
             const Interval ra=rangeOf(a);
             for (std::size_t j = i + 1; j < list.size(); ++j) {
                 if (edgeTarget[std::size_t(list[j])] != list[j]) continue;
+                const auto mate = mates.find(list[i]);
+                if (!mates.empty() && (mate == mates.end() || mate->second != list[j])) continue;
                 const RawEdge &b = model.edges[std::size_t(list[j])];
                 const Interval rb=rangeOf(b);
                 if (!matching(a,ra,b,rb)) continue;
@@ -1002,6 +1068,9 @@ bool sewModel(RawModel &model, double tolerance) {
                 reversed[std::size_t(list[j])] = a.start!=a.end ? a.start!=b.start : closedReversed(a,ra,b,rb);
             }
         }
+    for (const auto &[first, second] : pairs)
+        if (edgeTarget[std::size_t(first)] != edgeTarget[std::size_t(second)])
+            throw std::domain_error("cucitura: i bordi indicati non coincidono");
     for (RawFace &face : model.faces)
         for (auto &loop : face.loops)
             for (RawFin &fin : loop) {

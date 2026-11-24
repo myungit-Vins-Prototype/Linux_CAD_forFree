@@ -121,3 +121,36 @@ FK_TEST(InvertPointNonFinitePeriodicSeedsCannotReturnSuccess) {
         FK_CHECK(!invertPoint(torus, torus.point(.25, .4), torusGuess, tolerance, 10));
     }
 }
+
+FK_TEST(ProjectAndInvertSpindleTorusOnNegativeRadialBranch) {
+    const ToroidalSurface torus(Frame3(), 1, 2);
+    // At (pi, pi), the signed radius is -1. The point is at x=+1,
+    // although its meridian parameter faces the opposite direction.
+    const Vec3 point(1, 0, 0);
+    constexpr double cap = 1e-10;
+    const auto whole = projectPoint(torus, point);
+    FK_CHECK(whole.distance <= cap);
+    FK_CHECK_NEAR(whole.u, kPi, cap);
+    FK_CHECK_NEAR(whole.v, kPi, cap);
+
+    for (int turns : {-1, 0, 1}) {
+        const Interval u{3. + turns * kTwoPi, 3.3 + turns * kTwoPi};
+        const Interval v{3. - turns * kTwoPi, 3.3 - turns * kTwoPi};
+        const auto window = projectPoint(torus, point, u, v);
+        FK_CHECK(window.distance <= cap);
+        FK_CHECK(u.contains(window.u) && v.contains(window.v));
+        FK_CHECK_NEAR(window.u, kPi + turns * kTwoPi, cap);
+        FK_CHECK_NEAR(window.v, kPi - turns * kTwoPi, cap);
+    }
+
+    // Moving the window away from the stationary point must leave an
+    // eligible boundary candidate and must not return the excluded branch.
+    const auto boundary = projectPoint(torus, point, {2.9, 3.}, {3., 3.3});
+    FK_CHECK_NEAR(boundary.u, 3., cap);
+    FK_CHECK_NEAR(boundary.v, kPi, cap);
+    FK_CHECK_NEAR(boundary.distance, 2 * std::sin((kPi - 3.) / 2.), cap);
+
+    Vec2 seed(0, 0);
+    FK_CHECK(invertPoint(torus, point, seed, cap, 3));
+    FK_CHECK(distance(torus.point(seed.x(), seed.y()), point) <= cap);
+}

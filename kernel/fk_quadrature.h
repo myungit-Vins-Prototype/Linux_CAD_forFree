@@ -5,7 +5,11 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <stdexcept>
+#include <vector>
+
+#include "fk_cancel.h"
 
 // Quadratura adattiva di Gauss-Kronrod 7-15 (nodi e pesi di QUADPACK), per
 // integrali lungo le curve (lunghezze, aree, numeri di avvolgimento) e,
@@ -48,6 +52,23 @@ inline double quadratureProduct(double scale, double half, double sum) {
     if (!std::isfinite(value)) throw std::domain_error("quadratura: prodotto non rappresentabile");
     return value;
 }
+// Un prodotto pesato subnormale perde precisione prima che l'ampiezza
+// possa riportarlo a una grandezza normale. Controllare tutti i termini,
+// anche quelli piccoli accanto a campioni ordinari, senza cambiare le somme.
+inline bool quadratureWeightedUnderflow(const std::array<double, 15> &samples) {
+    const auto small = [](double value, double weight) {
+        return value != 0.0 && std::fabs(value) < std::numeric_limits<double>::min() / weight;
+    };
+    if (small(samples[0], kKronrodWeights[7]) || small(samples[0], kGaussWeights[3])) return true;
+    for (int j = 0; j < 7; ++j) {
+        const double left = samples[1 + 2 * j], right = samples[2 + 2 * j], sum = left + right;
+        if (small(sum, kKronrodWeights[j])
+            || small(std::fabs(left) + std::fabs(right), kKronrodWeights[j])
+            || (j % 2 == 1 && small(sum, kGaussWeights[j / 2]))) return true;
+    }
+    return false;
+}
+
 // Il ripiego usa soltanto i 15 campioni memorizzati: nessuna callback
 // ripetuta e nessuna perdita completa accettata nel riscalamento.
 struct QuadratureSums { double kronrod, gauss, absolute; };
@@ -61,6 +82,8 @@ inline QuadratureSums quadratureScaledSums(const std::array<double, 15> &samples
         if (samples[i] != 0.0 && scaled[i] == 0.0)
             throw std::domain_error("quadratura: campione perso nel riscalamento");
     }
+    if (quadratureWeightedUnderflow(scaled))
+        throw std::domain_error("quadratura: prodotti pesati persi nel riscalamento");
     QuadratureSums result{scaled[0] * kKronrodWeights[7], scaled[0] * kGaussWeights[3],
                           std::fabs(scaled[0]) * kKronrodWeights[7]};
     for (int j = 0; j < 7; ++j) {
@@ -97,7 +120,8 @@ double gaussKronrod(const F &f, double a, double b, double &error, double &absol
         absolute += kKronrodWeights[j] * (std::fabs(left) + std::fabs(right));
         if (j % 2 == 1) gauss += kGaussWeights[j / 2] * sum;
     }
-    const bool recover = !std::isfinite(kronrod) || !std::isfinite(gauss) || !std::isfinite(absolute);
+    const bool recover = !std::isfinite(kronrod) || !std::isfinite(gauss) || !std::isfinite(absolute)
+        || quadratureWeightedUnderflow(samples);
     error = std::fabs((kronrod - gauss) * half);
     absolute *= std::fabs(half);
     double value = kronrod * half;
@@ -119,7 +143,8 @@ template <class F>
 double adaptiveIntegral(const F &f, double a, double b, double tolerance, int depth) {
     double error, absolute;
     const double value = gaussKronrod(f, a, b, error, absolute);
-    if (error <= tolerance || error <= 50.0 * 2.220446049250313e-16 * absolute || depth >= 30) return value;
+    if (error <= tolerance || error <= 50.0 * 2.220446049250313e-16 * absolute) return value;
+    if (depth >= 30) throw std::domain_error("quadratura: profondita massima prima della convergenza");
     const double middle = quadratureMiddle(a, b);
     if (middle == a || middle == b) throw std::domain_error("quadratura: suddivisione non rappresentabile");
     const double result = adaptiveIntegral(f, a, middle, 0.5 * tolerance, depth + 1)
@@ -182,15 +207,19 @@ void gaussKronrod(const F &f, double a, double b, Evaluation<N> &integral, Value
         }
     }
     for (std::size_t k = 0; k < N; ++k) {
-        const bool recover = !std::isfinite(kronrod[k]) || !std::isfinite(gauss[k]) || !std::isfinite(absolute[k]);
-        const bool recoverMagnitude = !std::isfinite(integral.magnitude[k]);
+        std::array<double, 15> values, magnitudes;
+        for (std::size_t i = 0; i < samples.size(); ++i) {
+            values[i] = samples[i].value[k];
+            magnitudes[i] = samples[i].magnitude[k];
+        }
+        const bool recover = !std::isfinite(kronrod[k]) || !std::isfinite(gauss[k]) || !std::isfinite(absolute[k])
+            || quadratureWeightedUnderflow(values);
+        const bool recoverMagnitude = !std::isfinite(integral.magnitude[k]) || quadratureWeightedUnderflow(magnitudes);
         integral.value[k] = kronrod[k] * half;
         integral.magnitude[k] *= std::fabs(half);
         error[k] = std::fabs((kronrod[k] - gauss[k]) * half);
         absolute[k] *= std::fabs(half);
         if (recover || !std::isfinite(integral.value[k]) || !std::isfinite(error[k]) || !std::isfinite(absolute[k])) {
-            std::array<double, 15> values;
-            for (std::size_t i = 0; i < samples.size(); ++i) values[i] = samples[i].value[k];
             double scale;
             const auto sums = quadratureScaledSums(values, scale);
             integral.value[k] = quadratureProduct(scale, half, sums.kronrod);
@@ -198,10 +227,8 @@ void gaussKronrod(const F &f, double a, double b, Evaluation<N> &integral, Value
             absolute[k] = quadratureProduct(scale, std::fabs(half), sums.absolute);
         }
         if (recoverMagnitude || !std::isfinite(integral.magnitude[k])) {
-            std::array<double, 15> values;
-            for (std::size_t i = 0; i < samples.size(); ++i) values[i] = samples[i].magnitude[k];
             double scale;
-            const auto sums = quadratureScaledSums(values, scale);
+            const auto sums = quadratureScaledSums(magnitudes, scale);
             integral.magnitude[k] = quadratureProduct(scale, std::fabs(half), sums.kronrod);
         }
     }
@@ -247,13 +274,14 @@ Evaluation<N> adaptivePanel(const F &f, const Panel<N> &p, const Values<N> &tole
             || p.integral.magnitude[k] < 0.0 || !std::isfinite(p.error[k]) || p.error[k] < 0.0)
             throw std::domain_error("quadratura: pannello non finito o non valido");
     bool accepted = true, nearRoundoff = true;
-    for (std::size_t k = 0; k < controlled && depth < 30; ++k) {
+    for (std::size_t k = 0; k < controlled; ++k) {
         const double floor = roundoff * p.integral.magnitude[k];
         if (p.error[k] <= tolerance[k] || p.error[k] <= floor) continue;
         accepted = false;
         nearRoundoff = nearRoundoff && p.error[k] <= 1e4 * floor;
     }
     if (accepted) return p.integral;
+    if (depth >= 30) throw std::domain_error("quadratura: profondita massima prima della convergenza");
     const double middle = quadratureMiddle(p.a, p.b);
     if (middle == p.a || middle == p.b) throw std::domain_error("quadratura: suddivisione non rappresentabile");
     const Panel<N> left = panel<N>(f, p.a, middle), right = panel<N>(f, middle, p.b);
@@ -312,6 +340,70 @@ Evaluation<N> integrateVector(const F &f, double a, double b, double relativeTol
     for (std::size_t k = 0; k < N; ++k) tolerance[k] = relativeTolerance * absolute[k];
     return adaptivePanel<N>(f, first, tolerance, roundoff, 0, controlled);
 }
+
+// Budget relativo dell'intero tratto suddiviso, distribuito in quote uguali.
+// Serve quando un pannello non e' ulteriormente divisibile: si accetta solo
+// se la sua stima d'errore rispetta la quota o il limite di arrotondamento.
+template <std::size_t N, class F>
+Evaluation<N> integrateVectorPartition(const F &f, const std::vector<double> &breaks,
+                                       double relativeTolerance, double roundoff) {
+    if (breaks.size() < 2) return {};
+    if (!std::isfinite(relativeTolerance) || relativeTolerance < 0.0)
+        throw std::domain_error("quadratura: tolleranza relativa non valida");
+    const auto spans = breaks.size() - 1;
+    const double fraction = relativeTolerance / double(spans);
+    std::vector<Panel<N>> panels;
+    panels.reserve(spans);
+    Values<N> tolerance{};
+    for (std::size_t i = 0; i < spans; ++i) {
+        cancellationPoint();
+        Panel<N> initial;
+        initial.a = breaks[i];
+        initial.b = breaks[i + 1];
+        Values<N> absolute;
+        const double middle = quadratureMiddle(initial.a, initial.b);
+        if (initial.a != initial.b && (middle == initial.a || middle == initial.b)) {
+            // I nodi arrotondati possono uscire dal pannello e non visitare
+            // uno degli estremi. Usa entrambi i campioni per stimare lo scarto.
+            const double lo = std::min(initial.a, initial.b), hi = std::max(initial.a, initial.b);
+            const auto left = f(lo), right = f(hi);
+            gaussKronrod<N>([&](double t) { return t <= lo ? left : right; },
+                            initial.a, initial.b, initial.integral, initial.error, absolute);
+            const double span = hi - lo;
+            for (std::size_t k = 0; k < N; ++k) {
+                if (!std::isfinite(left.value[k]) || !std::isfinite(right.value[k])
+                    || !std::isfinite(left.magnitude[k]) || left.magnitude[k] < 0.0
+                    || !std::isfinite(right.magnitude[k]) || right.magnitude[k] < 0.0)
+                    throw std::domain_error("quadratura: campione vettoriale non valido");
+                const double difference = left.value[k] - right.value[k];
+                const double variation = std::isfinite(difference)
+                    ? quadratureProduct(1.0, span, difference)
+                    : quadratureProduct(2.0, span, 0.5 * left.value[k] - 0.5 * right.value[k]);
+                initial.error[k] = std::max(initial.error[k], std::fabs(variation));
+            }
+        } else {
+            gaussKronrod<N>(f, initial.a, initial.b, initial.integral, initial.error, absolute);
+        }
+        panels.push_back(initial);
+        for (std::size_t k = 0; k < N; ++k) {
+            tolerance[k] += fraction * absolute[k];
+            if (!std::isfinite(tolerance[k])) throw std::domain_error("quadratura: tolleranza non rappresentabile");
+        }
+    }
+    Evaluation<N> total;
+    for (const auto &initial : panels) {
+        cancellationPoint();
+        const auto piece = adaptivePanel<N>(f, initial, tolerance, roundoff, 0);
+        for (std::size_t k = 0; k < N; ++k) {
+            total.value[k] += piece.value[k];
+            total.magnitude[k] += piece.magnitude[k];
+            if (!std::isfinite(total.value[k]) || !std::isfinite(total.magnitude[k]))
+                throw std::domain_error("quadratura: somma vettoriale non rappresentabile");
+        }
+    }
+    return total;
+}
+
 
 }
 

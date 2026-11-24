@@ -98,3 +98,34 @@ FK_TEST(BSplineIsolineMassAnalyticAndParallel) {
                   48000. * (20.*20. + 30.*30. + 40.*40.) / 6. + 48000. * 500.*500. / 2., 6.);
     FK_CHECK(writeBodyBinary(body) == before);
 }
+
+FK_TEST(MassAffineTrimCrossesAnInteriorSurfaceKnot) {
+    constexpr double knot = 0.2134171894537;
+    std::vector<Vec3> poles;
+    // z=h(u)*v*(1-v), h is piecewise linear. The four straight trim
+    // curves do not have a break at the crease in the support.
+    for (const Vec2 row : {Vec2{0, 0}, Vec2{knot, 1}, Vec2{1, 0}})
+        for (int j = 0; j < 3; ++j)
+            poles.emplace_back(row.x(), 0.5 * j, j == 1 ? row.y() / 2.0 : 0.0);
+    const auto surface = std::make_shared<BSplineSurface>(
+        1, 2, std::vector<double>{0, 0, knot, 1, 1},
+        std::vector<double>{0, 0, 0, 1, 1, 1}, 3, 3, poles);
+    for (bool sense : {true, false}) {
+        const std::vector<Vec3> points = sense
+            ? std::vector<Vec3>{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}}
+            : std::vector<Vec3>{{0, 0, 0}, {0, 1, 0}, {1, 1, 0}, {1, 0, 0}};
+        std::vector<Body::BuildEdge> edges;
+        std::vector<Body::BuildFin> fins;
+        for (int i = 0; i < 4; ++i) {
+            const Vec3 &a = points[i], &b = points[(i + 1) % 4];
+            const auto uv = std::make_shared<BSplineCurve<2>>(
+                1, std::vector<double>{0, 0, 1, 1},
+                std::vector<Vec2>{{a.x(), a.y()}, {b.x(), b.y()}});
+            edges.push_back({i, (i + 1) % 4, std::make_shared<Line<3>>(a, b - a), {0, 1}});
+            fins.push_back({i, true, uv});
+        }
+        const Body body = Body::buildSheet(points, edges, {{surface, sense, {fins}}});
+        // Independent integral of sqrt(1 + z_u^2 + z_v^2), split at u=knot.
+        FK_CHECK_NEAR(faceArea(body, body.faces().front()), 1.135306558113121, 2e-12);
+    }
+}

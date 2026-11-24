@@ -298,15 +298,25 @@ Body extendPlanarFace(const Body &body, const std::vector<EdgeId> &selected, dou
     return result;
 }
 
-std::size_t detail::closestSheetPiece(const std::vector<Body> &pieces, const Vec3 &keep) {
+std::size_t detail::closestSheetPiece(const std::vector<const Body *> &pieces, const Vec3 &keep) {
     if (pieces.empty()) throw std::invalid_argument("closestSheetPiece: nessun pezzo");
     std::size_t best = 0;
     double closest = 1e300;
     for (std::size_t i = 0; i < pieces.size(); ++i) {
-        const double d = distanceToSheet(pieces[i], keep);
-        if (d < closest) closest = d, best = i;
+        const double distance = distanceToSheet(*pieces[i], keep);
+        if (distance < closest) {
+            closest = distance;
+            best = i;
+        }
     }
     return best;
+}
+
+std::size_t detail::closestSheetPiece(const std::vector<Body> &pieces, const Vec3 &keep) {
+    std::vector<const Body *> regions;
+    regions.reserve(pieces.size());
+    for (const auto &piece : pieces) regions.push_back(&piece);
+    return closestSheetPiece(regions, keep);
 }
 
 Body trimSheet(const Body &sheet, const Body &tool, const Vec3 &keep, double tolerance, BodyHistory *history) {

@@ -170,6 +170,10 @@ PointLocation classifyFacePoint(const Body &body, FaceId faceId, const Vec3 &poi
             const Edge &edge = body.edge(fin.edge);
             if (!fin.pcurve) throw std::logic_error("classifyPointOnFace: fin senza SP-curve");
             const Curve<2> &pcurve = *fin.pcurve;
+            const Curve<2> *basis = &pcurve;
+            while (const auto *trimmed = dynamic_cast<const TrimmedCurve<2> *>(basis))
+                basis = trimmed->basis().get();
+            const auto *spline = dynamic_cast<const BSplineCurve<2> *>(basis);
             double lo = 1e300, hi = -1e300;
             if (prepared) {
                 const auto &limits = prepared->limits.at(f.index);
@@ -205,8 +209,17 @@ PointLocation classifyFacePoint(const Body &body, FaceId faceId, const Vec3 &poi
                     Vec2 p[2];
                     pcurve.evaluate(t, 1, p);
                     if (std::fabs(p[1][across]) <= 1e-9 * norm(p[1])) return -2;
+                    const int direction = p[1][across] > 0.0 ? 1 : -1;
+                    if (spline && std::binary_search(spline->knots().begin(), spline->knots().end(), t)) {
+                        // Un nodo C0 puo' toccare il raggio con due derivate
+                        // non nulle. Come ai vertici del loop, si riprova
+                        // quando manca un attraversamento trasversale.
+                        Vec2 left[2];
+                        spline->evaluateLeft(t, 1, left);
+                        if (!(direction * left[1][across] > 1e-9 * norm(left[1]))) return -2;
+                    }
                     // +1: il dominio sta dalla parte delle quote maggiori lungo la semiretta.
-                    const int orientation = (p[1][across] > 0.0 ? 1 : -1) * (fin.sense ? 1 : -1) * int(faceSign) * (along == 1 ? 1 : -1);
+                    const int orientation = direction * (fin.sense ? 1 : -1) * int(faceSign) * (along == 1 ? 1 : -1);
                     const double value = p[0][along];
                     if (periodAlong > 0.0) {
                         double up = value + periodAlong * std::ceil((position - value) / periodAlong);
@@ -389,6 +402,23 @@ Box splineWindowBox(const BSplineSurface &surface,const Interval &u,const Interv
     return result;
 }
 }
+Vec3 shellBoundaryPoint(const Body &body, ShellId shell) {
+    for (FaceId f : body.shell(shell).faces) {
+        const Face &face = body.face(f);
+        for (LoopId l : face.loops) {
+            const Loop &loop = body.loop(l);
+            if (loop.isolatedVertex.valid()) return body.vertex(loop.isolatedVertex).point;
+            if (loop.first.valid()) return body.vertex(body.fin(loop.first).vertex).point;
+        }
+        if (face.loops.empty()) {
+            const Interval u = face.surface->uDomain(), v = face.surface->vDomain();
+            if (u.isFinite() && v.isFinite())
+                return face.surface->point(u.lo + 0.5 * u.length(), v.lo + 0.5 * v.length());
+        }
+    }
+    throw std::domain_error("shell senza punto di riferimento finito");
+}
+
 Box faceBox(const Body &body, FaceId face) {
     Box box;
     const Surface &surface = *body.face(face).surface;
@@ -515,9 +545,12 @@ Box faceBox(const Body &body, FaceId face) {
     return result;
 }
 
-SolidClassifier::SolidClassifier(const Body &body, double tolerance, bool prepareFaces) : body_(body), tolerance_(tolerance) {
-    for (FaceId f : body.faces()) {
-        faces_.push_back(f);
+SolidClassifier::SolidClassifier(const Body &body, double tolerance, bool prepareFaces)
+    : SolidClassifier(body, ShellId(), tolerance, prepareFaces) {}
+
+SolidClassifier::SolidClassifier(const Body &body, ShellId shell, double tolerance, bool prepareFaces)
+    : body_(body), tolerance_(tolerance), faces_(shell.valid() ? body.shell(shell).faces : body.faces()) {
+    for (FaceId f : faces_) {
         boxes_.push_back(faceBox(body, f).padded(tolerance));
         if (prepareFaces) preparedFaces_.emplace_back(f, FaceClassifier(body,f,tolerance));
     }
@@ -619,6 +652,7 @@ PointLocation SolidClassifier::classify(const Vec3 &point) const {
             const Face &face = body_.face(faces_[i]);
             bool grazing = false;
             const std::vector<double> hits = intersectLineSurface(point, direction, *face.surface, grazing, tolerance_);
+            double previousCrossing = -std::numeric_limits<double>::infinity();
             for (double t : hits) {
                 if (t < -tolerance_) continue;
                 const Vec3 x = point + t * direction;
@@ -631,7 +665,18 @@ PointLocation SolidClassifier::classify(const Vec3 &point) const {
                     reliable = false;
                     break;
                 }
-                if (location == PointLocation::Inside) ++crossings;
+                if (location == PointLocation::Inside) {
+                    // Due radici sulla stessa faccia con intervalli di
+                    // incertezza sovrapposti rendono ambigua la parità.
+                    // Un altro raggio evita sia il doppio conteggio sia
+                    // la fusione di due attraversamenti reali e ravvicinati.
+                    if (std::abs(t - previousCrossing) <= 2.0 * tolerance_) {
+                        reliable = false;
+                        break;
+                    }
+                    previousCrossing = t;
+                    ++crossings;
+                }
             }
             if (grazing) {
                 // Raggio tangente o sulla superficie: conta solo se tocca la faccia.

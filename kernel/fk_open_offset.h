@@ -2,6 +2,7 @@
 #define FORGECAD_FK_OPEN_OFFSET_H
 
 #include "fk_offset.h"
+#include <optional>
 
 // Offset di lamine con spigoli vivi e aperture planari: chiusure temporanee
 // esatte, intersezioni dei supporti sul trim necessario, rimozione delle gole
@@ -10,6 +11,8 @@
 namespace ForgeCad::Kernel::detail {
 bool canOffsetOpenSheet(const Body &sheet, double tolerance);
 OffsetResult offsetOpenSheet(const Body &sheet, double distance, double tolerance);
-Body thickenOpenSheet(const Body &sheet, double lower, double upper, double tolerance, BodyHistory *history);
+// Also supports bounded internal holes on a single B-spline carrier.
+// An empty result means the open-sheet topology is outside the supported family.
+std::optional<Body> tryThickenOpenSheet(const Body &sheet, double lower, double upper, double tolerance, BodyHistory *history);
 } // namespace ForgeCad::Kernel::detail
 #endif
