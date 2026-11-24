@@ -477,7 +477,7 @@ Se si dispone di una raccolta locale di modelli, aprire un documento con **File 
 ## Test e sviluppo
 
 La [CI GitHub Actions](docs/ci.md) compila l'applicazione completa ed esegue le
-suite CTest autosufficienti su Ubuntu 26.04 e macOS 15 a ogni push e pull request.
+suite CTest autosufficienti su Ubuntu 26.04 e macOS 15 sulle pull request e sui push a `main`.
 I test viewport con documenti esterni e le prove GPU/rendering nativo restano
 separati; il badge mostra il risultato complessivo del workflow.
 
