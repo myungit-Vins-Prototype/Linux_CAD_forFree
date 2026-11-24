@@ -54,7 +54,13 @@ void linkedDrawingTests(){
     {
         DrawingWindow window;clientOk(window.openPath(drawingPath));require(window.editor()->isReadOnly(),"metadati consultabili con sorgente assente");
         require(std::isnan(window.editor()->dimensionResult(dimensionId).value),"nessuna misura precedente mostrata come valida");
-        clientOk(window.updateFromSource(temporary.filePath("rinominata.prt")));clientOk(window.savePath(drawingPath));
+        clientOk(window.updateFromSource(temporary.filePath("rinominata.prt")));
+        const auto title=window.editor()->sheet().title;
+        clientOk(window.renameSheet(0,QStringLiteral("Titolo modificato")));
+        clientOk(window.editor()->undo());
+        require(window.editor()->sheet().title==title&&window.document().modelPath=="rinominata.prt"&&window.isModified(),
+                "Undo prima del salvataggio conserva la sorgente rilocalizzata");
+        clientOk(window.savePath(drawingPath));
         require(window.document().modelPath=="rinominata.prt","rilocalizzazione conserva identita' e salva nuovo percorso");
     }
     const auto moved=temporary.path()+"-trasferito";require(QDir().rename(temporary.path(),moved),"sposta workspace intero");

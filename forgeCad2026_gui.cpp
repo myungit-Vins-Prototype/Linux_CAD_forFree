@@ -404,7 +404,8 @@ void PdfWindow::initializeSceneAndTree(WindowSetup &setup) {
     // riapre questa finestra con quelli nuovi.
     auto editBlend = std::make_shared<std::function<void(int, QVector<EdgePoint>, double, bool)>>(
         [this, viewport](int index, QVector<EdgePoint> edges, double size, bool chamfer) {
-            if (index < 0 || index >= viewport->extrusions().size()) return;
+            index = viewport->prepareStoryboardEdit(false, index);
+            if (index < 0) return;
             const ExtrusionObject original = viewport->extrusions().at(index);
             const QString title = QStringLiteral("Modifica ") + (original.blendChamfer ? QStringLiteral("smusso") : QStringLiteral("raccordo"));
             const BlendDialogResult result = blendDialog(this, viewport, title, original.firstBody, index, edges, size, chamfer, true, original.chamferSpec,
@@ -441,8 +442,9 @@ void PdfWindow::initializeSceneAndTree(WindowSetup &setup) {
     });
     auto editBody = std::make_shared<std::function<void(int)>>([this, viewport, editBlend](int index) {
         if (viewport->interactionLocked()||viewport->documentReadOnly()) return;
+        index = viewport->prepareStoryboardEdit(false, index);
+        if (index < 0) return;
         const QVector<ExtrusionObject> &bodies = viewport->extrusions();
-        if (index < 0 || index >= bodies.size()) return;
         // Ogni finestra si chiude solo se il corpo si rigenera con i valori nuovi
         // (altrimenti mostra l'errore e resta aperta; il corpo resta com'era).
         const ExtrusionObject original = bodies.at(index);
@@ -483,6 +485,8 @@ void PdfWindow::initializeSceneAndTree(WindowSetup &setup) {
             sweepDialog(this, viewport, QStringLiteral("Modifica sweep"), index, original, [&](const ExtrusionObject &values) { return update(values); });
         } else if (original.feature == BodyFeature::Loft) {
             loftDialog(this, viewport, QStringLiteral("Modifica loft"), index, original, [&](const ExtrusionObject &values) { return update(values); });
+        } else if (original.feature == BodyFeature::VolumetricStructure) {
+            volumeStructureDialog(this, viewport, index, original);
         } else if (original.feature == BodyFeature::Scale) {
             scaleDialog(this, viewport, QStringLiteral("Modifica scala"), index, original, [&](const ExtrusionObject &values) {
                 ExtrusionObject body = original;
@@ -521,7 +525,7 @@ void PdfWindow::initializeSceneAndTree(WindowSetup &setup) {
             surfaceToolDialog(this,viewport,QStringList{QStringLiteral("Modifica estensione a riferimento"),QStringLiteral("Modifica superficie da rete di curve"),QStringLiteral("Modifica poli NURBS"),QStringLiteral("Modifica distensione superficie"),QStringLiteral("Modifica deformazione su superficie"),QStringLiteral("Modifica taglio superficie")}.value(original.surfaceTool.mode),index,original,[&](const ExtrusionObject &values){return update(values);});
         } else if (original.feature == BodyFeature::SpatialSketch) {
             spatialSketchDialog(this,viewport,QStringLiteral("Modifica schizzo 3D"),index,original,
-                [viewport,index](const ExtrusionObject &d){return viewport->updateBody(index,d);});
+                [viewport,index](const ExtrusionObject &d){return viewport->updateBody(index, d);});
         } else if (original.feature == BodyFeature::ExtractedCurve) {
             extractedCurveDialog(this, viewport, QStringLiteral("Modifica curva estratta 3D"), index, original,
                                  [&](const ExtrusionObject &values) { return update(values); });
@@ -1506,6 +1510,11 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
         auto *action=surfaceMenu->addAction(title+QStringLiteral("…"));action->setObjectName(mode==3?"surfaceUnrollAction":"surfaceWrapAction");action->setIcon(ForgeCad::commandIcon(mode==3?"surfaceUnroll":"surfaceWrap"));
         connect(action,&QAction::triggered,this,[this,viewport,mode,title]{ExtrusionObject d;d.feature=BodyFeature::SurfaceTools;d.surfaceTool.mode=mode;d.firstBody=viewport->selectedFeatureIndex();surfaceMappingDialog(this,viewport,title,-1,d,[viewport,title](const ExtrusionObject &value){auto result=value;result.name=title;return viewport->createBody(result);});});
     }
+    auto *volumeStructureAction = functionsMenu->addAction(QStringLiteral("Struttura volumetrica…"));
+    volumeStructureAction->setObjectName(QStringLiteral("volumeStructureAction"));
+    volumeStructureAction->setIcon(ForgeCad::commandIcon("fillRect"));
+    volumeStructureAction->setToolTip(QStringLiteral("Voxelizza un solido o genera un reticolo cubico, intrecciato o a giroide nella zona scelta"));
+    connect(volumeStructureAction, &QAction::triggered, this, [this, viewport] { volumeStructureDialog(this, viewport); });
     auto *analysisMenu = addCadMenu(menuBar(), QStringLiteral("Analisi"));
     auto *shapeAction = analysisMenu->addAction(QStringLiteral("Curvatura, zebra e continuità..."));
     connect(shapeAction, &QAction::triggered, this, [this, viewport] { shapeAnalysisDialog(this, viewport); });
@@ -2321,12 +2330,22 @@ void PdfWindow::initializeFeatureCommands(WindowSetup &setup) {
         // Di partenza il corpo e lo schizzo selezionati: lo schizzo diventa lo strumento (proiettato).
         QVector<SceneSelection> selected = viewport->selectedObjects();
         selected.prepend(viewport->selection());
+        QVector<int> bodies;
         for (const SceneSelection &object : selected) {
-            if (object.kind == SceneObjectKind::Extrusion && definition.firstBody < 0) definition.firstBody = object.index;
+            if (object.kind == SceneObjectKind::Extrusion && object.index >= 0 && object.index < viewport->extrusions().size()) {
+                if (definition.firstBody < 0) definition.firstBody = object.index;
+                if (viewport->extrusions().at(object.index).forgeBody && !bodies.contains(object.index))
+                    bodies.append(object.index);
+            }
             if (object.kind == SceneObjectKind::Sketch && definition.sketchIndex < 0) {
                 definition.sketchIndex = object.index;
                 definition.trimProject = true;
             }
+        }
+        if (definition.sketchIndex < 0 && bodies.size() >= 3 && bodies.front() == definition.firstBody) {
+            definition.secondBody = bodies.at(1);
+            definition.booleanTools = bodies.mid(2);
+            definition.trimRegions.resize(bodies.size());
         }
         const QString name = QStringLiteral("Taglio %1").arg(viewport->extrusions().size() + 1);
         trimDialog(this, viewport, QStringLiteral("Taglia superficie"), -1, definition, [viewport, name](const ExtrusionObject &d) {
@@ -4210,7 +4229,7 @@ void PdfWindow::newDrawing() {
     if (foregroundProgressDepth_>0 || viewport_->interactionLocked()) return;
     if ((documentPath_.isEmpty()||documentModified_)&&!saveDocument(false)) return;
     auto *drawing = new ForgeCad::DrawingWindow(this);
-    const auto source = viewport_->currentDocument();
+    const auto source = viewport_->evaluatedDocument();
     const auto error = drawing->createFromModel(documentPath_, &source, documentDiskFingerprint_);
     if (!error.isEmpty()) { delete drawing; QMessageBox::warning(this,QStringLiteral("Tavola 2D"),error); return; }
     ForgeCad::showDocumentWorkspace(drawing,this,true);
@@ -4396,11 +4415,14 @@ bool PdfWindow::saveDocumentPath(const QString &path) {
         lock = candidate.get();
     }
     beginForegroundProgress(QStringLiteral("Salvataggio di %1...").arg(QFileInfo(path).fileName()));
-    DocumentState saved = viewport_->currentDocument();
+    const bool saveBodies = QSettings().value(QStringLiteral("document/saveBodies"), true).toBool();
+    const bool pendingSketch = std::any_of(current.sketches.cbegin(), current.sketches.cend(),
+        [](const auto &sketch) { return sketch.historyRebuildPending; });
+    DocumentState saved = (saveBodies || pendingSketch) ? viewport_->evaluatedDocument() : current;
     if (!documentPath_.isEmpty() && ForgeCad::canonicalDocumentPath(documentPath_) != resolved)
         ForgeCad::forkDocumentIdentity(saved);
     const QString error = ForgeCad::saveDocumentFile(resolved, saved,
-                                                     QSettings().value(QStringLiteral("document/saveBodies"), true).toBool(), lock);
+                                                     saveBodies, lock);
     endForegroundProgress();
     if (!error.isEmpty()) {
         QMessageBox::warning(this, QStringLiteral("Salva"), error);
@@ -4450,7 +4472,8 @@ QString PdfWindow::runDocumentRevisionAction(DocumentRevisionAction action, cons
     if(!owned&&action==DocumentRevisionAction::Checkin)return QStringLiteral("Riprendere il check-out prima di pubblicare le modifiche.");
     const auto lockError=acquireDocumentWriteAccess();
     if(!lockError.isEmpty()){refreshDocumentEditAccess();return lockError;}
-    auto working = viewport_->currentDocument();
+    auto working = action == DocumentRevisionAction::Checkin
+        ? viewport_->evaluatedDocument() : viewport_->currentDocument();
     const auto oldBase = working.baseCheckinId;
     const bool bodies = QSettings().value(QStringLiteral("document/saveBodies"),true).toBool();
     ForgeCad::RevisionRecord record; bool matchesWorking = true;
@@ -4853,6 +4876,11 @@ void PdfWindow::rebuildModelTree() {
                 item->setToolTip(0, QStringLiteral("%1 %2 su %3 spigoli")
                     .arg(body.blendChamfer ? QStringLiteral("Smusso di") : QStringLiteral("Raccordo di raggio"))
                     .arg(size).arg(body.blendEdges.size()));
+            } else if (body.feature == BodyFeature::VolumetricStructure) {
+                const auto &p = body.volumeStructure;
+                item->setToolTip(0, p.mode == VolumeStructureMode::Voxel
+                    ? QStringLiteral("Lato del voxel %1").arg(ForgeCad::formatLength(p.samplingPitch, 6, true, this))
+                    : QStringLiteral("Passo reticolo %1").arg(ForgeCad::formatLength(p.cellPitch, 6, true, this)));
             } else if (body.feature == BodyFeature::Scale) {
                 static const QStringList centers = {QStringLiteral("all'origine"), QStringLiteral("al baricentro"), QStringLiteral("attorno al punto")};
                 item->setToolTip(0, QStringLiteral("Scala %1 %2").arg(body.scaleFactor).arg(centers.value(body.scaleCenterMode)));

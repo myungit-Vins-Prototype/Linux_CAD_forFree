@@ -87,7 +87,14 @@ elseif(FORGECAD_ENABLE_CUDA AND CMAKE_CUDA_COMPILER)
 else()
     set(FORGECAD_BOX_SOURCE gpu_box_support_cpu.cpp)
 endif()
-add_library(forgecad_compute STATIC cad_gpu_broad_phase.cpp cad_gpu_broad_phase.h gpu_box_support.h ${FORGECAD_BOX_SOURCE})
+if(FORGECAD_ENABLE_CUDA AND CMAKE_CUDA_COMPILER)
+    set(FORGECAD_TPMS_SOURCE gpu_tpms_support.cu)
+    set_source_files_properties(gpu_tpms_support.cu PROPERTIES COMPILE_OPTIONS "--fmad=false")
+else()
+    set(FORGECAD_TPMS_SOURCE gpu_tpms_support_cpu.cpp)
+endif()
+add_library(forgecad_compute STATIC cad_gpu_broad_phase.cpp cad_gpu_broad_phase.h
+    gpu_box_support.h ${FORGECAD_BOX_SOURCE} gpu_tpms_support.h ${FORGECAD_TPMS_SOURCE})
 target_include_directories(forgecad_compute PUBLIC ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_compute PUBLIC forgekernel)
 target_compile_options(forgecad_compute PRIVATE $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:-Wall;-Wextra;-Wpedantic>)
@@ -105,6 +112,10 @@ add_test(NAME forgecad_gpu_broad_phase_tests COMMAND forgecad_gpu_broad_phase_te
 add_test(NAME forgecad_box_fallback_tests COMMAND forgecad_gpu_broad_phase_tests --cpu-fallback)
 set_tests_properties(forgecad_box_fallback_tests PROPERTIES TIMEOUT 30)
 set_tests_properties(forgecad_gpu_broad_phase_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
+add_executable(forgecad_tpms_cuda_tests tests/test_tpms_cuda.cpp)
+target_link_libraries(forgecad_tpms_cuda_tests PRIVATE forgecad_compute)
+add_test(NAME forgecad_tpms_cuda_tests COMMAND forgecad_tpms_cuda_tests)
+set_tests_properties(forgecad_tpms_cuda_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 40)
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     add_executable(forgecad_metal_box_pool_tests tests/test_metal_box_pool.cpp)
     target_link_libraries(forgecad_metal_box_pool_tests PRIVATE forgecad_compute)
@@ -181,6 +192,9 @@ add_executable(forgecad
     forgeCad2026_dialogs_mapping.cpp
     forgeCad2026_dialogs_sketch.cpp
     forgeCad2026_dialogs_analysis.cpp
+    forgeCad2026_dialogs_lattice.cpp
+    cad_lattice_preview.cpp
+    cad_lattice_preview.h
     cad_types.h
     cad_shape_analysis.h
     cad_shape_analysis.cpp
@@ -297,6 +311,8 @@ add_executable(forgecad
     cad_feature_dependencies.cpp
     cad_feature_build.h
     cad_feature_build.cpp
+    cad_volume_structure.h
+    cad_build_diagnostic.cpp
     cad_model_history.h
     cad_model_history.cpp
     cad_history_chain.h
@@ -377,7 +393,7 @@ file(GLOB FORGECAD_KERNEL_GEOMETRY_SOURCES CONFIGURE_DEPENDS
     ${PROJECT_SOURCE_DIR}/kernel/fk_*.h ${PROJECT_SOURCE_DIR}/kernel/fk_*.cpp)
 forgecad_collect_geometry_sources(FORGECAD_GEOMETRY_SOURCES "${PROJECT_SOURCE_DIR}"
     cad_feature_build.cpp cad_history.cpp cad_document_io.cpp
-    cad_gpu_broad_phase.cpp ${FORGECAD_BOX_SOURCE}
+    cad_gpu_broad_phase.cpp ${FORGECAD_BOX_SOURCE} ${FORGECAD_TPMS_SOURCE}
     ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_KERNEL_GEOMETRY_SOURCES})
 # Un include aggiunto a un modulo del calcolo aggiorna la chiusura alla build
 # successiva, anche quando non e' stato creato alcun file nuovo.
@@ -642,6 +658,9 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_preview_selection_state_tests --preview-selection-state)
     set_tests_properties(forgecad_preview_selection_state_tests PROPERTIES TIMEOUT 150)
     forgecad_add_view_test(forgecad_storyboard_panel_selection_tests --storyboard-panel-selection)
+    forgecad_add_view_test(forgecad_build_diagnostic_flow_tests --build-diagnostic-flow)
+    forgecad_add_view_test(forgecad_build_diagnostic_overlay_tests --build-diagnostic-overlay)
+    forgecad_add_view_test(forgecad_sketch_build_diagnostic_tests --sketch-build-diagnostic)
     set_tests_properties(forgecad_function_panels_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_history_suppression_tests --history-suppression)
     set_tests_properties(forgecad_document_read_tests PROPERTIES TIMEOUT 60)

@@ -9,6 +9,7 @@ void CadViewport::resetDocumentForLoad() {
     pickCacheCancellation_.reset();
     warmedBodies_.clear();
     history_.clear();
+    historyBuildFeedbackPending_ = false;
     dragSnapshot_ = {};
     planeResizeSnapshot_ = {};
     dragRecorded_ = pointDragActive_ = draggingControlPoint_ = planeResizing_ = false;
@@ -22,6 +23,7 @@ void CadViewport::resetDocumentForLoad() {
     sketchCombCache_.clear();
     sketchCombPreview_ = {};
     sketchCombPreviewIndex_ = -1;
+    offsetDimensionCache_ = {};
     analysis_ = {};
     analysisSketch_ = -1;
     analysisDirty_ = true;
@@ -32,11 +34,7 @@ void CadViewport::resetDocumentForLoad() {
     clearShapeAnalysis();
     clearExportMeshPreview();
     clearDatumPreview();
-    trimPartPickDisplays_.clear();
-    trimPartPickBodies_.clear();
-    trimPartPickSides_.clear();
-    trimPartPickIndices_.clear();
-    trimPartHover_ = -1;
+    setTrimPartPickCallback({}, {}, {});
     raySelectionCache_.clear();
     projectedEdges_.clear();
     // Anche un viewport nascosto puo' possedere le mesh del vecchio file:

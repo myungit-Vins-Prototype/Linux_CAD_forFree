@@ -21,7 +21,7 @@ public:
     static QString previewKey(const ExtrusionObject &d, int index);
     static bool localMergePreview(const ExtrusionObject &body);
     static bool computePreview(const PreviewInputs &in, BodyDisplay &display, BodyDisplay &retainedDisplay,
-                               BodyDisplay &resultDisplay, ForgeBody &geometry, QString &error,
+                               BodyDisplay &resultDisplay, ForgeBody &geometry, QString &error, BuildDiagnostic &diagnostic,
                                QVector<int> *merged = nullptr, QString *notice = nullptr,
                                QVector<BodyDisplay> *additionalDisplays = nullptr);
 };

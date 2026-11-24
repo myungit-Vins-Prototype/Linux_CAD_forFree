@@ -227,8 +227,8 @@ public:
     BodyPicker(const BodyPicker &) = delete;
     BodyPicker &operator=(const BodyPicker &) = delete;
 
-    // L'elenco con il pulsante accanto.
-    QWidget *row(QWidget *field) const;
+    // L'elenco con il pulsante accanto o sopra.
+    QWidget *row(QWidget *field, Qt::Orientation orientation = Qt::Horizontal) const;
     bool active() const;
     bool waiting() const;
     // L'elenco contiene anche gli schizzi da `start` in poi (nell'ordine del
@@ -238,6 +238,7 @@ public:
     // aggiorna una volta sola alla fine (`changed`).
     bool handling() const;
     QString hint() const;
+    void setActiveButtonText(const QString &text);
     void start(bool waiting = false);
     void stop();
     // Il clic nella vista: vero se riguardava la scelta del corpo.
@@ -257,6 +258,7 @@ private:
     QComboBox *combo_;
     QListWidget *list_;
     QPushButton *button_ = nullptr;
+    QString activeButtonText_;
     bool active_ = false, waiting_ = false, installed_ = false, handling_ = false;
     int sketchStart_ = -1;
 };

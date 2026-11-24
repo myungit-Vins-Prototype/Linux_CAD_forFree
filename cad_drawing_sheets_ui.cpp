@@ -76,9 +76,13 @@ void DrawingWindow::markSheetsSaved(){
     for(auto &entry:sheetHistory_){DrawingFile file;if(decodeDrawingFile(entry.bytes,file).isEmpty()){file.modelPath=drawing_.modelPath;file.modelArchivePath=drawing_.modelArchivePath;encodeDrawingFile(file,entry.bytes);}}
     encodeDrawingFile(drawing_,savedDrawing_);
 }
-void DrawingWindow::recordSheets(const QString &label){
-    QByteArray bytes;const auto error=encodeDrawingFile(drawing_,bytes);if(!error.isEmpty()){statusBar()->showMessage(error);return;}
-    if(sheetHistory_.isEmpty()){resetSheetsHistory(false);return;}
+void DrawingWindow::recordSheets(const QByteArray &bytes,const QString &label){
+    if(sheetHistory_.isEmpty()){
+        sheetHistory_={{bytes,drawingSheetId(drawing_,activeSheet_),{}}};
+        sheetHistoryIndex_=0;
+        refreshSheetTabs();
+        return;
+    }
     if(bytes!=sheetHistory_[sheetHistoryIndex_].bytes){sheetHistory_.resize(sheetHistoryIndex_+1);sheetHistory_.append({bytes,drawingSheetId(drawing_,activeSheet_),label});++sheetHistoryIndex_;}
     qsizetype total=0;for(const auto &entry:sheetHistory_)total+=entry.bytes.size();while(sheetHistory_.size()>1&&(sheetHistory_.size()>101||total>32*1024*1024)){total-=sheetHistory_.front().bytes.size();sheetHistory_.removeFirst();--sheetHistoryIndex_;}
     modified_=bytes!=savedDrawing_;containerDirty_=modified_;refreshSheetTabs();refreshTitle();
@@ -87,7 +91,7 @@ void DrawingWindow::sheetChanged(const DrawingSheet &sheet){
     if(restoringSheets_)return;
     auto prepared=drawing_;drawingSheetAt(prepared,activeSheet_)=sheet;QByteArray validation;const auto error=encodeDrawingFile(prepared,validation);
     if(!error.isEmpty()){editor_->loadSheet(drawingSheetAt(drawing_,activeSheet_));statusBar()->showMessage(error,15000);return;}
-    drawing_=std::move(prepared);recordSheets(QStringLiteral("Modifica foglio %1").arg(sheet.title));
+    drawing_=std::move(prepared);recordSheets(validation,QStringLiteral("Modifica foglio %1").arg(sheet.title));
 }
 QString DrawingWindow::commitSheets(DrawingFile prepared,const QUuid &active,const QString &label){
     const auto access=sheetMutationError();if(!access.isEmpty())return access;
@@ -95,7 +99,7 @@ QString DrawingWindow::commitSheets(DrawingFile prepared,const QUuid &active,con
     int index=indexOfSheet(prepared,active);if(index<0)index=0;
     const bool fit=drawingSheetId(drawing_,activeSheet_)!=drawingSheetId(prepared,index)||editor_->sheet().size!=drawingSheetAt(prepared,index).size;
     const auto context=editor_->pageContext();const auto error=editor_->loadSheet(drawingSheetAt(prepared,index));if(!error.isEmpty())return error;
-    drawing_=std::move(prepared);activeSheet_=index;editor_->setPageContext(context);recordSheets(label);if(fit)editor_->fitSheet();return {};
+    drawing_=std::move(prepared);activeSheet_=index;editor_->setPageContext(context);recordSheets(bytes,label);if(fit)editor_->fitSheet();return {};
 }
 QString DrawingWindow::restoreSheets(bool redo){
     const auto access=sheetMutationError();if(!access.isEmpty())return access;

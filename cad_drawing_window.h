@@ -60,7 +60,7 @@ private:
     QString sheetMutationError();
     QString commitSheets(DrawingFile prepared,const QUuid &active,const QString &label);
     void sheetChanged(const DrawingSheet &sheet);
-    void recordSheets(const QString &label);
+    void recordSheets(const QByteArray &bytes,const QString &label);
     void resetSheetsHistory(bool clean);
     void markSheetsSaved();
     QString restoreSheets(bool redo);

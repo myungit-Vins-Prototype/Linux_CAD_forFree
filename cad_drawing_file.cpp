@@ -13,6 +13,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <algorithm>
 #include <functional>
 #include <QSaveFile>
 #include <QSet>
@@ -141,6 +142,8 @@ QString drawingModelDefinitionMatches(const DocumentState &document,const QByteA
     QByteArray current;const auto error=drawingModelDefinitionHash(document,current);if(!error.isEmpty())return error;
     if(current==expected){matches=true;return {};}
     matches=false;
+    for (const auto &feature : document.extrusions)
+        if (!feature.trimRegions.isEmpty()) return {};
     auto normalized=document;normalized.version.checkinId={};normalized.baseCheckinId={};normalized.orientation=AxesOrientation{};
     normalized.lengthUnit=LengthUnit::Millimeter;
     for(auto &feature:normalized.extrusions)feature.forgeBody.reset();
@@ -148,8 +151,10 @@ QString drawingModelDefinitionMatches(const DocumentState &document,const QByteA
         Kernel::cancellationPoint();QByteArray bytes;
         if(encodeDocument(candidate,bytes,false).isEmpty()
             &&QCryptographicHash::hash(bytes,QCryptographicHash::Sha256)==expected)return true;
+        if (encodeDocumentDefinition70ForHash(candidate,bytes).isEmpty()
+            && QCryptographicHash::hash(bytes,QCryptographicHash::Sha256)==expected) return true;
         return encodeDocumentDefinition69ForHash(candidate,bytes).isEmpty()
-            &&QCryptographicHash::hash(bytes,QCryptographicHash::Sha256)==expected;
+            && QCryptographicHash::hash(bytes,QCryptographicHash::Sha256)==expected;
     };
     // Il formato69 gia' escludeva la visibilita' dalle nuove impronte:
     // riprodurre anche la forma canonica quando piu' entita' sono nascoste.
@@ -236,6 +241,12 @@ QString prepareDrawingEditorModel(DocumentState &document,DrawingEditorModel &mo
         const bool rebuild=mode==DrawingModelPreparation::BuildMissingGeometry;
         require(rebuild||document.pendingSketchChanges.isEmpty(),
                 QStringLiteral("Terminare la modifica dello schizzo prima di creare la tavola."));
+        if (!rebuild) {
+            const auto pending = [](const auto &stage) { return stage.historyRebuildPending; };
+            require(std::none_of(document.sketches.cbegin(), document.sketches.cend(), pending)
+                    && std::none_of(document.extrusions.cbegin(), document.extrusions.cend(), pending),
+                    QStringLiteral("Completare il ricalcolo della storia prima di creare la tavola."));
+        }
         normalizeModelHistory(document);
         QSet<quint64> cached;
         for(int index=0;index<document.extrusions.size();++index){auto &feature=document.extrusions[index];

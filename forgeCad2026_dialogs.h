@@ -261,6 +261,8 @@ void shapeAnalysisDialog(QMainWindow *window, CadViewport *viewport);
 void microFeaturesDialog(QWidget *parent, CadViewport *viewport);
 
 void massPropertiesDialog(QWidget *parent, CadViewport *viewport);
+void volumeStructureDialog(QMainWindow *parent, CadViewport *viewport, int editIndex = -1,
+                           const ExtrusionObject &original = {});
 
 // Taglia superficie: con uno strumento (corpo, superficie, piano o schizzo)
 // oppure tra due facce limite, mantenendo tutti i solidi compresi. Per uno strumento,

@@ -1,5 +1,112 @@
 // Incluso nel runner come membro di ViewportInteractionTest.
+static void booleanCreationFromMenu() {
+    using namespace ForgeCad;
+    using namespace ForgeCad::Kernel;
+    DocumentState document;
+    for (int i = 0; i < 2; ++i) {
+        ExtrusionObject box;
+        box.feature = BodyFeature::Primitive;
+        box.primitive.origin[0] = i;
+        box.primitive.size[0] = box.primitive.size[1] = box.primitive.size[2] = 2;
+        box.featureId = quint64(901 + i);
+        box.name = QStringLiteral("Blocco %1").arg(i + 1);
+        document.extrusions.append(box);
+    }
+    PdfWindow window;
+    CadViewport &view = *window.viewport_;
+    QAction *action = nullptr;
+    for (auto *candidate : window.findChildren<QAction *>())
+        if (candidate->text() == QStringLiteral("Unione...")) { action = candidate; break; }
+    require(action, "azione Unione del menu Funzioni");
+
+    enum class Finish { Apply, Cancel, ChangeTool };
+    for (Finish finish : {Finish::Apply, Finish::Cancel, Finish::ChangeTool}) {
+        view.loadDocument(document);
+        ForgeBody ready;
+        std::exception_ptr failure;
+        bool chosen = false;
+        QElapsedTimer elapsed;
+        elapsed.start();
+        QTimer driver;
+        QObject::connect(&driver, &QTimer::timeout, &window, [&] {
+            auto *panel = window.findChild<QDialog *>("booleanDialog");
+            if (!panel) return;
+            try {
+                require(elapsed.elapsed() < 15000, "timeout anteprima del comando Unione");
+                if (!chosen) {
+                    chosen = true;
+                    auto *tools = panel->findChild<QListWidget *>("booleanTools");
+                    require(tools, "lista strumenti della booleana");
+                    for (int i = 0; i < tools->count(); ++i)
+                        if (tools->item(i)->data(Qt::UserRole).toInt() == 1)
+                            tools->item(i)->setCheckState(Qt::Checked);
+                    QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+                    view.keyPressEvent(&escape);
+                    return;
+                }
+                if (!view.preview_.valid) return;
+                ready = view.preview_.geometry;
+                require(ready != nullptr, "anteprima booleana completa");
+                driver.stop();
+                if (finish == Finish::ChangeTool) {
+                    auto tool = view.extrusions().at(1);
+                    tool.primitive.origin[0] = 1.5;
+                    clientOk(view.updateBody(1, tool));
+                }
+                auto *buttons = panel->findChild<QDialogButtonBox *>();
+                require(buttons, "pulsanti conferma booleana");
+                buttons->button(finish == Finish::Cancel ? QDialogButtonBox::Cancel : QDialogButtonBox::Ok)->click();
+            } catch (...) { failure = std::current_exception(); driver.stop(); panel->reject(); }
+        });
+        driver.start(5);
+        action->trigger();
+        driver.stop();
+        if (failure) std::rethrow_exception(failure);
+        require(ready != nullptr, "il menu apre il pannello Booleana e calcola il risultato");
+        if (finish == Finish::Cancel) {
+            require(view.extrusions().size() == 2, "Annulla conserva solo i due operandi");
+            continue;
+        }
+        const auto applied = view.extrusions().last().forgeBody;
+        require(view.extrusions().size() == 3 && applied, "Unione crea un solo risultato");
+        require((applied == ready) == (finish == Finish::Apply), "riuso solo con operandi invariati");
+
+        CadViewport direct;
+        auto referenceDocument = document;
+        if (finish == Finish::ChangeTool) referenceDocument.extrusions[1].primitive.origin[0] = 1.5;
+        direct.loadDocument(referenceDocument);
+        clientOk(direct.createBoolean(::BooleanOperation::Union, 0, {1}, QStringLiteral("Senza anteprima")));
+        const auto reference = direct.extrusions().last().forgeBody;
+        require(writeBodyBinary(*reference) == writeBodyBinary(*applied), "B-rep identico senza anteprima");
+        const auto a = genealogyOperandsOf(*applied), b = genealogyOperandsOf(*reference);
+        require(a.size() == 2 && b.size() == 2, "due operandi nella genealogia");
+        for (int i = 0; i < 2; ++i)
+            require(a[i].index == b[i].index && a[i].featureId == b[i].featureId, "stessi riferimenti agli operandi");
+        const auto names = elementNamesOf(*applied), referenceNames = elementNamesOf(*reference);
+        require(names && referenceNames && names->faces == referenceNames->faces
+                && names->edges == referenceNames->edges && names->vertices == referenceNames->vertices,
+                "stessi nomi topologici persistenti con e senza anteprima");
+        const auto history = featureHistoryOf(*applied), other = featureHistoryOf(*reference);
+        require(history && other, "genealogia disponibile dopo entrambe le conferme");
+        const auto sameOrigins = [&](EntityKind kind, const auto &ids) {
+            for (auto id : ids) {
+                const auto &left = history->origins(kind, id.index), &right = other->origins(kind, id.index);
+                require(history->isDeclared(kind, id.index) == other->isDeclared(kind, id.index)
+                        && left.size() == right.size(), "stesse origini dichiarate");
+                for (std::size_t i = 0; i < left.size(); ++i)
+                    require(left[i].operand == right[i].operand && left[i].kind == right[i].kind
+                            && left[i].index == right[i].index && left[i].relation == right[i].relation,
+                            "stessa evoluzione topologica");
+            }
+        };
+        sameOrigins(EntityKind::Face, applied->faces());
+        sameOrigins(EntityKind::Edge, applied->edges());
+        sameOrigins(EntityKind::Vertex, applied->vertices());
+    }
+}
+
 static void booleanBoxPicking() {
+    booleanCreationFromMenu();
     using namespace ForgeCad;
     using namespace Kernel;
     DocumentState document;

@@ -50,7 +50,7 @@ QString DrawingWindow::restoreDrawingState(DrawingFile prepared,int index,const 
         // Il vecchio editor resta vivo fino al ritorno dell'eventuale callback Undo.
         installEditor(active.release());sheetHistory_=history;sheetHistoryIndex_=cursor;savedDrawing_=saved;
         if(historyTarget>=0){sheetHistoryIndex_=historyTarget;modified_=bytes!=savedDrawing_;containerDirty_=modified_;}
-        else recordSheets(label);
+        else recordSheets(bytes,label);
         const auto checkin=drawing_.sheet.drawing.model.checkinId;
         sourceStatus_->setText(checkin.isNull()?QStringLiteral("Sorgente: copia di lavoro salvata %1").arg(sourcePath_):QStringLiteral("Modello fissato al check-in %1").arg(checkin.toString(QUuid::WithoutBraces)));
         editor_->fitSheet();busy_=oldBusy;setEnabled(wasEnabled);refreshPageContext();refreshTitle();

@@ -116,11 +116,226 @@ static void storyboardIncrementalRegressions() {
     }
 }
 
+static void storyboardDeferredFeatureEditRegression() {
+    using namespace ForgeCad;
+    using namespace Kernel;
+
+    CadViewport view;
+    PrimitiveParameters box;
+    box.size[0] = box.size[1] = box.size[2] = 2;
+    require(view.createPrimitive(box, QStringLiteral("Base")).isEmpty()
+        && view.createScale(0, 2, 0, {}, QStringLiteral("Primo stadio")).isEmpty()
+        && view.createPrimitive(box, QStringLiteral("Ramo indipendente")).isEmpty()
+        && view.createScale(1, 2, 0, {}, QStringLiteral("Secondo stadio")).isEmpty(),
+        "stadi dipendenti e ramo indipendente per modifica in rollback");
+
+    const ForgeBody oldBase = view.extrusions().at(0).forgeBody;
+    const quint64 firstId = view.extrusions().at(1).featureId;
+    const quint64 lastId = view.extrusions().at(3).featureId;
+    const ForgeBody oldFirst = view.extrusions().at(1).forgeBody;
+    const ForgeBody independent = view.extrusions().at(2).forgeBody;
+    const ForgeBody oldLast = view.extrusions().at(3).forgeBody;
+    const auto hasVolume = [](const ForgeBody &body, double expected) {
+        return body && std::abs(massProperties(*body).volume - expected) < 1e-8;
+    };
+    const auto stageIs = [&](int stage, double volume) {
+        return view.isBodyDrawn(stage) && hasVolume(view.extrusions().at(stage).forgeBody, volume);
+    };
+    require(stageIs(3, 512) && oldFirst && independent, "geometria iniziale della catena");
+
+    view.setHistoryPosition(1);
+    auto edited = view.extrusions().at(0);
+    edited.primitive.size[0] = 3;
+    require(view.updateBody(0, edited).isEmpty() && view.historyPosition() == 1,
+        "modifica della base conserva la posizione di rollback");
+    require(stageIs(0, 12) && !view.isBodyDrawn(1) && !view.isBodyDrawn(2) && !view.isBodyDrawn(3),
+        "la scena mostra soltanto la base aggiornata");
+    const auto suffixDeferred = [&] {
+        return !view.extrusions().at(1).forgeBody && !view.extrusions().at(3).forgeBody
+            && view.extrusions().at(1).featureId == firstId && view.extrusions().at(3).featureId == lastId
+            && view.extrusions().at(2).forgeBody == independent;
+    };
+    require(suffixDeferred(), "la modifica rinvia gli stadi futuri e conserva identita' e B-rep indipendente");
+
+    view.undo();
+    require(view.historyPosition() == 1 && stageIs(0, 8) && view.extrusions().at(0).forgeBody == oldBase
+        && view.extrusions().at(1).forgeBody == oldFirst && view.extrusions().at(3).forgeBody == oldLast
+        && view.extrusions().at(2).forgeBody == independent,
+        "Undo ripristina posizione, geometria e risultati futuri originali");
+    view.redo();
+    require(view.historyPosition() == 1 && stageIs(0, 12) && suffixDeferred(),
+        "Redo ripristina la modifica con gli stadi futuri ancora differiti");
+
+    view.setHistoryPosition(2);
+    const ForgeBody newFirst = view.extrusions().at(1).forgeBody;
+    require(stageIs(1, 96) && newFirst != oldFirst && !view.isBodyDrawn(0)
+        && !view.isBodyDrawn(3) && !view.extrusions().at(3).forgeBody,
+        "avanzare di un passo rigenera il solo stadio entrato nella scena");
+
+    view.setHistoryPosition(3);
+    require(stageIs(1, 96) && stageIs(2, 8) && view.extrusions().at(1).forgeBody == newFirst
+        && view.extrusions().at(2).forgeBody == independent && !view.extrusions().at(3).forgeBody,
+        "attraversare il ramo indipendente riutilizza i risultati pronti");
+
+    view.setHistoryPosition(1);
+    require(stageIs(0, 12) && !view.isBodyDrawn(1), "arretrare ripristina lo stadio della base");
+
+    QByteArray bytes;
+    require(encodeDocument(view.currentDocument(), bytes).isEmpty(), "salvataggio con ultimo stadio ancora differito");
+    DocumentState saved;
+    require(decodeDocument(bytes, saved).isEmpty(), "rilettura del documento salvato in rollback");
+    CadViewport reopened;
+    reopened.loadDocument(saved);
+    require(reopened.historyPosition() == 4, "riapertura alla fine della storia");
+    require(reopened.isBodyDrawn(3) && hasVolume(reopened.extrusions().at(3).forgeBody, 768),
+        "la riapertura produce lo stadio finale aggiornato dalla definizione salvata");
+
+    view.setHistoryPosition(4);
+    const ForgeBody newLast = view.extrusions().at(3).forgeBody;
+    require(stageIs(3, 768) && newLast != oldLast && !view.isBodyDrawn(1)
+        && view.extrusions().at(1).forgeBody == newFirst && view.extrusions().at(2).forgeBody == independent,
+        "lo stadio finale usa la geometria nuova e conserva gli altri B-rep");
+    view.setHistoryPosition(2);
+    require(stageIs(1, 96) && view.extrusions().at(1).forgeBody == newFirst,
+        "lo stadio intermedio resta pronto quando il cursore arretra");
+    view.setHistoryPosition(4);
+    require(stageIs(3, 768) && view.extrusions().at(3).forgeBody == newLast,
+        "un nuovo avanzamento riusa lo stadio finale aggiornato");
+}
+
+static void storyboardEditKeepsPositionRegression() {
+    using namespace ForgeCad;
+    using namespace Kernel;
+
+    for (bool independentBranch : {false, true}) {
+        CadViewport view;
+        PrimitiveParameters box;
+        box.size[0] = box.size[1] = box.size[2] = 2;
+        require(view.createPrimitive(box, QStringLiteral("Base")).isEmpty()
+            && view.createScale(0, 2, 0, {}, QStringLiteral("Primo stadio")).isEmpty()
+            && view.createScale(1, 2, 0, {}, QStringLiteral("Secondo stadio")).isEmpty(),
+            "catena per verifica della maniglia dopo la modifica");
+        if (independentBranch)
+            require(view.createPrimitive(box, QStringLiteral("Ramo indipendente")).isEmpty(),
+                "operazione indipendente successiva alla feature modificata");
+        const int end = view.historyPosition();
+        const ForgeBody originalBase = view.extrusions().at(0).forgeBody;
+        const ForgeBody originalTip = view.extrusions().at(2).forgeBody;
+        const ForgeBody independent = independentBranch ? view.extrusions().at(3).forgeBody : ForgeBody{};
+        const auto hasVolume = [](const ForgeBody &body, double expected) {
+            return body && std::abs(massProperties(*body).volume - expected) < 1e-8;
+        };
+        require(originalBase && hasVolume(originalTip, 512) && (!independentBranch || independent),
+            "geometria iniziale della catena e del ramo indipendente");
+
+        auto edited = view.extrusions().at(0);
+        require(view.updateBody(0, edited).isEmpty() && view.historyPosition() == end
+            && view.extrusions().at(0).forgeBody == originalBase && view.extrusions().at(2).forgeBody == originalTip,
+            "confermare la stessa definizione conserva cursore e geometria");
+        edited.primitive.size[0] = 0;
+        require(!view.updateBody(0, edited).isEmpty() && view.historyPosition() == end
+            && view.extrusions().at(0).forgeBody == originalBase && view.extrusions().at(2).forgeBody == originalTip,
+            "una modifica non valida conserva cursore e geometria");
+
+        edited.primitive.size[0] = 3;
+        require(view.updateBody(0, edited).isEmpty(), "conferma della modifica interattiva");
+        require(view.storyboardPosition() == end && view.isBodyDrawn(2)
+            && hasVolume(view.extrusions().at(2).forgeBody, 768)
+            && view.extrusions().at(2).forgeBody != originalTip,
+            "confermare la modifica a fine storia mantiene la maniglia e aggiorna il risultato finale");
+        if (independentBranch) {
+            require(view.isBodyDrawn(3) && view.extrusions().at(3).forgeBody == independent,
+                "il ramo indipendente conserva il B-rep");
+            continue;
+        }
+
+        require(view.createScale(2, 2, 0, {}, QStringLiteral("Ultimo stadio")).isEmpty(),
+            "aggiunge un successore oltre la posizione scelta");
+        view.setStoryboardPosition(3);
+        auto middle = view.extrusions().at(1);
+        middle.scaleFactor = 3;
+        require(view.updateBody(1, middle).isEmpty() && view.storyboardPosition() == 3
+            && view.isBodyDrawn(2) && hasVolume(view.extrusions().at(2).forgeBody, 2592)
+            && view.extrusions().at(3).historyRebuildPending && !view.extrusions().at(3).forgeBody,
+            "la modifica intermedia ricalcola fino alla maniglia e rinvia il successore oltre la maniglia");
+        view.undo();
+        require(view.storyboardPosition() == 3 && hasVolume(view.extrusions().at(2).forgeBody, 768),
+            "Undo della modifica intermedia mantiene la maniglia");
+        view.redo();
+        require(view.storyboardPosition() == 3 && hasVolume(view.extrusions().at(2).forgeBody, 2592),
+            "Redo della modifica intermedia mantiene la maniglia");
+        const DocumentState complete = view.evaluatedDocument();
+        require(hasVolume(complete.extrusions.at(3).forgeBody, 20736)
+            && view.storyboardPosition() == 3 && !view.isBodyDrawn(3),
+            "la valutazione completa conserva il punto scelto nella storyboard");
+        view.setStoryboardPosition(4);
+        require(view.isBodyDrawn(3) && hasVolume(view.extrusions().at(3).forgeBody, 20736),
+            "avanzare la maniglia mostra il risultato finale aggiornato");
+    }
+}
+
+static void storyboardSketchTailRegression() {
+    using namespace ForgeCad;
+    {
+        CadViewport view;
+        PrimitiveParameters box;
+        box.size[0] = box.size[1] = box.size[2] = 2;
+        require(view.createPrimitive(box, QStringLiteral("Base")).isEmpty()
+            && view.createScale(0, 2, 0, {}, QStringLiteral("Stadio dipendente")).isEmpty(),
+            "catena con uno schizzo autonomo in coda");
+        const int sketch = view.createSketch(0, QStringLiteral("Schizzo autonomo"));
+        require(sketch >= 0, "creazione dello schizzo autonomo");
+        view.sketches_[sketch].segments = {{{0, 0}, {1, 0}}};
+        view.endSketchMode();
+        const auto oldStage = view.extrusions().at(1).forgeBody;
+        const int end = view.storyboard().size();
+        require(view.storyboardIndex(true, sketch) == end - 1 && view.isSketchDrawn(sketch) && oldStage,
+            "lo schizzo autonomo occupa l'ultimo passo della storia");
+
+        auto edited = view.extrusions().at(0);
+        edited.primitive.size[0] = 3;
+        require(view.updateBody(0, edited).isEmpty()
+            && view.storyboardPosition() == end && view.isSketchDrawn(sketch)
+            && view.isBodyDrawn(1) && view.extrusions().at(1).forgeBody
+            && view.extrusions().at(1).forgeBody != oldStage,
+            "uno schizzo autonomo in coda mantiene il cursore al fondo e lo stadio dipendente si aggiorna");
+    }
+    {
+        CadViewport view;
+        ExtrusionObject datum;
+        datum.feature = BodyFeature::DatumPlane;
+        GeometryRef xy;
+        xy.kind = 1;
+        xy.index = 0;
+        datum.datum.refs = {xy};
+        datum.datum.distance = 2;
+        require(view.createBody(datum).isEmpty(), "piano per lo schizzo associato in coda");
+        const int sketch = view.createDatumSketch(0, QStringLiteral("Schizzo associato"));
+        require(sketch >= 0, "creazione dello schizzo associato");
+        view.sketches_[sketch].segments = {{{0, 0}, {1, 0}}};
+        view.endSketchMode();
+        require(view.storyboardIndex(true, sketch) == 1 && view.isSketchDrawn(sketch)
+            && std::abs(view.sketches().at(sketch).frame.origin[2] - 2) < 1e-12,
+            "lo schizzo segue il piano iniziale");
+
+        auto edited = view.extrusions().at(0);
+        edited.datum.distance = 7;
+        require(view.updateBody(0, edited).isEmpty()
+            && view.storyboardPosition() == 2 && view.isSketchDrawn(sketch)
+            && std::abs(view.extrusions().at(0).datumFrame.origin[2] - 7) < 1e-12
+            && std::abs(view.sketches().at(sketch).frame.origin[2] - 7) < 1e-12,
+            "lo schizzo associato prima della maniglia resta visibile e segue subito il piano modificato");
+    }
+}
+
 static void storyboardReviewRegressions() {
     sketchSupportRegressions();
     featureFaceSearchRegressions();
     storyboardMergedChainRegressions();
     storyboardIncrementalRegressions();
+    storyboardDeferredFeatureEditRegression();
+    storyboardEditKeepsPositionRegression();
+    storyboardSketchTailRegression();
     using namespace ForgeCad;
     using namespace Kernel;
     const auto box = [] {
@@ -190,15 +405,22 @@ static void storyboardReviewRegressions() {
         view.setHistoryPosition(4);
         require(view.createScale(3, 1.1, 0, {}, QStringLiteral("Scala inserita al cursore")).isEmpty(),
                 "inserimento prima della ripetizione di funzione");
-        const auto verify = [&](int target) {
+        const auto verify = [&](int target, bool expectDeferred = false) {
             const int index = findFeature(view, repeated.featureId);
             require(index >= 0 && view.extrusions().at(index).firstBody == findFeature(view, united.featureId)
-                && view.extrusions().at(index).secondBody == target && view.extrusions().at(index).forgeBody
-                && view.extrusions().at(index).error.isEmpty(),
+                && view.extrusions().at(index).secondBody == target,
                 "la ripetizione conserva la funzione esplicita e aggiorna solo lo stadio corrente del corpo");
+            const int patternStep = view.storyboardIndex(false, index);
+            require(patternStep >= 0, "la ripetizione conserva il proprio passo nella storia");
+            if (expectDeferred)
+                require(view.storyboardPosition() <= patternStep && !view.extrusions().at(index).forgeBody,
+                    "l'inserimento rinvia il calcolo della ripetizione fino al suo passo");
+            if (view.storyboardPosition() <= patternStep)
+                view.setStoryboardPosition(patternStep + 1);
+            require(view.extrusions().at(index).forgeBody && view.extrusions().at(index).error.isEmpty(),
+                "la ripetizione produce un risultato valido dopo il passaggio del cursore");
         };
-        verify(4);
-        view.setHistoryPosition(view.extrusions().size());
+        verify(4, true);
         view.undo(); verify(3); view.redo(); verify(4);
         view.deleteFeature(4); verify(3);
         view.undo(); verify(4); view.redo(); verify(3);

@@ -1,6 +1,7 @@
 #include "fk_precision.h"
 #include "forgeCad2026_feature_preview.h"
 #include "cad_feature_build.h"
+#include "cad_volume_structure.h"
 #include "cad_feature_dependencies.h"
 #include "cad_forge.h"
 #include <QStringList>
@@ -21,6 +22,13 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
                       QString::number(d.blendChamfer && d.chamferSpec.mode != 0 ? d.chamferSpec.mode : 0),
                       n(d.blendChamfer && d.chamferSpec.mode != 0 ? d.chamferSpec.second : 0.0),
                       QString::number(d.blendChamfer && d.chamferSpec.mode != 0 && d.chamferSpec.flip)};
+    if (d.feature == BodyFeature::VolumetricStructure) {
+        const auto &p = d.volumeStructure;
+        parts << QString::number(int(p.mode)) << QString::number(p.axis) << n(p.from) << n(p.to) << n(p.samplingPitch)
+              << n(p.cellPitch) << n(p.strutWidth) << n(p.filamentWidth) << n(p.amplitude)
+              << QString::number(p.automaticSampling);
+        if (ForgeCad::isGyroidMode(p.mode)) parts << n(p.wallThickness);
+    }
     if (!d.blendChamfer) {
         const auto &f = d.chamferSpec.fillet;
         parts << QString::number(f.mode) << QString::number(f.propagate);
@@ -89,6 +97,13 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
     for (int body : d.mergeBodies) parts << QString::number(body);
     parts << QStringLiteral("T");
     for (int body : d.booleanTools) parts << QString::number(body);
+    if (!d.trimRegions.isEmpty()) {
+        parts << QStringLiteral("Rifilo") << QString::number(d.trimRegions.size());
+        for (const auto &group : d.trimRegions) {
+            parts << QString::number(group.size());
+            for (const auto &p : group) parts << n(p.x) << n(p.y) << n(p.z);
+        }
+    }
     parts << QStringLiteral("M") << n(d.move.translation[0]) << n(d.move.translation[1]) << n(d.move.translation[2]) << n(d.move.angle)
           << QString::number(d.move.copy);
     ref(d.move.axis);
@@ -173,7 +188,9 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
 
 bool FeaturePreviewBuilder::computePreview(const PreviewInputs &in, BodyDisplay &display, BodyDisplay &retainedDisplay,
                                BodyDisplay &resultDisplay, ForgeCad::ForgeBody &geometry,
-                               QString &error, QVector<int> *merged, QString *notice, QVector<BodyDisplay> *additionalDisplays) {
+                               QString &error, BuildDiagnostic &diagnostic, QVector<int> *merged, QString *notice,
+                               QVector<BodyDisplay> *additionalDisplays) {
+    diagnostic = {};
     ForgeCad::Kernel::PrecisionScope precision(in.calculationAccuracy);
     retainedDisplay = {};
     resultDisplay = {};
@@ -200,6 +217,7 @@ bool FeaturePreviewBuilder::computePreview(const PreviewInputs &in, BodyDisplay 
     if (notice) *notice = body.notice;
     if (!ForgeCad::hasGeometry(body)) {
         error = body.error;
+        diagnostic = std::move(body.buildDiagnostic);
         return false;
     }
     geometry = body.forgeBody;

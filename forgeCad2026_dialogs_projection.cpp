@@ -148,23 +148,30 @@ bool projectionDialog(QMainWindow *window, CadViewport *viewport, const QString 
         viewport->setReferenceMarks(marks);
         scope.request(d);
     };
+    const QString pickPrompt = QStringLiteral("Clicca una curva dello schizzo. Le altre curve dello schizzo restano escluse.");
+    const QString pickedPrompt = QStringLiteral("Curva selezionata. Puoi aggiungere altre entita' spuntandole nella lista.");
+    const auto resetPickControls = [&] {
+        picking = -1;
+        for (auto *button : pickButtons) button->setChecked(false);
+        if (status->text() == pickPrompt) status->setText({});
+    };
     const auto arm = [&](int group) {
         viewport->cancelReferencePick(); picking = group;
         for (int k = 0; k < 2; ++k) pickButtons[k]->setChecked(k == group);
         const QString reason = viewport->beginReferencePick(ForgeCad::DatumRoleCurve | ForgeCad::DatumRoleLine, replaced);
         if (!reason.isEmpty()) {picking = -1; pickButtons[group]->setChecked(false);}
-        status->setText(reason.isEmpty() ? QStringLiteral("Clicca una curva dello schizzo. Le altre curve dello schizzo restano escluse.") : reason);
+        status->setText(reason.isEmpty() ? pickPrompt : reason);
     };
     viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
-        const int group = picking; picking = -1;
-        for (auto *button : pickButtons) button->setChecked(false);
+        const int group = picking;
+        resetPickControls();
         if (!picked || group < 0) return;
         if (ref.kind != 7 || ref.element.kind < 0 || ref.element.point >= 0) {
             status->setText(QStringLiteral("Scegli una curva o un segmento di uno schizzo piano.")); arm(group); return;
         }
         filling = true; sketchChoices[group]->setCurrentIndex(ref.index); filling = false;
         refill(group, {ref});
-        status->setText(QStringLiteral("Curva selezionata. Puoi aggiungere altre entita' spuntandole nella lista."));
+        status->setText(pickedPrompt);
         refresh();
     });
     for (int group = 0; group < 2; ++group) {
@@ -175,7 +182,12 @@ bool projectionDialog(QMainWindow *window, CadViewport *viewport, const QString 
             const int row = entityLists[group]->row(item); return row >= 0 ? QVector<GeometryRef>{entities[group].at(row)} : QVector<GeometryRef>{};
         });
     }
-    QObject::connect(mode, &QComboBox::currentIndexChanged, &dialog, [&] {viewport->cancelReferencePick(); picking = -1; refresh();});
+    QObject::connect(mode, &QComboBox::currentIndexChanged, &dialog, [&] {
+        viewport->cancelReferencePick();
+        resetPickControls();
+        if (status->text() == pickedPrompt) status->setText({});
+        refresh();
+    });
     QObject::connect(bodyBox, &QComboBox::currentIndexChanged, &dialog, refresh);
     QObject::connect(sketchBox, &QComboBox::currentIndexChanged, &dialog, refresh);
     QObject::connect(reverse, &QCheckBox::toggled, &dialog, refresh);

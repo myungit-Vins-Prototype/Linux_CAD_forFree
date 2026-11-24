@@ -118,6 +118,16 @@ DrawingSectionStep sectionStepValues(double at,double offset,const QTableWidget 
     for(int row=0;row<table->rowCount();++row)result.additional.push_back({static_cast<QDoubleSpinBox *>(table->cellWidget(row,0))->value(),static_cast<QDoubleSpinBox *>(table->cellWidget(row,1))->value()});
     return result;
 }
+void updateDetailRegion(DrawingViewLayout &layout, QPointF center, double radius, const QString &label) {
+    auto &relation = layout.relation;
+    if (layout.title == QStringLiteral("Dettaglio %1").arg(relation.label))
+        layout.title = QStringLiteral("Dettaglio %1").arg(label);
+    for (auto &point : relation.detailOutline)
+        point = center + (point - relation.detailCenter) * (radius / relation.detailRadius);
+    relation.detailCenter = center;
+    relation.detailRadius = radius;
+    relation.label = label;
+}
 QPen technicalPen(QPen pen,bool screen){
     if(screen){pen.setWidthF(std::clamp(pen.widthF()*4.5,.7,2.2));pen.setCosmetic(true);}
     pen.setCapStyle(Qt::FlatCap);pen.setJoinStyle(Qt::RoundJoin);return pen;
@@ -2541,6 +2551,7 @@ struct DrawingSheetEditor::Impl{
         return {};
     }
     void detailCreationOptions(){
+        if (readOnly) return;
         QString identifier;for(int i=0;i<1000;++i){identifier=i<26?QString(QChar('A'+i)):QStringLiteral("D%1").arg(i+1);bool used=false;for(const auto &layout:state.views)if(layout.relation.label.compare(identifier,Qt::CaseInsensitive)==0)used=true;if(!used)break;}
         const auto error=owner->beginDetailCircle({},identifier,2);if(!error.isEmpty()){say(error);return;}
         auto *dialog=new QDialog(owner,Qt::Tool);dialog->setAttribute(Qt::WA_DeleteOnClose);dialog->setObjectName("drawingDetailDialog");dialog->setWindowTitle(QStringLiteral("Vista dettaglio"));auto *form=new QFormLayout(dialog);
@@ -2598,26 +2609,58 @@ struct DrawingSheetEditor::Impl{
         const auto center=localPaper(parent,detail->center);const auto label=detail->label;const double scale=detail->scale,r=radius/viewFor(parent)->scale;
         const auto error=owner->beginDetailViewPlacement(parent,{center.x(),center.y()},r,scale,label);if(!error.isEmpty())say(error);return true;
     }
-    void detailProperties(const QUuid &id){detailDialog(id);}
-    void detailDialog(const QUuid &existing={}){
-        if(readOnly)return;
-        if(existing.isNull()){detailCreationOptions();return;}
-        const auto *original=layoutFor(existing);if(!original||!drawingIsDetail(*original))return;
-        QDialog dialog(owner);dialog.setObjectName("drawingDetailDialog");dialog.setWindowTitle(original?QStringLiteral("Modifica dettaglio"):QStringLiteral("Vista dettaglio"));auto *form=new QFormLayout(&dialog);
-        auto *parent=new QComboBox(&dialog);parent->setObjectName("drawingDetailParent");for(const auto &layout:state.views)if(!drawingIsDetail(layout))parent->addItem(layout.title,layout.viewId);
-        if(!parent->count()){say(QStringLiteral("Inserisci prima una vista madre."));return;}
-        const auto selected=original?original->relation.parentId:selectedView();const int selectedIndex=parent->findData(selected);if(selectedIndex>=0)parent->setCurrentIndex(selectedIndex);parent->setEnabled(!original);form->addRow(QStringLiteral("Vista madre:"),parent);
-        QString identifier=QStringLiteral("A");for(int i=0;i<1000;++i){identifier=i<26?QString(QChar('A'+i)):QStringLiteral("D%1").arg(i+1);bool used=false;for(const auto &layout:state.views)if(layout.relation.label.compare(identifier,Qt::CaseInsensitive)==0)used=true;if(!used)break;}
-        auto *label=new QLineEdit(original?original->relation.label:identifier,&dialog);label->setObjectName("drawingDetailIdentifier");label->setMaxLength(8);form->addRow(QStringLiteral("Identificativo:"),label);
-        auto *scale=new NumericInput(&dialog);scale->setObjectName("drawingDetailScale");scale->setRange(.001,1000);scale->setDecimals(4);scale->setValue(original?viewFor(existing)->scale:2*viewFor(parent->currentData().toUuid())->scale);form->addRow(QStringLiteral("Scala (rispetto al modello):"),scale);
-        const auto chosenScale=scaleControls(&dialog,form,scale,viewFor(existing),original);
+    void detailProperties(const QUuid &id) {
+        if (readOnly) return;
+        const auto *original = layoutFor(id);
+        const auto *definition = viewFor(id);
+        if (!definition || !original || !drawingIsDetail(*original)) return;
+        const auto *mother = layoutFor(original->relation.parentId);
+        if (!mother) { say(QStringLiteral("Inserisci prima una vista madre.")); return; }
+
+        QDialog dialog(owner);
+        dialog.setObjectName("drawingDetailDialog");
+        dialog.setWindowTitle(QStringLiteral("Modifica dettaglio"));
+        auto *form = new QFormLayout(&dialog);
+        auto *parent = new QComboBox(&dialog);
+        parent->setObjectName("drawingDetailParent");
+        parent->addItem(mother->title, mother->viewId);
+        parent->setEnabled(false);
+        form->addRow(QStringLiteral("Vista madre:"), parent);
+        auto *label = new QLineEdit(original->relation.label, &dialog);
+        label->setObjectName("drawingDetailIdentifier");
+        label->setMaxLength(8);
+        form->addRow(QStringLiteral("Identificativo:"), label);
+        auto *scale = new NumericInput(&dialog);
+        scale->setObjectName("drawingDetailScale");
+        form->addRow(QStringLiteral("Scala (rispetto al modello):"), scale);
+        const auto chosenScale = scaleControls(&dialog, form, scale, definition, original);
         auto *x=new NumericInput(&dialog),*y=new NumericInput(&dialog),*radius=new NumericInput(&dialog);x->setObjectName("drawingDetailCenterX");y->setObjectName("drawingDetailCenterY");radius->setObjectName("drawingDetailRadius");for(auto *input:{x,y,radius}){input->setRange(-1e6,1e6);input->setDecimals(6);input->setSuffix(QStringLiteral(" mm modello"));}radius->setMinimum(.000001);
         auto *linked=new QCheckBox(QStringLiteral("Dettaglio collegato alla vista madre"),&dialog);linked->setObjectName("drawingDetailLinked");linked->setChecked(original->relation.detailLinked);linked->setToolTip(QStringLiteral("La linea segue il contorno sulla madre e il bordo della vista di dettaglio."));form->addRow(linked);
-        auto *title=new QLineEdit(original?original->title:QString(),&dialog);title->setObjectName("drawingDetailTitle");title->setMaxLength(256);
-        if(original){x->setValue(original->relation.detailCenter.x());y->setValue(original->relation.detailCenter.y());radius->setValue(original->relation.detailRadius);form->addRow(QStringLiteral("Centro X:"),x);form->addRow(QStringLiteral("Centro Y:"),y);form->addRow(original->relation.detailOutline.isEmpty()?QStringLiteral("Raggio:"):QStringLiteral("Dimensione del contorno:"),radius);form->addRow(QStringLiteral("Titolo:"),title);}else{for(auto *input:{x,y,radius})input->hide();title->hide();}
-        auto *note=new QLabel(original?QStringLiteral("Piano, corpi e taglio seguono la madre. Centro e raggio sono nel piano della madre; la scala segue la sorgente scelta. Le quote misurano la geometria originale."):QStringLiteral("Dopo OK, indica centro e raggio sulla madre, poi posiziona l'anteprima sul foglio. Il cerchio delimita la vista e non e' quotabile."),&dialog);note->setWordWrap(true);form->addRow(note);
+        auto *title=new QLineEdit(original->title,&dialog);title->setObjectName("drawingDetailTitle");title->setMaxLength(256);
+        x->setValue(original->relation.detailCenter.x());y->setValue(original->relation.detailCenter.y());radius->setValue(original->relation.detailRadius);form->addRow(QStringLiteral("Centro X:"),x);form->addRow(QStringLiteral("Centro Y:"),y);form->addRow(original->relation.detailOutline.isEmpty()?QStringLiteral("Raggio:"):QStringLiteral("Dimensione del contorno:"),radius);form->addRow(QStringLiteral("Titolo:"),title);
+        auto *note=new QLabel(QStringLiteral("Piano, corpi e taglio seguono la madre. Centro e raggio sono nel piano della madre; la scala segue la sorgente scelta. Le quote misurano la geometria originale."),&dialog);note->setWordWrap(true);form->addRow(note);
         auto *error=new QLabel(&dialog);error->setWordWrap(true);form->addRow(error);auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
-        connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{QString message;if(original){auto next=state;for(auto &v:next.drawing.views)if(v.id==existing)for(auto &layout:next.views)if(layout.viewId==existing)chosenScale.apply(v,layout);for(auto &layout:next.views)if(layout.viewId==existing){layout.title=title->text().trimmed();if(layout.title==QStringLiteral("Dettaglio %1").arg(layout.relation.label))layout.title=QStringLiteral("Dettaglio %1").arg(label->text().trimmed().toUpper());layout.relation.label=label->text().trimmed().toUpper();layout.relation.detailLinked=linked->isChecked();for(auto &p:layout.relation.detailOutline)p=QPointF(x->value(),y->value())+(p-layout.relation.detailCenter)*(radius->value()/layout.relation.detailRadius);layout.relation.detailCenter={x->value(),y->value()};layout.relation.detailRadius=radius->value();}message=changeViews(std::move(next),QStringLiteral("Modifica dettaglio"));}else message=owner->beginDetailCircle(parent->currentData().toUuid(),label->text().trimmed().toUpper(),scale->value());error->setText(message);if(message.isEmpty())dialog.accept();});dialog.resize(500,original?400:250);dialog.exec();if(detail)view->setFocus();
+        connect(buttons, &QDialogButtonBox::accepted, &dialog, [&] {
+            auto next = state;
+            auto layout = std::find_if(next.views.begin(), next.views.end(),
+                                       [&](const auto &v) { return v.viewId == id; });
+            auto view = std::find_if(next.drawing.views.begin(), next.drawing.views.end(),
+                                     [&](const auto &v) { return v.id == id; });
+            if (layout == next.views.end() || view == next.drawing.views.end() || !drawingIsDetail(*layout)) {
+                error->setText(QStringLiteral("Seleziona un dettaglio."));
+                return;
+            }
+            chosenScale.apply(*view, *layout);
+            layout->title = title->text().trimmed();
+            layout->relation.detailLinked = linked->isChecked();
+            updateDetailRegion(*layout, {x->value(), y->value()}, radius->value(), label->text().trimmed().toUpper());
+            const auto message = changeViews(std::move(next), QStringLiteral("Modifica dettaglio"));
+            error->setText(message);
+            if (message.isEmpty()) dialog.accept();
+        });
+        dialog.resize(500, 400);
+        dialog.exec();
+        if (detail) view->setFocus();
     }
     void steppedSectionDialog(bool aligned=false){
         if(readOnly||computing)return;
@@ -2876,7 +2919,7 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     impl_->redoAction=action(QStringLiteral("Ripristina"),"drawingRedoAction",[this]{impl_->report(redo());});toolbar->addSeparator();
     action(QStringLiteral("Inserisci vista..."),"drawingAddProjectionAction",[this]{impl_->addViewDialog(DrawingViewKind::ProjectedEdges);});
     action(QStringLiteral("Inserisci sezione..."),"drawingAddViewAction",[this]{impl_->addViewDialog();});
-    action(QStringLiteral("Vista dettaglio..."),"drawingDetailViewAction",[this]{impl_->detailDialog();});
+    action(QStringLiteral("Vista dettaglio..."),"drawingDetailViewAction",[this]{impl_->detailCreationOptions();});
     action(QStringLiteral("Vista derivata..."),"drawingDerivedViewAction",[this]{impl_->derivedDialog();});
     action(QStringLiteral("Vista interrotta..."),"drawingBreakViewAction",[this]{impl_->breakDialog();});
     action(QStringLiteral("Vista ausiliaria..."),"drawingAuxiliaryViewAction",[this]{impl_->auxiliaryDialog();});
@@ -3121,7 +3164,7 @@ QString DrawingSheetEditor::moveDetailLabel(const QUuid &id,QPointF paperPositio
 QString DrawingSheetEditor::updateDetailView(const QUuid &id,QPointF center,double radius,double scale,const QString &label){
     if(impl_->computing||impl_->readOnly)return QStringLiteral("Tavola occupata o in sola lettura.");
     const auto *layout=impl_->layoutFor(id);if(!layout||!drawingIsDetail(*layout))return QStringLiteral("Seleziona un dettaglio.");
-    auto next=impl_->state;for(auto &v:next.drawing.views)if(v.id==id)v.scale=scale;for(auto &l:next.views)if(l.viewId==id){if(l.scaleSource){l.scaleSource=DrawingScaleSource::Custom;l.customScale=scale;}if(l.title==QStringLiteral("Dettaglio %1").arg(l.relation.label))l.title=QStringLiteral("Dettaglio %1").arg(label);for(auto &p:l.relation.detailOutline)p=center+(p-l.relation.detailCenter)*(radius/l.relation.detailRadius);l.relation.detailCenter=center;l.relation.detailRadius=radius;l.relation.label=label;}
+    auto next=impl_->state;for(auto &v:next.drawing.views)if(v.id==id)v.scale=scale;for(auto &l:next.views)if(l.viewId==id){if(l.scaleSource){l.scaleSource=DrawingScaleSource::Custom;l.customScale=scale;}updateDetailRegion(l,center,radius,label);}
     return impl_->changeViews(std::move(next),QStringLiteral("Modifica dettaglio"));
 }
 QString DrawingSheetEditor::beginSectionPlacement(const QUuid &parent,QPointF start,QPointF end,const QString &label,bool reverse,DrawingSectionStyle style,std::optional<DrawingSectionStep> step,std::optional<DrawingSectionBend> bend){

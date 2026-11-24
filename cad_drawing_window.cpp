@@ -301,10 +301,10 @@ QString DrawingWindow::updateFromSource(const QString &overridePath){
     QByteArray digest;error=drawingModelDefinitionHash(source,digest);if(!error.isEmpty())return error;
     DrawingEditorModel geometry;error=prepareDrawingEditorModel(source,geometry);if(!error.isEmpty())return error;
     auto prepared=drawing_;prepared.modelDefinitionHash=digest;
+    prepared.modelPath=path_.isEmpty()?resolved:QDir(QFileInfo(path_).absolutePath()).relativeFilePath(resolved);
     if(!changed)upgradeDrawingFileReferences(prepared,geometry);
-    error=updateSheetsModel(std::move(prepared),geometry);if(!error.isEmpty())return error;
-    modelBaseCheckinId_=source.baseCheckinId;model_=std::move(geometry);drawing_.modelDefinitionHash=digest;sourcePath_=resolved;
-    drawing_.modelPath=path_.isEmpty()?resolved:QDir(QFileInfo(path_).absolutePath()).relativeFilePath(resolved);
+    error=updateSheetsModel(std::move(prepared),std::move(geometry));if(!error.isEmpty())return error;
+    modelBaseCheckinId_=source.baseCheckinId;sourcePath_=resolved;
     sourceReady_=true;containerDirty_=true;modified_=true;
     sourceStatus_->setText(QStringLiteral("Modello aggiornato da: %1").arg(sourcePath_));refreshPageContext();refreshTitle();return {};
 }

@@ -5,6 +5,9 @@
 
 namespace ForgeCad {
 
+// Riserva per la conferma lo stesso ID che assegnerà la normalizzazione della storia.
+void assignCreationFeatureId(ExtrusionObject &body, const QVector<ExtrusionObject> &bodies);
+
 // Costruzione della feature da copie di schizzi e stadi precedenti. Il modulo
 // non accede alla GUI e puo' essere usato dai worker e dalle anteprime.
 // buildGeometry aggiorna risultato, tipo ed errore; buildBody gestisce anche

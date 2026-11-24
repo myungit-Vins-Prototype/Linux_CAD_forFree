@@ -116,6 +116,11 @@ public:
     void removeGlassPanel(quintptr id);
     void setExportMeshPreview(const BodyDisplay &display, bool quadrangular, bool limited);
     void clearExportMeshPreview();
+    void setLatticeTrialRegion(int source, QVector<QVector3D> outline);
+    void setLatticeTrialPreview(BodyDisplay lattice, BodyDisplay retained);
+    void clearLatticeTrialPreview();
+    void stageVolumeStructureResult(const ExtrusionObject &definition, const ForgeCad::ForgeBody &geometry,
+                                    const BodyDisplay &display, int editIndex);
     bool gpuGlassAvailable() const;
     QImage panelBackdropFrame();
     // Zoom: zoom_ e' l'altezza visibile in unita' del modello. I limiti
@@ -193,6 +198,7 @@ public:
     // cronologia riparte da zero; i corpi usano lo snapshot salvato quando e'
     // presente, altrimenti si rigenerano dalla definizione.
     DocumentState currentDocument() const;
+    DocumentState evaluatedDocument();
     DocumentState recoveryDocument() const;
     bool recoverySnapshotReady() const;
     bool hasPendingSketchChanges() const;
@@ -345,6 +351,7 @@ public:
     // riferimenti a schizzi e corpi): si ricostruisce e,
     // se riesce, prende il posto del vecchio e si rigenerano i corpi che ne
     // dipendono (un passo di Undo). Restituisce l'errore.
+    int prepareStoryboardEdit(bool sketch, int index);
     QString updateBody(int index, const ExtrusionObject &definition);
 
     // --- Quote dei segmenti -----------------------------------------------------
@@ -477,6 +484,7 @@ public:
     // Aggiorna la mesh grafica subito, senza promuoverla a geometria confermabile.
     void updateDragPreview(const ExtrusionObject &definition, int index);
     void requestPreview(const ExtrusionObject &definition, int index = -1);
+    void updateOffsetDirection(const ExtrusionObject &definition, int index);
     // Il pannello del taglio ha gia' calcolato e tassellato tutte le parti.
     // Installa direttamente quella scelta, annullando il job che rifarebbe la
     // stessa intersezione solo per l'anteprima.
@@ -485,6 +493,7 @@ public:
     // Raccordo o smusso degli spigoli `edges` del corpo `base` (al posto del raccordo `hidden`, se c'e').
     void requestBlendPreview(int base, const QVector<EdgePoint> &edges, double size, bool chamfer, int hidden = -1, const ChamferSpec &spec = {});
     void clearPreview();
+    void closeFunctionPreview();
     void clearBlendPreview();
     // Errore dell'anteprima (vuoto se riuscita o in calcolo), anche a ogni risultato nuovo.
     QString previewError() const;
@@ -568,11 +577,13 @@ public:
     void cancelReferencePick();
     bool referencePicking() const;
     void setReferencePickCallback(std::function<void(bool, GeometryRef)> callback);
-    // Tutte le regioni dei due operandi partecipano insieme al picking: il
-    // passaggio del mouse deduce corpo e parte, senza una scelta separata.
+    // La vista e il picking condividono le regioni e il filtro per operando.
+    void setTrimPartPickCallback(const QVector<int> &bodies, const QVector<QVector<SheetPiece>> &pieces,
+                                 std::function<void(int, int, EdgePoint)> callback);
     void setTrimPartPickCallback(int firstBody, const QVector<SheetPiece> &firstPieces,
                                  int secondBody, const QVector<SheetPiece> &secondPieces,
                                  std::function<void(int, int, EdgePoint)> callback);
+    void setTrimPartView(int focusBody, const QVector<QVector<int>> &kept);
     // Riferimenti gia' scelti, evidenziati nella vista (finestra del piano).
     void setReferenceMarks(const QVector<GeometryRef> &marks);
     // Quote temporanee per scegliere parametri, senza entrare in modifica schizzo.
@@ -600,6 +611,11 @@ public:
     // Misura (finestra Misura): la distanza minima tra i due punti, con l'etichetta.
     void setMeasureOverlay(bool valid, const QVector3D &from = {}, const QVector3D &to = {}, const QString &label = {});
     void drawMeasureOverlay(QPainter &painter) const;
+    void showBuildDiagnostic(const QString &error, const ForgeCad::BuildDiagnostic &diagnostic);
+    void clearBuildDiagnostic();
+    quint64 buildDiagnosticRevision() const { return buildDiagnosticRevision_; }
+    void showPanelBuildFailure(QObject *panel, const QString &error, quint64 revisionBeforeApply);
+    void clearPanelBuildFailure(QObject *panel);
 
     // Anteprima del piano della finestra (al posto del piano `replaced`, se lo si modifica).
     void setDatumPreview(bool valid, const SketchFrame &frame, double size, int replaced);
@@ -760,6 +776,7 @@ public:
     bool featureHandleGeometry(QVector3D &origin, QVector3D &axis, QVector3D &radial) const;
     QVector3D featureHandleRadialAt(double degrees) const;
     void drawFeatureHandle(QPainter &painter);
+    void drawOffsetDirection(QPainter &painter) const;
     bool featureHandleAt(const QPointF &position) const;
     void dragFeatureHandle(const QPointF &position);
 
@@ -1009,7 +1026,12 @@ private:
 
     // Risolve i vincoli dello schizzo attivo con i bersagli dati; se non ci
     // riesce lo schizzo torna a `before`. Le curve si ricampionano.
-    bool solveActive(const QVector<ForgeCad::PointTarget> &targets, const SketchObject &before, QString *error = nullptr);
+    QString solveNewSketchConstraint(SketchConstraint constraint);
+    void keepScaledSketchVisible(const SketchObject &sketch);
+    bool solveActive(const QVector<ForgeCad::PointTarget> &targets, const SketchObject &before, QString *error = nullptr,
+                     int editedConstraint = -1);
+    void showSketchSolveFailure(const SketchObject &sketch, const ForgeCad::SolveResult &result,
+                                const QVector<ForgeCad::PointTarget> &targets = {}, const SketchConstraint *edited = nullptr);
     // Il cursore e' un obiettivo di trascinamento, non un nuovo vincolo:
     // se non appartiene alla traiettoria ammessa, proietta la proposta sui
     // vincoli esistenti. Quote e comandi numerici usano ancora solveActive.
@@ -1031,12 +1053,26 @@ private:
         double textAngle = 0.0;  // gradi
         QPolygonF textBox;       // per la scelta con il mouse
     };
+    struct OffsetDimensionMeasurement {
+        QPointF source, result;
+        bool hasPoints = false;
+        std::optional<double> error;
+    };
+    struct OffsetDimensionCache {
+        QVector<SketchSegment> segments;
+        QVector<CurveObject> curves;
+        QVector<SketchConstraint> constraints;
+        QHash<int, OffsetDimensionMeasurement> measurements;
+        double accuracy = 0;
+    };
+    OffsetDimensionMeasurement &offsetDimensionMeasurement(const SketchObject &sketch, int index) const;
     QString dimensionText(const SketchConstraint &c) const;
     // Freccia con la punta in `tip` e il corpo dalla parte di `from` (schermo).
     static QPolygonF arrowHead(const QPointF &tip, const QPointF &from);
     bool dimensionGraphic(const SketchObject &sketch, int index, DimensionGraphic &g) const;
     // Anche per una quota che non e' (ancora) nello schizzo: l'anteprima dello strumento Quota.
-    bool dimensionGraphic(const SketchObject &sketch, const SketchConstraint &c, DimensionGraphic &g) const;
+    bool dimensionGraphic(const SketchObject &sketch, const SketchConstraint &c, DimensionGraphic &g,
+                          const OffsetDimensionMeasurement *offset = nullptr) const;
     // Quota sotto il puntatore (testo o linee), -1 se nessuna.
     int dimensionAt(const QPoint &position) const;
     void drawDimensions(QPainter &painter) const;
@@ -1066,7 +1102,7 @@ private:
     QString reorderFeatureTo(int index, int target, const QVector<StoryStep> &steps);
     void recordUndo();
 
-    void documentChanged();
+    void documentChanged(bool showHistoryBuildFailure = true);
 
     // Cache della selezione esatta dei corpi visibili preparate in un thread
     // (forgeWarmPickCaches), una volta per B-rep: altrimenti la prima
@@ -1085,8 +1121,7 @@ private:
     void ensureBodyDisplays(const QVector<int> &indices) const;
     void ensureVisibleBodyDisplays() const;
 
-    bool hasSurfacePierceSource(int index) const;
-    void refreshSurfacePierceSketches(int sourceIndex,QSet<int> &changed,int targetSketch=-1);
+    void refreshHistorySketchReferences(int index);
     bool allowedSketchReference(const GeometryRef &ref) const;
     const SketchObject &sketchReferenceCache();
     void updateSnapReferenceNote(const ForgeCad::SnapResult &result);
@@ -1105,27 +1140,18 @@ private:
     int sketchReferenceCacheOwner_ = -1;
     bool sketchReferenceCacheValid_ = false;
     bool lastSnapExternal_ = false;
-    // Rigenera da `from` in poi i corpi che dipendono da corpi `dirty` o da
-    // schizzi `dirtySketches` (tutti con `all`). Un piano di costruzione
-    // rigenerato porta con se' gli schizzi che vi stanno sopra (followDatum),
-    // e con loro i corpi che li usano (hanno indice maggiore del piano).
-    // I corpi indipendenti tra loro (nessuno e' operando dell'altro) si
-    // costruiscono in parallelo, a livelli: un corpo parte quando i suoi
-    // operandi da rifare sono pronti. I piani di costruzione fanno da
-    // separatori, perche' followDatum cambia gli schizzi che vi stanno sopra.
+    // Invalida i dipendenti delle lavorazioni e degli schizzi modificati.
+    // I semi prima di from sono gia' stati calcolati. I risultati e gli
+    // appoggi oltre il cursore rimangono da rigenerare.
     void regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtySketches, bool all = false,
-                        const std::function<void(int, int, const QString &)> &progress = {});
+                        const std::function<void(int, int, const QString &)> &progress = {}, int throughPosition = -1);
+    void rebuildPendingHistory(bool throughEnd = false);
+    bool rebuildPendingHistoryThrough(int position);
 
-    // Costruisce i corpi `indices` (crescenti): ogni livello contiene quelli
-    // i cui operandi da rifare stanno nei livelli precedenti. buildGeometry
-    // legge solo gli schizzi e gli operandi (gia' pronti) e scrive il suo corpo.
+    // Costruisce i corpi crescenti a livelli, con gli operandi pronti.
     void rebuildParallel(const QVector<int> &indices,
                          const std::function<void(int, const QString &)> &advanced = {});
-
-    // Gli schizzi sul piano di costruzione `index` prendono il suo piano: la
-    // normale del piano, l'asse X precedente proiettato (lo schizzo non ruota
-    // se il piano si sposta o si inclina poco) e l'origine precedente proiettata.
-    void followDatum(int index, QSet<int> &changed);
+    void followDatum(int index, int sketchIndex);
     // Sistema di uno schizzo sul piano di costruzione: normale del piano; asse X
     // e origine quelli di `previous` proiettati sul piano (se c'e' e l'asse non
     // e' quasi normale), altrimenti l'asse X del piano e la proiezione
@@ -1501,7 +1527,9 @@ private:
 
     void drawExtrusions();
 
-    void drawTrimPartHover();
+    void drawTrimParts();
+    void drawTrimPartLabel(QPainter &painter) const;
+    int trimPartAt(const QPoint &position, EdgePoint *point = nullptr) const;
 
     // Anteprime semitrasparenti con isoparametriche U/V.
     // Per estrusione/rivoluzione una passata di profondita' elimina la
@@ -1523,7 +1551,7 @@ private:
     // La geometria dell'anteprima, come rebuildBody, e la sua tassellazione.
     static bool computePreview(const PreviewInputs &in, BodyDisplay &display, BodyDisplay &retainedDisplay,
                                BodyDisplay &resultDisplay, ForgeCad::ForgeBody &geometry,
-                               QString &error, QVector<int> *merged = nullptr, QString *notice = nullptr,
+                               QString &error, ForgeCad::BuildDiagnostic &diagnostic, QVector<int> *merged = nullptr, QString *notice = nullptr,
                                QVector<BodyDisplay> *additionalDisplays = nullptr);
 
     // Calcolo dell'anteprima in un thread del pool. Il risultato arriva nel
@@ -1532,8 +1560,14 @@ private:
     QVector<ExtrusionObject> existingPreviewResults(const ExtrusionObject &definition, int index) const;
     void useExistingPreviewResults();
     void startPreviewJob();
-
     QString preparePreviewError(QString error);
+
+    QString presentBuildFailure(const ExtrusionObject &definition, int index, QString error,
+                                ForgeCad::BuildDiagnostic diagnostic = {});
+    void clearBuildFeedback();
+    void resetPreview(bool clearDiagnostic);
+    void showSelectionBuildFailure();
+    bool historyBuildFeedbackPending_ = false;
 
     // Punti della geometria di un schizzo (estremi dei segmenti, campioni
     // delle curve) nello spazio del modello: solo per inquadrare la vista.
@@ -1676,6 +1710,7 @@ private:
     QVector<SceneSelection> selectedObjects_;
     // Opacita' dei corpi in modalita' schizzo (1 = opachi): lo schizzo resta leggibile dietro di loro.
     double sketchBodyOpacity_ = 0.35;
+    mutable OffsetDimensionCache offsetDimensionCache_;
     mutable ForgeCad::SketchAnalysis analysis_;
     mutable bool analysisDirty_ = true;
     mutable int analysisSketch_ = -1;
@@ -1762,6 +1797,11 @@ private:
     std::function<void(int, QVector<EdgePoint>, double, bool)> edgeEditFinished_;
     std::function<void(int, QVector<EdgePoint>)> edgePickChanged_; // pannello aperto: selezione aggiornata nella vista
     std::function<void()> edgePickPanelAccept_, edgePickPanelCancel_;
+    struct OffsetDirection {
+        QVector3D origin, axis;
+        bool symmetric = false;
+    };
+    std::optional<OffsetDirection> offsetDirection_;
     // Anteprima di una funzione (vedi requestPreview).
     struct Preview {
         QString key;  // vuota: nessuna anteprima
@@ -1778,6 +1818,7 @@ private:
         bool sceneResult = false;
         QVector<BodyDisplay> additionalDisplays;
         QString error;
+        ForgeCad::BuildDiagnostic diagnostic;
         QString notice;  // esito non bloccante (ExtrusionObject::notice)
         ForgeCad::ForgeBody geometry;
         BodyDisplay display;        // cio' che si disegna (per un raccordo, solo la patch)
@@ -1796,6 +1837,9 @@ private:
     ExtrusionObject previewDragDefinition_;
     QString previewDragKey_;
     bool previewDragVisible_ = false;
+    int latticeTrialSource_ = -1;
+    QVector<QVector3D> latticeTrialOutline_;
+    BodyDisplay latticeTrialDisplay_, latticeTrialRetained_;
     BodyDisplay exportMeshPreview_;
     bool exportMeshPreviewQuadrangular_ = false;
     bool exportMeshPreviewLimited_ = false;
@@ -1807,8 +1851,14 @@ private:
         QVector<QVector<QVector3D>> lines;
     };
     QVector<LoftErrorMark> previewLoftErrors_;
-    void prepareLoftDiagnostics(const QString &error);
+    void prepareLoftDiagnostics(const QString &error, const ExtrusionObject &definition, int index);
     void drawLoftDiagnostics(QPainter &painter) const;
+    QString buildDiagnosticError_;
+    ForgeCad::BuildDiagnostic buildDiagnostic_;
+    quint64 buildDiagnosticRevision_ = 0;
+    QPointer<QObject> buildDiagnosticPanel_;
+    bool buildDiagnosticFromHistory_ = false;
+    void drawBuildDiagnostic(QPainter &painter) const;
     int previewErrorSketch_ = -1;  // sezione della loft evidenziata quando una guida non la incontra
     QTimer *previewTimer_ = nullptr;
     ForgeCad::Kernel::CancellationToken previewCancellation_;
@@ -1838,6 +1888,8 @@ private:
     QVector<int> trimPartPickBodies_;
     QVector<BodyDisplay> trimPartPickDisplays_;
     QVector<int> trimPartPickSides_, trimPartPickIndices_;
+    QBitArray trimPartKept_;
+    int trimPartFocusBody_ = -1;
     int trimPartHover_ = -1;
     std::function<void(int, int, EdgePoint)> trimPartPickFinished_;
     std::function<void()> documentChangedCallback_;

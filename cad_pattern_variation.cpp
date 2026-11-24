@@ -313,7 +313,8 @@ Plan parameterScope(const ExtrusionObject &pattern, const QVector<SketchObject> 
                     const QVector<ExtrusionObject> &b) {
     Plan scope;
     const int root = pattern.firstBody;
-    if (!pattern.pattern.featureOnly || root < 0 || root >= b.size() || !patternFeatureSupported(b[root]))
+    if (pattern.pattern.kind < 0 || pattern.pattern.kind > 1 || root < 0 || root >= b.size() ||
+        b[root].suppressed || (pattern.pattern.featureOnly && !patternFeatureSupported(b[root])))
         return scope;
     const auto appendFeature = [&](int index) {
         if (index < 0 || index >= b.size()) return;
@@ -322,7 +323,7 @@ Plan parameterScope(const ExtrusionObject &pattern, const QVector<SketchObject> 
                 scope.order.append(-1-sketch);
         if (!scope.order.contains(index)) scope.order.append(index);
     };
-    if (b[root].operation >= 0) {
+    if (pattern.pattern.featureOnly && b[root].operation >= 0) {
         appendFeature(b[root].secondBody);
         for (int tool : b[root].booleanTools) appendFeature(tool);
     } else appendFeature(root);
@@ -532,9 +533,7 @@ ForgeBody forgeVariablePattern(const ExtrusionObject &pattern, int index, const 
     };
     int occurrence = 0;
     try {
-        if (!pattern.pattern.featureOnly)
-            return fail(QStringLiteral("Le variazioni richiedono Una funzione; non sono disponibili per Il corpo intero."));
-        if (pattern.pattern.kind == 2)
+        if (pattern.pattern.kind != 0 && pattern.pattern.kind != 1)
             return fail(QStringLiteral("Le variazioni sono disponibili nelle ripetizioni lineari e circolari."));
         if (pattern.firstBody < 0 || pattern.firstBody >= index || index > bodies.size())
             return fail(QStringLiteral("Sorgente della ripetizione non valida."));

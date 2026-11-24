@@ -1605,6 +1605,7 @@ struct Block {
     std::function<void(QVector<double> &)> evaluate;
     QVector<int> points;
     Kernel::ConstraintLinear::Rows linearDerivatives;
+    bool dragTarget = false;
 };
 
 void pointDerivative(const System &system,const ConstraintRef &ref,int axis,double factor,
@@ -1711,13 +1712,13 @@ QSet<int> rigidCurvePoints(const System &system, const SketchObject &sketch) {
 }
 
 QVector<Block> buildBlocks(const System &system, const SketchObject &sketch, const QVector<PointTarget> &targets,
-                           bool gauges, bool omitDirectFix = false) {
+                           bool gauges) {
     QVector<const SketchConstraint *> active;
     for (const SketchConstraint &c : sketch.geometricConstraints)
         if (wellFormed(sketch, c)) active.append(&c);
     QVector<Block> blocks;
     for (const SketchConstraint *c : active) {
-        if (omitDirectFix && directFix(*c)) continue;
+        if (directFix(*c)) continue;
         Block block;
         if (c->type == ConstraintType::Pattern) {
             patternDependencies(system, *c, block.points);
@@ -1781,6 +1782,7 @@ QVector<Block> buildBlocks(const System &system, const SketchObject &sketch, con
     }
     for (const PointTarget &target : targets) {
         Block block;
+        block.dragTarget = true;
         system.pointDependencies(target.point, block.points);
         if (block.points.isEmpty()) continue;
         const QPointF goal = target.position;
@@ -2071,7 +2073,7 @@ SketchAnalysis analyzeSketch(const SketchObject &sketch) {
             for (int point : points) fixedPoints.insert(point);
         }
     fixedPoints.unite(rigidCurvePoints(system, sketch));
-    const QVector<Block> blocks = buildBlocks(system, sketch, {}, true, true);
+    const QVector<Block> blocks = buildBlocks(system, sketch, {}, true);
     QVector<double> r;
     for (const Block &block : blocks) block.evaluate(r);
     const int m = r.size();
@@ -2146,18 +2148,27 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
         result.error = QStringLiteral("Lo schizzo contiene valori numerici non finiti o il calcolo non e' rappresentabile.");
         return result;
     };
-    const auto finite = [](const auto &values) {
-        return std::all_of(std::begin(values), std::end(values), [](double v) { return std::isfinite(v); });
-    };
     if (!finiteSketchNumbers(sketch)) return nonFinite();
     for (const auto &target : targets)
         if (!std::isfinite(target.position.x()) || !std::isfinite(target.position.y())) return nonFinite();
-    for(const auto &curve:sketch.curves) if(curve.tool==DrawingTool::Converted && curve.degree==0 && !curve.referenceCurve) {
-        SolveResult result;result.ok=false;result.error=QStringLiteral("Il riferimento esatto dello schizzo deve essere rigenerato dalla sorgente.");return result;
+    for (int i = 0; i < sketch.curves.size(); ++i) {
+        const auto &curve = sketch.curves.at(i);
+        if (curve.tool != DrawingTool::Converted || curve.degree != 0 || curve.referenceCurve) continue;
+        result.ok = false;
+        result.error = QStringLiteral("Il riferimento esatto dello schizzo deve essere rigenerato dalla sorgente.");
+        result.diagnosticRefs = {{1, i, -1}};
+        result.diagnosticContext = QStringLiteral("Ultima geometria disponibile del riferimento convertito.");
+        return result;
     }
     for (const auto &link : sketch.linkedReferences) if (!link || !link->error.isEmpty()) {
         SolveResult result; result.ok = false;
         result.error = link ? link->error : QStringLiteral("Riferimento associativo mancante.");
+        if (link) {
+            result.diagnosticRefs = link->entities;
+            result.diagnosticContext = link->sourceLabel.isEmpty()
+                ? QStringLiteral("Ultima geometria disponibile del riferimento associativo.")
+                : QStringLiteral("Ultima geometria disponibile del riferimento %1.").arg(link->sourceLabel);
+        }
         return result;
     }
     for (const auto &constraint : sketch.geometricConstraints)
@@ -2165,6 +2176,10 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
             SolveResult result; result.ok=false;
             result.error=constraint.pierce && !constraint.pierce->error.isEmpty() ? constraint.pierce->error
                 : QStringLiteral("Il vincolo Pierce non ha un riferimento di superficie valido.");
+            result.diagnosticRefs = {constraint.first};
+            result.diagnosticContext = constraint.pierce && !constraint.pierce->name.isEmpty()
+                ? QStringLiteral("Punto dello schizzo vincolato da Pierce a %1.").arg(constraint.pierce->name)
+                : QStringLiteral("Punto dello schizzo del vincolo Pierce.");
             return result;
         }
     if(std::any_of(sketch.geometricConstraints.begin(),sketch.geometricConstraints.end(),[](const auto &c){return c.type==ConstraintType::Offset;})) {
@@ -2205,7 +2220,7 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
     const double tolerance = 1e-13 * scale, step = 1e-6 * scale;
     if (!std::isfinite(scale) || !std::isfinite(step)) return nonFinite();
     QVector<double> &x = system.values();
-    if (!finite(x)) return nonFinite();
+    if (!finiteNumbers(x)) return nonFinite();
     const QVector<double> original = x;
     const auto conflict = [&] {
         result.ok = false;
@@ -2227,13 +2242,17 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
                 if (point < 0) continue;
                 QPointF goal = constraint.positions.at(k);
                 if (handles) goal -= system.point(system.curvePoint(ref.element, (ref.point - kHandlePoint) / 2));
-                if (fixed.contains(point) && length(system.point(point) - goal) > 1e-9 * scale) return conflict();
+                if (fixed.contains(point) && length(system.point(point) - goal) > 1e-9 * scale) {
+                    result.diagnosticRefs = {ref};
+                    result.diagnosticContext = QStringLiteral("Due vincoli Fissa prescrivono posizioni diverse per lo stesso punto.");
+                    return conflict();
+                }
                 x[2 * point] = goal.x(); x[2 * point + 1] = goal.y();
                 fixed.insert(point);
             }
         }
     }
-    if (!finite(x)) return nonFinite();
+    if (!finiteNumbers(x)) return nonFinite();
     // Le cache associative sono dati della sorgente: nessuna incognita libera
     // e nessuna equazione Fix salvata nel documento.
     for (const auto &link : sketch.linkedReferences) if (link)
@@ -2250,11 +2269,8 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
         if (!fixed.contains(k / 2)) { columnMap[k] = int(freeColumns.size()); freeColumns.append(k); }
     const int n = int(freeColumns.size());
     QVector<Block> blocks;
-    const QVector<Block> all = buildBlocks(system, sketch, targets, false, true);
-    // I bersagli del trascinamento sono in fondo (buildBlocks senza gauge).
-    const int constraintBlocks = int(buildBlocks(system, sketch, {}, false, true).size());
-    for (int b = 0; b < all.size(); ++b) {
-        const Block &block = all.at(b);
+    const auto all = buildBlocks(system, sketch, targets, false);
+    for (const Block &block : all) {
         bool variable = false, touchesRigid = false;
         for (int point : block.points) {
             variable = variable || !fixed.contains(point);
@@ -2264,7 +2280,7 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
         // Un vincolo tra curve rigide non si puo' correggere muovendo altro:
         // resta com'e' (non soddisfatto lo mostra la finestra Vincoli) e non
         // impedisce di modificare il resto dello schizzo.
-        else if (touchesRigid && b < constraintBlocks) continue;
+        else if (touchesRigid && !block.dragTarget) continue;
         else {
             QVector<double> values; block.evaluate(values);
             for (double value : values) {
@@ -2299,7 +2315,7 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
         QVector<double> dx(n, 0.0);
         if (qEnvironmentVariableIntValue("FORGECAD_SOLVER_DENSE") == 1) {
             const QVector<double> J = jacobian(blocks, x, m, step, &columnMap, n);
-            if (!finite(J)) return nonFinite();
+            if (!finiteNumbers(J)) return nonFinite();
             // Passo di norma minima: dx = -J^T (J J^T + mu I)^-1 r.
             QVector<double> A(m * m, 0.0);
             double trace = 0.0;
@@ -2310,7 +2326,7 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
                     A[i * m + j] = A[j * m + i] = sum;
                     if (i == j) trace += sum;
                 }
-            if (!finite(A) || !std::isfinite(trace)) return nonFinite();
+            if (!finiteNumbers(A) || !std::isfinite(trace)) return nonFinite();
             const double mu = 1e-12 * std::max(trace / std::max(m, 1), 1e-300);
             for (int i = 0; i < m; ++i) A[i * m + i] += mu;
             // Cholesky (A e' simmetrica definita positiva grazie a mu).
@@ -2355,7 +2371,7 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
             if (!Kernel::ConstraintLinear::minimumNormStep(rows, r.constData(), n, delta)) break;
             std::copy(delta.begin(), delta.end(), dx.begin());
         }
-        if (!finite(dx)) return nonFinite();
+        if (!finiteNumbers(dx)) return nonFinite();
         // Ricerca lineare: il passo si dimezza finche' lo scarto non scende.
         const QVector<double> before = x;
         double lambda = 1.0;
@@ -2363,9 +2379,9 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
         QVector<double> trial;
         for (int attempt = 0; attempt < 12; ++attempt) {
             for (int k = 0; k < n; ++k) x[freeColumns[k]] = before[freeColumns[k]] + lambda * dx[k];
-            if (!finite(x)) return nonFinite();
+            if (!finiteNumbers(x)) return nonFinite();
             residuals(trial);
-            if (!finite(trial)) return nonFinite();
+            if (!finiteNumbers(trial)) return nonFinite();
             if (norm(trial) < current) {
                 improved = true;
                 break;
@@ -2380,7 +2396,7 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
         result.residual = norm(r);
     }
     result.residual = norm(r);
-    if (!std::isfinite(result.residual) || !finite(x)) return nonFinite();
+    if (!std::isfinite(result.residual) || !finiteNumbers(x)) return nonFinite();
     if (result.residual > 1e-9 * scale) {
         x = original;
         result.ok = false;

@@ -149,6 +149,26 @@ void CadViewport::clearExportMeshPreview() {
     update();
 }
 
+void CadViewport::setLatticeTrialRegion(int source, QVector<QVector3D> outline) {
+    if (latticeTrialSource_ != source) {
+        latticeTrialDisplay_ = {};
+        latticeTrialRetained_ = {};
+    }
+    latticeTrialSource_ = source;
+    latticeTrialOutline_ = std::move(outline);
+    update();
+}
+
+void CadViewport::setLatticeTrialPreview(BodyDisplay lattice, BodyDisplay retained) {
+    latticeTrialDisplay_ = std::move(lattice);
+    latticeTrialRetained_ = std::move(retained);
+    update();
+}
+
+void CadViewport::clearLatticeTrialPreview() {
+    setLatticeTrialRegion(-1, {});
+}
+
 bool CadViewport::gpuGlassAvailable() const {
     return glassCompositor_.available();
 }
@@ -682,6 +702,7 @@ QVector<QPointF> CadViewport::projectSketchPolyline(const QVector<QPointF> &poin
 }
 
 bool CadViewport::isSketchDrawn(int index) const {
+    if (sketches_.at(index).historyRebuildPending) return false;
     if(sketchMode_ && index==activeSketch_)return true;
     if(sketchMode_ && sketchContextEnd_>=0 && (index>=sketchContextSketches_.size() || !sketchContextSketches_.at(index)))return false;
     if (storyPosition_ >= 0 && storyboardIndex(true, index) >= storyPosition_) return false;

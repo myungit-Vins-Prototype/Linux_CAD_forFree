@@ -223,7 +223,8 @@ QVector<int> historyOperands(const ExtrusionObject &body) {
         return operands;
     case BodyFeature::SheetTrim:
         add(body.firstBody);
-        if (body.trimBoth) add(body.secondBody);
+        if (body.trimBoth || !body.trimRegions.isEmpty()) add(body.secondBody);
+        if (!body.trimRegions.isEmpty()) for (int tool : body.booleanTools) add(tool);
         return operands;
     case BodyFeature::Primitive:
     case BodyFeature::Imported:

@@ -227,6 +227,7 @@ QString featureType(const ExtrusionObject &feature) {
     case BodyFeature::SheetTrim: return QStringLiteral("Taglio superficie");
     case BodyFeature::SheetExtend: return QStringLiteral("Estensione superficie");
     case BodyFeature::Scale: return QStringLiteral("Scala");
+    case BodyFeature::VolumetricStructure: return QStringLiteral("Struttura volumetrica");
     case BodyFeature::Helix: return feature.helix.spiral ? QStringLiteral("Spirale") : QStringLiteral("Elica");
     case BodyFeature::Sweep: return feature.sweepSurface ? QStringLiteral("Sweep di superficie") : QStringLiteral("Sweep");
     case BodyFeature::Loft: return feature.loftSurface ? QStringLiteral("Loft di superficie") : QStringLiteral("Loft");
@@ -405,6 +406,7 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
         addBodyDependency(result, features, index, feature.firstBody,
                           QStringLiteral("superficie • %1 bordi").arg(feature.blendEdges.size()));
         break;
+    case BodyFeature::VolumetricStructure:
     case BodyFeature::Scale:
         addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("corpo"));
         break;
@@ -456,6 +458,8 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
     case BodyFeature::SheetTrim:
         addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("superficie"));
         if (feature.secondBody >= 0) addBodyDependency(result, features, index, feature.secondBody, QStringLiteral("strumento"));
+        for (int tool : feature.booleanTools)
+            addBodyDependency(result, features, index, tool, QStringLiteral("superficie di taglio"));
         if (feature.sketchIndex >= 0) addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("schizzo di taglio"));
         break;
     case BodyFeature::Helix:

@@ -77,10 +77,13 @@ QVector<int> bodyOperands(const ExtrusionObject &body) {
     case BodyFeature::DeleteFace:
     case BodyFeature::Shell:
     case BodyFeature::Thread:
+    case BodyFeature::VolumetricStructure:
     case BodyFeature::Scale: return {body.firstBody};
     case BodyFeature::ProjectedCurve: return body.projectionMode == 1 ? QVector<int>{} : QVector<int>{body.firstBody};
     case BodyFeature::Sew: return QVector<int>{body.firstBody} + body.booleanTools;
-    case BodyFeature::SheetTrim: return body.secondBody >= 0 ? QVector<int>{body.firstBody, body.secondBody} : QVector<int>{body.firstBody};
+    case BodyFeature::SheetTrim:
+        if (!body.trimRegions.isEmpty()) return QVector<int>{body.firstBody, body.secondBody} + body.booleanTools;
+        return body.secondBody >= 0 ? QVector<int>{body.firstBody, body.secondBody} : QVector<int>{body.firstBody};
     case BodyFeature::Helix: return body.helix.source != 0 ? QVector<int>{body.firstBody} : QVector<int>{};
     case BodyFeature::Sweep: {
         QVector<int> result = body.sweepPathRef.kind < 0 && body.sweepPath == 1 ? QVector<int>{body.firstBody} : QVector<int>();
@@ -257,10 +260,13 @@ QVector<int> hiddenOperands(const ExtrusionObject &body) {
     if (body.feature == BodyFeature::Transform && !body.move.copy) return {body.firstBody};
     if (body.feature==BodyFeature::Pattern && body.pattern.kind>=3 && !body.pattern.featureOnly) return {body.firstBody};
     if (body.feature == BodyFeature::Pattern && body.pattern.featureOnly && body.secondBody >= 0) return {body.secondBody};
+    if (body.feature == BodyFeature::VolumetricStructure) return {body.firstBody};
     if (body.feature == BodyFeature::Sew) return QVector<int>{body.firstBody} + body.booleanTools;
-    if (body.feature == BodyFeature::SheetTrim)
-        return body.trimBoth && body.secondBody >= 0 ? QVector<int>{body.firstBody, body.secondBody}
-                                                    : QVector<int>{body.firstBody};
+    if (body.feature == BodyFeature::SheetTrim) {
+        if (!body.trimBoth || body.secondBody < 0) return {body.firstBody};
+        if (!body.trimRegions.isEmpty()) return QVector<int>{body.firstBody, body.secondBody} + body.booleanTools;
+        return {body.firstBody, body.secondBody};
+    }
     return {};
 }
 

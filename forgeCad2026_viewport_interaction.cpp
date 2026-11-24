@@ -48,6 +48,8 @@ void CadViewport::keyPressEvent(QKeyEvent *event) {
         event->accept();
         return;
     }
+    if (event->key() == Qt::Key_Escape && sketchMode_ && !sketchViewUnlocked_ && preview_.key.isEmpty())
+        clearBuildDiagnostic();
     if (event->key() == Qt::Key_Escape && dimensionPlacing_ >= 0) {
         dimensionPlacing_ = -1;  // la quota resta dove e'
         documentChanged();
@@ -313,19 +315,11 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
         // Il clic usa le regioni, anche senza un precedente mouseMove e
         // quando il corpo originale e' nascosto dall'anteprima.
         if (event->modifiers() == Qt::NoModifier) {
-            QVector3D origin, direction;
-            viewRay(lastMousePosition_, origin, direction);
-            int nearest = -1;
-            float best = std::numeric_limits<float>::max();
-            for (int k = 0; k < trimPartPickDisplays_.size(); ++k) {
-                float distance = 0.0f;
-                if (meshRayHit(trimPartPickDisplays_.at(k), origin, direction, distance) && distance < best)
-                    best = distance, nearest = k;
-            }
+            EdgePoint point;
+            const int nearest = trimPartAt(lastMousePosition_, &point);
             if (nearest >= 0) {
-                const QVector3D hit = origin + best * direction.normalized();
-                trimPartPickFinished_(trimPartPickSides_.at(nearest), trimPartPickIndices_.at(nearest),
-                                      EdgePoint{hit.x(), hit.y(), hit.z()});
+                const auto finished = trimPartPickFinished_;
+                finished(trimPartPickSides_.at(nearest), trimPartPickIndices_.at(nearest), point);
             }
         }
         // Nessuna regione disponibile: non ricadere nella selezione scena.
@@ -362,6 +356,7 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
         // colorano le facce; il corpo intero si colora solo dalla storyboard.
         if (selectedFeature_ >= 0 && selectedFace_.body >= 0) setFeatureHighlights({selectedFeature_});
         else clearFeatureHighlights();
+        showSelectionBuildFailure();
         if (selectionCallback_)
             selectionCallback_(selectedFeature_ >= 0 ? SceneSelection{SceneObjectKind::Extrusion, selectedFeature_, -1} : selection_);
         if (sketchPickCallback_ && selection_.kind == SceneObjectKind::Sketch) sketchPickCallback_(selection_.index);
@@ -800,16 +795,13 @@ void CadViewport::contextMenuEvent(QContextMenuEvent *event) {
                 const double value = ForgeCad::getDouble(this, QStringLiteral("Quota maniglia"), QStringLiteral("Lunghezza:"), old,
                                                           1e-9, 1e9, 6, &ok);
                 if (ok) {
-                    const DocumentState snapshot = documentState();
-                    SketchObject &sketch = sketches_[activeSketch_];
-                    const SketchObject before = sketch;
+                    const SketchObject &sketch = sketches_.at(activeSketch_);
                     SketchConstraint constraint = ForgeCad::makeConstraint(sketch, ConstraintType::Distance,
                         {{1, curveIndex, control}, {1, curveIndex, handlePoint(control, side)}});
                     constraint.value = value;
-                    sketch.geometricConstraints.append(constraint);
-                    QString failure;
-                    if (!solveActive({}, before, &failure)) showStatus(failure);
-                    else { history_.record(snapshot); sketchEdited(); }
+                    const QString failure = solveNewSketchConstraint(constraint);
+                    if (!failure.isEmpty()) showStatus(failure);
+                    else sketchEdited();
                 }
             }
             event->accept();
@@ -946,18 +938,19 @@ void CadViewport::mouseMoveEvent(QMouseEvent *event) {
         update();
         return;
     }
-    if (!event->buttons() && planeResizeHandleAt(currentPosition) >= 0) {
+    if (!trimPartPickFinished_ && !event->buttons() && planeResizeHandleAt(currentPosition) >= 0) {
         setCursor(Qt::SizeFDiagCursor);
         return;
     }
-    if (!event->buttons() && !sketchMode_ && !sectionHover_) unsetCursor();
+    if (!trimPartPickFinished_ && !event->buttons() && !sketchMode_ && !sectionHover_) unsetCursor();
     if (sectionDragging_) {
         const double delta = sectionDragDelta(currentPosition - lastMousePosition_);
         lastMousePosition_ = currentPosition;
         if (delta != 0.0 && sectionDragged_) sectionDragged_(delta);
         return;
     }
-    if (!sketchMode_ && !(event->buttons() & Qt::LeftButton) && section_.enabled && sectionDragged_) {
+    if (!trimPartPickFinished_ && !sketchMode_ && !(event->buttons() & Qt::LeftButton)
+        && section_.enabled && sectionDragged_) {
         const bool over = sectionHandleAt(currentPosition);
         if (over != sectionHover_) {
             sectionHover_ = over;
@@ -1349,9 +1342,10 @@ void CadViewport::mouseReleaseEvent(QMouseEvent *event) {
             documentChanged();
         }
         dimensionDrag_ = -1;
+        ForgeCad::SolveResult attachmentResult;
+        QVector<ForgeCad::PointTarget> snapped;
         if (dragRecorded_ && (lastSnapExternal_ || lastSnapKind_ == SnapKind::Intersection) && geometrySnap_ && activeSketchObject()) {
             auto &sketch = sketches_[activeSketch_]; const auto before = sketch;
-            QVector<ForgeCad::PointTarget> snapped;
             if (pointDragActive_) snapped = targetsAt(sketch,pointDragPosition_);
             else if (draggingControlPoint_ && draggingPointKind_ == EditablePointKind::Control
                 && draggingCurveIndex_ >= 0 && draggingControlIndex_ >= 0)
@@ -1371,12 +1365,23 @@ void CadViewport::mouseReleaseEvent(QMouseEvent *event) {
                     && ForgeCad::constrainIntersection(sketch, target.point, intersection, cache, sketches_, extrusions_)) continue;
                 recordPointCoincidences(sketch,target.point,target.position);
             }
-            if (!ForgeCad::solveSketch(sketch).ok) sketch = before;
+            attachmentResult = ForgeCad::solveSketch(sketch);
+            if (!attachmentResult.ok) sketch = before;
         }
         pointDragActive_ = false;
         circleRadiusDrag_=-1;
         bodyDragSegment_ = -1;
-        if (dragRecorded_) sketchEdited();
+        if (dragRecorded_) {
+            const QString dragError = buildDiagnosticError_;
+            const auto dragDiagnostic = buildDiagnostic_;
+            sketchEdited();
+            if (!attachmentResult.ok && activeSketchObject()) {
+                showSketchSolveFailure(*activeSketchObject(), attachmentResult, snapped);
+                showStatus(attachmentResult.error);
+            } else if (!dragError.isEmpty() && buildDiagnosticError_.isEmpty()) {
+                showBuildDiagnostic(dragError, dragDiagnostic);
+            }
+        }
         dragRecorded_ = false;
         draggingControlPoint_ = false;
         draggingCurveIndex_ = -1;

@@ -1161,4 +1161,150 @@ SketchEditResult editSketchPattern(SketchObject &sketch, int constraint, const S
     return result;
 }
 
+bool scaleSketchForFirstDimension(SketchObject &sketch, SketchConstraint &dimension, const QPointF &preferredCenter) {
+    const auto isLength = [](ConstraintType type) {
+        return isDimension(type) && type != ConstraintType::Angle;
+    };
+    if (!isLength(dimension.type) || dimension.type == ConstraintType::Offset
+        || !std::isfinite(dimension.value) || dimension.value <= 0.0
+        || !finiteSketchNumbers(sketch))
+        return false;
+    for (double length : sketch.segmentLengths)
+        if (length > 0.0) return false;
+    QSet<int> linkedSegments, linkedCurves;
+    for (const auto &link : sketch.linkedReferences) {
+        if (!link || !link->error.isEmpty()) return false;
+        for (const ConstraintRef &ref : link->entities) {
+            if (ref.element < 0) return false;
+            if (ref.kind == 0 && ref.element < sketch.segments.size()) linkedSegments.insert(ref.element);
+            else if (ref.kind == 1 && ref.element < sketch.curves.size()) linkedCurves.insert(ref.element);
+            else return false;
+        }
+    }
+    const auto isLinked = [&](const ConstraintRef &ref) {
+        return (ref.kind == 0 && linkedSegments.contains(ref.element))
+            || (ref.kind == 1 && linkedCurves.contains(ref.element));
+    };
+    for (int i = 0; i < sketch.curves.size(); ++i) {
+        const auto &curve = sketch.curves.at(i);
+        if (!linkedCurves.contains(i) && (curve.referenceCurve || (curve.tool == DrawingTool::Converted && curve.degree == 0)))
+            return false;
+    }
+
+    const auto usesPlane = [](const SketchConstraint &constraint) {
+        return constraint.first.kind == 2 || constraint.second.kind == 2 || constraint.third.kind == 2;
+    };
+    const auto samePoint = [](const QPointF &a, const QPointF &b) {
+        return a.x() == b.x() && a.y() == b.y();
+    };
+    bool keepOrigin = usesPlane(dimension);
+    bool hasFixedPoint = false;
+    QPointF fixedPoint;
+    const auto anchorAt = [&](const QPointF &position) {
+        if (hasFixedPoint && !samePoint(position, fixedPoint)) return false;
+        hasFixedPoint = true;
+        fixedPoint = position;
+        return true;
+    };
+    for (const CoincidentConstraint &constraint : sketch.coincidentConstraints)
+        keepOrigin = keepOrigin || constraint.firstKind == 2 || constraint.secondKind == 2;
+    for (const SketchConstraint &constraint : sketch.geometricConstraints) {
+        if (isLength(constraint.type) || constraint.type == ConstraintType::Pierce) return false;
+        // Un asse usato solo per la direzione non impone il centro dell'omotetia.
+        if (constraint.type != ConstraintType::Angle && constraint.type != ConstraintType::Parallel
+            && constraint.type != ConstraintType::Perpendicular)
+            keepOrigin = keepOrigin || usesPlane(constraint);
+        if (constraint.type == ConstraintType::Pattern) {
+            const SketchPatternData &pattern = constraint.pattern;
+            if (pattern.kind == 0) {
+                if (pattern.dimensioned || (pattern.count2 > 1 && pattern.dimensioned2)) return false;
+            } else if (pattern.kind == 1) {
+                keepOrigin = keepOrigin || pattern.center.kind == 2;
+            } else if (pattern.kind == 2) {
+                keepOrigin = keepOrigin || pattern.axis.kind == 2;
+            }
+        } else if (constraint.type == ConstraintType::Fix && !isLinked(constraint.first)) {
+            if (constraint.positions.isEmpty()) return false;
+            for (const QPointF &position : constraint.positions)
+                if (!anchorAt(position)) return false;
+        } else if (constraint.type == ConstraintType::Coincident && isLinked(constraint.first) != isLinked(constraint.second)) {
+            QPointF position;
+            const auto &external = isLinked(constraint.first) ? constraint.first : constraint.second;
+            if (refPoint(sketch, external, position) && !anchorAt(position)) return false;
+        } else if (constraint.type == ConstraintType::Midpoint && !isLinked(constraint.first)
+                   && constraint.second.kind == 0 && isLinked(constraint.second)) {
+            const auto &line = sketch.segments.at(constraint.second.element);
+            if (!anchorAt(0.5 * line.first + 0.5 * line.second)) return false;
+        }
+    }
+    if (keepOrigin && hasFixedPoint && !samePoint(fixedPoint, QPointF())) return false;
+    QPointF center = sketch.linkedReferences.isEmpty() ? preferredCenter : QPointF();
+    if (keepOrigin) center = QPointF();
+    else if (hasFixedPoint) center = fixedPoint;
+
+    const double measured = currentMeasure(sketch, dimension);
+    if (!std::isfinite(measured) || measured <= 0.0) return false;
+    const double factor = dimension.value / measured;
+    if (!std::isfinite(factor) || factor <= 0.0 || factor == 1.0) return false;
+
+    const auto scaled = [center, factor](const QPointF &point) {
+        return QPointF(std::fma(factor, point.x() - center.x(), center.x()),
+                       std::fma(factor, point.y() - center.y(), center.y()));
+    };
+    SketchObject work = sketch;
+    // Le entità proiettate sono cache della sorgente. Solo la geometria locale cambia scala.
+    for (int i = 0; i < work.segments.size(); ++i) {
+        if (linkedSegments.contains(i)) continue;
+        auto &segment = work.segments[i];
+        segment.first = scaled(segment.first);
+        segment.second = scaled(segment.second);
+    }
+    for (int i = 0; i < work.curves.size(); ++i) {
+        if (linkedCurves.contains(i)) continue;
+        auto &curve = work.curves[i];
+        for (QPointF &point : curve.controlPoints) point = scaled(point);
+        for (auto &handles : curve.tangentHandles) {
+            handles.first = scaled(handles.first);
+            handles.second = scaled(handles.second);
+        }
+        for (QPointF &sample : curve.samples) {
+            sample = scaled(sample);
+            if (!std::isfinite(sample.x()) || !std::isfinite(sample.y())) return false;
+        }
+    }
+    for (SketchConstraint &constraint : work.geometricConstraints) {
+        if (constraint.placed) constraint.placement = scaled(constraint.placement);
+        if (constraint.type != ConstraintType::Pattern) continue;
+        auto &pattern = constraint.pattern;
+        if (pattern.kind == 0) {
+            pattern.spacing *= factor;
+            if (pattern.count2 > 1) pattern.spacing2 *= factor;
+        } else if (pattern.kind == 1) {
+            pattern.centerPoint = scaled(pattern.centerPoint);
+        } else if (pattern.kind == 2) {
+            pattern.axisPoint = scaled(pattern.axisPoint);
+        }
+    }
+    if (!finiteSketchNumbers(work)) return false;
+    // Una proiezione fissa può restare incidente anche dopo l'omotetia (es. la base
+    // su un piano standard). Verifica i vincoli misti prima di pubblicare la copia.
+    if (!sketch.linkedReferences.isEmpty()) {
+        for (const auto &constraint : work.geometricConstraints) {
+            if ((isLinked(constraint.first) || isLinked(constraint.second) || isLinked(constraint.third)
+                 || constraint.type == ConstraintType::Pattern)
+                && constraintError(work, constraint) > sketchConnectionTolerance())
+                return false;
+        }
+    }
+    const double scaledMeasure = currentMeasure(work, dimension);
+    if (!std::isfinite(scaledMeasure) || scaledMeasure <= 0.0
+        || std::abs(scaledMeasure - dimension.value) > sketchConnectionTolerance())
+        return false;
+    const QPointF placement = dimension.placed ? scaled(dimension.placement) : dimension.placement;
+    if (!std::isfinite(placement.x()) || !std::isfinite(placement.y())) return false;
+    sketch = std::move(work);
+    dimension.placement = placement;
+    return true;
+}
+
 }

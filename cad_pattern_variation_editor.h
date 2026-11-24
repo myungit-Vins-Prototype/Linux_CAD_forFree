@@ -16,6 +16,7 @@ class PatternVariationEditor final : public QWidget {
     void setContext(const ExtrusionObject &pattern, const QVector<SketchObject> &sketches,
                     const QVector<ExtrusionObject> &bodies);
     std::function<void()> changed;
+    bool hasParameters() const { return !parameters_.isEmpty(); }
     QVector<PatternVariation> dimensions() const;
     void selectParameter(const PatternVariation &reference);
 
@@ -28,6 +29,7 @@ class PatternVariationEditor final : public QWidget {
     QTableWidget *table_;
     QPushButton *add_;
     int source_ = -2, total_ = 1;
+    bool variableKind_ = false;
     bool feature_ = false;
 };
 } // namespace ForgeCad

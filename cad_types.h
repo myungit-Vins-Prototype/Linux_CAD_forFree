@@ -12,6 +12,7 @@
 
 #include <memory>
 
+#include "cad_build_diagnostic.h"
 #include "cad_document_version.h"
 
 namespace ForgeCad::Kernel {
@@ -233,6 +234,7 @@ struct SketchObject {
     QString supportError;      // diagnostica runtime, non serializzata
     QVector<std::shared_ptr<const SketchLinkedReference>> linkedReferences;
     QString referenceError; // diagnostica della rigenerazione associativa, non serializzata
+    bool historyRebuildPending = false; // aggiornamento associativo rinviato dal cursore della storia
 
     QString name;
     int plane = 0;  // 0 XY, 1 XZ, 2 YZ, kFacePlane: su una faccia (frame)
@@ -334,7 +336,7 @@ struct BodyDisplay {
 enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3, SheetTrim = 4, SheetExtend = 5, Scale = 6, Helix = 7, Sweep = 8, Loft = 9,
                          Imported = 10, DatumPlane = 11, Pattern = 12, Transform = 13, SurfaceOffset = 14, Sew = 15, Ruled = 16, PlanarSurface = 17,
                          DeleteFace = 18, BoundarySurface = 19, Shell = 20, Thread = 21, FillSurface = 22, Draft = 23,
-                         ProjectedCurve = 24, Thicken = 25, ExtractedCurve = 26, SpatialSketch = 27, SurfaceTools = 28 };
+                         ProjectedCurve = 24, Thicken = 25, ExtractedCurve = 26, SpatialSketch = 27, SurfaceTools = 28, VolumetricStructure = 29 };
 
 // Riferimento leggero a una sotto-entita' del B-rep. `subshape` e' l'ID
 // topologico al momento della scelta, `geometry` il tipo di curva/superficie.
@@ -711,6 +713,23 @@ struct SurfaceToolParameters {
     QVector<GeometryRef> sources; // mappature: kind11 corpo intero, kind5 faccia
     QVector<GeometryRef> targets; // mode0: riferimenti finali; vuoto nei file con il solo extentRef
 };
+enum class VolumeStructureMode { Woven = 0, Cubic = 1, Voxel = 2, Gyroid = 3, CurvedGyroid = 4, SplineGyroid = 5, TrimmedSplineGyroid = 6 };
+
+// Zona in coordinate del modello; axis -1 usa tutto il solido firstBody.
+struct VolumetricStructureParameters {
+    VolumeStructureMode mode = VolumeStructureMode::Woven;
+    int axis = -1;
+    double from = 0.0;
+    double to = 0.0;
+    double samplingPitch = 0.20;
+    double cellPitch = 1.60;
+    double strutWidth = 0.52;
+    double filamentWidth = 0.40;
+    double amplitude = 0.46;
+    double wallThickness = 0.40; // spessore nominale del giroide
+    bool automaticSampling = true;
+};
+
 // Condizione trasversale lungo una guida, distinta da G0/G1/G2 lungo la curva.
 struct LoftGuideCrossCondition {
     int mode = 0;  // 0 libero, 1 normale al piano del profilo, 2 tangente alle facce
@@ -758,6 +777,8 @@ struct ExtrusionObject {
     EdgePoint trimKeep;
     bool trimBoth = false;
     EdgePoint trimToolKeep;
+    // Rifilo multiplo: punti delle regioni mantenute per firstBody, secondBody e booleanTools, in quest'ordine.
+    QVector<QVector<SpatialPoint>> trimRegions;
     bool extendLinear = false;  // SheetExtend: tangente (rigata) invece della stessa superficie
     // Scale: firstBody = corpo, fattore uniforme e centro (0 origine, 1 baricentro del solido, 2 il punto scaleCenter).
     double scaleFactor = 1.0;
@@ -845,6 +866,7 @@ struct ExtrusionObject {
     double fillShapeWeight = 1.0;
     QVector<int> fillFaceContinuities; // -1 eredita; altrimenti G0/G1/G2 per ruledSecond
     SurfaceToolParameters surfaceTool;
+    VolumetricStructureParameters volumeStructure;
     int fillContinuity = 1;
     double fillInfluence = 1.0;
     double fillGuideWeight = 1.0;
@@ -912,6 +934,7 @@ struct ExtrusionObject {
     QVector<ForgeCad::ForgeBody> patternResults; // transitorio, ricostruito dalla madre
     ForgeCad::ForgeBody forgeBody;
     QString error;
+    ForgeCad::BuildDiagnostic buildDiagnostic; // diagnostica runtime, non serializzata
     // Esito non bloccante del calcolo (scarti della superficie di
     // riempimento); non si salva.
     QString notice;
@@ -920,6 +943,7 @@ struct ExtrusionObject {
     // forgeBody, display ed error vengono dallo snapshot salvato: alla prima
     // apertura si usano invece di ricalcolare e ritassellare il corpo.
     bool cachedGeometry = false;
+    bool historyRebuildPending = false; // risultato da rigenerare quando il cursore raggiunge la feature
 };
 
 // Corpo logico mostrato nella storyboard. Le feature conservano i risultati
@@ -962,6 +986,7 @@ struct DocumentState {
     // Stato transitorio per Undo/Redo durante l'editing: i corpi mostrano
     // ancora il risultato precedente. Non viene serializzato nel formato.
     QVector<int> pendingSketchChanges;
+    int undoStoryPosition = -1; // posizione del cursore nello snapshot Undo/Redo, non serializzata
     AxesOrientation orientation;
     bool orientationSet = false;  // letto dal file (altrimenti quello predefinito delle opzioni)
     LengthUnit lengthUnit = LengthUnit::Millimeter;

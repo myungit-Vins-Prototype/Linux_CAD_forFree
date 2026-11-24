@@ -1,4 +1,7 @@
+#include "cad_volume_structure.h"
+#include "fk_classify.h"
 #include "cad_feature_build.h"
+#include "cad_kernel.h"
 #include "cad_surface_tools.h"
 #include "cad_element_names.h"
 #include "cad_topology_ref.h"
@@ -50,20 +53,20 @@ static void appendDistinctSegments(std::vector<ForgeCad::Kernel::PathSegment> &s
 }
 }
 
+void assignCreationFeatureId(ExtrusionObject &body, const QVector<ExtrusionObject> &bodies) {
+    if (body.featureId) return;
+    body.featureId = 1;
+    for (const auto &feature : bodies)
+        body.featureId = std::max(body.featureId, feature.featureId + 1);
+}
+
 // Geometria e tassellazione di un corpo (anche da un thread: non tocca il viewport).
 void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
                       int quality, bool prepareDisplay) {
     synchronizeSketchPlane(body, sketches);
     QElapsedTimer timer;
     timer.start();
-    // Le feature nuove vengono costruite prima di entrare nella storyboard:
-    // riserva lo stesso ID che assegnera' normalizeModelHistory, prima che
-    // la genealogia generi nomi persistenti. Le anteprime usano buildGeometry
-    // direttamente e restano provvisorie fino alla conferma.
-    if (!body.featureId) {
-        body.featureId = 1;
-        for (const auto &feature : bodies) body.featureId = std::max(body.featureId, feature.featureId + 1);
-    }
+    assignCreationFeatureId(body, bodies);
     bool usedSnapshot = body.cachedGeometry && body.forgeBody;
     // La madre ricrea anche i risultati condivisi dai corpi derivati.
     if (body.feature == BodyFeature::Pattern && (body.patternComponent == 0
@@ -135,12 +138,19 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
 // avvisi della risoluzione dei riferimenti (ambigui) vanno nell'esito.
 void buildGeometry(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies) {
     synchronizeSketchPlane(body, sketches);
+    body.buildDiagnostic = {};
     clearReferenceWarnings();
     body.referenceResolutions.clear();
     beginTopologyResolutionCapture();
     try { buildGeometryImpl(body, index, sketches, bodies); }
     catch (...) { endTopologyResolutionCapture(bodies); throw; }
     body.referenceResolutions = endTopologyResolutionCapture(bodies);
+    if (!body.error.isEmpty() && body.buildDiagnostic.paths.isEmpty()) {
+        auto context = featureDiagnosticContext(body, sketches, bodies);
+        if (!body.buildDiagnostic.context.isEmpty())
+            context.context.prepend(body.buildDiagnostic.context + QLatin1Char('\n'));
+        body.buildDiagnostic = std::move(context);
+    }
     if (body.forgeBody) registerFeatureGenealogy(body, index, sketches, bodies);
     QStringList warnings = takeReferenceWarnings();
     for (const auto &resolution : body.referenceResolutions)
@@ -179,6 +189,15 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
         for (const auto &c : sketches.at(sketch).geometricConstraints)
             if (c.type==ConstraintType::Pierce && (!c.pierce || !c.pierce->error.isEmpty()
                 || ForgeCad::constraintError(sketches.at(sketch),c)>1e-7)) {
+                QPointF point;
+                if (refPoint(sketches.at(sketch), c.first, point)) {
+                    try {
+                        body.buildDiagnostic.paths.append(QVector<QVector3D>{sketchToDisplay(point, sketches.at(sketch))});
+                        body.buildDiagnostic.context = QStringLiteral("Punto del vincolo Pierce · %1").arg(sketches.at(sketch).name);
+                    } catch (const std::logic_error &) {
+                        // Un frame degenere non fornisce la posizione mondo del punto.
+                    }
+                }
                 body.error=QStringLiteral("Vincolo Pierce non risolto nello schizzo %1: %2").arg(sketches.at(sketch).name,
                     c.pierce ? (c.pierce->error.isEmpty() ? QStringLiteral("punto fuori dalla superficie") : c.pierce->error) : QStringLiteral("riferimento mancante"));
                 return;
@@ -260,6 +279,17 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
             body.solid = base->solid && hasGeometry(body);
             return;
         }
+        case BodyFeature::VolumetricStructure: {
+            const auto *base = operand(body.firstBody);
+            if (!base || !base->forgeBody || base->forgeBody->isSheet()) {
+                body.error = QStringLiteral("La struttura volumetrica richiede un solido di partenza.");
+                return;
+            }
+            const auto prepared = prepareVolumeStructure(Kernel::RayFaceIndex(*base->forgeBody).bounds, body.volumeStructure);
+            body.forgeBody = std::make_shared<const Kernel::Body>(prepared.build(*base->forgeBody));
+            body.solid = true;
+            return;
+        }
         case BodyFeature::Scale: {
             const ExtrusionObject *base = operand(body.firstBody);
             if (!base) {
@@ -302,7 +332,7 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
                 direction = resolved.direction;  // retta: la sua direzione; piano: la normale
                 along = &direction;
             }
-            body.forgeBody = ForgeCad::forgeThicken(base->forgeBody, body.offsetFaces, body.distance, body.thickenSide, along, &body.error);
+            body.forgeBody = ForgeCad::forgeThicken(base->forgeBody, body.offsetFaces, body.distance, body.thickenSide, along, &body.error, &body.buildDiagnostic);
             body.solid = body.forgeBody && !body.forgeBody->isSheet();
             return;
         }
@@ -377,7 +407,7 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
                 body.error = QStringLiteral("Il corpo dell'offset non esiste piu' o non ha geometria.");
                 return;
             }
-            body.forgeBody = ForgeCad::forgeOffsetFaces(base->forgeBody, body.offsetFaces, body.distance, &body.error, nullptr, body.offsetSew);
+            body.forgeBody = ForgeCad::forgeOffsetFaces(base->forgeBody, body.offsetFaces, body.distance, &body.error, nullptr, body.offsetSew, &body.buildDiagnostic);
             body.solid = false;
             return;
         }
@@ -391,7 +421,7 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
                 }
                 sheets.append(sheet->forgeBody);
             }
-            body.forgeBody = ForgeCad::forgeSew(sheets, body.sewTolerance, body.sewSolid, &body.error);
+            body.forgeBody = ForgeCad::forgeSew(sheets, body.sewTolerance, body.sewSolid, &body.error, nullptr, &body.buildDiagnostic);
             body.solid = body.forgeBody && !body.forgeBody->isSheet();
             return;
         }
@@ -400,6 +430,22 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
             const bool trim = body.feature == BodyFeature::SheetTrim;
             const ExtrusionObject *sheet = operand(body.firstBody);
             const ExtrusionObject *tool = trim && body.secondBody >= 0 ? operand(body.secondBody) : nullptr;
+            if (trim && !body.trimRegions.isEmpty()) {
+                QVector<ForgeCad::ForgeBody> operands;
+                const QVector<int> indices = QVector<int>{body.firstBody, body.secondBody} + body.booleanTools;
+                QSet<int> seen;
+                for (int index : indices) {
+                    const auto *source = operand(index);
+                    if (seen.contains(index) || !source || !source->forgeBody) {
+                        body.error = QStringLiteral("Una superficie del rifilo è duplicata o non ha geometria valida.");
+                        return;
+                    }
+                    seen.insert(index);
+                    operands.append(source->forgeBody);
+                }
+                body.forgeBody = ForgeCad::forgeTrimSurfaces(operands, body.trimRegions, body.trimBoth, &body.error);
+                return;
+            }
             if (!sheet) body.error = QStringLiteral("La superficie non esiste piu'.");
             else if (trim && body.secondBody >= 0 && !tool) body.error = QStringLiteral("Lo strumento del taglio non esiste piu'.");
             else if (trim) {
@@ -683,7 +729,8 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
                 return;
             }
             std::vector<ForgeCad::Kernel::Transform3> placements;
-            if (!ForgeCad::patternPlacements(body.pattern, index, sketches, bodies, placements, &body.error, body.firstBody)) return;
+            if (body.pattern.variations.isEmpty() &&
+                !ForgeCad::patternPlacements(body.pattern, index, sketches, bodies, placements, &body.error, body.firstBody)) return;
             if (!body.pattern.variations.isEmpty()) {
                 body.forgeBody = forgeVariablePattern(body, index, sketches, bodies, &body.error);
             } else if (body.pattern.featureOnly) {
@@ -834,8 +881,13 @@ void tessellateGeometry(const ExtrusionObject &body, int quality, BodyDisplay &d
             ForgeCad::curveDisplay(*body.curves.at(k), quality, more);
             display.edges += more.edges;
         }
-    } else if (body.forgeBody) ForgeCad::forgeTessellate(*body.forgeBody, quality, display);
-    else display = {};
+    } else if (body.forgeBody) {
+        if (body.feature == BodyFeature::VolumetricStructure
+            && isInterpolatedGyroid(body.volumeStructure.mode))
+            ForgeCad::forgeTessellateFacetedSolid(*body.forgeBody, quality, display);
+        else
+            ForgeCad::forgeTessellate(*body.forgeBody, quality, display);
+    } else display = {};
 }
 
 // Le copie separate di una ripetizione condividono la stessa mesh sulla

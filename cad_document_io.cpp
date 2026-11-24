@@ -1,3 +1,4 @@
+#include "cad_volume_structure.h"
 #include "cad_memory.h"
 #include <QSettings>
 #include "cad_document_io.h"
@@ -620,7 +621,19 @@ void write(QDataStream &out, const ExtrusionObject &body, quint16 version) {
         out << quint32(body.loftCorrespondences.size());
         for (const auto &row : body.loftCorrespondences) out << row.reverse << row.positions;
     }
-
+    if (version >= 71) {
+        out << quint32(body.trimRegions.size());
+        for (const auto &group : body.trimRegions) {
+            out << quint32(group.size());
+            for (const auto &p : group) out << p.x << p.y << p.z;
+        }
+    }
+    if (version >= 72 && body.feature == BodyFeature::VolumetricStructure) {
+        const auto &p = body.volumeStructure;
+        out << qint32(p.mode) << qint32(p.axis) << p.from << p.to << p.samplingPitch << p.cellPitch
+            << p.strutWidth << p.filamentWidth << p.amplitude << p.automaticSampling;
+        if (version >= 73) out << p.wallThickness;
+    }
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -1011,7 +1024,34 @@ bool read(ReadStream &in, ExtrusionObject &body, quint16 version, int extras) {
             body.loftCorrespondences.append(std::move(row));
         }
     }
-    const BodyFeature last = version >= 53 ? BodyFeature::SurfaceTools : version >= 45 ? BodyFeature::SpatialSketch : version >= 44 ? BodyFeature::ExtractedCurve : version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
+    if (version >= 71) {
+        quint32 groups = 0;
+        if (!readCount(in, groups, 4) ||
+            (groups && (body.feature != BodyFeature::SheetTrim || groups != quint32(2 + body.booleanTools.size()))))
+            return false;
+        if (!in.readRecords(body.trimRegions, groups, [&](QVector<SpatialPoint> &group) {
+            quint32 points = 0;
+            return readCount(in, points, 24) && in.readRecords(group, points, [&](SpatialPoint &p) {
+                in >> p.x >> p.y >> p.z;
+                return in.status() == QDataStream::Ok && std::isfinite(p.x) && std::isfinite(p.y) && std::isfinite(p.z);
+            });
+        })) return false;
+    }
+    if (version >= 72 && body.feature == BodyFeature::VolumetricStructure) {
+        auto &p = body.volumeStructure;
+        qint32 mode = 0, axis = -1;
+        in >> mode >> axis >> p.from >> p.to >> p.samplingPitch >> p.cellPitch
+           >> p.strutWidth >> p.filamentWidth >> p.amplitude >> p.automaticSampling;
+        p.mode = VolumeStructureMode(mode);
+        p.axis = axis;
+        if (version >= 73) in >> p.wallThickness;
+        else if (isGyroidMode(p.mode)) return false;
+        if (version < 74 && p.mode == VolumeStructureMode::CurvedGyroid) return false;
+        if (version < 75 && p.mode == VolumeStructureMode::SplineGyroid) return false;
+        if (version < 76 && p.mode == VolumeStructureMode::TrimmedSplineGyroid) return false;
+        if (body.operation >= 0 || body.firstBody < 0 || !validVolumetricStructureParameters(p)) return false;
+    }
+    const BodyFeature last = version >= 72 ? BodyFeature::VolumetricStructure : version >= 53 ? BodyFeature::SurfaceTools : version >= 45 ? BodyFeature::SpatialSketch : version >= 44 ? BodyFeature::ExtractedCurve : version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
     return in.status() == QDataStream::Ok;
 }
@@ -1029,7 +1069,7 @@ constexpr quint32 kBodyCacheTag = 0x46434332;  // "FCC2"
 // 9: raccordi ricalcolati sui nodi degli appoggi; derivate laterali corrette.
 // 11: griglie loft senza molteplicita' superflue nei nodi adattivi delle guide.
 // 12: lift G1 cubico indipendente dal grado e raccordi con jet unilaterali.
-constexpr quint32 kBodyCacheVersion = 16;
+constexpr quint32 kBodyCacheVersion = 18;
 constexpr qsizetype kMaxDisplayValues = 200000000;
 
 QByteArray definitionHash(const QByteArray &payload) { return QCryptographicHash::hash(payload, QCryptographicHash::Sha256); }
@@ -1210,7 +1250,7 @@ QByteArray bodyCache(const QByteArray &payload, const DocumentState &state, quin
     for (int index = 0; index < state.extrusions.size(); ++index) {
         const ExtrusionObject &body = state.extrusions.at(index);
         std::string data;
-        if (body.forgeBody) {
+        if (!body.historyRebuildPending && body.forgeBody) {
             try {
                 data = Kernel::writeBodyBinary(*body.forgeBody);
             } catch (const std::exception &) {
@@ -1224,7 +1264,7 @@ QByteArray bodyCache(const QByteArray &payload, const DocumentState &state, quin
         }
         // Gli stadi nascosti conservano il B-rep esatto; la loro mesh si
         // rigenera rapidamente se servira' alla vista durante il rollback.
-        const bool display = body.visible && hasDisplaySnapshot(body.display);
+        const bool display = !body.historyRebuildPending && body.visible && hasDisplaySnapshot(body.display);
         out << quint8(display ? 1 : 0);
         if (display) writeDisplay(out, body.display);
         const auto declared = data.empty() ? DeclaredHistorySnapshot() : declaredHistorySnapshot(body, index, state.extrusions);
@@ -1365,22 +1405,26 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     // dichiarazioni delle facce costruite dallo strumento. Il B-rep era
     // corretto, ma i nomi cambiavano alla riapertura. Rigenerare soltanto
     // queste feature e i loro derivati, conservando gli altri snapshot.
+    // Cache 18 riusa gli attraversamenti del B-rep per il contorno campionato della TPMS.
     // I check-in mantengono sempre la propria geometria storica.
-    std::vector<bool> rebuildNames(count, false);
-    if (cacheVersion < 16 && state.version.checkinId.isNull()) {
+    std::vector<bool> rebuildFeature(count, false);
+    if (cacheVersion < 18 && state.version.checkinId.isNull()) {
         for (quint32 i = 0; i < count; ++i) {
             const auto &feature = snapshotBodies[int(i)];
-            bool rebuild = feature.feature == BodyFeature::Pattern && feature.pattern.featureOnly;
+            const auto &structure = feature.volumeStructure;
+            bool rebuild = (cacheVersion < 16 && feature.feature == BodyFeature::Pattern && feature.pattern.featureOnly)
+                || (feature.feature == BodyFeature::VolumetricStructure
+                    && structure.mode == VolumeStructureMode::CurvedGyroid);
             if (feature.firstBody >= 0 && feature.firstBody < int(i))
-                rebuild = rebuild || rebuildNames[std::size_t(feature.firstBody)];
+                rebuild = rebuild || rebuildFeature[std::size_t(feature.firstBody)];
             for (int operand : featureGenealogyOperandIndices(feature, int(i), snapshotBodies))
-                rebuild = rebuild || rebuildNames[std::size_t(operand)];
-            rebuildNames[i] = rebuild;
+                rebuild = rebuild || rebuildFeature[std::size_t(operand)];
+            rebuildFeature[i] = rebuild;
         }
     }
     for (quint32 i = 0; i < count; ++i) {
         ExtrusionObject &body = state.extrusions[int(i)];
-        if (!bodies[i] || rebuildNames[i]) continue;
+        if (!bodies[i] || rebuildFeature[i]) continue;
         body.forgeBody = std::move(bodies[i]);
         body.solid = !body.forgeBody->isSheet();
         body.error = records[i].error;
@@ -1515,6 +1559,27 @@ QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, boo
                     if (!std::isfinite(value) || value < 0 || value > 1) return QStringLiteral("Posizione del collegamento non valida.");
             }
 
+            if (body.feature == BodyFeature::VolumetricStructure) {
+                if (version < 72) return QStringLiteral("La struttura volumetrica richiede il formato 72.");
+                if (version < 76 && body.volumeStructure.mode == VolumeStructureMode::TrimmedSplineGyroid)
+                    return QStringLiteral("La TPMS con rifilo spline richiede il formato 76.");
+                if (version < 75 && body.volumeStructure.mode == VolumeStructureMode::SplineGyroid)
+                    return QStringLiteral("La TPMS con parete spline richiede il formato 75.");
+                if (version < 74 && body.volumeStructure.mode == VolumeStructureMode::CurvedGyroid)
+                    return QStringLiteral("La TPMS a parete curva richiede il formato 74.");
+                if (version < 73 && isGyroidMode(body.volumeStructure.mode))
+                    return QStringLiteral("Il giroide a parete richiede il formato 73.");
+                if (body.operation >= 0 || body.firstBody < 0 || !validVolumetricStructureParameters(body.volumeStructure))
+                    return QStringLiteral("Parametri della struttura volumetrica non validi.");
+            }
+            if (!body.trimRegions.isEmpty()) {
+                if (version < 71) return QStringLiteral("Il rifilo multiplo richiede il formato 71.");
+                if (body.feature != BodyFeature::SheetTrim || body.trimRegions.size() != 2 + body.booleanTools.size())
+                    return QStringLiteral("Le regioni del rifilo non corrispondono ai corpi selezionati.");
+                for (const auto &group : body.trimRegions) for (const auto &p : group)
+                    if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z))
+                        return QStringLiteral("Punto di rifilo non valido.");
+            }
             if (version < 63 && !body.pattern.variations.isEmpty())
                 return QStringLiteral("Le variazioni richiedono il formato 63.");
             if (body.pattern.variations.size() > 256) return QStringLiteral("Troppe variazioni parametriche.");
@@ -1586,6 +1651,10 @@ QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, boo
 
 QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodies, int compressionLevel) {
     return encodeDocumentVersion(state, bytes, bodies, compressionLevel, kVersion);
+}
+
+QString encodeDocumentDefinition70ForHash(const DocumentState &state, QByteArray &bytes) {
+    return encodeDocumentVersion(state, bytes, false, 9, 70);
 }
 
 QString encodeDocumentDefinition69ForHash(const DocumentState &state, QByteArray &bytes) {

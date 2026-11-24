@@ -244,7 +244,7 @@ BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, const QStr
         viewport->endEdgePick(true);
     }
     viewport->setPreviewCallback({});
-    viewport->clearBlendPreview();
+    viewport->closeFunctionPreview();
     result.size = sizeBox->value();
     result.chamfer = currentChamfer();
     result.spec = currentSpec();
@@ -347,9 +347,9 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     }
     const QVector<int> results = viewport->resultBodiesBefore(replaced);
     QVector<int> candidates = results;
-    const int limit = replaced < 0 ? viewport->historyPosition() : std::min(replaced, viewport->historyPosition());
+    const int limit = replaced < 0 ? viewport->historyPosition() : replaced;
     for (int i = 0; i < limit; ++i)
-        if (!bodies.at(i).suppressed && bodies.at(i).error.isEmpty() && bodies.at(i).forgeBody
+        if (!bodies.at(i).historyRebuildPending && !bodies.at(i).suppressed && bodies.at(i).error.isEmpty() && bodies.at(i).forgeBody
             && ForgeCad::patternFeatureSupported(bodies.at(i)) && !candidates.contains(i)) candidates.append(i);
     if (replaced >= 0 && patternInitial.firstBody >= 0 && patternInitial.firstBody < limit
         && !candidates.contains(patternInitial.firstBody)) candidates.append(patternInitial.firstBody);
@@ -422,7 +422,7 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     kindBox->setCurrentIndex(qBound(0, p.kind, 2));
     auto *whatBox = new QComboBox(&dialog);
     whatBox->setObjectName(QStringLiteral("patternWhat"));
-    whatBox->setToolTip(QStringLiteral("La funzione ripete il materiale aggiunto o sottratto, mantenendo il corpo di base."));
+    whatBox->setToolTip(QStringLiteral("Il corpo intero ripete il risultato della sorgente. Una funzione ripete il materiale aggiunto o sottratto al corpo di base."));
     whatBox->addItems({QStringLiteral("Il corpo intero"), QStringLiteral("Una funzione")});
     whatBox->setCurrentIndex(p.featureOnly ? 1 : 0);
     auto *sourceRow = picker.row(bodyBox);
@@ -493,6 +493,8 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     occurrences->setToolTip(QStringLiteral("Togli la spunta per escludere un'occorrenza; rimettila per ripristinarla."));
     form->addRow(QStringLiteral("Occorrenze attive:"), occurrences);
     auto *variations = new ForgeCad::PatternVariationEditor(&dialog);
+    int draftMode = whatBox->currentIndex();
+    QVector<PatternVariation> variationDrafts[2];
     variations->setVariations(p.variations);
     form->addRow(QStringLiteral("Variazioni:"), variations);
     auto *status = new FunctionMessage(&dialog);
@@ -537,7 +539,7 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         d.pattern.count2 = grid ? countBox2->value() : 1;
         d.pattern.flip2 = flipBox2->isChecked();
         d.pattern.spacing2 = spacingBox2->value();
-        d.pattern.variations = d.pattern.featureOnly && d.pattern.kind != 2 ? variations->variations() : QVector<PatternVariation>{};
+        d.pattern.variations = d.pattern.kind != 2 ? variations->variations() : QVector<PatternVariation>{};
         d.pattern.refs = p.refs;
         if (!grid) d.pattern.refs.resize(1);
         return d;
@@ -612,13 +614,14 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         else if (step == 2) stepHint->setText(QStringLiteral("Passaggio 2 di 3 — Scegli %1 nella viewport. Esc annulla questa scelta e conserva il riferimento precedente.").arg(referenceName.toLower()));
         else stepHint->setText(QStringLiteral("Passaggio 3 di 3 — Regola istanze e misure, poi premi OK. Sorgente: %1. %2: %3.")
             .arg(bodyBox->currentText(), referenceName, ForgeCad::geometryRefText(p.refs.at(0), viewport->sketches(), viewport->extrusions())));
-        const bool variableFeature = step == 3 && kind != 2 && whatBox->currentIndex() == 1 && feature;
-        variations->setEnabled(variableFeature);
-        variations->setToolTip(whatBox->currentIndex() == 0
-            ? QStringLiteral("Le variazioni sono disponibili soltanto scegliendo Una funzione.") : QString());
-        viewport->setParameterDimensions(variableFeature ? variations->dimensions() : QVector<PatternVariation>{},
-            variableFeature ? variations->variations() : QVector<PatternVariation>{},
-            variableFeature ? std::function<void(const PatternVariation &)>([&](const PatternVariation &ref) {
+        const bool canVary = variations->hasParameters() || !variations->variations().isEmpty();
+        const bool variable = step == 3 && kind != 2 && canVary;
+        variations->setEnabled(variable);
+        variations->setToolTip(validSource && !canVary
+            ? QStringLiteral("La sorgente selezionata non ha parametri variabili.") : QString());
+        viewport->setParameterDimensions(variable ? variations->dimensions() : QVector<PatternVariation>{},
+            variable ? variations->variations() : QVector<PatternVariation>{},
+            variable ? std::function<void(const PatternVariation &)>([&](const PatternVariation &ref) {
                 variations->selectParameter(ref);
                 if (auto *scroll = dialog.findChild<QScrollArea *>("functionDialogScroll"))
                     scroll->ensureWidgetVisible(variations, 0, 20);
@@ -718,10 +721,14 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         refresh();
     });
     QObject::connect(bodyBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+        for (auto &draft : variationDrafts) draft.clear();
         variations->setVariations({});
         picker.stop(); active = -1; setStatus({}, false); refresh();
     });
-    QObject::connect(whatBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+    QObject::connect(whatBox, &QComboBox::currentIndexChanged, &dialog, [&](int mode) {
+        variationDrafts[draftMode] = variations->variations();
+        draftMode = mode;
+        variations->setVariations(variationDrafts[draftMode]);
         setStatus({}, false);
         if (bodyBox->currentIndex() < 0 || (whatBox->currentIndex() == 1
             && !ForgeCad::patternFeatureSupported(bodies.at(candidates.at(bodyBox->currentIndex()))))) picker.start();

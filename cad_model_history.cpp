@@ -16,7 +16,7 @@ bool isReferenceFeature(const ExtrusionObject &feature) {
 }
 
 bool isValidHistoryStage(const ExtrusionObject &feature) {
-    if (feature.suppressed || !feature.error.isEmpty()) return false;
+    if (feature.historyRebuildPending || feature.suppressed || !feature.error.isEmpty()) return false;
     if (feature.operation < 0 && feature.feature == BodyFeature::DatumPlane) return feature.datumValid;
     if (feature.operation < 0 && (feature.feature == BodyFeature::Helix || feature.feature == BodyFeature::ProjectedCurve || feature.feature == BodyFeature::ExtractedCurve || feature.feature == BodyFeature::SpatialSketch))
         return feature.curve != nullptr;
@@ -35,6 +35,7 @@ quint64 inheritedBody(const QVector<ExtrusionObject> &features, const ExtrusionO
     case BodyFeature::SheetTrim:
     case BodyFeature::SheetExtend:
     case BodyFeature::Scale:
+    case BodyFeature::VolumetricStructure:
     case BodyFeature::Sew:
     case BodyFeature::Draft:
     case BodyFeature::Shell:
@@ -128,7 +129,7 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
     // operando. Non sono una nuova preferenza Nascondi del corpo logico.
     QSet<quint64> consumed;
     for (const auto &feature : features) {
-        if (feature.suppressed || !feature.error.isEmpty()) continue;
+        if (feature.historyRebuildPending || feature.suppressed || !feature.error.isEmpty()) continue;
         for (int operand : hiddenOperands(feature, features)) {
             if (operand < 0 || operand >= features.size()) continue;
             const quint64 id = features.at(operand).modelBodyId;
@@ -168,7 +169,7 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
             const ExtrusionObject &feature = features.at(index);
             if (feature.suppressed) continue;
             lastActive = index;
-            if (!feature.error.isEmpty()) continue;
+            if (feature.historyRebuildPending || !feature.error.isEmpty()) continue;
             lastWithoutError = index;
             if (feature.featureId == previousTip) savedTip = index;
             if (isValidHistoryStage(feature)) tip = index;
@@ -182,9 +183,11 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
         // i documenti precedenti al formato storyboard e quando un altro
         // corpo lo consuma. Se pero' la coda della storia e' fallita, il flag
         // del vecchio stadio valido era stato spento quando quella feature
-        // era ancora il tip: in quel solo caso lo stato del corpo e'
+        // era ancora il tip. Lo stesso vale per la coda da rigenerare:
+        // lo stato del corpo e'
         // autorevole e va conservato.
-        const bool failedTail = lastActive >= 0 && lastActive != tip && !features.at(lastActive).error.isEmpty();
+        const bool inactiveTail = lastActive >= 0 && lastActive != tip
+            && (features.at(lastActive).historyRebuildPending || !features.at(lastActive).error.isEmpty());
         // Lo stesso quando il tip si sposta da solo: una feature fallita che ora
         // riesce (riattivata, o corretta in "Modifica parametri") ha il flag
         // spento, perche' finche' falliva si mostrava lo stadio precedente.
@@ -193,7 +196,7 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
         // tip e ogni feature era nascosta. Il recupero della geometria deve
         // riprendere la preferenza del corpo, anche quando era nascosto a mano.
         const bool tipRecovered = hadBody && !previousTip && tip >= 0;
-        if ((!hadBody || (!failedTail && !tipMoved && !tipRecovered && !consumed.contains(id))) && tip >= 0)
+        if ((!hadBody || (!inactiveTail && !tipMoved && !tipRecovered && !consumed.contains(id))) && tip >= 0)
             body.visible = features.at(tip).visible;
         for (int index : indices) features[index].visible = index == tip && body.visible;
         bodies.append(body);

@@ -938,7 +938,7 @@ bool thickenDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     form->addRow(directionLabel);
     form->addRow(QStringLiteral("Lato:"), sideBox);
     form->addRow(wrappedNote(QStringLiteral("Lungo la normale: superficie a distanza e pareti lungo la normale ai bordi; le facce devono essere unite da "
-                                            "spigoli tangenti e lo spessore non puo' superare il raggio di curvatura. Lungo una direzione (asse, retta, "
+                                            "spigoli tangenti. Nei raccordi interni su appoggio piano il kernel puo' rifilare le superfici oltre il raggio. Lungo una direzione (asse, retta, "
                                             "normale di un piano o di una faccia piana): copia traslata e pareti estruse, esatte, anche con spigoli vivi; "
                                             "ogni retta parallela alla direzione deve incontrare la superficie una volta sola. Tutta la superficie diventa "
                                             "un solido nello stesso corpo; facce scelte di un corpo danno un corpo nuovo."), &dialog));
@@ -975,6 +975,8 @@ bool thickenDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         if (picking) {
             scope.label->setText(QStringLiteral("termina la scelta per vedere l'anteprima"));
             viewport->clearPreview();
+            if (picking == 1 && (directionBox->currentIndex() != 4 || definition.thickenDirection.kind >= 0))
+                viewport->updateOffsetDirection(current(), replaced);
             return;
         }
         if (directionBox->currentIndex() == 4 && definition.thickenDirection.kind < 0) {
@@ -2040,7 +2042,7 @@ bool sewDialog(QWidget *parent, CadViewport *viewport, const QString &title, int
     solidBox->setChecked(initial.sewSolid);
     BodyPicker picker(dialog, viewport, replaced, indices, nullptr, list);
     auto *surfaceRow = picker.row(list);
-    auto *rowLayout = qobject_cast<QHBoxLayout *>(surfaceRow->layout());
+    auto *rowLayout = qobject_cast<QBoxLayout *>(surfaceRow->layout());
     auto *pickButton = surfaceRow->findChild<QPushButton *>();
     rowLayout->removeWidget(pickButton);
     auto *selectionButtons = new QVBoxLayout();
@@ -2231,7 +2233,7 @@ ExtendDialogResult extendDialog(QWidget *parent, CadViewport *viewport, const QS
         viewport->endEdgePick(true);
     }
     viewport->setPreviewCallback({});
-    viewport->clearPreview();
+    viewport->closeFunctionPreview();
     result.distance = distanceBox->value();
     result.linear = typeBox->currentIndex() == 1;
     return result;

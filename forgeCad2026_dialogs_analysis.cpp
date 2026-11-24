@@ -458,8 +458,8 @@ void microFeaturesDialog(QWidget *parent, CadViewport *viewport) {
         box.setText(QStringLiteral("Nessuna faccia sottile (sotto 0,05 mm), nessuno spigolo corto (sotto 0,05 mm) "
                                    "e nessuno spigolo quasi tangente (tra 0,06 e 10 gradi)."));
     } else {
-        box.setText(QStringLiteral("%1 micro-geometrie, segnate nella vista. Di solito sono rumore di una feature a monte "
-                                   "(loft, offset, estensioni) e fanno fallire raccordi e offset: conviene correggerle li'.")
+        box.setText(QStringLiteral("La vista evidenzia %1 elementi piccoli o quasi tangenti. "
+                                   "Controlla le misure e la lavorazione che li ha creati.")
                         .arg(lines.size()));
         box.setDetailedText(lines.join(QLatin1Char('\n')));
     }

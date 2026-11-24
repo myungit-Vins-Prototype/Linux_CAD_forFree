@@ -1,6 +1,26 @@
 #include "forgeCad2026_viewport_internal.h"
 
 
+void CadViewport::showSelectionBuildFailure() {
+    clearBuildFeedback();
+    if (sketchMode_) return;
+    if (selection_.kind == SceneObjectKind::Sketch && selection_.index >= 0 && selection_.index < sketches_.size()) {
+        const auto &sketch = sketches_.at(selection_.index);
+        const auto &error = sketch.supportError.isEmpty() ? sketch.referenceError : sketch.supportError;
+        if (!error.isEmpty() && !sketch.historyRebuildPending) {
+            const int step = storyboardIndex(true, selection_.index);
+            if (step >= 0 && step < storyboardPosition())
+                showBuildDiagnostic(error, ForgeCad::sketchReferenceDiagnostic(sketch));
+        }
+        return;
+    }
+    const int index = selectedFeatureIndex();
+    if (index < 0 || index >= historyPosition()) return;
+    const ExtrusionObject &feature = extrusions_.at(index);
+    if (feature.suppressed || feature.historyRebuildPending || feature.error.isEmpty()) return;
+    presentBuildFailure(feature, index, feature.error, feature.buildDiagnostic);
+}
+
 SceneSelection CadViewport::selection() const { return selection_; }
 
 int CadViewport::selectedFeatureIndex() const {
@@ -37,6 +57,7 @@ void CadViewport::setSelectedObjects(const QVector<SceneSelection> &objects) {
     for (const SceneSelection &object : objects)
         if (object.kind == SceneObjectKind::Extrusion) features.append(object.index);
     setFeatureHighlights(features);
+    showSelectionBuildFailure();
     if (objects.size() > 1) showStatus(QStringLiteral("%1 oggetti selezionati (Canc elimina)").arg(objects.size()));
     update();
 }
@@ -56,6 +77,7 @@ void CadViewport::selectObject(SceneObjectKind kind, int index, bool wholeBody )
     if (kind == SceneObjectKind::Plane) selectedPlane_ = index;
     if (kind == SceneObjectKind::Extrusion && wholeBody) setBodyHighlight(index);
     else setFeatureHighlights(kind == SceneObjectKind::Extrusion ? QVector<int>{index} : QVector<int>());
+    showSelectionBuildFailure();
     update();
 }
 
@@ -188,6 +210,7 @@ void CadViewport::finishBoxSelection() {
     selection_ = found.isEmpty() ? SceneSelection() : found.first();
     selectedFace_ = {};
     clearFeatureHighlights();
+    showSelectionBuildFailure();
     if (selectionCallback_) selectionCallback_(selection_);
     if (multiSelectionCallback_ && found.size() > 1) multiSelectionCallback_(found);
     showStatus(found.size() > 1 ? QStringLiteral("%1 oggetti selezionati (Canc elimina)").arg(found.size())
@@ -204,6 +227,7 @@ void CadViewport::toggleObjectAt(const QPoint &position) {
     selection_ = selectedObjects_.isEmpty() ? SceneSelection() : selectedObjects_.last();
     selectedFace_ = {};
     clearFeatureHighlights();
+    showSelectionBuildFailure();
     if (selectionCallback_) selectionCallback_(selection_);
     if (multiSelectionCallback_ && selectedObjects_.size() > 1) multiSelectionCallback_(selectedObjects_);
     if (selectedObjects_.size() > 1) showStatus(QStringLiteral("%1 oggetti selezionati (Canc elimina)").arg(selectedObjects_.size()));
@@ -386,28 +410,76 @@ void CadViewport::setReferencePickCallback(std::function<void(bool, GeometryRef)
 void CadViewport::setTrimPartPickCallback(int firstBody, const QVector<SheetPiece> &firstPieces,
                                  int secondBody, const QVector<SheetPiece> &secondPieces,
                                  std::function<void(int, int, EdgePoint)> callback) {
+    setTrimPartPickCallback({firstBody, secondBody}, {firstPieces, secondPieces}, std::move(callback));
+}
+
+void CadViewport::setTrimPartPickCallback(const QVector<int> &bodies, const QVector<QVector<SheetPiece>> &pieces,
+                                         std::function<void(int, int, EdgePoint)> callback) {
     trimPartPickBodies_.clear();
     trimPartPickDisplays_.clear();
     trimPartPickSides_.clear();
     trimPartPickIndices_.clear();
-    const auto append = [&](int body, const QVector<SheetPiece> &pieces, int side) {
-        if (body < 0) return;
-        for (int k = 0; k < pieces.size(); ++k) {
-            trimPartPickBodies_.append(body);
-            trimPartPickDisplays_.append(pieces.at(k).display);
+    if (callback) for (int side = 0; side < qMin(bodies.size(), pieces.size()); ++side) {
+        if (bodies[side] < 0) continue;
+        for (int part = 0; part < pieces[side].size(); ++part) {
+            trimPartPickBodies_.append(bodies[side]);
+            trimPartPickDisplays_.append(pieces[side][part].display);
             trimPartPickSides_.append(side);
-            trimPartPickIndices_.append(k);
+            trimPartPickIndices_.append(part);
         }
-    };
-    if (callback) {
-        append(firstBody, firstPieces, 0);
-        append(secondBody, secondPieces, 1);
     }
+    trimPartKept_ = QBitArray(trimPartPickDisplays_.size());
+    trimPartFocusBody_ = -1;
+    sceneBoundsDirty_ = true;
     trimPartHover_ = -1;
     hover_ = {};
     unsetCursor();
     trimPartPickFinished_ = std::move(callback);
     update();
+}
+
+void CadViewport::setTrimPartView(int focusBody, const QVector<QVector<int>> &kept) {
+    if (!trimPartPickBodies_.contains(focusBody)) focusBody = -1;
+    if (trimPartFocusBody_ != focusBody) {
+        trimPartFocusBody_ = focusBody;
+        sceneBoundsDirty_ = true;
+        trimPartHover_ = -1;
+        unsetCursor();
+    }
+    for (int i = 0; i < trimPartPickDisplays_.size(); ++i)
+        trimPartKept_.setBit(i, kept.value(trimPartPickSides_.at(i)).contains(trimPartPickIndices_.at(i)));
+    update();
+}
+
+int CadViewport::trimPartAt(const QPoint &position, EdgePoint *point) const {
+    QVector3D origin, direction;
+    viewRay(position, origin, direction);
+    double skipped = 0.0;
+    if (!sectionRay(origin, direction, skipped)) return -1;
+
+    const QVector3D unit = direction.normalized();
+    float best = std::numeric_limits<float>::max();
+    const auto closer = [&](const BodyDisplay &display) {
+        float distance = 0.0f;
+        if (!meshRayHit(display, origin, unit, distance) || distance >= best
+            || sectionRemoves(origin + distance * unit)) return false;
+        best = distance;
+        return true;
+    };
+    int nearest = -1;
+    for (int i = 0; i < trimPartPickDisplays_.size(); ++i) {
+        if (trimPartFocusBody_ >= 0 && trimPartPickBodies_.at(i) != trimPartFocusBody_) continue;
+        if (closer(trimPartPickDisplays_.at(i))) nearest = i;
+    }
+    // Un corpo di contesto opaco può coprire una regione solo nella vista d'insieme.
+    if (nearest >= 0 && trimPartFocusBody_ < 0 && displayMode_ != 0)
+        for (int i = 0; i < extrusions_.size(); ++i)
+            if (isBodyVisibleInScene(i) && closer(extrusions_.at(i).display)) return -1;
+    if (point && nearest >= 0) {
+        const QVector3D hit = origin + best * unit;
+        *point = {hit.x(), hit.y(), hit.z()};
+    }
+    return nearest;
 }
 
 bool CadViewport::selectedFaceReference(int &body, EdgePoint &reference) const {
@@ -429,23 +501,21 @@ void CadViewport::updateHover(const QPoint &currentPosition) {
         && !sketchPickCallback_ && !sketchEntityPickCallback_ && !sketchOffsetSelectionCallback_) { hover_ = {}; return; }
     if (QApplication::mouseButtons() & Qt::LeftButton) return;
     if (trimPartPickFinished_) {
-        QVector3D origin, direction;
-        viewRay(currentPosition, origin, direction);
-        int nearest = -1;
-        float best = std::numeric_limits<float>::max();
-        for (int k = 0; k < trimPartPickDisplays_.size(); ++k) {
-            float distance = 0.0f;
-            if (meshRayHit(trimPartPickDisplays_.at(k), origin, direction, distance) && distance < best)
-                best = distance, nearest = k;
-        }
+        const int nearest = trimPartAt(currentPosition);
         if (nearest != trimPartHover_) {
             trimPartHover_ = nearest;
             if (nearest >= 0) {
                 setCursor(Qt::PointingHandCursor);
-                showStatus(QStringLiteral("%1 corpo, parte %2: clic per mantenerla")
-                               .arg(trimPartPickSides_.at(nearest) == 0 ? QStringLiteral("Primo") : QStringLiteral("Secondo"))
+                showStatus(QStringLiteral("%1, parte %2")
+                               .arg(extrusions_.value(trimPartPickBodies_.at(nearest)).name)
                                .arg(trimPartPickIndices_.at(nearest) + 1));
-            } else unsetCursor();
+            } else {
+                unsetCursor();
+                showStatus({});
+            }
+            update();
+        } else if (nearest >= 0) {
+            // Il testo segue il cursore anche all'interno della stessa regione.
             update();
         }
         hover_ = {};

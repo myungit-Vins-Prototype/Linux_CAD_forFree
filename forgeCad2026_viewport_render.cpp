@@ -1,5 +1,264 @@
 #include "forgeCad2026_viewport_internal.h"
 
+#include <QImage>
+#include <QRegion>
+#include <QTextOption>
+#include <cmath>
+#include <limits>
+#include <optional>
+
+void CadViewport::showBuildDiagnostic(const QString &error, const ForgeCad::BuildDiagnostic &diagnostic) {
+    if (error.isEmpty()) {
+        clearBuildDiagnostic();
+        return;
+    }
+    ++buildDiagnosticRevision_;
+    buildDiagnosticPanel_.clear();
+    buildDiagnosticFromHistory_ = false;
+    buildDiagnosticError_ = error;
+    buildDiagnostic_ = diagnostic;
+    update();
+}
+
+void CadViewport::clearBuildDiagnostic() {
+    if (buildDiagnosticError_.isEmpty()) return;
+    ++buildDiagnosticRevision_;
+    buildDiagnosticPanel_.clear();
+    buildDiagnosticFromHistory_ = false;
+    buildDiagnosticError_.clear();
+    buildDiagnostic_ = {};
+    update();
+}
+
+namespace {
+
+// Gli overlay arrivano dopo la risoluzione del framebuffer multisample della scena.
+// Il motore raster di Qt calcola la copertura dei bordi anche senza campioni GL.
+template<class Draw>
+void paintSmoothOverlay(QPainter &target, const QRectF &bounds, Draw draw) {
+    if (bounds.isEmpty()) return;
+    const qreal dpr = target.device()->devicePixelRatioF();
+    const QRect pixels = QRectF(bounds.topLeft() * dpr, bounds.size() * dpr).toAlignedRect();
+    QImage layer(pixels.size(), QImage::Format_ARGB32_Premultiplied);
+    if (layer.isNull()) {
+        target.save();
+        target.setRenderHint(QPainter::Antialiasing);
+        draw(target);
+        target.restore();
+        return;
+    }
+    layer.setDevicePixelRatio(dpr);
+    layer.setDotsPerMeterX(qRound(target.device()->logicalDpiX() / 0.0254));
+    layer.setDotsPerMeterY(qRound(target.device()->logicalDpiY() / 0.0254));
+    layer.fill(Qt::transparent);
+    const QPointF origin = QPointF(pixels.topLeft()) / dpr;
+    {
+        QPainter raster(&layer);
+        raster.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+        raster.setFont(target.font());
+        raster.setLayoutDirection(target.layoutDirection());
+        raster.translate(-origin);
+        draw(raster);
+    }
+    target.drawImage(origin, layer);
+}
+
+// Restituisce un tratto effettivamente visibile anche se entrambi gli estremi
+// sono fuori campo. Il richiamo termina sulla polilinea diagnostica.
+std::optional<QLineF> visibleDiagnosticSegment(QPointF a, QPointF b, const QRectF &rect) {
+    double lo = 0.0, hi = 1.0;
+    const auto clip = [&](double start, double end, double min, double max) {
+        if (start == end) return start >= min && start <= max;
+        double first = (min - start) / (end - start);
+        double last = (max - start) / (end - start);
+        if (first > last) std::swap(first, last);
+        lo = std::max(lo, first);
+        hi = std::min(hi, last);
+        return lo <= hi;
+    };
+    if (!clip(a.x(), b.x(), rect.left(), rect.right()) || !clip(a.y(), b.y(), rect.top(), rect.bottom()))
+        return std::nullopt;
+    const QLineF segment(a, b);
+    return QLineF(segment.pointAt(lo), segment.pointAt(hi));
+}
+
+} // namespace
+
+void CadViewport::drawBuildDiagnostic(QPainter &painter) const {
+    if (buildDiagnosticError_.isEmpty()) return;
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    const QColor accent(255, 111, 101);
+    const QColor outline(30, 14, 20);
+    const QRectF viewport(rect());
+    const QPointF center = viewport.center();
+    QPainterPath strokes;
+    QVector<QPointF> points;
+    QVector<QPointF> targets, offscreenTargets;
+    for (const auto &path : buildDiagnostic_.paths) {
+        QPointF start, anchor, nearest;
+        double longest = -1.0;
+        double nearestDistance = std::numeric_limits<double>::infinity();
+        qsizetype runLength = 0;
+        for (const QVector3D &world : path) {
+            const QPointF screen = projectWorldPoint(world);
+            if (!std::isfinite(screen.x()) || !std::isfinite(screen.y())) {
+                if (runLength == 1) points.append(start);
+                runLength = 0;
+                continue;
+            }
+            if (runLength > 0) {
+                const auto visible = visibleDiagnosticSegment(strokes.currentPosition(), screen, viewport);
+                if (visible && visible->length() > longest) {
+                    longest = visible->length();
+                    anchor = visible->center();
+                }
+            }
+            if (longest < 0) {
+                if (viewport.contains(screen)) {
+                    anchor = screen;
+                    longest = 0.0;
+                } else {
+                    const double distance = QLineF(center, screen).length();
+                    if (distance < nearestDistance) {
+                        nearestDistance = distance;
+                        nearest = screen;
+                    }
+                }
+            }
+            if (runLength == 0) {
+                start = screen;
+                strokes.moveTo(screen);
+                runLength = 1;
+            } else if (strokes.currentPosition() != screen) {
+                strokes.lineTo(screen);
+                ++runLength;
+            }
+        }
+        if (runLength == 1) points.append(start);
+        if (longest >= 0) targets.append(anchor);
+        else if (std::isfinite(nearestDistance)) offscreenTargets.append(nearest);
+    }
+
+    const QString message = buildDiagnostic_.context.isEmpty() ? buildDiagnosticError_
+        : buildDiagnosticError_ + QLatin1Char('\n') + buildDiagnostic_.context;
+    painter.setFont(uiFont(10, QFont::DemiBold));
+    QTextOption textLayout(Qt::AlignLeft | Qt::AlignVCenter);
+    textLayout.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+    const auto measure = [&](int width) {
+        const auto text = painter.boundingRect(QRectF(0, 0, width, 0), message, textLayout);
+        return QSize(qCeil(text.width()), qCeil(text.height()));
+    };
+    const QRect bounds = rect().adjusted(12, 12, -12, -12);
+    QRegion available(bounds);
+    for (QWidget *widget : findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly)) {
+        if (widget->isVisible() && !widget->isWindow())
+            available -= widget->geometry().adjusted(-8, -8, 8, 8);
+    }
+    QRect label;
+    qsizetype coveredTargets = std::numeric_limits<qsizetype>::max();
+    for (const QRect &area : available) {
+        const int textWidth = qMin(420, area.width() - 20);
+        if (textWidth < 60) continue;
+        const QSize text = measure(textWidth);
+        const QSize labelSize(qMin(text.width(), textWidth) + 20, text.height() + 14);
+        if (labelSize.height() > area.height()) continue;
+        const int right = area.right() - labelSize.width() + 1;
+        const int bottom = area.bottom() - labelSize.height() + 1;
+        for (const QPoint &origin : {QPoint(area.left(), bottom), QPoint(right, bottom),
+                                     area.topLeft(), QPoint(right, area.top())}) {
+            const QRect candidate(origin, labelSize);
+            const QRectF margin = candidate.adjusted(-7, -7, 7, 7);
+            const auto covered = std::count_if(targets.begin(), targets.end(),
+                [&](const QPointF &p) { return margin.contains(p); });
+            if (covered < coveredTargets || (covered == coveredTargets && candidate.bottom() > label.bottom())) {
+                coveredTargets = covered;
+                label = candidate;
+            }
+        }
+    }
+    if (!label.isValid() && bounds.width() > 20 && bounds.height() > 14) {
+        const int textWidth = qMin(420, bounds.width() - 20);
+        const QSize text = measure(textWidth);
+        const int labelHeight = qMin(bounds.height(), text.height() + 14);
+        label = QRect(bounds.left(), bounds.bottom() - labelHeight + 1, textWidth + 20, labelHeight);
+    }
+    if (label.isValid()) available -= label.adjusted(-6, -6, 6, 6);
+    QPainterPath arrowheads;
+    for (const QPointF &offscreenTarget : offscreenTargets) {
+        QPointF tip;
+        QPointF direction;
+        double bestDistance = std::numeric_limits<double>::infinity();
+        for (const QRect &area : available) {
+            const QRectF inset = QRectF(area).adjusted(12, 12, -12, -12);
+            if (!inset.isValid()) continue;
+            const QPointF delta = offscreenTarget - inset.center();
+            const double length = std::hypot(delta.x(), delta.y());
+            if (length == 0.0 || !std::isfinite(length)) continue;
+            // Incontra il primo lato del riquadro lungo il raggio verso il bersaglio.
+            const double scale = 0.5 / qMax(std::abs(delta.x()) / inset.width(),
+                                           std::abs(delta.y()) / inset.height());
+            const QPointF candidate = inset.center() + scale * delta;
+            const double distance = length * (1.0 - scale);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                tip = candidate;
+                direction = delta / length;
+            }
+        }
+        if (std::isfinite(bestDistance)) {
+            const QPointF base = tip - 12.0 * direction;
+            const QPointF side(-direction.y(), direction.x());
+            targets.append(tip);
+            arrowheads.addPolygon(QPolygonF{tip, base + 5.0 * side, base - 5.0 * side});
+            arrowheads.closeSubpath();
+        }
+    }
+    QRectF inkBounds;
+    if (label.isValid()) inkBounds = QRectF(label).adjusted(-2, -2, 2, 2);
+    if (!strokes.isEmpty()) inkBounds |= strokes.controlPointRect().adjusted(-5, -5, 5, 5);
+    if (!arrowheads.isEmpty()) inkBounds |= arrowheads.controlPointRect().adjusted(-3, -3, 3, 3);
+    for (const auto &point : points)
+        inkBounds |= QRectF(point - QPointF(8, 8), QSizeF(16, 16));
+    paintSmoothOverlay(painter, inkBounds.intersected(viewport), [&](QPainter &layer) {
+        if (label.isValid()) {
+            QPainterPath leaders;
+            for (const auto &target : targets) {
+                leaders.moveTo(QRectF(label).center());
+                leaders.lineTo(target);
+            }
+            layer.setBrush(Qt::NoBrush);
+            layer.setPen(QPen(outline, 3.0));
+            layer.drawPath(leaders);
+            layer.setPen(QPen(QColor(255, 177, 164), 1.4));
+            layer.drawPath(leaders);
+        }
+        layer.setBrush(Qt::NoBrush);
+        layer.setPen(QPen(outline, 7.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        layer.drawPath(strokes);
+        layer.setPen(QPen(accent, 3.5, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        layer.drawPath(strokes);
+        for (const QPointF &point : points) {
+            layer.setPen(QPen(outline, 2.0));
+            layer.setBrush(accent);
+            layer.drawEllipse(point, 6.0, 6.0);
+        }
+
+        layer.setPen(QPen(outline, 2.0));
+        layer.setBrush(accent);
+        arrowheads.setFillRule(Qt::WindingFill);
+        layer.drawPath(arrowheads);
+        if (label.isValid()) {
+            layer.setPen(QPen(accent, 1.5));
+            layer.setBrush(QColor(31, 19, 26));
+            layer.drawRoundedRect(label, 5.0, 5.0);
+            layer.setPen(Qt::white);
+            layer.drawText(QRectF(label.adjusted(10, 7, -10, -7)), message, textLayout);
+        }
+    });
+    painter.restore();
+}
 
 void CadViewport::drawSelectionBox(QPainter &painter) const {
     if (!boxSelecting_) return;
@@ -40,6 +299,49 @@ void CadViewport::drawMeasureOverlay(QPainter &painter) const {
         painter.drawText(box, Qt::AlignCenter, measureLabel_);
     }
     painter.restore();
+}
+
+void CadViewport::drawOffsetDirection(QPainter &painter) const {
+    if (!offsetDirection_) return;
+    const auto &indicator = *offsetDirection_;
+    const QPointF origin = projectWorldPoint(indicator.origin);
+    const QVector3D axis = camera_.modelViewMatrix().mapVector(indicator.axis);
+    const QPointF projected(axis.x(), -axis.y());
+    const double length = pointLength(projected);
+    const QColor ink(255, 183, 71), outline(42, 29, 17);
+    // La freccia arriva a 50 pixel logici dal punto di applicazione.
+    const QRectF bounds(origin - QPointF(54, 54), QSizeF(108, 108));
+    paintSmoothOverlay(painter, bounds.intersected(QRectF(rect())), [&](QPainter &layer) {
+        for (int side : {1, -1}) {
+            if (side < 0 && !indicator.symmetric) break;
+            if (length < 0.08) {
+                // Lungo la vista: punta verso l'osservatore (punto), coda verso l'interno (croce).
+                const QPointF p = origin + QPointF(indicator.symmetric ? side * 8.0 : 0.0, 0);
+                layer.setPen(QPen(ink, 2));
+                layer.setBrush(outline);
+                layer.drawEllipse(p, 7.0, 7.0);
+                if (side * axis.z() > 0) {
+                    layer.setBrush(ink);
+                    layer.drawEllipse(p, 2.0, 2.0);
+                } else {
+                    layer.drawLine(p + QPointF(-3, -3), p + QPointF(3, 3));
+                    layer.drawLine(p + QPointF(-3, 3), p + QPointF(3, -3));
+                }
+            } else {
+                const QPointF direction = side * projected / length;
+                const QPointF across(-direction.y(), direction.x());
+                const QPointF tip = origin + 50.0 * direction;
+                const QPointF base = tip - 15.0 * direction;
+                layer.setPen(QPen(outline, 5.0, Qt::SolidLine, Qt::RoundCap));
+                layer.drawLine(origin, base);
+                layer.setPen(QPen(ink, 2.5, Qt::SolidLine, Qt::RoundCap));
+                layer.drawLine(origin, base);
+                layer.setPen(QPen(outline, 1.0));
+                layer.setBrush(ink);
+                layer.drawPolygon(QPolygonF{tip, base + 6.0 * across, base - 6.0 * across});
+            }
+        }
+    });
 }
 
 void CadViewport::drawFeatureHandle(QPainter &painter) {
@@ -151,10 +453,16 @@ void CadViewport::paintGL() {
     // VAO o modificare framebuffer/cache del fotogramma ancora in preparazione.
     if (responsiveWork_) return;
     QVector<int> requested;
-    for (int index=0;index<extrusions_.size();++index)
-        if (isBodyDrawn(index) || index==edgePickBody_ || pickBodies_.contains(index)
-            || preview_.replaced.contains(index) || preview_.restored.contains(index)
-            || (!preview_.key.isEmpty() && index==preview_.definition.firstBody)) requested.append(index);
+    if (trimPartPickDisplays_.isEmpty()) {
+        for (int index = 0; index < extrusions_.size(); ++index)
+            if (isBodyDrawn(index) || index == edgePickBody_ || pickBodies_.contains(index)
+                || preview_.replaced.contains(index) || preview_.restored.contains(index)
+                || (!preview_.key.isEmpty() && index == preview_.definition.firstBody)) requested.append(index);
+    } else {
+        // I frammenti hanno già una mesh. Carica solo i corpi di contesto visibili.
+        for (int index = 0; index < extrusions_.size(); ++index)
+            if (isBodyVisibleInScene(index)) requested.append(index);
+    }
     ensureBodyDisplays(requested);
     // Ripristinare contesto e FBO del widget prima di qualunque passata GL;
     // fare soltanto makeCurrent dopo l'inizio della scena perderebbe il FBO MSAA.
@@ -189,7 +497,12 @@ void CadViewport::paintGL() {
     drawReferenceLabels();
     drawSelectionHighlight();
     drawPlaneResizeHandles();
-    { QPainter painter(this); drawLoftDiagnostics(painter); }
+    if (!previewLoftErrors_.isEmpty() || !buildDiagnosticError_.isEmpty()) {
+        QPainter painter(this);
+        if (!previewLoftErrors_.isEmpty())
+            paintSmoothOverlay(painter, rect(), [this](QPainter &layer) { drawLoftDiagnostics(layer); });
+        drawBuildDiagnostic(painter);
+    }
     // Il vetro copre anche etichette e selezioni: niente overlay della
     // scena viene disegnato sopra il fondale del pannello.
     // QPainter puo' lasciare scissor/stencil attivi dopo gli overlay.
@@ -306,7 +619,17 @@ void CadViewport::drawDimensions(QPainter &painter) const {
         const bool preview = index == previewIndex;
         if (preview ? !dimensionGraphic(*sketch, dimensionPreview_, g) : !dimensionGraphic(*sketch, index, g)) continue;
         const bool selected = !preview && selectedConstraints_.contains(index), hovered = index == constraintHover_;
-        const bool broken = !preview && ForgeCad::constraintError(*sketch, sketch->geometricConstraints.at(index)) > 1e-7;
+        bool broken = false;
+        if (!preview) {
+            const auto &constraint = sketch->geometricConstraints.at(index);
+            if (constraint.type == ConstraintType::Offset) {
+                auto &measurement = offsetDimensionMeasurement(*sketch, index);
+                if (!measurement.error) measurement.error = ForgeCad::constraintError(*sketch, constraint);
+                broken = *measurement.error > 1e-7;
+            } else {
+                broken = ForgeCad::constraintError(*sketch, constraint) > 1e-7;
+            }
+        }
         const QColor color = preview ? QColor(255, 170, 70) : selected ? kSelectionColor : hovered ? kHoverColor : broken ? QColor(255, 140, 90) : QColor(185, 215, 240);
         painter.setPen(QPen(color, selected || preview ? 1.6 : 1.1));
         painter.setBrush(Qt::NoBrush);
@@ -459,6 +782,7 @@ void CadViewport::drawReferenceLabels() {
     drawDatumLabels(painter);
     drawTopologyLabels(painter);
     drawParameterDimensions(painter);
+    drawTrimPartLabel(painter);
     if (sketchMode_) {
         painter.setPen(QColor(255, 220, 120));
         const ForgeCad::SketchAnalysis &analysis = sketchAnalysis();
@@ -671,10 +995,12 @@ void CadViewport::highlightSceneObject(QPainter &painter, const SceneSelection &
 }
 
 void CadViewport::drawSelectionHighlight() {
+    if (trimPartPickFinished_) return;
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     drawSectionHandle(painter);
     drawFeatureHandle(painter);
+    drawOffsetDirection(painter);
     drawFilletRadiusHandles(painter);
     drawSelectionBox(painter);
     if (sketchMode_ && activeSketch_ >= 0 && activeSketch_ < sketches_.size()) {
@@ -1326,7 +1652,8 @@ void CadViewport::drawFeatureHighlightEdges(int index) {
 }
 
 void CadViewport::drawSelectedFace() {
-    if (edgePicking_ || sketchMode_ || selectedFace_.body < 0 || selectedFace_.body >= extrusions_.size()) return;
+    if (trimPartPickFinished_ || edgePicking_ || sketchMode_ || selectedFace_.body < 0
+        || selectedFace_.body >= extrusions_.size()) return;
     sceneRenderer_.drawSelectedFace(overlayRenderer_, extrusions_.at(selectedFace_.body).display,
                                      faceDisplayEdges(selectedFace_.body, selectedFace_.hit), kSelectionColor);
 }
@@ -1389,6 +1716,13 @@ void CadViewport::drawExtrusions() {
     // I comandi di feature possono partire dallo schizzo: l'editing resta
     // attivo, ma SketchViewUnlock permette la vista 3D della lavorazione.
     const bool previewing = (!sketchMode_ || sketchViewUnlocked_) && !preview_.key.isEmpty();
+    const bool latticePreview = !latticeTrialDisplay_.vertices.isEmpty()
+        && latticeTrialSource_ >= 0 && latticeTrialSource_ < extrusions_.size();
+    const auto replacesLatticeSource = [this, latticePreview](int index) {
+        if (!latticePreview || index < 0 || index >= extrusions_.size()) return false;
+        const quint64 logicalBody = extrusions_.at(latticeTrialSource_).modelBodyId;
+        return index == latticeTrialSource_ || (logicalBody && extrusions_.at(index).modelBodyId == logicalBody);
+    };
     QVector<int> drawn;
     for (int index = 0; index < extrusions_.size(); ++index) {
         const ExtrusionObject &extrusion = extrusions_.at(index);
@@ -1399,6 +1733,7 @@ void CadViewport::drawExtrusions() {
         // La base resta interrogabile dal picker dei bordi, ma il risultato
         // completo ne sostituisce tutte le facce e gli spigoli di display.
         if (previewing && preview_.valid && preview_.sceneResult && preview_.replaced.contains(index)) continue;
+        if (replacesLatticeSource(index)) continue;
         drawn.append(index);
     }
     // Un solo strato trasparente per pixel: prima trova la superficie piu
@@ -1450,7 +1785,8 @@ void CadViewport::drawExtrusions() {
         for (const auto &border : shapeAnalysis_.borders)
             overlayRenderer_.drawWideLineStrip(border.points, border.color, 4.0f);
     }
-    const auto outline = [this](const SceneSelection &target, const QColor &color, float width) {
+    const auto outline = [this, &replacesLatticeSource](const SceneSelection &target, const QColor &color, float width) {
+        if (target.kind == SceneObjectKind::Extrusion && replacesLatticeSource(target.index)) return;
         if (target.kind != SceneObjectKind::Extrusion || target.index < 0
             || target.index >= extrusions_.size()) return;
         const ExtrusionObject &extrusion = extrusions_.at(target.index);
@@ -1460,12 +1796,19 @@ void CadViewport::drawExtrusions() {
     // La superficie in costruzione non e' un appoggio: durante la scelta
     // delle facce storiche lascia scoperte quelle realmente selezionabili.
     const bool pickingHistoricalFace = refPicking_ && refPickOwner_ >= 0 && (refPickRoles_ & ForgeCad::DatumRoleFace);
-    if (previewing && (preview_.valid || previewDragVisible_) && !pickingHistoricalFace) drawPreview();
-    drawTrimPartHover();
+    if (!trimPartPickDisplays_.isEmpty()) drawTrimParts();
+    else if (previewing && (preview_.valid || previewDragVisible_) && !pickingHistoricalFace) drawPreview();
+    if (latticePreview) {
+        ForgeCad::Gui::SceneRenderer::PreviewStyle style;
+        style.displayMode = 1;
+        style.retainedColor = meshColorForFeature(latticeTrialSource_);
+        sceneRenderer_.drawFeaturePreview(displayCache_, overlayRenderer_,
+                                          latticeTrialDisplay_, latticeTrialRetained_, style);
+    }
     disableSectionClip();
     drawSectionCaps(sectionSolids);
     enableSectionClip();
-    if (!edgePicking_ && !previewing) {  // nessun contorno di selezione sulla base in scelta
+    if (!edgePicking_ && !previewing && !trimPartPickFinished_) {
         if (hover_ != selection_ && !selectedObjects_.contains(hover_)) outline(hover_, kHoverColor, 6.0f);
         outline(selection_, kSelectionColor, 7.0f);
         for (const SceneSelection &object : selectedObjects_)
@@ -1473,11 +1816,47 @@ void CadViewport::drawExtrusions() {
     }
     disableSectionClip();
     drawSectionPlane();
+    if (!latticeTrialOutline_.isEmpty()) {
+        const QColor color = palette().color(QPalette::Highlight);
+        const QVector4D rgba(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f);
+        const bool depth = glIsEnabled(GL_DEPTH_TEST);
+        glDisable(GL_DEPTH_TEST);
+        for (qsizetype i = 0; i + 1 < latticeTrialOutline_.size(); i += 2)
+            overlayRenderer_.drawWideLineStrip({latticeTrialOutline_[i], latticeTrialOutline_[i + 1]},
+                                                rgba, 2.0f * float(devicePixelRatioF()));
+        if (depth) glEnable(GL_DEPTH_TEST);
+    }
 }
 
-void CadViewport::drawTrimPartHover() {
-    if (trimPartHover_ < 0 || trimPartHover_ >= trimPartPickDisplays_.size()) return;
-    sceneRenderer_.drawTrimPreview(displayCache_, trimPartPickDisplays_.at(trimPartHover_), displayMode_);
+void CadViewport::drawTrimParts() {
+    for (int i = 0; i < trimPartPickDisplays_.size(); ++i) {
+        if (trimPartFocusBody_ >= 0 && trimPartPickBodies_.at(i) != trimPartFocusBody_) continue;
+        sceneRenderer_.drawTrimRegion(displayCache_, trimPartPickDisplays_.at(i),
+                                      trimPartKept_.testBit(i), i == trimPartHover_);
+    }
+}
+
+void CadViewport::drawTrimPartLabel(QPainter &painter) const {
+    const int part = trimPartHover_;
+    if (part < 0 || part >= trimPartPickDisplays_.size()) return;
+    painter.save();
+    painter.setFont(uiFont(11, QFont::DemiBold));
+    const QString text = QStringLiteral("%1 · Parte %2 · %3")
+        .arg(extrusions_.at(trimPartPickBodies_.at(part)).name).arg(trimPartPickIndices_.at(part) + 1)
+        .arg(trimPartKept_.testBit(part) ? QStringLiteral("Da conservare") : QStringLiteral("Da scartare"));
+    const QFontMetrics metrics(painter.font());
+    const int available = qMax(0, width() - 28);
+    const QString caption = metrics.elidedText(text, Qt::ElideMiddle, available);
+    const QSize size(metrics.horizontalAdvance(caption) + 16, metrics.height() + 10);
+    const QPoint topLeft(qBound(4, lastMousePosition_.x() + 14, qMax(4, width() - size.width() - 4)),
+        qBound(4, lastMousePosition_.y() + 18, qMax(4, height() - size.height() - 4)));
+    const QRect badge(topLeft, size);
+    painter.setBrush(palette().brush(QPalette::ToolTipBase));
+    painter.setPen(palette().color(QPalette::Mid));
+    painter.drawRoundedRect(badge, 5, 5);
+    painter.setPen(palette().color(QPalette::ToolTipText));
+    painter.drawText(badge, Qt::AlignCenter, caption);
+    painter.restore();
 }
 
 void CadViewport::drawPreview() {

@@ -72,25 +72,51 @@ static void sketchProjection() {
     QMainWindow window; auto *dialogView=new CadViewport(&window); window.setCentralWidget(dialogView);
     dialogView->loadDocument(state);
     bool rows=false, callback=false;
+    bool pickerStarted=false, pickerReset=false, pickerRestarted=false, errorPreserved=false;
+    int confirmations=0;
+    const QString applyError=QStringLiteral("Errore di conferma della proiezione di prova");
     QTimer watchdog; watchdog.setInterval(10000);
     QObject::connect(&watchdog,&QTimer::timeout,&window,[&] {for(auto *dialog:window.findChildren<QDialog *>()) dialog->reject();});
     watchdog.start();
     QTimer::singleShot(0,&window,[&] {
         for(auto *dialog:window.findChildren<QDialog *>()) if(dialog->objectName()==QStringLiteral("projectionDialog")) {
-            const auto *mode=dialog->findChild<QComboBox *>(QStringLiteral("projectionMode"));
+            auto *mode=dialog->findChild<QComboBox *>(QStringLiteral("projectionMode"));
             auto *one=dialog->findChild<QListWidget *>(QStringLiteral("projectionEntities0"));
             auto *two=dialog->findChild<QListWidget *>(QStringLiteral("projectionEntities1"));
             rows=mode && mode->currentIndex()==1 && one && two && one->count()==2 && two->count()==2
                 && one->item(0)->checkState()==Qt::Checked && one->item(1)->checkState()==Qt::Unchecked
                 && two->item(0)->checkState()==Qt::Checked && two->item(1)->checkState()==Qt::Unchecked;
-            auto *buttons=dialog->findChild<QDialogButtonBox *>(); if(buttons) buttons->button(QDialogButtonBox::Ok)->click();
+            auto *pickFirst=dialog->findChild<QPushButton *>(QStringLiteral("projectionPick0"));
+            auto *pickSecond=dialog->findChild<QPushButton *>(QStringLiteral("projectionPick1"));
+            auto *buttons=dialog->findChild<QDialogButtonBox *>();
+            if (!rows || !pickFirst || !pickSecond || !buttons) {dialog->reject(); return;}
+            pickFirst->click();
+            QPlainTextEdit *status=nullptr;
+            for (auto *message : dialog->findChildren<QPlainTextEdit *>())
+                if (message->toPlainText().startsWith(QStringLiteral("Clicca una curva dello schizzo"))) status=message;
+            pickerStarted=dialogView->referencePicking() && pickFirst->isChecked() && status;
+            mode->setCurrentIndex(0);
+            mode->setCurrentIndex(1);
+            pickerReset=!dialogView->referencePicking() && !pickFirst->isChecked() && !pickSecond->isChecked()
+                && status && status->toPlainText().isEmpty();
+            pickSecond->click();
+            pickerRestarted=dialogView->referencePicking() && !pickFirst->isChecked() && pickSecond->isChecked();
+            mode->setCurrentIndex(0);
+            mode->setCurrentIndex(1);
+
+            buttons->button(QDialogButtonBox::Ok)->click();
+            mode->setCurrentIndex(0);
+            mode->setCurrentIndex(1);
+            errorPreserved=status && status->toPlainText()==applyError;
+            buttons->button(QDialogButtonBox::Ok)->click();
         }
     });
     require(projectionDialog(&window,dialogView,QStringLiteral("Test due schizzi"),-1,feature,[&](const ExtrusionObject &d) {
         callback=d.projectionMode==1 && d.firstBody==-1 && d.sketchIndex==-1 && d.ruledFirst.size()==1 && d.ruledSecond.size()==1
             && d.ruledFirst[0].element.element==0 && d.ruledSecond[0].element.element==0;
-        return QString();
+        return ++confirmations == 1 ? applyError : QString();
     }), "conferma pannello doppia proiezione senza solidi");
     require(rows && callback && !dialogView->referencePicking() && !dialogView->interactionLocked(), "curve individuali, conferma e ripristino pannello");
+    require(pickerStarted && pickerReset && pickerRestarted && errorPreserved && confirmations==2, "cambio modalità annulla la scelta nella vista, consente il riarmo e conserva gli errori di conferma");
     std::cout<<"PASS GUI doppia proiezione: selezione precisa, anteprima, Undo/Redo, dipendenze, due rigenerazioni, codec cache/no-cache, errori e guardie senza fit"<<std::endl;
 }

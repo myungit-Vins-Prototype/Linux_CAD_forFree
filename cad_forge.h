@@ -21,6 +21,8 @@ namespace ForgeCad::Kernel { enum class BooleanOperation; }
 
 namespace ForgeCad {
 
+struct BuildDiagnostic;
+
 // Booleana interna: propaga le eccezioni e conserva anche esiti vuoti.
 // Registra la genealogia dichiarata nell'ordine esatto degli operandi.
 ForgeBody forgeBooleanWithHistory(const ForgeBody &first, const ForgeBody &second, Kernel::BooleanOperation operation);
@@ -80,6 +82,10 @@ ForgeBody forgeBoolean(const ForgeBody &first, const ForgeBody &second, BooleanO
 // Taglio della pelle di `sheet` col corpo `tool` (lamina o solido) o, se
 // `tool` e' nullo, col piano `plane`; resta la parte piu' vicina a `keep`.
 ForgeBody forgeTrimSheet(const ForgeBody &sheet, const ForgeBody &tool, int plane, const EdgePoint &keep, QString *error);
+QVector<QVector<SheetPiece>> forgeTrimSurfacePieces(const QVector<ForgeBody> &operands, bool reciprocal, QString *error);
+QVector<int> forgeTrimRegionIndices(const QVector<ForgeBody> &pieces, const QVector<SpatialPoint> &points);
+ForgeBody forgeTrimSurfaces(const QVector<ForgeBody> &operands, const QVector<QVector<SpatialPoint>> &regions,
+                            bool reciprocal, QString *error);
 ForgeBody forgeTrimBoth(const ForgeBody &first, const ForgeBody &second, const EdgePoint &firstKeep,
                         const EdgePoint &secondKeep, QString *error);
 // Utensili di taglio temporanei: piano illimitato oppure schizzo estruso in
@@ -119,18 +125,20 @@ ForgeBody forgeDraft(const ForgeBody &base, const QVector<EdgePoint> &faces, con
 // superficie) ispessite di `thickness`; side 0 nel verso, 1 opposto, 2 meta'
 // per parte; `direction` nullo: lungo la normale delle facce.
 ForgeBody forgeThicken(const ForgeBody &base, const QVector<EdgePoint> &faces, double thickness, int side, const Kernel::Vec3 *direction,
-                       QString *error);
+                       QString *error, BuildDiagnostic *diagnostic = nullptr);
 ForgeBody forgeShell(const ForgeBody &base, const QVector<EdgePoint> &openFaces, double thickness, QString *error);
 // `component` -1 conserva tutte le componenti nello stesso B-rep (file
 // precedenti); un valore >= 0 restituisce una sola componente connessa.
 ForgeBody forgeDeleteFaces(const ForgeBody &base, const QVector<EdgePoint> &faces, QString *error, int component = -1);
 QVector<ForgeBody> forgeDeleteFacesSeparated(const ForgeBody &base, const QVector<EdgePoint> &faces, QString *error);
 // Distanza zero: copia esatta delle facce come superficie, conservando i bordi comuni.
-ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &faces, double distance, QString *error, QString *summary = nullptr, bool preserveSeams = true);
+ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &faces, double distance, QString *error, QString *summary = nullptr, bool preserveSeams = true,
+                           BuildDiagnostic *diagnostic = nullptr);
 // Cucitura delle superfici `sheets` (anche solidi: valgono le loro facce) in
 // una sola entro `tolerance`; con `solid` e il risultato chiuso, un solido.
 // `summary` dice se e' chiusa e quanti bordi restano liberi.
-ForgeBody forgeSew(const QVector<ForgeBody> &sheets, double tolerance, bool solid, QString *error, QString *summary = nullptr);
+ForgeBody forgeSew(const QVector<ForgeBody> &sheets, double tolerance, bool solid, QString *error, QString *summary = nullptr,
+                  BuildDiagnostic *diagnostic = nullptr);
 
 // Base dell'elica da uno spigolo circolare (source 1) o da una faccia
 // cilindrica o conica (source 2) del body, vicino a `point` (come
@@ -198,6 +206,7 @@ ForgeBody forgeImported(const QByteArray &data, QString *error);
 
 // Approssimazione per la visualizzazione (quality 0/1/2), come tessellate().
 void forgeTessellate(const Kernel::Body &body, int quality, BodyDisplay &display);
+void forgeTessellateFacetedSolid(const Kernel::Body &body, int quality, BodyDisplay &display);
 void forgeSurfaceConstructionCurves(const Kernel::Body &body, BodyDisplay &display, int divisions = 4,
                                     bool allFaces = false, const QVector<int> &faceFilter = {});
 // Visualizzazione locale del raccordo: solo le superfici nuove rispetto alla

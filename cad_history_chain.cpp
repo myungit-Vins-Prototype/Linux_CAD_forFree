@@ -32,37 +32,87 @@ QVector<int> reconnectMergedHistory(QVector<ExtrusionObject> &features, const QS
     return changed;
 }
 
+HistoryDependents historyDependents(const QVector<SketchObject> &sketches,
+                                   const QVector<ExtrusionObject> &features,
+                                   const QVector<bool> &changedFeatures,
+                                   const QSet<int> &changedSketches) {
+    const int featureCount = features.size();
+    HistoryDependents result{QVector<bool>(featureCount, false), {}};
+    QVector<int> queue;
+    // Nodi delle lavorazioni seguiti dai nodi degli schizzi.
+    const auto mark = [&](int node) {
+        if (node < featureCount) {
+            if (result.features.at(node)) return;
+            result.features[node] = true;
+        } else {
+            const int sketch = node - featureCount;
+            if (result.sketches.contains(sketch)) return;
+            result.sketches.insert(sketch);
+        }
+        queue.append(node);
+    };
+    for (int index = 0; index < featureCount && index < changedFeatures.size(); ++index)
+        if (changedFeatures.at(index)) mark(index);
+    for (int index : changedSketches)
+        if (index >= 0 && index < sketches.size()) mark(featureCount + index);
+    if (queue.isEmpty()) return result;
+
+    QVector<QVector<int>> consumers(featureCount + sketches.size());
+    QVector<int> nextExtents;
+    QHash<quint64, int> featureIndices, sketchIndices, previousBodyStage;
+    for (int index = 0; index < featureCount; ++index) {
+        const auto &feature = features.at(index);
+        if (feature.featureId) featureIndices.insert(feature.featureId, index);
+        const int previous = previousBodyStage.value(feature.modelBodyId, -1);
+        previousBodyStage.insert(feature.modelBodyId, index);
+        if (feature.suppressed) {
+            // La soppressione copia il risultato dello stadio precedente.
+            if (previous >= 0) consumers[previous].append(index);
+            continue;
+        }
+        for (int source : bodyOperands(feature))
+            if (source >= 0 && source < featureCount) consumers[source].append(index);
+        for (int source : sketchesOf(feature))
+            if (source >= 0 && source < sketches.size()) consumers[featureCount + source].append(index);
+        if (feature.operation < 0 && feature.feature == BodyFeature::Extrusion && feature.extent == 4)
+            nextExtents.append(index);
+    }
+    for (int index = 0; index < sketches.size(); ++index)
+        if (sketches.at(index).storyId) sketchIndices.insert(sketches.at(index).storyId, index);
+    for (int index = 0; index < sketches.size(); ++index) {
+        const auto &sketch = sketches.at(index);
+        const int node = featureCount + index;
+        if (sketch.datumPlane >= 0 && sketch.datumPlane < featureCount)
+            consumers[sketch.datumPlane].append(node);
+        visitSketchGeometryRefs(sketch, [&](const GeometryRef &ref, SketchGeometryRefFamily, int) {
+            if (isBodyRef(ref)) {
+                const int source = ref.featureId ? featureIndices.value(ref.featureId, -1) : ref.index;
+                if (source >= 0 && source < featureCount) consumers[source].append(node);
+            } else if (isSketchRef(ref)) {
+                const int source = ref.featureId ? sketchIndices.value(ref.featureId, -1) : ref.index;
+                if (source >= 0 && source < sketches.size()) consumers[featureCount + source].append(node);
+            }
+        });
+    }
+    for (int pos = 0; pos < queue.size(); ++pos) {
+        const int node = queue.at(pos);
+        for (int consumer : consumers.at(node)) mark(consumer);
+        if (node >= featureCount || isCurveBody(features.at(node)) || isDatumBody(features.at(node))) continue;
+        // Anche una forma assente o esclusa prima della modifica puo' diventare
+        // un solido candidato per un'estrusione successiva "Fino al prossimo".
+        while (!nextExtents.isEmpty() && nextExtents.last() > node) mark(nextExtents.takeLast());
+    }
+    return result;
+}
+
 void invalidateHistoryCaches(DocumentState &state, const QVector<int> &changed) {
     if (changed.isEmpty()) return;
-    QSet<int> dirty(changed.cbegin(), changed.cend()), sketches;
-    QSet<quint64> featureIds, sketchIds;
+    QVector<bool> seeds(state.extrusions.size(), false);
     for (int index : changed)
-        if (index >= 0 && index < state.extrusions.size()) featureIds.insert(state.extrusions.at(index).featureId);
-    // Punto fisso anche per vecchi documenti con schizzi ancora privi di una
-    // posizione autonoma: nessuna dipendenza viene persa per l'ordine di visita.
-    bool grew;
-    do {
-        grew = false;
-        for (int index = 0; index < state.sketches.size(); ++index) {
-            if (sketches.contains(index)) continue;
-            const auto &sketch = state.sketches.at(index);
-            bool affected = dirty.contains(sketch.datumPlane);
-            visitSketchGeometryRefs(sketch, [&](const GeometryRef &ref, SketchGeometryRefFamily, int) {
-                if (isBodyRef(ref)) affected |= ref.featureId ? featureIds.contains(ref.featureId) : dirty.contains(ref.index);
-                if (isSketchRef(ref)) affected |= ref.featureId ? sketchIds.contains(ref.featureId) : sketches.contains(ref.index);
-            });
-            if (affected) { sketches.insert(index); sketchIds.insert(sketch.storyId); grew = true; }
-        }
-        for (int index = 0; index < state.extrusions.size(); ++index) {
-            if (dirty.contains(index)) continue;
-            bool affected = false;
-            for (int operand : bodyOperands(state.extrusions.at(index))) affected |= dirty.contains(operand);
-            for (int sketch : sketchesOf(state.extrusions.at(index))) affected |= sketches.contains(sketch);
-            if (affected) { dirty.insert(index); featureIds.insert(state.extrusions.at(index).featureId); grew = true; }
-        }
-    } while (grew);
-    for (int index : dirty)
-        if (index >= 0 && index < state.extrusions.size()) state.extrusions[index].cachedGeometry = false;
+        if (index >= 0 && index < seeds.size()) seeds[index] = true;
+    const auto affected = historyDependents(state.sketches, state.extrusions, seeds, {});
+    for (int index = 0; index < affected.features.size(); ++index)
+        if (affected.features.at(index)) state.extrusions[index].cachedGeometry = false;
 }
 
 }

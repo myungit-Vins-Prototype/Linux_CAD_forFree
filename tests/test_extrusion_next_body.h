@@ -168,10 +168,18 @@ static void extrusionNextBodyTests() {
     ExtrusionObject definition; definition.sketchIndex = 0; definition.extent = 4; definition.distance = 1;
     require(view.createExtrusion(definition,QStringLiteral("Fino al prossimo")).isEmpty(), "creazione prossimo corpo con limite nascosto manualmente");
     const quint64 featureId = view.extrusions().last().featureId;
-    const auto check = [&](double height, QVector<int> dependencies) {
+    const auto check = [&](double height, QVector<int> dependencies, bool expectDeferred = false) {
         int index = -1;
         for (int i = 0; i < view.extrusions().size(); ++i) if (view.extrusions().at(i).featureId == featureId) index = i;
         require(index >= 0, "identita' dell'estrusione preservata nella storia");
+        const int step = view.storyboardIndex(false, index);
+        require(step >= 0, "passo dell'estrusione preservato nella storia");
+        if (expectDeferred)
+            require(view.storyboardPosition() <= step && !view.isBodyDrawn(index)
+                && !view.extrusions().at(index).forgeBody,
+                "cambiare i limiti in rollback rinvia il calcolo dell'estrusione");
+        if (view.storyboardPosition() <= step)
+            view.setStoryboardPosition(step + 1);
         const auto &feature = view.extrusions().at(index);
         volume(feature,4*height);
         require(feature.booleanTools == dependencies && std::abs(zBounds(feature.forgeBody).second-height) < 1e-12,
@@ -181,7 +189,7 @@ static void extrusionNextBodyTests() {
     view.setHistoryPosition(1);
     auto closer = distant.primitive; closer.origin[2] = 4;
     require(view.createPrimitive(closer,QStringLiteral("Nuovo limite al cursore")).isEmpty(), "nuovo solido inserito prima dell'estrusione");
-    check(4,{0,1});
+    check(4,{0,1},true);
     view.undo(); check(8,{0}); view.redo(); check(4,{0,1});
     require(view.setFeatureSuppressed(1,true).isEmpty(), "soppressione del nuovo limite"); check(8,{0});
     require(view.setFeatureSuppressed(1,false).isEmpty(), "riattivazione del nuovo limite"); check(4,{0,1});
@@ -202,7 +210,7 @@ static void extrusionNextBodyTests() {
     view.setHistoryPosition(2);
     require(view.createBoolean(::BooleanOperation::Union,0,QVector<int>{1},QStringLiteral("Limiti consumati")).isEmpty(),
             "consumo dei due limiti prima dell'estrusione");
-    check(1,{2});
+    check(1,{2},true);
     require(view.setFeatureSuppressed(2,true).isEmpty(), "soppressione del consumo"); check(1,{0,1});
     require(view.setFeatureSuppressed(2,false).isEmpty(), "riattivazione del consumo"); check(1,{2});
     view.undo(); check(1,{0,1}); view.redo(); check(1,{2});

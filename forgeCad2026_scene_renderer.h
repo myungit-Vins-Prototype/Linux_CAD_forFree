@@ -53,7 +53,7 @@ public:
     void drawFeaturePreview(DisplayCache &cache, OverlayRenderer &overlay,
                             const BodyDisplay &display, const BodyDisplay &retained,
                             const PreviewStyle &style);
-    void drawTrimPreview(DisplayCache &cache, const BodyDisplay &display, int displayMode);
+    void drawTrimRegion(DisplayCache &cache, const BodyDisplay &display, bool kept, bool hovered);
     void drawExportMeshPreview(DisplayCache &cache, const BodyDisplay &display, bool quadrangular);
     // Nasconde solo le giunzioni lisce fra pezze B-spline del filetto.
     // Senza topologia disponibile conserva tutti i bordi.

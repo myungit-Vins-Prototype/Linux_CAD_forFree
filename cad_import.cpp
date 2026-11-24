@@ -48,8 +48,7 @@ QString importCadFile(const QString &path, QVector<ImportedPart> &parts, QString
     std::vector<QString> failures(bodies.size());
     std::vector<std::exception_ptr> unexpected(bodies.size());
     Kernel::StepWriteOptions storageOptions;
-    // writeStep usa localtime per il valore predefinito: calcolalo una volta
-    // fuori dai worker (localtime puo' usare memoria statica condivisa).
+    // Tutte le parti di una stessa importazione conservano lo stesso timestamp.
     storageOptions.timeStamp = QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-ddTHH:mm:ss")).toStdString();
     Kernel::parallelFor(bodies.size(), bodies.size() >= 4 ? std::min(8u, Kernel::threadCount(0)) : 1u, [&](std::size_t i) {
         try {

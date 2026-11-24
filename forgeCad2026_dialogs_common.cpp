@@ -22,6 +22,7 @@
 #include "cad_features.h"
 #include "cad_feature_dependencies.h"
 #include "cad_feature_build.h"
+#include "cad_loft_diagnostics.h"
 #include "cad_import.h"
 #include "cad_mass.h"
 #include "cad_measure.h"
@@ -1161,7 +1162,9 @@ void FeatureOperationDiagram::paintEvent(QPaintEvent *) {
         : kind_ == Revolution ? QStringLiteral("revolution") : QStringLiteral("sweep"));
 }
 
-bool ForgeCad::Gui::runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogButtonBox *buttons, const std::function<QString()> &apply, bool hideWhileApplying) {
+namespace {
+void connectFunctionApply(QDialog &dialog, QFormLayout *form, QDialogButtonBox *buttons,
+                          const std::function<QString()> &apply, bool hideWhileApplying, CadViewport *viewport = nullptr) {
     auto *errorLabel = new FunctionMessage(&dialog);
     errorLabel->setObjectName(QStringLiteral("functionApplyError"));
     setFunctionMessageRole(errorLabel, FunctionMessageRole::Error, true);
@@ -1175,13 +1178,16 @@ bool ForgeCad::Gui::runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogB
     else
         form->addRow(errorLabel);
     QObject::disconnect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, [&dialog, buttons, errorLabel, apply, hideWhileApplying] {
+    const QPointer<CadViewport> target(viewport);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog,
+                     [&dialog, buttons, errorLabel, apply, hideWhileApplying, target] {
         if (hideWhileApplying) {
             buttons->setEnabled(false);
             // Nascondere non emette finished: l'anteprima resta viva finche'
             // apply ne ha acquisito il risultato, senza cancellare il worker.
             dialog.hide();
         }
+        const quint64 revision = target ? target->buildDiagnosticRevision() : 0;
         QApplication::setOverrideCursor(Qt::WaitCursor);
         const QString error = apply();
         QApplication::restoreOverrideCursor();
@@ -1190,13 +1196,18 @@ bool ForgeCad::Gui::runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogB
             dialog.accept();
             return;
         }
-        QString visible = error;
-        visible.remove(QRegularExpression(QStringLiteral("\\s*\\[\\[loft-(section|guide)=\\d+\\]\\]")));
+        const QString visible = ForgeCad::visibleLoftError(error);
+        if (target) target->showPanelBuildFailure(&dialog, visible, revision);
         errorLabel->setText(visible + QStringLiteral("\nCorreggi i valori e riprova, oppure Annulla."));
         errorLabel->show();
         if (hideWhileApplying) dialog.show();
         if (!dynamic_cast<FunctionDialogPanel *>(&dialog)) dialog.adjustSize();
     });
+}
+}
+
+bool ForgeCad::Gui::runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogButtonBox *buttons, const std::function<QString()> &apply, bool hideWhileApplying) {
+    connectFunctionApply(dialog, form, buttons, apply, hideWhileApplying);
     if (!hideWhileApplying) return dialog.exec() == QDialog::Accepted;
     // QDialog::exec termina anche con hide(): qui si attende invece finished,
     // come nei pannelli incorporati, per poter riaprire dopo un errore reale.
@@ -1210,42 +1221,11 @@ bool ForgeCad::Gui::runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogB
 
 bool runUntilAppliedModeless(QMainWindow *window, CadViewport *viewport, QDialog &dialog, QFormLayout *form, QDialogButtonBox *buttons,
                                     const std::function<QString()> &apply, bool hideWhileApplying) {
-    auto *errorLabel = new FunctionMessage(&dialog);
-    errorLabel->setObjectName(QStringLiteral("functionApplyError"));
-    setFunctionMessageRole(errorLabel, FunctionMessageRole::Error, true);
-    errorLabel->hide();
-    int row = -1;
-    QFormLayout::ItemRole role;
-    form->getWidgetPosition(buttons, &row, &role);
-    if (row >= 0) form->insertRow(row, errorLabel);
-    else if (auto *box = dynamic_cast<QBoxLayout *>(buttons->parentWidget()->layout()))
-        box->insertWidget(qMax(0, box->indexOf(buttons)), errorLabel);
-    else
-        form->addRow(errorLabel);
-    QObject::disconnect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, [&dialog, buttons, errorLabel, apply, hideWhileApplying] {
-        if (hideWhileApplying) {
-            buttons->setEnabled(false);
-            // Nascondere non emette finished: l'anteprima resta viva finche'
-            // apply ne ha acquisito il risultato, senza cancellare il worker.
-            dialog.hide();
-        }
-        QApplication::setOverrideCursor(Qt::WaitCursor);
-        const QString error = apply();
-        QApplication::restoreOverrideCursor();
-        if (hideWhileApplying) buttons->setEnabled(true);
-        if (error.isEmpty()) {
-            dialog.accept();
-            return;
-        }
-        QString visible = error;
-        visible.remove(QRegularExpression(QStringLiteral("\\s*\\[\\[loft-(section|guide)=\\d+\\]\\]")));
-        errorLabel->setText(visible + QStringLiteral("\nCorreggi i valori e riprova, oppure Annulla."));
-        errorLabel->show();
-        if (hideWhileApplying) dialog.show();
-        if (!dynamic_cast<FunctionDialogPanel *>(&dialog)) dialog.adjustSize();
-    });
-    return runModeless(window, viewport, dialog);
+    connectFunctionApply(dialog, form, buttons, apply, hideWhileApplying, viewport);
+    const QPointer<CadViewport> target(viewport);
+    const bool result = runModeless(window, viewport, dialog);
+    if (target) target->clearPanelBuildFailure(&dialog);
+    return result;
 }
 
 PreviewScope::PreviewScope(CadViewport *target, QDialog &dialog, QFormLayout *form, int replacedIndex, QBoxLayout *outside )
@@ -1280,7 +1260,7 @@ void PreviewScope::request(const ExtrusionObject &definition) const {
 PreviewScope::~PreviewScope() {
     if (!viewport) return;
     viewport->setPreviewCallback({});
-    viewport->clearPreview();
+    viewport->closeFunctionPreview();
 }
 
 void connectReferenceList(QListWidget *list, QDialog &dialog, CadViewport *viewport,
@@ -1399,12 +1379,16 @@ BodyPicker::~BodyPicker() {
     if (installed_) viewport_->setReferencePickCallback(nullptr);
 }
 
-QWidget *BodyPicker::row(QWidget *field) const {
+QWidget *BodyPicker::row(QWidget *field, Qt::Orientation orientation) const {
     auto *row = new QWidget(field->parentWidget());
-    auto *layout = new QHBoxLayout(row);
+    const bool vertical = orientation == Qt::Vertical;
+    QBoxLayout *layout;
+    if (vertical) layout = new QVBoxLayout(row);
+    else layout = new QHBoxLayout(row);
     layout->setContentsMargins(0, 0, 0, 0);
+    if (vertical) layout->addWidget(button_);
     layout->addWidget(field, 1);
-    layout->addWidget(button_, 0, list_ ? Qt::AlignTop : Qt::Alignment());
+    if (!vertical) layout->addWidget(button_, 0, list_ ? Qt::AlignTop : Qt::Alignment());
     return row;
 }
 
@@ -1425,6 +1409,10 @@ QString BodyPicker::hint() const {
                                      : QStringLiteral("Clicca nella vista una faccia del corpo.");
 }
 
+void BodyPicker::setActiveButtonText(const QString &text) {
+    activeButtonText_ = text;
+}
+
 void BodyPicker::start(bool waiting ) {
     if (!button_->isEnabled()) return;
     if (starting) starting();  // la finestra lascia la sua scelta nella vista
@@ -1433,6 +1421,8 @@ void BodyPicker::start(bool waiting ) {
     active_ = error.isEmpty();
     waiting_ = active_ && waiting;
     button_->setChecked(active_);
+    if (!activeButtonText_.isEmpty())
+        button_->setText(active_ ? activeButtonText_ : QStringLiteral("Dalla vista"));
     if (!active_ && message) message(error, true);
 }
 
@@ -1440,6 +1430,7 @@ void BodyPicker::stop() {
     if (active_) viewport_->cancelReferencePick();
     active_ = false;
     button_->setChecked(false);
+    if (!activeButtonText_.isEmpty()) button_->setText(QStringLiteral("Dalla vista"));
 }
 
 bool BodyPicker::handle(bool picked, const GeometryRef &ref) {

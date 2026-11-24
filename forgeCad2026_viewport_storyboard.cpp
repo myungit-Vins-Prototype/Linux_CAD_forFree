@@ -39,7 +39,8 @@ QVector<GeometryRef> CadViewport::storyboardReferences(SceneObjectKind kind, int
     QVector<GeometryRef> result;
     if (storyboardPickContext().isEmpty()) return result;
     const int owner = refPicking_ ? refPickOwner_ : edgePickEdit_;
-    const int limit = owner < 0 ? int(extrusions_.size()) : owner;
+    const bool editing = owner >= 0 && owner < extrusions_.size();
+    const int limit = editing ? owner : historyPosition();
     const int roles = refPicking_ ? refPickRoles_ : DatumRoleCurve | DatumRoleFace;
     if (wholeBody) {
         if (index < 0 || index >= modelBodies_.size()) return result;
@@ -66,8 +67,8 @@ QVector<GeometryRef> CadViewport::storyboardReferences(SceneObjectKind kind, int
         if (!refPicking_ || index<0 || index>=sketches_.size()) return result;
         const auto &sketch=sketches_.at(index);
         const int position=storyboardIndex(true,index), before=owner<0?-1:storyboardIndex(false,owner);
-        if (!sketch.supportError.isEmpty() || (sketch.datumPlane>=limit && sketch.datumPlane>=0)
-            || (before>=0 && position>=before) || (storyPosition_>=0 && position>=storyPosition_)) return result;
+        if (sketch.historyRebuildPending || !sketch.supportError.isEmpty() || (sketch.datumPlane>=limit && sketch.datumPlane>=0)
+            || (before>=0 && position>=before) || (!editing && storyPosition_>=0 && position>=storyPosition_)) return result;
         GeometryRef ref;ref.kind=7;ref.index=index;ref.featureId=sketch.storyId;ref.element={-1,-1,-1};
         if (roles & DatumRoleCurve) result.append(ref);
         for (int i=0;i<sketch.segments.size();++i) {
@@ -87,7 +88,8 @@ QVector<GeometryRef> CadViewport::storyboardReferences(SceneObjectKind kind, int
     if (kind!=SceneObjectKind::Extrusion || index<0 || index>=limit || index>=extrusions_.size()) return result;
     const auto &body=extrusions_.at(index);
     const int position=storyboardIndex(false,index);
-    if (body.suppressed || !body.error.isEmpty() || (storyPosition_>=0 && position>=storyPosition_)) return result;
+    if (body.historyRebuildPending || body.suppressed || !body.error.isEmpty()
+        || (!editing && storyPosition_ >= 0 && position >= storyPosition_)) return result;
     if (refPicking_ && !pickBodies_.isEmpty() && !pickBodies_.contains(index)) return result;
     if (edgePicking_ && ((edgePickExtend_ && body.solid) || (!pickedEdges_.isEmpty() && index!=edgePickBody_))) return result;
     if (edgePicking_ && index!=edgePickBody_ && !resultBodiesBefore(owner).contains(index)) return result;

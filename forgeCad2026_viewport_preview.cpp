@@ -93,7 +93,84 @@ void CadViewport::updateDragPreview(const ExtrusionObject &definition, int index
     update();
 }
 
+void CadViewport::updateOffsetDirection(const ExtrusionObject &definition, int index) {
+    using namespace ForgeCad::Kernel;
+    if (offsetDirection_) update();
+    offsetDirection_.reset();
+    const bool thicken = definition.feature == BodyFeature::Thicken;
+    if (definition.operation >= 0 || (!thicken && definition.feature != BodyFeature::SurfaceOffset)
+        || !std::isfinite(definition.distance) || definition.distance == 0.0) return;
+    const int base = definition.firstBody;
+    if (base < 0 || base >= extrusions_.size()) return;
+    const auto &source = extrusions_.at(base);
+    if (!source.forgeBody) return;
+    const Body &shape = *source.forgeBody;
+    try {
+        PrecisionScope precision(calculationAccuracy_);
+        FaceId face;
+        Vec3 pick;
+        if (!definition.offsetFaces.isEmpty()) {
+            const EdgePoint &last = definition.offsetFaces.last();
+            Box bounds;
+            for (VertexId vertex : shape.vertices()) bounds.add(shape.vertex(vertex).point);
+            face = ForgeCad::resolveFaceReference(shape, last, 1e-3 * std::max(1.0, bounds.diagonal()));
+            if (!shape.contains(face)) return;
+            pick = Vec3(last.x, last.y, last.z);
+        } else {
+            // Per tutto il corpo preferisci una faccia in vista, verso l'osservatore.
+            const auto &display = source.display;
+            const auto camera = camera_.modelViewMatrix();
+            bool inView = false;
+            float depth = -std::numeric_limits<float>::infinity();
+            for (qsizetype i = 0; i < std::min(display.faceIds.size(), display.faceLabelPoints.size()); ++i) {
+                const FaceId candidate{display.faceIds.at(i)};
+                if (!shape.contains(candidate)) continue;
+                const auto &point = display.faceLabelPoints.at(i);
+                const bool visible = QRectF(rect()).contains(projectWorldPoint(point));
+                const float z = camera.map(point).z();
+                if (!face.valid() || (visible && !inView) || (visible == inView && z > depth)) {
+                    face = candidate;
+                    depth = z;
+                    inView = visible;
+                }
+            }
+            if (!face.valid()) {
+                const auto faces = shape.faces();
+                if (faces.empty()) return;
+                face = faces.front();
+            }
+            if (!faceLabelPoint(base, face.index, pick)) return;
+        }
+        const Face &data = shape.face(face);
+        if (!data.surface) return;
+        auto on = projectPoint(*data.surface, pick);
+        // Un vecchio riferimento può essere ancora valido per nome dopo il rifilo.
+        if (!definition.offsetFaces.isEmpty()
+            && classifyPointOnFace(shape, face, on.point, linearResolution()) == PointLocation::Outside) {
+            if (!faceLabelPoint(base, face.index, pick)) return;
+            on = projectPoint(*data.surface, pick);
+        }
+        Vec3 axis;
+        if (thicken && definition.thickenDirection.kind >= 0) {
+            ForgeCad::ResolvedRef ref;
+            if (!ForgeCad::resolveGeometryRef(definition.thickenDirection, index < 0 ? int(extrusions_.size()) : index,
+                                               sketches_, extrusions_, ref, nullptr) || !(ref.hasLine || ref.hasPlane)) return;
+            axis = ref.direction;
+        } else {
+            axis = normalAt(*data.surface, on.u, on.v) * (data.sense ? 1.0 : -1.0);
+        }
+        if (thicken ? definition.thickenSide == 1 : definition.distance < 0.0) axis = -axis;
+        const QVector3D origin(on.point.x(), on.point.y(), on.point.z()), direction(axis.x(), axis.y(), axis.z());
+        if (!qIsFinite(origin.lengthSquared()) || !qIsFinite(direction.lengthSquared()) || direction.isNull()) return;
+        offsetDirection_ = OffsetDirection{origin, direction.normalized(), thicken && definition.thickenSide == 2};
+        update();
+    } catch (const std::exception &) {
+        // Un riferimento perso o singolare resta gestito dalla diagnostica della funzione.
+    }
+}
+
 void CadViewport::requestPreview(const ExtrusionObject &definition, int index ) {
+    updateOffsetDirection(definition, index);
     const bool contextChanged=preparePreviewCacheContext();
     if (contextChanged) { previewDragSource_.reset();previewDragVisible_=false; }
     updateDragPreview(definition, index);
@@ -101,12 +178,15 @@ void CadViewport::requestPreview(const ExtrusionObject &definition, int index ) 
     const QString key = previewKey(definition, index);
     if (!contextChanged && key == preview_.key) {
         previewHandlePending_ = false;
-        if ((preview_.valid || !preview_.error.isEmpty()) && previewCallback_) previewCallback_(preview_.error);
+        if (!preview_.error.isEmpty()) preparePreviewError(preview_.error);
+        else clearBuildFeedback();
+        if ((preview_.valid || !preview_.error.isEmpty()) && previewCallback_) previewCallback_(previewError());
         return;
     }
+    clearBuildFeedback();
     // Durante il drag lascia finire il fotogramma in corso: cancellarlo
     // a ogni movimento impedirebbe di vedere qualunque risultato.
-    if ((featureHandleDragging_ || filletRadiusDrag_ >= 0) && previewRunning_) {
+    if (!contextChanged && (featureHandleDragging_ || filletRadiusDrag_ >= 0) && previewRunning_) {
         previewHandlePending_ = true;
         previewHandleDefinition_ = definition;
         previewHandleIndex_ = index;
@@ -130,11 +210,10 @@ void CadViewport::requestPreview(const ExtrusionObject &definition, int index ) 
                     && !extrusions_.at(operand).suppressed)
                     preview_.restored.insert(operand);
     }
-    // Nel taglio entrambi gli originali restano visibili: si puo' cliccare
-    // anche una regione diversa da quella attualmente mostrata in ambra.
-    if (definition.operation < 0 && definition.feature == BodyFeature::SheetTrim && !definition.trimProject) {
-        preview_.replaced.clear();
-    }
+    // Le mesh delle regioni restano disponibili al picker. Il corpo intero
+    // deve sparire quando è visibile il risultato, per evitare doppie facce.
+    if (definition.operation < 0 && definition.feature == BodyFeature::SheetTrim)
+        preview_.replaced = ForgeCad::hiddenOperands(definition, extrusions_);
     else if (ForgeCad::isCurveBody(definition) || ForgeCad::isDatumBody(definition)) preview_.replaced.clear();  // la base dell'elica resta
     else if (definition.operation < 0 && definition.feature == BodyFeature::Blend) preview_.replaced.clear(); // la base opaca resta sotto la patch
     else if (definition.operation < 0 && definition.feature == BodyFeature::SurfaceOffset) preview_.replaced.clear();  // il corpo di partenza resta
@@ -168,11 +247,10 @@ void CadViewport::requestPreview(const ExtrusionObject &definition, int index ) 
     preview_.sceneResult = false;
     preview_.additionalDisplays.clear();
     preview_.error.clear();
+    preview_.diagnostic = {};
     preview_.geometry.reset();
     if (!previewDragVisible_) preview_.retainedDisplay = {};
     preview_.resultDisplay = {};
-    previewErrorSketch_ = -1;
-    previewLoftErrors_.clear();
     ++preview_.generation;
     const auto existing = existingPreviewResults(definition, index);
     const bool ready = !existing.isEmpty() && std::all_of(existing.begin(), existing.end(), [&](const auto &body) {
@@ -223,13 +301,31 @@ void CadViewport::showTrimPreview(const ExtrusionObject &definition, const Forge
     if (previewTimer_) previewTimer_->stop();
     ++preview_.generation;
     preview_.valid = bool(geometry);
-    preview_.error = geometry ? QString() : QStringLiteral("La parte scelta non ha geometria valida.");
+    preview_.sceneResult = false;
+    preview_.replaced = ForgeCad::hiddenOperands(definition, extrusions_);
+    preview_.diagnostic = {};
+    clearBuildFeedback();
+    preview_.error = geometry ? QString() : QStringLiteral("Nessuna regione selezionata.");
     preview_.geometry = geometry;
     preview_.display = display;
     preview_.retainedDisplay = {};
     preview_.resultDisplay = {};
-    if (previewCallback_) previewCallback_(preview_.error);
+    if (geometry && previewCallback_) previewCallback_({});
     update();
+}
+
+void CadViewport::stageVolumeStructureResult(const ExtrusionObject &definition, const ForgeCad::ForgeBody &geometry,
+                                             const BodyDisplay &display, int editIndex) {
+    requestPreview(definition, editIndex);
+    if (previewTimer_) previewTimer_->stop();
+    ++preview_.generation;
+    preview_.valid = true;
+    preview_.sceneResult = false;
+    preview_.error.clear();
+    preview_.diagnostic = {};
+    preview_.geometry = geometry;
+    preview_.display = display;
+    preview_.resultDisplay = display;
 }
 
 void CadViewport::requestBlendPreview(int base, const QVector<EdgePoint> &edges, double size, bool chamfer, int hidden , const ChamferSpec &spec ) {
@@ -248,7 +344,12 @@ void CadViewport::requestBlendPreview(int base, const QVector<EdgePoint> &edges,
     requestPreview(blend, hidden);
 }
 
-void CadViewport::clearPreview() {
+void CadViewport::clearPreview() { resetPreview(true); }
+
+void CadViewport::closeFunctionPreview() { resetPreview(!buildDiagnosticFromHistory_); }
+
+void CadViewport::resetPreview(bool clearDiagnostic) {
+    offsetDirection_.reset();
     // Il risultato viene invalidato subito; il worker esce al prossimo
     // checkpoint e solo allora libera previewRunning_ e la barra di lavoro.
     if (previewTimer_) previewTimer_->stop();
@@ -270,12 +371,12 @@ void CadViewport::clearPreview() {
     preview_.sceneResult = false;
     preview_.additionalDisplays.clear();
     preview_.error.clear();
+    preview_.diagnostic = {};
     preview_.geometry.reset();
     preview_.definition = {};
     previewHandleDefinition_ = {};
     previewDragDefinition_ = {};
-    previewErrorSketch_ = -1;
-    previewLoftErrors_.clear();
+    if (clearDiagnostic) clearBuildFeedback();
     preview_.display = {};
     preview_.retainedDisplay = {};
     preview_.resultDisplay = {};
@@ -284,7 +385,7 @@ void CadViewport::clearPreview() {
 
 void CadViewport::clearBlendPreview() { clearPreview(); }
 
-QString CadViewport::previewError() const { return preview_.error; }
+QString CadViewport::previewError() const { return ForgeCad::visibleLoftError(preview_.error); }
 bool CadViewport::previewPending() const { return !preview_.key.isEmpty() && !preview_.valid && preview_.error.isEmpty(); }
 
 void CadViewport::setPreviewCallback(std::function<void(const QString &)> callback) { previewCallback_ = std::move(callback); }
@@ -295,14 +396,22 @@ bool CadViewport::takePreviewResult(ExtrusionObject &body, int previewIndex, QSt
     if (body.mergeProbe || preview_.key.isEmpty() || preview_.key != previewKey(body, previewIndex)) return false;
     if (!preview_.valid && preview_.error.isEmpty()) {
         ScopedWork work(workCallback_, QStringLiteral("Completamento del calcolo dell'anteprima..."));
-        const QString key = preview_.key;
-        while (preview_.key == key && !preview_.valid && preview_.error.isEmpty())
+        const quint64 generation = preview_.generation;
+        while (preview_.generation == generation && !preview_.valid && preview_.error.isEmpty())
             QCoreApplication::processEvents(QEventLoop::WaitForMoreEvents | QEventLoop::ExcludeUserInputEvents, 50);
-        if (preview_.key != key) return false;
+        if (preview_.generation != generation) return false;
+    }
+    // Durante l'attesa un operando o la qualità di tessellazione possono cambiare.
+    if (preparePreviewCacheContext()) {
+        clearPreview();
+        return false;
     }
     if (!preview_.valid || !preview_.geometry) {
-        if (error) *error = preview_.error;
-        return !preview_.error.isEmpty();
+        if (preview_.error.isEmpty()) return false;
+        body.buildDiagnostic = preview_.diagnostic;
+        const QString message = presentBuildFailure(body, previewIndex, preview_.error, body.buildDiagnostic);
+        if (error) *error = message;
+        return true;
     }
     body.forgeBody = preview_.geometry;
     body.solid = !preview_.geometry->isSheet();
@@ -315,7 +424,12 @@ bool CadViewport::takePreviewResult(ExtrusionObject &body, int previewIndex, QSt
         ForgeCad::tessellateGeometry(body, tessellationQuality_, body.display);
     body.display.constructionCurves.clear();
     body.error.clear();
+    body.buildDiagnostic = {};
     body.notice = preview_.notice;
+    if (previewIndex < 0) {
+        ForgeCad::assignCreationFeatureId(body, extrusions_);
+        ForgeCad::registerFeatureGenealogy(body, int(extrusions_.size()), sketches_, extrusions_);
+    }
     return true;
 }
 
@@ -344,9 +458,10 @@ QString CadViewport::previewKey(const ExtrusionObject &d, int index) {
 
 bool CadViewport::computePreview(const PreviewInputs &in, BodyDisplay &display, BodyDisplay &retainedDisplay,
                                  BodyDisplay &resultDisplay, ForgeCad::ForgeBody &geometry,
-                                 QString &error, QVector<int> *merged, QString *notice, QVector<BodyDisplay> *additionalDisplays) {
+                                 QString &error, ForgeCad::BuildDiagnostic &diagnostic, QVector<int> *merged, QString *notice,
+                                 QVector<BodyDisplay> *additionalDisplays) {
     return ForgeCad::Gui::FeaturePreviewBuilder::computePreview(in, display, retainedDisplay, resultDisplay,
-                                                               geometry, error, merged, notice, additionalDisplays);
+                                                               geometry, error, diagnostic, merged, notice, additionalDisplays);
 }
 
 QVector<ExtrusionObject> CadViewport::existingPreviewResults(const ExtrusionObject &definition, int index) const {
@@ -410,7 +525,7 @@ void CadViewport::startPreviewJob() {
         d.surfaceTool.targets.size()>1&&d.surfaceTool.targets[1].kind==11) {
         auto mapping=d.surfaceTool;GeometryRef plane;
         if(!ForgeCad::resolveFlattenedMapping(mapping,in.index,extrusions_,plane,&invalid)) {
-            preview_.error=invalid;
+            preview_.error = presentBuildFailure(d, preview_.index, invalid);
             if(previewCallback_)previewCallback_(preview_.error);
             update();return;
         }
@@ -437,7 +552,7 @@ void CadViewport::startPreviewJob() {
         if (sketch < 0 || sketch >= sketches_.size()) invalid = QStringLiteral("nessuno schizzo");
     const quint64 generation = preview_.generation;
     if (!invalid.isEmpty() && !in.reuse) {
-        preview_.error = invalid;
+        preview_.error = presentBuildFailure(d, preview_.index, invalid);
         if (edgePicking_ && edgePickStatus_) edgePickStatus_(edgePickMessage());
         if (previewCallback_) previewCallback_(preview_.error);
         update();
@@ -457,12 +572,13 @@ void CadViewport::startPreviewJob() {
         QVector<BodyDisplay> additionalDisplays;
         ForgeCad::ForgeBody geometry;
         QString error, notice;
+        ForgeCad::BuildDiagnostic diagnostic;
         bool ok = false;
         QVector<int> merged;
         const bool probe = in.definition.mergeProbe;
         try {
             ForgeCad::Kernel::cancellationPoint();
-            ok = computePreview(in, display, retainedDisplay, resultDisplay, geometry, error, &merged, &notice, &additionalDisplays);
+            ok = computePreview(in, display, retainedDisplay, resultDisplay, geometry, error, diagnostic, &merged, &notice, &additionalDisplays);
             ForgeCad::Kernel::cancellationPoint();
         } catch (const ForgeCad::Kernel::OperationCancelled &) {
             ok = false;
@@ -473,13 +589,14 @@ void CadViewport::startPreviewJob() {
         }
         if (!ok && error.isEmpty()) error = QStringLiteral("costruzione non riuscita");
         deliverResult(guard, [this, generation, ok, error, notice, probe, merged, workText, reuse = in.reuse,
+                                             diagnostic = std::move(diagnostic),
                                              additionalDisplays = std::move(additionalDisplays), geometry = std::move(geometry), display = std::move(display),
                                              retainedDisplay = std::move(retainedDisplay),
                                              resultDisplay = std::move(resultDisplay)]() mutable {
             previewRunning_ = false;
             previewCancellation_.reset();
             if (workCallback_) workCallback_(false, workText, true);
-            if (generation == preview_.generation) {
+            if (generation == preview_.generation && (ok || !previewHandlePending_)) {
                 if (probe) {
                     const bool localExtrusion = localMergePreview(preview_.definition)
                         && preview_.definition.mergeOperation != 0;
@@ -497,7 +614,10 @@ void CadViewport::startPreviewJob() {
                     }
                 }
                 preview_.valid = ok;
-                preview_.error = ok ? QString() : preparePreviewError(error);
+                preview_.diagnostic = std::move(diagnostic);
+                preview_.error = ok ? QString() : error;
+                if (ok) clearBuildFeedback();
+                else preparePreviewError(error);
                 preview_.notice = ok ? notice : QString();
                 preview_.geometry = std::move(geometry);
                 preview_.display = std::move(display);
@@ -509,10 +629,10 @@ void CadViewport::startPreviewJob() {
                 if (ok && reuse) useExistingPreviewResults();
                 rememberPreview();
                 if (edgePicking_ && edgePickStatus_) edgePickStatus_(edgePickMessage());
-                if (previewCallback_) previewCallback_(preview_.error);
+                if (previewCallback_) previewCallback_(previewError());
                 update();
                 previewRerun_ = false;
-            } else if (!preview_.key.isEmpty() && !preview_.valid && preview_.error.isEmpty()) {
+            } else if (!previewHandlePending_ && previewPending()) {
                 previewRerun_ = false;
                 startPreviewJob();
             }
@@ -527,18 +647,46 @@ void CadViewport::startPreviewJob() {
 }
 
 QString CadViewport::preparePreviewError(QString error) {
-    prepareLoftDiagnostics(error);
-    previewErrorSketch_ = -1;
-    const QRegularExpression marker(QStringLiteral("\\s*\\[\\[loft-section=(\\d+)\\]\\]"));
-    const QRegularExpressionMatch match = marker.match(error);
-    if (match.hasMatch()) {
-        const int section = match.captured(1).toInt();
-        if (!preview_.definition.loftSections.isEmpty()) {
-            if(section>=0 && section<preview_.definition.loftSections.size() && preview_.definition.loftSections.at(section).kind==7)
-                previewErrorSketch_=preview_.definition.loftSections.at(section).index;
-        } else if (section >= 0 && section < preview_.definition.loftSketches.size())
-            previewErrorSketch_ = preview_.definition.loftSketches.at(section);
-        error.remove(marker);
+    return presentBuildFailure(preview_.definition, preview_.index, std::move(error), preview_.diagnostic);
+}
+
+void CadViewport::showPanelBuildFailure(QObject *panel, const QString &error, quint64 revisionBeforeApply) {
+    if (!panel || error.isEmpty()) return;
+    if (revisionBeforeApply == buildDiagnosticRevision_ || error != buildDiagnosticError_) {
+        clearBuildFeedback();
+        showBuildDiagnostic(error, {});
     }
-    return ForgeCad::visibleLoftError(error);
+    buildDiagnosticPanel_ = panel;
+}
+
+void CadViewport::clearPanelBuildFailure(QObject *panel) {
+    if (panel && buildDiagnosticPanel_ == panel) clearBuildFeedback();
+}
+
+void CadViewport::clearBuildFeedback() {
+    clearBuildDiagnostic();
+    if (previewErrorSketch_ >= 0 || !previewLoftErrors_.isEmpty()) {
+        previewErrorSketch_ = -1;
+        previewLoftErrors_.clear();
+        update();
+    }
+}
+
+QString CadViewport::presentBuildFailure(const ExtrusionObject &definition, int index, QString error,
+                                         ForgeCad::BuildDiagnostic diagnostic) {
+    prepareLoftDiagnostics(error, definition, index);
+    previewErrorSketch_ = -1;
+    const int section = ForgeCad::loftFailure(error).section;
+    if (section >= 0) {
+        if (!definition.loftSections.isEmpty()) {
+            if (section < definition.loftSections.size() && definition.loftSections.at(section).kind == 7)
+                previewErrorSketch_ = definition.loftSections.at(section).index;
+        } else if (section < definition.loftSketches.size())
+            previewErrorSketch_ = definition.loftSketches.at(section);
+    }
+    error = ForgeCad::visibleLoftError(error);
+    if (diagnostic.paths.isEmpty() && diagnostic.context.isEmpty())
+        diagnostic = ForgeCad::featureDiagnosticContext(definition, sketches_, extrusions_);
+    showBuildDiagnostic(error, diagnostic);
+    return error;
 }

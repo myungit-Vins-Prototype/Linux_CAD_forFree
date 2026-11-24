@@ -12,6 +12,17 @@ namespace ForgeCad {
 QVector<int> reconnectMergedHistory(QVector<ExtrusionObject> &features,
                                    const QSet<quint64> &bodyIds = {});
 
+struct HistoryDependents {
+    QVector<bool> features;
+    QSet<int> sketches;
+};
+
+// Chiude le modifiche sulle dipendenze di lavorazioni e schizzi, includendo i semi.
+HistoryDependents historyDependents(const QVector<SketchObject> &sketches,
+                                   const QVector<ExtrusionObject> &features,
+                                   const QVector<bool> &changedFeatures,
+                                   const QSet<int> &changedSketches);
+
 // Le cache dei consumatori di una definizione ricollegata non rappresentano
 // piu' il documento. Propaga anche attraverso appoggi/riferimenti degli schizzi.
 void invalidateHistoryCaches(DocumentState &state, const QVector<int> &changed);

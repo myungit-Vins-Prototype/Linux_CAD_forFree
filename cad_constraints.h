@@ -71,6 +71,8 @@ struct SolveResult {
     QString error;
     double residual = 0.0;
     int iterations = 0;
+    QVector<ConstraintRef> diagnosticRefs;
+    QString diagnosticContext;
 };
 
 // Valida i numeri della definizione di schizzo (non le cache di visualizzazione).

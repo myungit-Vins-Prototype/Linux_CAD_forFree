@@ -5,6 +5,8 @@
 #include <QScrollBar>
 #include <QClipboard>
 #include <QTimer>
+#include <QTreeWidget>
+#include "../cad_drawing_file.h"
 #include "test_sketch_projection_fit_validation.h"
 #include <QtTest/QTest>
 #include "../cad_document_tabs.h"
@@ -56,6 +58,7 @@
 #include "../cad_surface_mapping.h"
 #include "../cad_extrude.h"
 #include "../cad_sketch_refs.h"
+#include "../cad_sketch_edit.h"
 #include "../cad_sketch_apparent.h"
 #include "fk_apparent_contour.h"
 #include "fk_surface_algo.h"
@@ -240,6 +243,203 @@ public:
     }
 
 
+    static void firstSketchDimensionScale() {
+        using namespace ForgeCad;
+        using T = ConstraintType;
+        SketchObject initial;
+        initial.name = QStringLiteral("Scala prima quota");
+        initial.segments = {{{2, 3}, {12, 3}}, {{3, 5}, {6, 9}}, {{18, 6}, {18, 13}}};
+        initial.constructionSegments = {2};
+        CurveObject circle;
+        circle.tool = DrawingTool::Circle;
+        circle.controlPoints = {{21, 12}, {24, 12}};
+        initial.curves.append(circle);
+
+        const ConstraintRef first{0, 0, -1}, second{0, 1, -1}, round{1, 0, -1};
+        CadViewport view;
+        view.sketches_ = {initial};
+        view.selectSketch(0);
+        view.history_.clear();
+
+        const auto confirm = [](CadViewport &viewport, double value, const auto &command) {
+            bool entered = false;
+            QTimer::singleShot(0, &viewport, [&] {
+                auto *dialog = viewport.findChild<QDialog *>();
+                if (!dialog) return;
+                auto *spin = dialog->findChild<QDoubleSpinBox *>();
+                auto *buttons = dialog->findChild<QDialogButtonBox *>();
+                if (spin && buttons) {
+                    spin->setValue(value);
+                    entered = true;
+                    buttons->button(QDialogButtonBox::Ok)->click();
+                }
+                // Chiude il pannello se una regressione impedisce la conferma.
+                QTimer::singleShot(0, dialog, &QDialog::reject);
+            });
+            require(command().isEmpty() && entered, "conferma del valore nel pannello di quota");
+        };
+        const auto place = [&](T type, const QVector<ConstraintRef> &refs, double value) {
+            const auto constraint = makeConstraint(view.sketches_.front(), type, refs);
+            confirm(view, value, [&] { return view.placeDimension(constraint); });
+        };
+        const auto close = [](double actual, double expected) { return std::abs(actual - expected) < 1e-7; };
+        const auto lengthOf = [](const SketchObject &sketch, int index) {
+            const auto &segment = sketch.segments.at(index);
+            return pointDistance(segment.first, segment.second);
+        };
+        const auto radiusOf = [](const SketchObject &sketch) {
+            const auto &points = sketch.curves.front().controlPoints;
+            return pointDistance(points.at(0), points.at(1));
+        };
+        const auto current = [&]() -> const SketchObject & { return view.sketches_.front(); };
+
+        place(T::Angle, {first, second}, 60);
+        const SketchObject angled = current();
+        require(close(lengthOf(angled, 2), 7) && close(radiusOf(angled), 3),
+                "la quota angolare lascia invariate le entità disgiunte");
+        const double length = lengthOf(angled, 0);
+        view.sketchSelections_ = {{0, 0}};
+        confirm(view, 2 * length, [&] { return view.addConstraint(T::Distance); });
+        const SketchObject scaled = current();
+        require(scaled.geometricConstraints.size() == 2, "Distanza aggiunge la prima quota lineare");
+        const QPointF beforeOrigin = angled.segments.front().first;
+        const QPointF afterOrigin = scaled.segments.front().first;
+        const auto scaledPoint = [&](const QPointF &before, const QPointF &after) {
+            return pointDistance(after - afterOrigin, 2 * (before - beforeOrigin)) < 1e-7;
+        };
+        for (int i = 0; i < angled.segments.size(); ++i) {
+            require(scaledPoint(angled.segments.at(i).first, scaled.segments.at(i).first)
+                    && scaledPoint(angled.segments.at(i).second, scaled.segments.at(i).second),
+                    "la prima quota lineare scala insieme tutti i segmenti dello schizzo");
+        }
+        for (int i = 0; i < circle.controlPoints.size(); ++i) {
+            require(scaledPoint(angled.curves.front().controlPoints.at(i), scaled.curves.front().controlPoints.at(i)),
+                    "la prima quota lineare scala anche centro e raggio del cerchio");
+        }
+        require(close(std::abs(currentMeasure(scaled, scaled.geometricConstraints.front())), 60),
+                "la prima quota lineare conserva l'angolo");
+        view.undo();
+        require(current().segments == angled.segments && current().curves.front().controlPoints == angled.curves.front().controlPoints
+                && current().geometricConstraints.size() == 1, "Undo della prima quota ripristina la geometria intera");
+        view.redo();
+        require(current().segments == scaled.segments && current().curves.front().controlPoints == scaled.curves.front().controlPoints
+                && current().geometricConstraints.size() == 2, "Redo della prima quota ripristina la scala dell'intero schizzo");
+
+        if (!view.activeSketchObject()) view.selectSketch(0);
+        place(T::Radius, {round}, 8);
+        require(close(radiusOf(current()), 8) && close(lengthOf(current(), 0), 2 * length)
+                && current().segments.at(2) == scaled.segments.at(2), "la seconda quota usa il solver locale");
+
+        const auto beforeEdit = current().curves.front().controlPoints;
+        require(view.setConstraintValue(1, 3 * length).isEmpty() && close(lengthOf(current(), 0), 3 * length)
+                && current().curves.front().controlPoints == beforeEdit
+                && current().segments.at(2) == scaled.segments.at(2), "la modifica della prima quota usa il solver locale");
+
+        CadViewport fixed;
+        fixed.resize(1000, 700);
+        SketchObject anchored = initial;
+        const QPointF pivot = anchored.segments.at(0).first;
+        anchored.geometricConstraints = {makeConstraint(anchored, T::Fix, {{0, 0, 0}})};
+        fixed.sketches_ = {anchored};
+        fixed.selectSketch(0);
+        fixed.setConstraintsVisible(false);
+        fixed.camera_.zoom_ = 20;
+        const auto pixel = fixed.projectWorldPoint(fixed.mapSketchPoint({7, 3}, fixed.sketches_.front()));
+        QMouseEvent doubleClick(QEvent::MouseButtonDblClick, pixel, pixel, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        confirm(fixed, 5, [&] { fixed.mouseDoubleClickEvent(&doubleClick); return QString(); });
+        const SketchObject &reduced = fixed.sketches_.front();
+        require(reduced.geometricConstraints.size() == 2 && close(lengthOf(reduced, 0), 5)
+                && close(lengthOf(reduced, 2), 3.5) && close(radiusOf(reduced), 1.5)
+                && reduced.segments.at(0).first == pivot
+                && pointDistance(reduced.segments.at(2).first, pivot + 0.5 * (anchored.segments.at(2).first - pivot)) < 1e-7,
+                "il doppio clic riduce lo schizzo in proporzione attorno al punto fissato");
+
+        CadViewport radial;
+        radial.sketches_ = {initial};
+        radial.selectSketch(0);
+        radial.sketchSelections_ = {{1, 0}};
+        confirm(radial, 300, [&] { return radial.addConstraint(T::Radius); });
+        const SketchObject &radialResult = radial.sketches_.front();
+        require(radialResult.geometricConstraints.size() == 1 && close(radiusOf(radialResult), 300)
+                && close(lengthOf(radialResult, 0), 1000) && close(lengthOf(radialResult, 2), 700),
+                "anche il raggio usato come prima quota ridimensiona tutto lo schizzo");
+        for (const auto &point : radial.sketchGeometryPoints(radialResult))
+            require(QRectF(radial.rect()).contains(radial.projectWorldPoint(point)),
+                    "il profilo ingrandito di cento volte resta visibile");
+
+        CadViewport trapezoid;
+        SketchObject profile;
+        const QVector<QPointF> vertices{{-1.2, 0}, {-1.2, 1.74}, {2.2, 0.83}, {2.2, 0}};
+        for (int i = 0; i < vertices.size(); ++i)
+            profile.segments.append({vertices.at(i), vertices.at((i + 1) % vertices.size())});
+
+        GeometryRef xzPlane;
+        xzPlane.kind = 1;
+        xzPlane.index = 1;
+        require(appendLinkedSketchReference(profile, xzPlane, {}, {}, false, true, 100.0).isEmpty(),
+                "proiezione del piano XZ sul piano XY del trapezio");
+        require(profile.linkedReferences.size() == 1 && profile.linkedReferences.front()->entities.size() == 1,
+                "il piano XZ proietta un riferimento lineare");
+        const auto reference = profile.linkedReferences.front()->entities.front();
+        const auto projection = profile.segments.at(reference.element);
+        for (int i = 0; i < vertices.size(); ++i) {
+            const int next = (i + 1) % vertices.size();
+            profile.geometricConstraints.append(makeConstraint(profile, T::Coincident, {{0, i, 1}, {0, next, 0}}));
+        }
+        profile.geometricConstraints.append(makeConstraint(profile, T::Vertical, {{0, 0, -1}}));
+        profile.geometricConstraints.append(makeConstraint(profile, T::Vertical, {{0, 2, -1}}));
+        profile.geometricConstraints.append(makeConstraint(profile, T::Horizontal, {{0, 3, -1}}));
+        for (const int endpoint : {0, 1})
+            profile.geometricConstraints.append(makeConstraint(profile, T::PointOnCurve,
+                {{0, 3, endpoint}, {reference.kind, reference.element, -1}}));
+
+        trapezoid.sketches_ = {profile};
+        trapezoid.selectSketch(0);
+        trapezoid.history_.clear();
+        trapezoid.sketchSelections_ = {{0, 0}};
+        confirm(trapezoid, 50, [&] { return trapezoid.addConstraint(T::Distance); });
+
+        const auto &scaledProfile = trapezoid.sketches_.front();
+        require(scaledProfile.geometricConstraints.size() == profile.geometricConstraints.size() + 1
+                && close(lengthOf(scaledProfile, 0), 50),
+                "il solver applica la prima quota di 50 al lato sinistro");
+        const double factor = 50.0 / 1.74;
+        for (int i = 0; i < vertices.size(); ++i) {
+            const int next = (i + 1) % vertices.size();
+            const auto &edge = scaledProfile.segments.at(i);
+            require(pointDistance(edge.first, factor * vertices.at(i)) < 1e-7
+                    && pointDistance(edge.second, factor * vertices.at(next)) < 1e-7,
+                    "la prima quota scala tutti i vertici del trapezio rispetto all'origine e chiude il profilo");
+        }
+        require(scaledProfile.segments.at(reference.element) == projection
+                && isHiddenSketchReference(scaledProfile, reference.kind, reference.element),
+                "la proiezione associativa del piano rimane invariata e nascosta");
+        const auto scaledSegments = scaledProfile.segments;
+        trapezoid.undo();
+        require(trapezoid.sketches_.front().segments == profile.segments
+                && trapezoid.sketches_.front().geometricConstraints.size() == profile.geometricConstraints.size(),
+                "Undo ripristina il trapezio prima della prima quota");
+        trapezoid.redo();
+        require(trapezoid.sketches_.front().segments == scaledSegments,
+                "Redo ripristina la scala uniforme del trapezio");
+
+        SketchObject pinned = profile;
+        const int pinnedEdge = pinned.segments.size();
+        pinned.segments.append(projection);
+        for (const int endpoint : {0, 1})
+            pinned.geometricConstraints.append(makeConstraint(pinned, T::Coincident,
+                {{0, pinnedEdge, endpoint}, {reference.kind, reference.element, endpoint}}));
+        auto blockedDimension = makeConstraint(pinned, T::Distance, {{0, 0, -1}});
+        blockedDimension.value = 50;
+        blockedDimension.placed = true;
+        blockedDimension.placement = {-3, 1};
+        const auto pinnedSegments = pinned.segments;
+        require(!scaleSketchForFirstDimension(pinned, blockedDimension, QPointF())
+                && pinned.segments == pinnedSegments && blockedDimension.value == 50
+                && blockedDimension.placement == QPointF(-3, 1),
+                "due estremi ancorati alla proiezione impediscono l'omotetia senza alterare geometria o quota");
+    }
+
     static void constructionDimensionRegressions() {
         using namespace ForgeCad;
         const auto mouse=[](CadViewport &v,const QPointF &point,bool move=false) {
@@ -342,6 +542,9 @@ public:
 #include "test_preview_selection_state.h"
 #include "test_chamfer_preview_editing.h"
 #include "test_storyboard_panel_selection.h"
+#include "test_build_diagnostic_overlay.h"
+#include "test_sketch_build_diagnostic.h"
+#include "test_build_diagnostic_flow.h"
 #include "test_loft_projected_sections.h"
 #include "test_loft_points.h"
 #include "test_surface_mapping.h"
@@ -466,7 +669,13 @@ static void solidTrims() {
         panel->findChild<QComboBox *>("trimMode")->setCurrentIndex(0);
         auto *tool = panel->findChild<QComboBox *>("trimTool");
         tool->setCurrentIndex(tool->count() - 2); // Main XZ plane, through the middle of the source.
-        panel->findChild<QDialogButtonBox *>("trimButtons")->button(QDialogButtonBox::Ok)->click();
+        auto *part = panel->findChild<QComboBox *>("trimPart");
+        auto *ok = panel->findChild<QDialogButtonBox *>("trimButtons")->button(QDialogButtonBox::Ok);
+        require(part->count() == 2 && part->currentIndex() == -1 && !ok->isEnabled(),
+            "il taglio singolo richiede una parte scelta dall’utente");
+        part->setCurrentIndex(1);
+        require(ok->isEnabled() && gui->preview_.valid, "la scelta esplicita abilita la conferma");
+        ok->click();
     });
     gui->editBodyCallback_(3);
     clientOk(interactionError);
@@ -474,6 +683,9 @@ static void solidTrims() {
         && gui->extrusions().last().surfaceTool.targets.isEmpty(), "conversione a standard elimina dipendenze inattive");
     nextPanel([&](QDialog *panel) {
         require(panel->findChild<QComboBox *>("trimMode")->currentIndex() == 0, "modifica standard apre la modalita corretta");
+        auto *part = panel->findChild<QComboBox *>("trimPart");
+        require(part->currentIndex() == 1 && gui->trimPartKept_.count(true) == 1,
+            "la modifica di un taglio singolo ripristina la regione scelta");
         panel->findChild<QComboBox *>("trimMode")->setCurrentIndex(1);
         pick(panel, 0, limitRef(1, 2)); pick(panel, 1, limitRef(2, 7));
         panel->findChild<QDialogButtonBox *>("trimButtons")->button(QDialogButtonBox::Ok)->click();
@@ -485,7 +697,183 @@ static void solidTrims() {
         && gui->extrusions().last().featureId == featureId, "conversione da standard conserva identita e solo operandi attivi");
     gui->undo(); require(gui->extrusions().last().feature == BodyFeature::SheetTrim, "Undo conversione");
     gui->redo(); require(gui->extrusions().last().feature == BodyFeature::SurfaceTools, "Redo conversione");
-    std::cout << "PASS pannello Taglia superficie: comando, due modalita, picking, modifica, conversioni e Undo/Redo\n";
+    DocumentState sheets;
+    sheets.version.documentId = QUuid::createUuid();
+    const auto addSheet = [&](const QString &name, const Frame3 &frame) {
+        ExtrusionObject sheet;
+        sheet.feature = BodyFeature::Imported;
+        sheet.name = name;
+        sheet.importSource = name + QStringLiteral(".step");
+        ExchangeBody exchange;
+        exchange.name = name.toStdString();
+        exchange.body = makePlaneSheet(frame, 5.);
+        sheet.importData = QByteArray::fromStdString(writeStep({exchange}));
+        sheets.extrusions.append(std::move(sheet));
+    };
+    addSheet(QStringLiteral("Base"), Frame3());
+    addSheet(QStringLiteral("Parete X"), Frame3({}, {1,0,0}, {0,1,0}));
+    addSheet(QStringLiteral("Parete Y"), Frame3({}, {0,1,0}, {1,0,0}));
+    normalizeModelHistory(sheets);
+    QByteArray legacy70;
+    clientOk(encodeDocumentDefinition70ForHash(sheets, legacy70));
+    const auto hash70 = QCryptographicHash::hash(legacy70, QCryptographicHash::Sha256);
+    bool matches70 = false;
+    clientOk(drawingModelDefinitionMatches(sheets, hash70, matches70));
+    require(matches70, "le tavole collegate conservano l’impronta del formato 70");
+    DocumentState migrated70;
+    clientOk(decodeDocument(legacy70, migrated70));
+    require(migrated70.extrusions.size() == 3 && migrated70.extrusions.front().trimRegions.isEmpty(),
+        "il formato 70 mantiene le definizioni precedenti");
+    const auto checkTrimArea = [&](const ExtrusionObject &feature, double area) {
+        require(feature.forgeBody && feature.forgeBody->isSheet() && checkBody(*feature.forgeBody).empty(),
+            "risultato del rifilo valido");
+        double measured = 0.;
+        for (const auto face : feature.forgeBody->faces()) measured += faceArea(*feature.forgeBody, face);
+        require(std::fabs(measured - area) < 1e-7, "area del rifilo");
+    };
+    view.loadDocument(sheets);
+    ExtrusionObject multiple;
+    multiple.feature = BodyFeature::SheetTrim;
+    multiple.firstBody = 0;
+    multiple.secondBody = 1;
+    multiple.booleanTools = {2};
+    multiple.trimRegions = {{{-2.,-2.,0.}, {2.,2.,0.}}, {}, {}};
+    clientOk(view.createSheetTrim(multiple, QStringLiteral("Due regioni")));
+    checkTrimArea(view.extrusions().last(), 50.);
+    QByteArray untouched = "immutato";
+    require(!encodeDocumentDefinition70ForHash(view.currentDocument(), untouched).isEmpty() && untouched == "immutato",
+        "il rifilo multiplo non viene omesso durante una conversione legacy");
+    require(!view.isBodyVisibleInScene(0) && view.isBodyVisibleInScene(1) && view.isBodyVisibleInScene(2),
+        "rifilo multiplo unidirezionale consuma solo il sorgente");
+    require(bodyOperands(view.extrusions().last()) == QVector<int>({0,1,2}), "dipendenze di tutti gli strumenti");
+
+    gui->loadDocument(sheets);
+    gui->selection_ = {SceneObjectKind::Extrusion, 0, -1};
+    QVector<ForgeBody> operands;
+    for (const auto &sheet : gui->extrusions()) operands.append(sheet.forgeBody);
+    QString splitError;
+    const auto regions = forgeTrimSurfacePieces(operands, true, &splitError);
+    clientOk(splitError);
+    require(regions.size() == 3 && std::all_of(regions.begin(), regions.end(),
+        [](const auto &parts) { return parts.size() == 4; }), "tre corpi suddivisi in quattro regioni ciascuno");
+    const std::array<SpatialPoint,3> keeps{{{2.,2.,0.}, {0.,2.,2.}, {2.,0.,2.}}};
+    nextPanel([&](QDialog *panel) {
+        panel->findChild<QComboBox *>("trimMode")->setCurrentIndex(2);
+        auto *tools = panel->findChild<QListWidget *>("trimMultipleTools");
+        auto *parts = panel->findChild<QTreeWidget *>("trimRegions");
+        auto *ok = panel->findChild<QDialogButtonBox *>("trimButtons")->button(QDialogButtonBox::Ok);
+        require(tools && parts && tools->isVisibleTo(panel) && !parts->isVisibleTo(panel), "prima si scelgono i corpi");
+        auto *pickTools = tools->parentWidget()->findChild<QPushButton *>();
+        pickTools->click();
+        require(gui->referencePicking() && !gui->isBodyVisibleInScene(0)
+            && gui->isBodyVisibleInScene(1) && gui->isBodyVisibleInScene(2),
+            "picking degli strumenti esclude la superficie sorgente");
+        auto *finish = panel->findChild<QPushButton *>("trimFinishToolPick");
+        require(finish && finish->isVisibleTo(panel) && finish->text() == QStringLiteral("Mostra suddivisione")
+            && !ok->isVisibleTo(panel) && !ok->isEnabled(),
+            "Mostra suddivisione sostituisce Conferma nel piè del pannello durante la scelta dei corpi");
+        for (int body : {1, 2}) {
+            GeometryRef ref;
+            ref.kind = 5;
+            ref.index = body;
+            gui->refPickFinished_(true, ref);
+            require(gui->referencePicking() && !parts->isVisibleTo(panel) && gui->trimPartPickDisplays_.isEmpty(),
+                "durante il picking degli strumenti l’elenco delle parti resta nascosto");
+        }
+        finish->click();
+        require(!gui->referencePicking() && pickTools->text() == QStringLiteral("Dalla vista")
+            && !finish->isVisibleTo(panel) && ok->isVisibleTo(panel) && parts->isVisibleTo(panel) && !gui->preview_.valid && !ok->isEnabled()
+            && !gui->isBodyVisibleInScene(0) && gui->isBodyVisibleInScene(1) && gui->isBodyVisibleInScene(2),
+            "Mostra suddivisione apre le regioni del sorgente e attende una scelta");
+        panel->findChild<QCheckBox *>("trimBoth")->setChecked(true);
+        require(parts->topLevelItemCount() == 3 && gui->trimPartPickDisplays_.size() == 12,
+            "picking delle parti di tutti i corpi");
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < parts->topLevelItem(i)->childCount(); ++j)
+                require(parts->topLevelItem(i)->child(j)->checkState(0) == Qt::Unchecked,
+                    "nessuna regione viene preselezionata dal rifilo reciproco");
+        require(gui->trimPartKept_.count(true) == 0 && !ok->isEnabled(),
+            "la suddivisione è visibile e il viewport attende la prima scelta");
+        auto *focus = panel->findChild<QComboBox *>("trimRegionFocus");
+        require(focus && focus->count() == 4, "filtro per tutti gli operandi");
+        gui->fitView({{-5,-5,-5}, {5,5,5}});
+        for (int i = 0; i < 3; ++i) {
+            QVector<ForgeBody> pieces;
+            for (const auto &piece : regions[i]) pieces.append(piece.geometry);
+            const int part = forgeTrimRegionIndices(pieces, {keeps[i]}).front();
+            focus->setCurrentIndex(focus->findData(i));
+            gui->setViewNormal(i == 0 ? 0 : 3 - i);
+            const auto &p = keeps[i];
+            const QPoint cursor = gui->projectWorldPoint(QVector3D(p.x, p.y, p.z)).toPoint();
+            gui->updateHover(cursor);
+            const int hover = gui->trimPartHover_;
+            require(hover >= 0 && gui->trimPartPickSides_.at(hover) == i && gui->trimPartPickIndices_.at(hover) == part,
+                "l'hover riconosce la regione del corpo isolato");
+            QMouseEvent press(QEvent::MouseButtonPress, QPointF(cursor), QPointF(cursor), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            gui->mousePressEvent(&press);
+            QMouseEvent release(QEvent::MouseButtonRelease, QPointF(cursor), QPointF(cursor), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            gui->mouseReleaseEvent(&release);
+            require(parts->topLevelItem(i)->child(part)->checkState(0) == Qt::Checked
+                && gui->trimPartKept_.testBit(hover), "il clic seleziona e colora la stessa regione dell’hover");
+        }
+        focus->setCurrentIndex(0);
+        pickTools->click();
+        require(!parts->isVisibleTo(panel) && !ok->isEnabled(), "riaprire la scelta dei corpi sospende le regioni");
+        QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+        gui->keyPressEvent(&escape);
+        require(!gui->referencePicking() && parts->isVisibleTo(panel) && gui->trimPartKept_.count(true) == 3
+            && ok->isEnabled() && gui->preview_.valid && gui->preview_.geometry,
+            "Esc mostra la stessa suddivisione e ripristina le tre spunte esplicite");
+        require(!gui->isBodyVisibleInScene(0) && !gui->isBodyVisibleInScene(1) && !gui->isBodyVisibleInScene(2),
+            "le superfici intere non si sovrappongono alle regioni mantenute");
+        panel->findChild<QDialogButtonBox *>("trimButtons")->button(QDialogButtonBox::Ok)->click();
+    });
+    action->trigger();
+    clientOk(interactionError);
+    require(gui->extrusions().size() == 4 && gui->extrusions().last().trimBoth, "rifilo reciproco multiplo confermato");
+    require(!gui->isBodyVisibleInScene(0) && !gui->isBodyVisibleInScene(1) && !gui->isBodyVisibleInScene(2),
+        "rifilo reciproco consuma tutti i partecipanti");
+    checkTrimArea(gui->extrusions().last(), 75.);
+    QByteArray trimBytes;
+    DocumentState trimDocument;
+    clientOk(encodeDocument(gui->currentDocument(), trimBytes, false));
+    clientOk(decodeDocument(trimBytes, trimDocument));
+    require(trimDocument.extrusions.last().trimRegions.size() == 3 &&
+        trimDocument.extrusions.last().booleanTools == QVector<int>({2}), "persistenza di regioni e strumenti");
+    CadViewport reopened;
+    reopened.loadDocument(trimDocument);
+    checkTrimArea(reopened.extrusions().last(), 75.);
+    gui->undo(); require(gui->extrusions().size() == 3 && gui->isBodyVisibleInScene(2), "Undo rifilo multiplo");
+    gui->redo(); checkTrimArea(gui->extrusions().last(), 75.);
+    clientOk(gui->createScale(3, 1.25, 0, {}, QStringLiteral("Scala successiva")));
+    require(gui->isBodyVisibleInScene(4), "stadio successivo visibile prima della modifica");
+    nextPanel([&](QDialog *panel) {
+        require(panel->findChild<QComboBox *>("trimMode")->currentIndex() == 2, "modifica riapre il rifilo multiplo");
+        auto *parts = panel->findChild<QTreeWidget *>("trimRegions");
+        require(parts->topLevelItemCount() == 3, "gruppi ripristinati nel pannello");
+        require(!gui->isBodyVisibleInScene(0) && !gui->isBodyVisibleInScene(3) && !gui->isBodyVisibleInScene(4)
+            && gui->trimPartPickDisplays_.size() == 12,
+            "in modifica sono visibili l’anteprima e le regioni, senza gli stadi sovrapposti");
+        for (int i = 0; i < 3; ++i) {
+            int checked = 0;
+            for (int j = 0; j < parts->topLevelItem(i)->childCount(); ++j)
+                if (parts->topLevelItem(i)->child(j)->checkState(0) == Qt::Checked) ++checked;
+            require(checked == 1, "selezione del corpo ripristinata");
+        }
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < parts->topLevelItem(i)->childCount(); ++j)
+                parts->topLevelItem(i)->child(j)->setCheckState(0, Qt::Unchecked);
+        require(!gui->preview_.valid && gui->trimPartKept_.count(true) == 0
+            && !gui->isBodyVisibleInScene(0) && !gui->isBodyVisibleInScene(1) && !gui->isBodyVisibleInScene(2)
+            && !gui->isBodyVisibleInScene(3) && !gui->isBodyVisibleInScene(4),
+            "senza spunte restano solo le regioni, anche in modifica storica");
+        panel->reject();
+    });
+    gui->editBodyCallback_(3);
+    clientOk(interactionError);
+    require(gui->isBodyVisibleInScene(4) && !gui->isBodyVisibleInScene(0),
+        "l’annullamento ripristina lo stadio finale");
+    std::cout << "PASS Taglia superficie: modi legacy e rifilo multiplo, picking, anteprima, salvataggio e Undo/Redo\n";
 
 }
 
@@ -580,9 +968,56 @@ static void solidTrims() {
             require(expected, qPrintable(QStringLiteral("azione Estrusione: %1; message=%2 informative=%3 icon=%4 panel=%5 timeout=%6 text=%7")
                 .arg(QString::fromUtf8(scenario.name)).arg(messageSeen).arg(informative).arg(observedIcon).arg(panelSeen).arg(timedOut).arg(observedMessage)));
         }
+        DocumentState document;
+        document.sketches.append(valid);
+        document.sketches.last().name = QStringLiteral("Profilo conferma da menu");
+        CadViewport direct;
+        direct.loadDocument(document);
+        ExtrusionObject definition;
+        definition.sketchIndex = 0;
+        definition.distance = 1.;
+        require(direct.createExtrusion(definition, QStringLiteral("Estrusione diretta")).isEmpty(),
+                "creazione di controllo senza anteprima");
+        const auto &expected = direct.extrusions().first();
+        view->loadDocument(document);
+        view->selection_ = {SceneObjectKind::Sketch, 0, -1};
+        ForgeBody ready;
+        QElapsedTimer wait;
+        wait.start();
+        QTimer confirm;
+        QObject::connect(&confirm, &QTimer::timeout, &window, [&] {
+            for (auto *dialog : window.findChildren<QDialog *>()) {
+                if (!dialog->isVisible() || !dialog->findChild<QComboBox *>(QStringLiteral("extrusionExtent"))) continue;
+                if (view->preview_.valid && !view->previewRunning_) {
+                    ready = view->preview_.geometry;
+                    confirm.stop();
+                    dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+                    if (view->extrusions().isEmpty()) dialog->reject();
+                } else if (!view->previewError().isEmpty() || wait.elapsed() > 5000) {
+                    confirm.stop();
+                    dialog->reject();
+                }
+                return;
+            }
+        });
+        confirm.start(10);
+        extrude->trigger();
+        require(ready && view->extrusions().size() == 1, "menu Estrusione conferma l'anteprima pronta");
+        const auto &created = view->extrusions().first();
+        require(created.forgeBody == ready, "conferma da menu conserva il B-rep dell'anteprima");
+        require(created.featureId == expected.featureId && !created.cachedGeometry
+                    && Kernel::writeBodyBinary(*created.forgeBody) == Kernel::writeBodyBinary(*expected.forgeBody),
+                "conferma e creazione diretta conservano identita e B-rep equivalenti");
+        const auto createdNames = elementNamesOf(*created.forgeBody);
+        const auto expectedNames = elementNamesOf(*expected.forgeBody);
+        require(createdNames && expectedNames && createdNames->faces == expectedNames->faces
+                    && createdNames->edges == expectedNames->edges && createdNames->vertices == expectedNames->vertices,
+                "promozione registra la genealogia con i nomi persistenti della creazione diretta");
         std::cout << "PASS extrusion action preconditions: warnings and valid active/selected profiles" << std::endl;
     }
+#include "test_primitive_scale_preview.h"
     static void previewPerformance(bool gl = false) {
+        primitiveScaleCreationFromMenu();
         using namespace ForgeCad;using namespace ForgeCad::Kernel;
         const auto settle=[](CadViewport &view) {
             QElapsedTimer timer;timer.start();
@@ -769,8 +1204,12 @@ static void solidTrims() {
             {
                 const SketchViewUnlock unlock(&view);
                 view.requestPreview(definition);settle(view);
+                const auto ready = view.preview_.geometry;
                 const QString error=revolution?view.createBody(definition):view.createExtrusion(definition,QStringLiteral("Estrusione confermata"));
                 require(error.isEmpty(),"conferma della feature da schizzo riuscita");
+                if (!revolution)
+                    require(view.extrusions_.constLast().forgeBody == ready,
+                            "estrusione a distanza riusa il B-rep anche con fusione manuale");
                 view.clearPreview();
             }
             const int result=view.extrusions_.size()-1;
@@ -1434,7 +1873,7 @@ static void solidTrims() {
         std::cout << "Reference list highlight PASS\n";
     }
 
-    static void variablePatternPanel() {
+    static void variablePatternPanel(bool whole) {
         using namespace ForgeCad;
         using namespace ForgeCad::Kernel;
         DocumentState document;
@@ -1447,13 +1886,14 @@ static void solidTrims() {
         SketchConstraint diameter; diameter.type=ConstraintType::Diameter; diameter.first={1,0,-1}; diameter.value=4;
         sketch.geometricConstraints={diameter}; document.sketches={sketch};
         ExtrusionObject boss; boss.name=QStringLiteral("Estrusione da ripetere"); boss.sketchIndex=0;
-        boss.distance=5; boss.mergeOperation=1; boss.mergeBodies={0};
+        boss.distance=5;
+        if (!whole) { boss.mergeOperation=1; boss.mergeBodies={0}; }
         document.extrusions={base,boss};
         QMainWindow window;
         auto *view=new CadViewport(&window); window.setCentralWidget(view);
         window.resize(1280,800); view->loadDocument(document); window.show();
         ExtrusionObject definition; definition.feature=BodyFeature::Pattern; definition.firstBody=1;
-        definition.name=QStringLiteral("Altezze variabili"); definition.pattern.count=4; definition.pattern.spacing=15; definition.pattern.featureOnly=true;
+        definition.name=QStringLiteral("Altezze variabili"); definition.pattern.count=4; definition.pattern.spacing=15; definition.pattern.featureOnly=!whole;
         definition.pattern.refs={{2,0,{},{}}};
         std::exception_ptr failure;
         QTimer::singleShot(100,&window,[&] {
@@ -1465,10 +1905,18 @@ static void solidTrims() {
                 require(combo->count()==1 && combo->itemText(0).contains(QStringLiteral("Distanza")),"solo parametri della funzione");
                 require(view->parameterDimensions_.size()==1 && !view->sketchMode_,"quota visibile fuori modifica schizzo");
                 auto *what=dialog->findChild<QComboBox *>("patternWhat");
-                what->setCurrentIndex(0);
-                require(view->parameterDimensions_.isEmpty() && !dialog->findChild<QWidget *>("patternVariations")->isEnabled(),"corpo disabilita variazione e quote");
-                what->setCurrentIndex(1);
-                require(view->parameterDimensions_.size()==1,"funzione ripristina quote");
+                require(what && what->currentIndex() == (whole ? 0 : 1), "modo della ripetizione");
+                if (!whole) {
+                    what->setCurrentIndex(0);
+                    require(view->parameterDimensions_.size()==1 && dialog->findChild<QWidget *>("patternVariations")->isEnabled(),
+                            "quote accessibili nel modo corpo");
+                    what->setCurrentIndex(1);
+                }
+                auto *kind=dialog->findChild<QComboBox *>("patternKind");
+                kind->setCurrentIndex(2);
+                require(view->parameterDimensions_.isEmpty(), "specchio mantiene quote temporanee");
+                kind->setCurrentIndex(0);
+                require(view->parameterDimensions_.size()==1,"lineare ripristina quote");
                 dialog->resize(600,700); dialog->move(view->width()-dialog->width(),40);
                 view->setViewPreset(0); view->fitAll(); QApplication::processEvents();
                 CadViewport::DimensionGraphic graphic;
@@ -1517,7 +1965,8 @@ static void solidTrims() {
             }
             require(std::abs(volume-expected)<1e-7,"volume del risultato del pannello");
         };
-        require(view->extrusions_[2].pattern.variations.size()==1,"pannello salva la variazione"); check(1400+157.5*M_PI);
+        require(view->extrusions_[2].pattern.variations.size()==1 && view->extrusions_[2].pattern.featureOnly==!whole,
+                "pannello salva il modo e la variazione"); check(1400+157.5*M_PI);
         auto edited=view->extrusions_[2];edited.pattern.variations[0].increment=2;
         require(!view->unchangedFeature(edited,2),"incremento invalida la cache anteprima");
         require(view->updateBody(2,edited).isEmpty(),"modifica incremento nella storia");check(1400+270*M_PI);
@@ -4132,6 +4581,105 @@ static void solidTrims() {
         for(auto &p:sketch.curves[0].controlPoints) p+=QPointF(0,2);
         require(solveSketch(sketch).ok && std::fabs(sketch.curves[1].controlPoints[0].y()-3.2)<1e-7,"offset segue sorgente modificata");
         require(constraintError(sketch,sketch.geometricConstraints[0])<1e-7,"residuo offset");
+        {
+            using namespace Kernel;
+            // Il fianco di un settore estruso conserva un bordo circolare
+            // aperto. La proiezione e l'offset devono restare archi esatti.
+            constexpr double radius = 5.0, offsetDistance = 0.5;
+            SketchObject sector;
+            CurveObject arc;
+            arc.tool = DrawingTool::Arc;
+            arc.controlPoints = {{0, 0}, {radius, 0}, {0, radius}};
+            sector.curves = {arc};
+            sector.segments = {{{0, radius}, {0, 0}}, {{0, 0}, {radius, 0}}};
+            ExtrusionObject source;
+            source.feature = BodyFeature::Imported;
+            source.featureId = 901;
+            source.solid = true;
+            source.name = QStringLiteral("Settore estruso");
+            QString error;
+            source.forgeBody = forgeExtrusion(sector, 2.0, &error);
+            require(source.forgeBody && error.isEmpty(), "settore estruso con bordo circolare");
+            const auto &body = *source.forgeBody;
+            GeometryRef ref;
+            ref.kind = 4;
+            ref.index = 0;
+            ref.featureId = source.featureId;
+            bool found = false;
+            for (const auto id : body.edges()) {
+                const auto &edge = body.edge(id);
+                const double t = 0.5 * (edge.range.lo + edge.range.hi);
+                const Vec3 middle = edge.curve->point(t);
+                if (std::abs(middle.z()) < 1e-10 && middle.x() > 1.0 && middle.y() > 1.0) {
+                    ref.point = edgeReference(body, id, middle);
+                    found = true;
+                    break;
+                }
+            }
+            require(found, "bordo circolare sul piano dello schizzo");
+
+            CadViewport view;
+            view.extrusions_ = {source};
+            SketchObject target;
+            target.storyId = 902;
+            view.sketches_ = {target};
+            view.selectSketch(0);
+            view.setSketchOffsetSelectionCallback([] {});
+            QVector<SketchEntity> selected;
+            require(appendLinkedSketchReference(view.sketches_[0], ref, view.sketches_, view.extrusions_,
+                        false, true, 100.0, &selected, true).isEmpty()
+                    && selected.size() == 1 && selected.front().kind == 1
+                    && view.sketches_[0].curves[selected.front().index].tool == DrawingTool::Arc,
+                    "proiezione associativa del bordo come arco");
+            view.sketchSelections_ = {{1, selected.front().index}};
+            SketchOffset arcOffset;
+            arcOffset.distance = offsetDistance;
+            arcOffset.dimensioned = true;
+            require(view.applySketchOffset(arcOffset).isEmpty(), "conferma offset associativo con quota");
+            view.setSketchOffsetSelectionCallback({});
+
+            const auto checkedArc = [&](const SketchObject &s) {
+                require(s.referenceError.isEmpty() && s.linkedReferences.size() == 1 && s.linkedReferences.front()
+                        && s.linkedReferences.front()->source.featureId == ref.featureId
+                        && s.linkedReferences.front()->error.isEmpty(),
+                        "collegamento al bordo conservato");
+                require(s.geometricConstraints.size() == 1, "quota unica conservata");
+                const auto &quota = s.geometricConstraints.front();
+                require(quota.type == ConstraintType::Offset && quota.value == offsetDistance
+                        && quota.offset.sources == s.linkedReferences.front()->entities
+                        && quota.offset.copies.size() == 1 && quota.offset.copies.front().kind == 1,
+                        "quota offset conserva sorgente e copia");
+                const auto &copy = s.curves.at(quota.offset.copies.front().element);
+                const auto geometry = curveGeometry(copy);
+                require(copy.tool == DrawingTool::Arc && geometry.size() == 1
+                        && geometry.front().curve->type() == CurveType::Circle,
+                        "geometria esatta dell'arco disponibile");
+                const auto &circle = static_cast<const Circle<2> &>(*geometry.front().curve);
+                require(norm(circle.center()) < 1e-10
+                        && std::abs(std::abs(circle.radius() - radius) - offsetDistance) < 1e-10
+                        && std::abs(geometry.front().range.length() - kHalfPi) < 1e-10,
+                        "arco concentrico alla distanza e con l'apertura attese");
+                require(copy.samples.size() >= 2 && copy.numericallyValid,
+                        "arco offset conserva i campioni per la vista");
+                return copy.controlPoints;
+            };
+            const auto original = checkedArc(view.sketches_.front());
+            const auto distanceShown = [&] {
+                const auto &measurement = view.offsetDimensionMeasurement(view.sketches_.front(), 0);
+                require(measurement.hasPoints, "quota offset con punti di attacco");
+                return QLineF(measurement.source, measurement.result).length();
+            };
+            require(std::abs(distanceShown() - offsetDistance) < 1e-10, "quota coerente dopo conferma");
+            require(view.setConstraintValue(0, .75).isEmpty(), "modifica della quota offset");
+            require(std::abs(distanceShown() - .75) < 1e-10, "cache della quota aggiornata dopo modifica");
+            require(view.setConstraintValue(0, offsetDistance).isEmpty(), "ripristino quota iniziale");
+            view.endSketchMode();
+            require(checkedArc(view.sketches_.front()) == original, "arco invariato all'uscita dallo schizzo");
+            view.selectSketch(0);
+            require(checkedArc(view.sketches_.front()) == original, "arco invariato al rientro nello schizzo");
+            view.endSketchMode();
+        }
+
         // Fallimento atomico quando un cerchio collassa.
         SketchObject circular;CurveObject circle;circle.tool=DrawingTool::Circle;circle.controlPoints={{0,0},{2,0}};circular.curves={circle};
         offset.reverse=true;offset.distance=.5;
@@ -5377,6 +5925,35 @@ static void solidTrims() {
         ExtrusionObject thicken;
         thicken.feature = BodyFeature::Thicken; thicken.firstBody = 0; thicken.distance = 1.5; thicken.name = QStringLiteral("Spessore 1");
         thicken.offsetFaces = {faceReference(*base, top, Vec3(10.0, 5.0, 5.0))};
+        {
+            auto d = thicken;
+            d.feature = BodyFeature::SurfaceOffset;
+            viewport.requestPreview(d);
+            require(viewport.offsetDirection_ && !viewport.offsetDirection_->symmetric
+                    && viewport.offsetDirection_->axis.z() > .99f
+                    && (viewport.offsetDirection_->origin - QVector3D(10, 5, 5)).length() < 1e-5f,
+                    "freccia di offset sulla faccia selezionata");
+            d.distance = -d.distance;
+            viewport.requestPreview(d);
+            require(viewport.offsetDirection_ && viewport.offsetDirection_->axis.z() < -.99f,
+                    "offset negativo inverte la freccia");
+            d.distance = 0;
+            viewport.requestPreview(d);
+            require(!viewport.offsetDirection_, "offset nullo senza verso");
+            d = thicken;
+            d.thickenDirection.kind = 2;
+            d.thickenDirection.index = 0;
+            d.thickenSide = 1;
+            viewport.requestPreview(d);
+            require(viewport.offsetDirection_ && viewport.offsetDirection_->axis.x() < -.99f,
+                    "spessore opposto all'asse X scelto");
+            d.thickenSide = 2;
+            viewport.requestPreview(d);
+            require(viewport.offsetDirection_ && viewport.offsetDirection_->symmetric
+                    && viewport.offsetDirection_->axis.x() > .99f, "due versi per lo spessore simmetrico");
+            viewport.clearPreview();
+            require(!viewport.offsetDirection_, "annullamento pulisce la freccia");
+        }
         require(viewport.createBody(thicken).isEmpty(), "spessore della faccia superiore");
         const auto volume = [&] { return massProperties(*viewport.extrusions_.at(1).forgeBody).volume; };
         const auto zmin = [&] {
@@ -5412,6 +5989,9 @@ static void solidTrims() {
             require(plate.createBody(keepTop).isEmpty() && plate.extrusions_.at(1).forgeBody->isSheet(), "lamina della faccia superiore");
             ExtrusionObject whole;
             whole.feature = BodyFeature::Thicken; whole.firstBody = 1; whole.distance = 2.0; whole.thickenSide = 1; whole.name = QStringLiteral("Spessore lamina");
+            plate.requestPreview(whole);
+            require(plate.offsetDirection_ && plate.offsetDirection_->axis.z() < -.99f,
+                    "freccia verso interno su tutta la lamina");
             require(plate.createBody(whole).isEmpty(), "spessore di tutta la lamina");
             const ExtrusionObject &solid = plate.extrusions_.at(2);
             require(solid.solid && std::fabs(massProperties(*solid.forgeBody).volume - 400.0) < 1e-9, "lamina ispessita verso il basso");
@@ -5458,7 +6038,7 @@ static void solidTrims() {
             result.name = QStringLiteral("Spessore dal pannello");
             return view->createBody(result);
         });
-        require(previewReady, "anteprima dello spessore nel pannello");
+        require(previewReady && !view->offsetDirection_, "anteprima dello spessore e pulizia alla chiusura del pannello");
         require(made && view->extrusions_.size() == 3 && std::fabs(massProperties(*view->extrusions_.last().forgeBody).volume - 100.0) < 1e-9
                 && !view->interactionLocked(), "spessore creato dal pannello");
         std::cout << "PASS spessore: facce, lato, direzione, undo/redo, errore, persistenza e pannello" << std::endl;
@@ -6767,6 +7347,28 @@ static void solidTrims() {
         };
         click();
         require(side == 1 && part == 0, "clic senza hover sul corpo nascosto dall'anteprima");
+        v.setTrimPartPickCallback(0, regions, 1, regions,
+            [&](int s, int p, EdgePoint) { side = s; part = p; });
+        click();
+        require(side == 0 && part == 0, "nella vista d’insieme le regioni coincidenti hanno un ordine stabile");
+        v.setTrimPartView(1, {{}, {0}});
+        v.updateHover(cursor);
+        require(v.trimPartHover_ == 2 && v.trimPartKept_.testBit(2), "isolamento sul corpo dietro la stessa regione");
+        click();
+        require(side == 1 && part == 0, "a pari proiezione il clic seleziona il corpo isolato");
+        const QVector3D front = v.viewerDirection() * 2.f;
+        ExtrusionObject cover = b;
+        cover.forgeBody = std::make_shared<const Body>(makePlaneSheet(
+            Frame3({front.x(), front.y(), front.z()}, {1, 0, 0}, {0, 1, 0}), 5));
+        forgeTessellate(*cover.forgeBody, 2, cover.display);
+        v.extrusions_.append(cover);
+        v.setTrimPartView(-1, {{}, {0}});
+        v.updateHover(cursor);
+        require(v.isBodyVisibleInScene(2) && v.trimPartHover_ == -1, "il corpo opaco copre la regione sottostante");
+        v.setTrimPartView(1, {{}, {0}});
+        v.updateHover(cursor);
+        require(!v.isBodyVisibleInScene(2) && v.trimPartHover_ == 2, "l'isolamento scopre la stessa regione");
+        v.extrusions_.removeLast();
         v.selection_ = {SceneObjectKind::Extrusion, 0};
         v.setTrimPartPickCallback(0, {}, 1, {}, [](int, int, EdgePoint) {});
         click(); click(Qt::ControlModifier);
@@ -6803,8 +7405,12 @@ static void solidTrims() {
                     require(!v.refPicking_ && bool(v.trimPartPickFinished_), "ritorno alla scelta delle parti");
                     if (reverse) {
                         dialog->findChild<QCheckBox *>(QStringLiteral("trimBoth"))->setChecked(false);
-                        require(partBox->count() == 2 && toolPartBox->count() == 0 && v.preview_.valid,
-                                "taglio singolo disponibile dopo errore del secondo corpo");
+                        require(partBox->count() == 2 && toolPartBox->count() == 0 && partBox->currentIndex() == -1
+                                    && !v.preview_.valid && v.trimPartKept_.count(true) == 0,
+                                "taglio singolo disponibile in attesa della scelta della regione");
+                        partBox->setCurrentIndex(1);
+                        require(v.preview_.valid && v.trimPartKept_.count(true) == 1,
+                                "anteprima singola solo dopo scelta esplicita");
                     }
                     inspected = true;
                 } catch (...) { failure = std::current_exception(); }
@@ -11506,7 +12112,10 @@ int main(int argc, char **argv) {
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--pattern-variation-panel"))) {
-        try { ViewportInteractionTest::variablePatternPanel(); }
+        try {
+            ViewportInteractionTest::variablePatternPanel(false);
+            ViewportInteractionTest::variablePatternPanel(true);
+        }
         catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         return 0;
     }
@@ -11757,7 +12366,7 @@ int main(int argc, char **argv) {
         return 0;
     }
     if(app.arguments().contains(QStringLiteral("--construction-dimensions"))){
-        try{ViewportInteractionTest::constructionDimensionRegressions();}
+        try{ViewportInteractionTest::firstSketchDimensionScale(); ViewportInteractionTest::constructionDimensionRegressions();}
         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
         return 0;
     }
@@ -11837,6 +12446,21 @@ int main(int argc, char **argv) {
     }
     if (app.arguments().contains(QStringLiteral("--storyboard-panel-selection"))) {
         try { ViewportInteractionTest::storyboardPanelSelection(); ViewportInteractionTest::loftFailureDiagnostics(); ViewportInteractionTest::mirrorDeleteOnce(); }
+        catch (const std::exception &error) { std::cerr << error.what() << '\n'; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--build-diagnostic-flow"))) {
+        try { ViewportInteractionTest::buildDiagnosticFlow(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--build-diagnostic-overlay"))) {
+        try { ViewportInteractionTest::buildDiagnosticOverlay(); }
+        catch (const std::exception &error) { std::cerr << error.what() << '\n'; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--sketch-build-diagnostic"))) {
+        try { ViewportInteractionTest::sketchBuildDiagnostic(); }
         catch (const std::exception &error) { std::cerr << error.what() << '\n'; return 1; }
         return 0;
     }

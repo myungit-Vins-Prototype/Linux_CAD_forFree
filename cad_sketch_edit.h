@@ -120,6 +120,11 @@ SketchEditResult moveSketchEntities(SketchObject &sketch, const QVector<SketchEn
 // (le copie si spostano con il risolutore), altrimenti le copie si rifanno.
 SketchEditResult editSketchPattern(SketchObject &sketch, int constraint, const SketchPatternData &values);
 
+// Prima quota lineare: ridimensiona lo schizzo attorno al centro compatibile
+// con i vincoli e riposiziona le annotazioni. Se non applicabile, non modifica
+// lo schizzo ne' la quota, che puo' essere risolta con il procedimento normale.
+bool scaleSketchForFirstDimension(SketchObject &sketch, SketchConstraint &dimension, const QPointF &preferredCenter);
+
 // Elimina segmenti e curve (con i loro vincoli e le linee di costruzione) e
 // restituisce la mappa dei segmenti vecchio -> nuovo indice (-1 eliminato).
 QVector<int> removeSketchEntities(SketchObject &sketch, const QSet<int> &segments, const QSet<int> &curves);

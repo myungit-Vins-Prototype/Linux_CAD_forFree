@@ -4,12 +4,67 @@
 #include "cad_sketch_reference_usage.h"
 #include <QMap>
 
+namespace {
+
+ForgeCad::BuildDiagnostic sketchDiagnostic(const SketchObject &sketch, const QVector<ConstraintRef> &refs, const QString &context,
+                                           const QVector<ForgeCad::PointTarget> &targets = {}) {
+    ForgeCad::BuildDiagnostic diagnostic;
+    diagnostic.context = context;
+    std::optional<ForgeCad::Kernel::Frame3> frame;
+    try {
+        frame = ForgeCad::sketchAxes(sketch);
+    } catch (const std::logic_error &) {
+        return diagnostic;
+    }
+    const auto append = [&](const QVector<QPointF> &points) {
+        if (points.isEmpty()) return;
+        QVector<QVector3D> path;
+        path.reserve(points.size());
+        for (const QPointF &point : points) {
+            const auto world = frame->toGlobal(ForgeCad::Kernel::Vec3(point.x(), point.y(), 0.0));
+            path.append(QVector3D(float(world.x()), float(world.y()), float(world.z())));
+        }
+        diagnostic.paths.append(std::move(path));
+    };
+    for (const auto &target : targets)
+        if (std::isfinite(target.position.x()) && std::isfinite(target.position.y()))
+            append({target.position});
+    for (const ConstraintRef &ref : refs) {
+        if (ref.kind == 2 && ref.element == 0) {
+            append({QPointF()});
+        } else if (ref.kind == 0 && ref.element >= 0 && ref.element < sketch.segments.size()) {
+            const auto &segment = sketch.segments.at(ref.element);
+            if (ref.point == 0) append({segment.first});
+            else if (ref.point == 1) append({segment.second});
+            else if (ref.point < 0) append({segment.first, segment.second});
+        } else if (ref.kind == 1 && ref.element >= 0 && ref.element < sketch.curves.size()) {
+            const auto &curve = sketch.curves.at(ref.element);
+            if (isHandlePoint(ref.point)) {
+                const int handle = ref.point - kHandlePoint;
+                if (handle / 2 < curve.tangentHandles.size()) {
+                    const auto &pair = curve.tangentHandles.at(handle / 2);
+                    append({handle % 2 == 0 ? pair.first : pair.second});
+                }
+            } else if (ref.point >= 0 && ref.point < curve.controlPoints.size()) {
+                append({curve.controlPoints.at(ref.point)});
+            } else if (ref.point < 0) {
+                append(curve.samples);
+                if (curve.samples.isEmpty() && curve.tool == DrawingTool::Converted && curve.degree == 0)
+                    for (const QPointF &endpoint : curve.controlPoints) append({endpoint});
+            }
+        }
+    }
+    return diagnostic;
+}
+
+} // namespace
 
 void CadViewport::setSplineShapeOptions(const ForgeCad::SplineShapeOptions &options) { splineShapeOptions_ = options; update(); }
 
 void CadViewport::setDrawingTool(DrawingTool tool) {
     if (tool == DrawingTool::Line) tool = DrawingTool::Polyline; // alias dei vecchi comandi personalizzati
     const bool changed = drawingTool_ != tool;
+    if (sketchMode_ && changed && preview_.key.isEmpty()) clearBuildDiagnostic();
     if (changed && tool == DrawingTool::Select) {
         sketchSelections_.clear(); selectedPoints_.clear();
     }
@@ -51,9 +106,9 @@ QString CadViewport::editSegmentDimension(int index ) {
     if (index < 0)
         for (const SketchElementSelection &element : sketchSelections_)
             if (element.kind == 1) return editCurveDimension(element.index);
-    SketchObject &sketch = sketches_[activeSketch_];
-    if (index < 0 || index >= sketch.segments.size()) return QStringLiteral("Seleziona prima un segmento dello schizzo.");
-    const SketchSegment segment = sketch.segments.at(index);
+    const SketchObject &active = sketches_.at(activeSketch_);
+    if (index < 0 || index >= active.segments.size()) return QStringLiteral("Seleziona prima un segmento dello schizzo.");
+    const SketchSegment segment = active.segments.at(index);
     const QPointF delta = segment.second - segment.first;
     QDialog dialog(this);
     dialog.setWindowTitle(QStringLiteral("Quota del segmento"));
@@ -67,41 +122,45 @@ QString CadViewport::editSegmentDimension(int index ) {
     angleBox->setRange(-360.0, 360.0);
     const double oldAngle = std::atan2(delta.y(), delta.x()) * 180.0 / M_PI;
     angleBox->setValue(oldAngle);
+    const double initialAngle = angleBox->value();
     angleBox->setSuffix(QStringLiteral(" \u00B0"));
     form->addRow(QStringLiteral("Lunghezza:"), lengthBox);
     form->addRow(QStringLiteral("Angolo rispetto all'asse X:"), angleBox);
-    form->addRow(wrappedNote(QStringLiteral("Il primo estremo resta fermo; la lunghezza diventa una quota (vincolo)\n"
-                                           "e gli altri vincoli dello schizzo restano soddisfatti."), &dialog));
+    form->addRow(wrappedNote(QStringLiteral("La prima quota di lunghezza ridimensiona in proporzione lo schizzo libero."), &dialog));
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
     if (dialog.exec() != QDialog::Accepted) return {};
     const double angle = angleBox->value() * M_PI / 180.0, length = lengthBox->value();
-    const QPointF second = segment.first + QPointF(std::cos(angle), std::sin(angle)) * length;
     const DocumentState snapshot = documentState();
+    SketchObject &sketch = sketches_[activeSketch_];
     const SketchObject before = sketch;
-    moveSketchPoint(sketch, index, segment.second, second - segment.second, segment.first);
-    // La lunghezza e' una quota: il vincolo Distanza del segmento (nuovo o aggiornato).
     const ConstraintRef self{0, index, -1};
+    SketchConstraint dimension = ForgeCad::makeConstraint(sketch, ConstraintType::Distance, {self});
+    dimension.value = length;
+    const bool scaled = ForgeCad::scaleSketchForFirstDimension(sketch, dimension, segment.first);
+    const SketchSegment current = sketch.segments.at(index);
+    QPointF second = current.second;
+    if (!scaled || angleBox->value() != initialAngle) {
+        second = current.first + QPointF(std::cos(angle), std::sin(angle)) * length;
+        moveSketchPoint(sketch, index, current.second, second - current.second, current.first);
+    }
     bool found = false;
     for (SketchConstraint &c : sketch.geometricConstraints)
         if (c.type == ConstraintType::Distance && c.first == self && c.second.kind < 0) {
             c.value = length;
             found = true;
         }
-    if (!found) {
-        SketchConstraint c = ForgeCad::makeConstraint(sketch, ConstraintType::Distance, {self});
-        c.value = length;
-        sketch.geometricConstraints.append(c);
-    }
+    if (!found) sketch.geometricConstraints.append(dimension);
     // Le quote d'angolo del segmento seguono la direzione scelta.
     for (SketchConstraint &c : sketch.geometricConstraints)
         if (c.type == ConstraintType::Angle && (c.first == self || c.second == self)) c.value = ForgeCad::currentMeasure(sketch, c);
-    QVector<ForgeCad::PointTarget> targets = targetsAt(sketch, segment.first);
+    QVector<ForgeCad::PointTarget> targets = targetsAt(sketch, current.first);
     targets += targetsAt(sketch, second);
     QString failure;
     if (!solveActive(targets, before, &failure)) return failure;
+    if (scaled) keepScaledSketchVisible(sketch);
     history_.record(snapshot);
     sketchEdited();
     return {};
@@ -357,22 +416,21 @@ QString CadViewport::placeDimension(SketchConstraint constraint) {
     valueBox->setFocus();
     valueBox->selectAll();
     QString result;
-    runUntilApplied(dialog, form, buttons, [&] {
+    const bool applied = runUntilApplied(dialog, form, buttons, [&] {
         valueBox->interpretText();
         SketchConstraint placed = constraint;
         placed.value = constraint.type == T::Angle ? signedAngleInput(valueBox->value(), constraint.value) : valueBox->value();
-        const DocumentState snapshot = documentState();
-        SketchObject &sketch = sketches_[activeSketch_];
-        const SketchObject before = sketch;
-        sketch.geometricConstraints.append(placed);
-        markSymmetryAxis(sketch, placed);
-        QString failure;
-        if (!solveActive({}, before, &failure)) return failure.isEmpty() ? QStringLiteral("La quota e' in conflitto con i vincoli.") : failure;
-        history_.record(snapshot);
-        selectedConstraints_ = {int(sketch.geometricConstraints.size()) - 1};
+        const QString failure = solveNewSketchConstraint(placed);
+        if (!failure.isEmpty()) return failure;
+        const int index = int(sketches_.at(activeSketch_).geometricConstraints.size()) - 1;
+        selectedConstraints_ = {index};
+        if (!placed.placed && (placed.type == T::AxisRadius || placed.type == T::AxisDiameter))
+            dimensionPlacing_ = index;
         sketchEdited();
+        selectionChanged();
         return QString();
     });
+    if (!applied) clearBuildDiagnostic();
     return result;
 }
 
@@ -729,7 +787,8 @@ QString CadViewport::previewSketchEdit(const SketchEdit &edit) {
     SketchObject work = *active;
     QVector<ForgeCad::SketchEntity> created;
     const ForgeCad::SketchEditResult result = edit(work, &created);
-    if (result.error.isEmpty())
+    if (result.error.isEmpty()) {
+        clearBuildDiagnostic();
         for (const ForgeCad::SketchEntity &entity : created) {
             if (entity.kind == 0) {
                 const SketchSegment &segment = work.segments.at(entity.index);
@@ -740,6 +799,9 @@ QString CadViewport::previewSketchEdit(const SketchEdit &edit) {
                 sketchPatternPreview_.append(curve.samples);
             }
         }
+    } else {
+        showBuildDiagnostic(result.error, sketchDiagnostic(*active, constraintSelection(), QStringLiteral("Selezione per l'anteprima dello schizzo.")));
+    }
     update();
     return result.error;
 }
@@ -750,7 +812,11 @@ QString CadViewport::applySketchEdit(const SketchEdit &edit) {
     SketchObject work = sketches_.at(activeSketch_);
     QVector<ForgeCad::SketchEntity> created;
     const ForgeCad::SketchEditResult result = edit(work, &created);
-    if (!result.error.isEmpty()) return result.error;
+    if (!result.error.isEmpty()) {
+        const auto *active = activeSketchObject();
+        showBuildDiagnostic(result.error, sketchDiagnostic(*active, constraintSelection(), QStringLiteral("Selezione per la modifica dello schizzo.")));
+        return result.error;
+    }
     recordUndo();
     for (CurveObject &curve : work.curves)
         if (curve.samples.isEmpty()) ForgeCad::recalculateCurve(curve, tessellationQuality_);
@@ -852,6 +918,7 @@ QString CadViewport::applySketchMove(const ForgeCad::SketchMove &move) {
 
 void CadViewport::clearSketchPatternPreview() {
     sketchPatternPreview_.clear();
+    clearBuildDiagnostic();
     update();
 }
 
@@ -886,12 +953,16 @@ QString CadViewport::addSurfacePierce(const ConstraintRef &point, GeometryRef so
     const SketchObject *active=activeSketchObject();
     if (!active || !ForgeCad::applicableConstraints(*active,{point}).contains(ConstraintType::Pierce))
         return QStringLiteral("Seleziona un punto dello schizzo con Ctrl+clic.");
+    const auto showPierceFailure = [&](const QString &error) {
+        showBuildDiagnostic(error, sketchDiagnostic(*active, {point}, QStringLiteral("Punto dello schizzo scelto per Pierce.")));
+        return error;
+    };
     ForgeCad::normalizeModelHistory(extrusions_,modelBodies_);
     const int owner=pierceSourceIndex(source);
     if (owner<0 || (source.kind!=5 && source.kind!=9)
         || (source.kind==5 && !extrusions_.at(owner).forgeBody) || (source.kind==9 && !extrusions_.at(owner).curve))
-        return QStringLiteral("Scegli una curva 3D o una faccia della superficie o del solido.");
-    if(!allowedSketchReference(source))return QStringLiteral("La sorgente Pierce deve precedere lo schizzo nella storia.");
+        return showPierceFailure(QStringLiteral("Scegli una curva 3D o una faccia della superficie o del solido."));
+    if (!allowedSketchReference(source)) return showPierceFailure(QStringLiteral("La sorgente Pierce deve precedere lo schizzo nella storia."));
     source.index=owner; source.featureId=extrusions_.at(owner).featureId;
     // Un corpo generato da questo schizzo creerebbe un ciclo. Seguire
     // anche le dipendenze Pierce degli schizzi intermedi.
@@ -908,9 +979,9 @@ QString CadViewport::addSurfacePierce(const ConstraintRef &point, GeometryRef so
         for (int operand : ForgeCad::bodyOperands(extrusions_.at(index))) if (cyclic(operand)) return true;
         return false;
     };
-    if (cyclic(owner)) return QStringLiteral("Pierce creerebbe una dipendenza circolare con lo schizzo.");
+    if (cyclic(owner)) return showPierceFailure(QStringLiteral("Pierce creerebbe una dipendenza circolare con lo schizzo."));
     for (int i=0;i<=owner;++i) if (ForgeCad::sketchesOf(extrusions_.at(i)).contains(activeSketch_))
-        return QStringLiteral("La superficie Pierce deve precedere le funzioni che usano questo schizzo.");
+        return showPierceFailure(QStringLiteral("La superficie Pierce deve precedere le funzioni che usano questo schizzo."));
     for (const auto &c : active->geometricConstraints)
         if (c.type==ConstraintType::Pierce && c.first==point && c.pierce
             && c.pierce->surface.kind==source.kind && c.pierce->surface.featureId==source.featureId
@@ -920,10 +991,13 @@ QString CadViewport::addSurfacePierce(const ConstraintRef &point, GeometryRef so
     SketchConstraint constraint; constraint.type=ConstraintType::Pierce; constraint.first=point;
     const QString error=source.kind==9 ? ForgeCad::refreshCurvePierce(work,constraint,source,sketches_,extrusions_)
         : ForgeCad::refreshSurfacePierce(work,constraint,*extrusions_.at(owner).forgeBody,source,extrusions_.at(owner).name);
-    if (!error.isEmpty()) return error;
+    if (!error.isEmpty()) return showPierceFailure(error);
     work.geometricConstraints.append(constraint);
     const auto solved=ForgeCad::solveSketch(work);
-    if (!solved.ok) return solved.error;
+    if (!solved.ok) {
+        showSketchSolveFailure(work, solved, {}, &constraint);
+        return solved.error;
+    }
     recordUndo();
     sketches_[activeSketch_]=std::move(work);
     selectedConstraints_={int(sketches_.at(activeSketch_).geometricConstraints.size()-1)};
@@ -944,7 +1018,11 @@ QString CadViewport::beginSurfacePierce() {
     setReferencePickCallback([this,point,sketch](bool picked,GeometryRef ref) {
         setReferencePickCallback(nullptr);
         setSketchViewUnlocked(false);
-        if (!picked) { showStatus(QStringLiteral("Pierce annullato.")); return; }
+        if (!picked) {
+            clearBuildDiagnostic();
+            showStatus(QStringLiteral("Pierce annullato."));
+            return;
+        }
         if (activeSketch_!=sketch) { showStatus(QStringLiteral("Lo schizzo attivo e' cambiato.")); return; }
         const QString error=addSurfacePierce(point,ref);
         showStatus(error.isEmpty() ? QStringLiteral("Vincolo Pierce sul riferimento aggiunto.") : error);
@@ -952,6 +1030,44 @@ QString CadViewport::beginSurfacePierce() {
     const QString error=beginReferencePick(ForgeCad::DatumRoleFace|ForgeCad::DatumRoleCurve,-1);
     if (!error.isEmpty()) { setReferencePickCallback(nullptr); setSketchViewUnlocked(false); return error; }
     showStatus(QStringLiteral("Pierce: scegli una curva 3D o una faccia; trascina per ruotare la vista, Esc annulla."));
+    return {};
+}
+
+void CadViewport::keepScaledSketchVisible(const SketchObject &sketch) {
+    const auto points = sketchGeometryPoints(sketch);
+    if (points.isEmpty()) return;
+    const QPointF first = projectWorldPoint(points.front());
+    double left = first.x(), right = first.x(), top = first.y(), bottom = first.y();
+    for (const auto &point : points) {
+        const QPointF pixel = projectWorldPoint(point);
+        left = qMin(left, pixel.x());
+        right = qMax(right, pixel.x());
+        top = qMin(top, pixel.y());
+        bottom = qMax(bottom, pixel.y());
+    }
+    if (left < 0 || right > width() || top < 0 || bottom > height() || qMax(right - left, bottom - top) < 30) {
+        sceneBoundsDirty_ = true; // I limiti dello zoom dipendono dalle dimensioni aggiornate.
+        fitView(points);
+    }
+}
+
+QString CadViewport::solveNewSketchConstraint(SketchConstraint constraint) {
+    for (const auto &other : sketches_.at(activeSketch_).geometricConstraints)
+        if (other.type == constraint.type
+            && ((other.first == constraint.first && other.second == constraint.second)
+                || (other.first == constraint.second && other.second == constraint.first)))
+            return QStringLiteral("Il vincolo c'e' gia'.");
+    const DocumentState snapshot = documentState();
+    SketchObject &sketch = sketches_[activeSketch_];
+    const SketchObject before = sketch;
+    const bool scaled = ForgeCad::scaleSketchForFirstDimension(sketch, constraint, QPointF());
+    sketch.geometricConstraints.append(constraint);
+    markSymmetryAxis(sketch, constraint);
+    QString failure;
+    if (!solveActive({}, before, &failure, int(sketch.geometricConstraints.size()) - 1))
+        return failure.isEmpty() ? QStringLiteral("Il vincolo e' in conflitto con lo schizzo.") : failure;
+    if (scaled) keepScaledSketchVisible(sketch);
+    history_.record(snapshot);
     return {};
 }
 
@@ -965,18 +1081,14 @@ QString CadViewport::addConstraint(ConstraintType type, double value ) {
         return QStringLiteral("Il vincolo %1 non si applica alle entita' scelte.").arg(ForgeCad::constraintName(type));
     SketchConstraint constraint = ForgeCad::makeConstraint(*active, type, refs);
     if (ForgeCad::isDimension(type) && !std::isnan(value)) constraint.value = value;
-    for (const SketchConstraint &other : active->geometricConstraints)
-        if (other.type == constraint.type
-            && ((other.first == constraint.first && other.second == constraint.second) || (other.first == constraint.second && other.second == constraint.first)))
-            return QStringLiteral("Il vincolo c'e' gia'.");
-    const DocumentState snapshot = documentState();
-    SketchObject &sketch = sketches_[activeSketch_];
-    const SketchObject before = sketch;
-    sketch.geometricConstraints.append(constraint);
-    markSymmetryAxis(sketch, constraint);
-    QString failure;
-    if (!solveActive({}, before, &failure)) return failure;
-    history_.record(snapshot);
+    if (std::isnan(value) && ForgeCad::isDimension(type) && type != ConstraintType::Angle && type != ConstraintType::Offset
+        && std::none_of(active->geometricConstraints.cbegin(), active->geometricConstraints.cend(), [](const SketchConstraint &c) {
+            return ForgeCad::isDimension(c.type) && c.type != ConstraintType::Angle;
+        }))
+        return placeDimension(constraint);
+    const QString failure = solveNewSketchConstraint(constraint);
+    if (!failure.isEmpty()) return failure;
+    const auto &sketch = sketches_.at(activeSketch_);
     selectedConstraints_ = {int(sketch.geometricConstraints.size()) - 1};
     if (type == ConstraintType::AxisRadius || type == ConstraintType::AxisDiameter) {
         dimensionPlacing_ = int(sketch.geometricConstraints.size()) - 1;
@@ -1016,7 +1128,7 @@ QString CadViewport::setConstraintValue(int index, double value, std::optional<C
     if (type && axial && (*type == ConstraintType::AxisRadius || *type == ConstraintType::AxisDiameter)) constraint.type = *type;
     constraint.value = value;
     QString failure;
-    if (!solveActive({}, before, &failure)) return failure;
+    if (!solveActive({}, before, &failure, index)) return failure;
     history_.record(snapshot);
     sketchEdited();
     selectionChanged();
@@ -1032,7 +1144,11 @@ QString CadViewport::setSketchPatternValues(int index, const SketchPatternData &
     const SketchObject before = *active;
     SketchObject work = before;
     const ForgeCad::SketchEditResult result = ForgeCad::editSketchPattern(work, index, values);
-    if (!result.error.isEmpty()) return result.error;
+    if (!result.error.isEmpty()) {
+        const auto &sources = before.geometricConstraints.at(index).pattern.sources;
+        showBuildDiagnostic(result.error, sketchDiagnostic(before, sources, QStringLiteral("Entità sorgenti della ripetizione.")));
+        return result.error;
+    }
     QVector<ForgeCad::PointTarget> targets;
     const SketchPatternData &data = (result.segmentMap.isEmpty() ? work.geometricConstraints.at(index) : work.geometricConstraints.last()).pattern;
     for (const ConstraintRef &source : data.sources) {
@@ -1115,7 +1231,7 @@ void CadViewport::editSketchPatternValues(int index) {
     connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
-    runUntilApplied(dialog, form, buttons, [&] {
+    const bool applied = runUntilApplied(dialog, form, buttons, [&] {
         values.count = count->value();
         values.count2 = count2->value();
         values.spacing = spacing->value();
@@ -1126,6 +1242,7 @@ void CadViewport::editSketchPatternValues(int index) {
         values.dimensioned2 = dimensioned2->isChecked();
         return setSketchPatternValues(index, values);
     });
+    if (!applied) clearBuildDiagnostic();
 }
 
 void CadViewport::editConstraintValue(int index) {
@@ -1174,11 +1291,12 @@ void CadViewport::editConstraintValue(int index) {
     form->addRow(buttons);
     valueBox->setFocus();
     valueBox->selectAll();
-    runUntilApplied(dialog, form, buttons, [&] {
+    const bool applied = runUntilApplied(dialog, form, buttons, [&] {
         valueBox->interpretText();
         const double value = type == ConstraintType::Angle ? signedAngleInput(valueBox->value(), constraint.value) : valueBox->value();
         return setConstraintValue(index, value, type);
     });
+    if (!applied) clearBuildDiagnostic();
 }
 
 const ForgeCad::SketchAnalysis &CadViewport::sketchAnalysis() const {
@@ -1327,12 +1445,15 @@ void CadViewport::selectSketch(int index) {
         for(int i=0;i<sketches_.size();++i)if(sketches_.at(i).storyId==target){index=i;break;}
         if(index<0)return;
     }
+    index = prepareStoryboardEdit(true, index);
+    if (index < 0) return;
     activeSketch_ = index;
     beginSketchMode(sketches_.at(index).plane);
 }
 
 void CadViewport::beginSketchMode(int plane) {
     if(documentReadOnly_)return;
+    clearBuildFeedback();
     activePlane_ = plane;
     selectedPlane_ = plane < 3 ? plane : -1;
     selectedFace_ = {};
@@ -1375,6 +1496,7 @@ void CadViewport::beginSketchMode(int plane) {
 }
 
 void CadViewport::endSketchMode() {
+    clearBuildDiagnostic();
     pruneActiveSketchReferences(false);
     int discard = -1;
     if(sketchMode_ && newSketchStoryId_ && activeSketch_>=0 && activeSketch_<sketches_.size()) {
@@ -1395,6 +1517,7 @@ void CadViewport::endSketchMode() {
     sketchViewUnlocked_ = false;
     sketchViewRotated_ = false;
     sketchMode_ = false;
+    offsetDimensionCache_ = {};
     sketchSessionFeatures_.clear();
     refreshSketchContext();
     raySelectionCache_.clear();projectedEdges_.clear();
@@ -1568,6 +1691,7 @@ void CadViewport::applyEditTool(const QPointF &point) {
     if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return;
     SketchObject edited = sketches_.at(activeSketch_);
     const SketchElementSelection hit = findSketchElement(point);
+    QVector<ConstraintRef> refs;
     ForgeCad::SketchEditResult result;
     if (drawingTool_ == DrawingTool::Fillet || drawingTool_ == DrawingTool::Chamfer) {
         const bool chamfer = drawingTool_ == DrawingTool::Chamfer;
@@ -1575,6 +1699,7 @@ void CadViewport::applyEditTool(const QPointF &point) {
         int first = -1, second = -1;
         QPointF pickFirst, pickSecond;
         if (blendFirst_ < 0 && ForgeCad::sketchCornerAt(edited, point, pickTolerance(), first, pickFirst, second, pickSecond)) {
+            refs = {{0, first, -1}, {0, second, -1}};
             result = ForgeCad::blendSketchSegments(edited, first, pickFirst, second, pickSecond, size, chamfer);
         } else if (hit.kind != 0) {
             showStatus(hit.kind < 0 ? QString() : QStringLiteral("Raccordo e smusso si fanno tra segmenti."));
@@ -1585,13 +1710,18 @@ void CadViewport::applyEditTool(const QPointF &point) {
             update();
             return;
         } else {
+            refs = {{0, blendFirst_, -1}, {0, hit.index, -1}};
             result = ForgeCad::blendSketchSegments(edited, blendFirst_, blendFirstPick_, hit.index, point, size, chamfer);
             blendFirst_ = -1;
         }
     } else {
         if (hit.kind < 0) return;
+        refs = {{hit.kind, hit.index, -1}};
         if (isLinkedSketchEntity(edited, hit.kind, hit.index)) {
-            showStatus(QStringLiteral("Il riferimento associativo si modifica dalla geometria sorgente.")); return;
+            const QString error = QStringLiteral("Il riferimento associativo si modifica dalla geometria sorgente.");
+            showBuildDiagnostic(error, sketchDiagnostic(edited, refs, QStringLiteral("Riferimento associativo scelto.")));
+            showStatus(error);
+            return;
         }
         const ForgeCad::SketchEntity entity{hit.kind, hit.index};
         if (drawingTool_ == DrawingTool::Trim) result = ForgeCad::trimSketchEntity(edited, entity, point);
@@ -1599,8 +1729,8 @@ void CadViewport::applyEditTool(const QPointF &point) {
         else result = ForgeCad::splitSketchEntity(edited, entity, point, pickTolerance());
     }
     if (!result.error.isEmpty()) {
+        showBuildDiagnostic(result.error, sketchDiagnostic(sketches_.at(activeSketch_), refs, QStringLiteral("Entità scelte per la modifica.")));
         showStatus(result.error);
-        update();
         return;
     }
     recordUndo();
@@ -2193,7 +2323,7 @@ QString CadViewport::editEllipseDimension(int index) {
     changed.controlPoints[2] = newCenter + second->value() * perpendicular;
     ForgeCad::recalculateCurve(changed, tessellationQuality_);
     if (!changed.numericallyValid) return QStringLiteral("Ellisse non valida.");
-    recordUndo();
+    const DocumentState snapshot = documentState();
     SketchObject &sketch = sketches_[activeSketch_];
     const SketchObject beforeEdit = sketch;
     // I punti coincidenti con il centro lo seguono.
@@ -2201,6 +2331,7 @@ QString CadViewport::editEllipseDimension(int index) {
     sketch.curves[index] = changed;
     QString failure;
     if (!solveActive(curveTargets(sketch, index), beforeEdit, &failure)) return failure;
+    history_.record(snapshot);
     sketchEdited();
     return {};
 }
@@ -2265,7 +2396,7 @@ QString CadViewport::editCurveDimension(int index) {
     if (dialog.exec() != QDialog::Accepted) return {};
     const QPointF newCenter(centerX->value(), centerY->value());
     const double newRadius = radiusBox->value();
-    recordUndo();
+    const DocumentState snapshot = documentState();
     SketchObject &sketch = sketches_[activeSketch_];
     const SketchObject beforeEdit = sketch;
     const QPointF nowhere(qQNaN(), qQNaN());
@@ -2291,20 +2422,46 @@ QString CadViewport::editCurveDimension(int index) {
     syncCurveDimensions(sketch, index);
     QString failure;
     if (!solveActive(curveTargets(sketch, index), beforeEdit, &failure)) return failure;
+    history_.record(snapshot);
     sketchEdited();
     return {};
 }
 
-bool CadViewport::solveActive(const QVector<ForgeCad::PointTarget> &targets, const SketchObject &before, QString *error ) {
+void CadViewport::showSketchSolveFailure(const SketchObject &sketch, const ForgeCad::SolveResult &result,
+                                         const QVector<ForgeCad::PointTarget> &targets, const SketchConstraint *edited) {
+    if (!result.diagnosticContext.isEmpty() || !result.diagnosticRefs.isEmpty()) {
+        showBuildDiagnostic(result.error, sketchDiagnostic(sketch, result.diagnosticRefs, result.diagnosticContext));
+        return;
+    }
+    if (!targets.isEmpty()) {
+        auto diagnostic = sketchDiagnostic(sketch, {}, {}, targets);
+        if (!diagnostic.paths.isEmpty())
+            diagnostic.context = QStringLiteral("Posizioni richieste per la modifica dello schizzo.");
+        showBuildDiagnostic(result.error, diagnostic);
+        return;
+    }
+    if (edited) {
+        const QString context = QStringLiteral("Riferimenti del vincolo richiesto (%1).").arg(ForgeCad::constraintName(edited->type));
+        showBuildDiagnostic(result.error, sketchDiagnostic(sketch, {edited->first, edited->second, edited->third}, context));
+        return;
+    }
+    showBuildDiagnostic(result.error, {});
+}
+
+bool CadViewport::solveActive(const QVector<ForgeCad::PointTarget> &targets, const SketchObject &before, QString *error,
+                             int editedConstraint) {
     if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return false;
     SketchObject &sketch = sketches_[activeSketch_];
     ForgeCad::refreshLinkedSketchReferences(sketch, sketches_, extrusions_);
     const ForgeCad::SolveResult result = ForgeCad::solveSketch(sketch, targets);
     analysisDirty_ = true;
     if (!result.ok) {
+        const auto *edited = editedConstraint >= 0 && editedConstraint < sketch.geometricConstraints.size()
+            ? &sketch.geometricConstraints.at(editedConstraint) : nullptr;
+        showSketchSolveFailure(sketch, result, targets, edited);
         sketch = before;
         if (error) *error = result.error;
-    }
+    } else clearBuildDiagnostic();
     for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, tessellationQuality_);
     return result.ok;
 }
@@ -2313,8 +2470,14 @@ bool CadViewport::solveActiveDrag(const QVector<ForgeCad::PointTarget> &targets,
     auto &sketch=sketches_[activeSketch_];
     ForgeCad::refreshLinkedSketchReferences(sketch, sketches_, extrusions_);
     const auto seed=sketch;auto work=seed;
-    auto exact=targets;exact+=anchors;auto result=ForgeCad::solveSketch(work,exact);
-    if(!result.ok){work=seed;result=ForgeCad::solveSketch(work,anchors);}
+    auto exact=targets;exact+=anchors;
+    const auto requested = ForgeCad::solveSketch(work, exact);
+    auto result = requested;
+    if (!requested.ok) {
+        work = seed;
+        result = ForgeCad::solveSketch(work, anchors);
+        showSketchSolveFailure(before, result.ok ? requested : result, targets);
+    } else clearBuildDiagnostic();
     analysisDirty_=true;
     if(!result.ok){sketch=before;return false;}
     const auto changed=[&]{
@@ -2381,11 +2544,35 @@ QPolygonF CadViewport::arrowHead(const QPointF &tip, const QPointF &from) {
     return QPolygonF({tip, tip + length * u + half * n, tip + length * u - half * n});
 }
 
-bool CadViewport::dimensionGraphic(const SketchObject &sketch, int index, DimensionGraphic &g) const {
-    return dimensionGraphic(sketch, sketch.geometricConstraints.at(index), g);
+CadViewport::OffsetDimensionMeasurement &CadViewport::offsetDimensionMeasurement(const SketchObject &sketch, int index) const {
+    auto &cache = offsetDimensionCache_;
+    const double accuracy = ForgeCad::Kernel::linearResolution();
+    // Own the implicitly shared vectors so an edit detaches them and the
+    // old storage cannot be reused as a cache key.
+    if (cache.segments.constData() != sketch.segments.constData()
+        || cache.curves.constData() != sketch.curves.constData()
+        || cache.constraints.constData() != sketch.geometricConstraints.constData()
+        || cache.accuracy != accuracy) {
+        cache = {sketch.segments, sketch.curves, sketch.geometricConstraints, {}, accuracy};
+    }
+    auto found = cache.measurements.find(index);
+    if (found == cache.measurements.end()) {
+        OffsetDimensionMeasurement measurement;
+        const auto &constraint = sketch.geometricConstraints.at(index);
+        measurement.hasPoints = ForgeCad::dimensionPoints(sketch, constraint, measurement.source, measurement.result);
+        found = cache.measurements.insert(index, measurement);
+    }
+    return found.value();
 }
 
-bool CadViewport::dimensionGraphic(const SketchObject &sketch, const SketchConstraint &c, DimensionGraphic &g) const {
+bool CadViewport::dimensionGraphic(const SketchObject &sketch, int index, DimensionGraphic &g) const {
+    const auto &constraint = sketch.geometricConstraints.at(index);
+    const auto *offset = constraint.type == ConstraintType::Offset ? &offsetDimensionMeasurement(sketch, index) : nullptr;
+    return dimensionGraphic(sketch, constraint, g, offset);
+}
+
+bool CadViewport::dimensionGraphic(const SketchObject &sketch, const SketchConstraint &c, DimensionGraphic &g,
+                                   const OffsetDimensionMeasurement *offset) const {
     if (!ForgeCad::isDimension(c.type)) return false;
     const double px = double(camera_.zoom_) / double(qMax(1, height()));  // unita' dello schizzo per pixel
     const auto screen = [&](const QPointF &p) { return projectWorldPoint(mapSketchPoint(p, sketch)); };
@@ -2408,7 +2595,13 @@ bool CadViewport::dimensionGraphic(const SketchObject &sketch, const SketchConst
     const bool projected = c.type == ConstraintType::HorizontalDistance || c.type == ConstraintType::VerticalDistance;
     if (c.type == ConstraintType::Offset || c.type == ConstraintType::Distance || c.type == ConstraintType::AxisRadius || c.type == ConstraintType::AxisDiameter || projected) {
         QPointF p, q;
-        if (!ForgeCad::dimensionPoints(sketch, c, p, q)) return false;
+        if (offset) {
+            if (!offset->hasPoints) return false;
+            p = offset->source;
+            q = offset->result;
+        } else if (!ForgeCad::dimensionPoints(sketch, c, p, q)) {
+            return false;
+        }
         // Quote orizzontali e verticali: la linea di misura e' lungo X (o Y)
         // dello schizzo, le linee di riferimento perpendicolari a lei.
         QPointF u, n;
@@ -2632,12 +2825,13 @@ int CadViewport::constraintAt(const QPoint &position) const {
 
 void CadViewport::sketchEdited() {
     pruneActiveSketchReferences(false);
+    QString failure;
+    ForgeCad::BuildDiagnostic diagnostic;
     // I vincoli dello schizzo restano soddisfatti (se l'ultima modifica li
     // ha rotti il risolutore li rimette a posto, se puo').
     if (activeSketch_ >= 0 && activeSketch_ < sketches_.size() && !sketches_.at(activeSketch_).geometricConstraints.isEmpty()) {
         const SketchObject before = sketches_.at(activeSketch_);
-        QString failure;
-        if (!solveActive({}, before, &failure)) showStatus(failure);
+        if (!solveActive({}, before, &failure)) diagnostic = buildDiagnostic_;
     }
     // I vincoli selezionati possono non esserci piu'.
     const int count = activeSketch_ >= 0 && activeSketch_ < sketches_.size() ? sketches_.at(activeSketch_).geometricConstraints.size() : 0;
@@ -2647,6 +2841,10 @@ void CadViewport::sketchEdited() {
     if(sketchMode_&&activeSketch_>=0)deferredSketches_.insert(activeSketch_);
     else regenerateDependents(activeSketch_);
     documentChanged();
+    if (!failure.isEmpty()) {
+        showBuildDiagnostic(failure, diagnostic);
+        showStatus(failure);
+    }
 }
 
 void CadViewport::deleteSketchElements() {

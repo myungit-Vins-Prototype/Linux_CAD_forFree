@@ -73,6 +73,10 @@ static void storyboardMergedChainRegressions() {
     };
     const auto verify = [&](CadViewport &view, int cut, int boss) {
         require(view.extrusions()[boss].mergeBodies == QVector<int>{cut}, "la fusione successiva usa la sottrazione intermedia");
+        const int bossStep = view.storyboardIndex(false, boss);
+        require(bossStep >= 0, "la fusione conserva il proprio passo nella storia");
+        if (view.storyboardPosition() <= bossStep)
+            view.setStoryboardPosition(bossStep + 1);
         require(view.extrusions()[boss].forgeBody && view.extrusions()[boss].error.isEmpty(), "risultato successivo valido");
         require(std::abs(massProperties(*view.extrusions()[boss].forgeBody).volume - 75 * M_PI) < 1e-7,
                 "il volume finale conserva la sottrazione di tre pi greco");
@@ -116,6 +120,8 @@ static void storyboardMergedChainRegressions() {
             require(view.isBodyDrawn(1) && !view.isBodyDrawn(2), "la sessione schizzo mostra la conferma e nasconde le funzioni future");
             view.endSketchMode();
         }
+        require(view.storyboardPosition() <= view.storyboardIndex(false, 2)
+            && !view.extrusions()[2].forgeBody, "l'inserimento o la modifica rinvia la fusione successiva");
         verify(view,1,2);
         require(view.extrusions()[3].featureId == independentId && view.extrusions()[3].forgeBody == independent, "inserimento/modifica conserva il ramo indipendente");
         view.undo();

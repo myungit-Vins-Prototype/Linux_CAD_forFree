@@ -1,4 +1,5 @@
 #include "forgeCad2026_viewport_internal.h"
+#include "cad_volume_structure.h"
 
 bool CadViewport::isBodyVisibleInScene(int index) const {
     if (index < 0 || index >= extrusions_.size()) return false;
@@ -11,6 +12,7 @@ bool CadViewport::isBodyVisibleInScene(int index) const {
         if (index >= owner || (!pickBodies_.isEmpty() && !pickBodies_.contains(index))) return false;
         return isBodyDrawn(index) || (!pickBodies_.isEmpty() && referenceBodyEligible(index));
     }
+    if (trimPartPickFinished_ && (trimPartFocusBody_ >= 0 || trimPartPickBodies_.contains(index))) return false;
     const bool previewing = (!sketchMode_ || sketchViewUnlocked_) && !preview_.key.isEmpty();
     const bool replaced = previewing && preview_.replaced.contains(index);
     // Il picker dei bordi interroga la topologia d'ingresso anche quando
@@ -241,12 +243,23 @@ QVector<QVector3D> CadViewport::sketchGeometryPoints(const SketchObject &sketch)
 
 QVector<QVector3D> CadViewport::sceneGeometryPoints(bool planesIfEmpty , bool datumSizes ) const {
     QVector<QVector3D> points;
-    for (int index=0;index<extrusions_.size();++index) {
-        const auto &body=extrusions_.at(index);
-        if (!isBodyDrawn(index)) continue;
-        for (const QVector<QVector3D> &edge : body.display.edges) points += edge;
-        if (body.display.edges.isEmpty()) points += body.display.vertices;
+    const auto addDisplay = [&](const BodyDisplay &display, bool includeFaces = false) {
+        for (const auto &edge : display.edges) points += edge;
+        if (includeFaces || display.edges.isEmpty()) points += display.vertices;
+    };
+    const bool choosingParts = !trimPartPickDisplays_.isEmpty();
+    for (int index = 0; index < extrusions_.size(); ++index) {
+        if (choosingParts ? !isBodyVisibleInScene(index) : !isBodyDrawn(index)) continue;
+        const auto &body = extrusions_.at(index);
+        // Nella TPMS mista gli spigoli visibili appartengono alla parte
+        // piena. Le facce del reticolo contribuiscono comunque allo zoom.
+        const bool curvedGyroid = body.feature == BodyFeature::VolumetricStructure
+            && ForgeCad::isInterpolatedGyroid(body.volumeStructure.mode);
+        addDisplay(body.display, curvedGyroid);
     }
+    for (int i = 0; i < trimPartPickDisplays_.size(); ++i)
+        if (trimPartFocusBody_ < 0 || trimPartPickBodies_.at(i) == trimPartFocusBody_)
+            addDisplay(trimPartPickDisplays_.at(i));
     for (int index = 0; index < sketches_.size(); ++index)
         if (isSketchDrawn(index)) points += sketchGeometryPoints(sketches_.at(index));
     // Piani di costruzione: il centro (la misura automatica dipende dalla scena), gli angoli se la misura e' data.

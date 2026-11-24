@@ -15,19 +15,6 @@
 #include "cad_macos_menu.h"
 #endif
 
-// Su portatili ibridi (Intel + NVIDIA) forza il rendering OpenGL sulla GPU
-// NVIDIA tramite PRIME render offload. Va fatto prima di creare QApplication,
-// perche' le librerie EGL/GLX vengono caricate all'inizializzazione di Qt.
-// Impostare FORGECAD_IGPU=1 per restare sulla GPU integrata.
-static void preferDiscreteGpu() {
-    if (qEnvironmentVariableIsSet("FORGECAD_IGPU")) return;
-    const QString nvidiaEgl = QStringLiteral("/usr/share/glvnd/egl_vendor.d/10_nvidia.json");
-    if (!QFileInfo::exists(nvidiaEgl)) return;
-    qputenv("__EGL_VENDOR_LIBRARY_FILENAMES", nvidiaEgl.toUtf8());
-    qputenv("__NV_PRIME_RENDER_OFFLOAD", "1");
-    qputenv("__GLX_VENDOR_LIBRARY_NAME", "nvidia");
-}
-
 // Tutta la scena usa shader, VAO e VBO OpenGL 3.3; il profilo Core impedisce
 // che nuovi percorsi ricadano accidentalmente nella pipeline fissa.
 static void requestCoreContext() {
@@ -49,7 +36,7 @@ static void requestCoreContext() {
 #include <iostream>
 
 int main(int argc,char **argv) {
-    preferDiscreteGpu();requestCoreContext();QCoreApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
+    requestCoreContext();QCoreApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
     QApplication app(argc,argv);
     ForgeCad::initializeApplicationTheme(app);
     QCoreApplication::setOrganizationName(QStringLiteral("ForgeCADPreview"));

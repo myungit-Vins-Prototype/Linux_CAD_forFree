@@ -1,5 +1,6 @@
 #include "cad_gpu_broad_phase.h"
 #include "gpu_box_support.h"
+#include "gpu_tpms_support.h"
 
 #include <atomic>
 #include <cmath>
@@ -52,6 +53,13 @@ std::shared_ptr<Kernel::BoxBatchEvaluator> makeGpuBoxEvaluator() {
 void initializeGeometryAcceleration() {
     const char *setting=std::getenv("FORGECAD_GPU_BROAD_PHASE");
     Kernel::setBoxBatchEvaluator(setting&&std::strcmp(setting,"1")==0?makeGpuBoxEvaluator():nullptr);
+    const char *tpms = std::getenv("FORGECAD_TPMS_CUDA");
+    const bool disableTpms = tpms && std::strcmp(tpms, "0") == 0;
+    const bool forceTpms = tpms && std::strcmp(tpms, "1") == 0;
+    // Il trasferimento rende conveniente il lotto CUDA a partire dalle
+    // griglie grandi. Si può forzare il backend per una misura comparativa.
+    constexpr std::size_t minimumCudaCells = 256 * 1024;
+    Kernel::setTpmsBatchEvaluator(disableTpms ? nullptr : makeCudaTpmsEvaluator(forceTpms ? 0 : minimumCudaCells));
     if(std::getenv("FORGECAD_PROFILE"))std::fprintf(stderr,"PROFILO broad phase: %s, GPU %s\n",forgecad_gpu_box_backend(),
         Kernel::getBoxBatchEvaluator()?"abilitata":"disabilitata (BVH CPU)");
 }

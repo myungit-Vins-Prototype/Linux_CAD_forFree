@@ -5,10 +5,10 @@
 #include <QPainterPath>
 #include <cmath>
 
-void CadViewport::prepareLoftDiagnostics(const QString &error) {
+void CadViewport::prepareLoftDiagnostics(const QString &error, const ExtrusionObject &definition, int index) {
     previewLoftErrors_.clear();
-    if(preview_.definition.feature!=BodyFeature::Loft)return;
-    const auto paths=ForgeCad::loftDiagnosticPaths(ForgeCad::loftFailure(error),preview_.definition,preview_.index,sketches_,extrusions_);
+    if(definition.operation >= 0 || definition.feature != BodyFeature::Loft) return;
+    const auto paths=ForgeCad::loftDiagnosticPaths(ForgeCad::loftFailure(error),definition,index,sketches_,extrusions_);
     for(const auto &path:paths) {
         LoftErrorMark mark;mark.label=path.label;
         mark.color=path.guide?QColor(255,65,75):QColor(255,180,45);

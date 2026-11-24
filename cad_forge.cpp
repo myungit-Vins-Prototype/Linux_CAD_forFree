@@ -1,4 +1,5 @@
 #include "cad_forge.h"
+#include "cad_build_diagnostic.h"
 #include "cad_loft_diagnostics.h"
 #include "cad_loft_correspondence.h"
 
@@ -66,6 +67,14 @@ void setError(QString *error, const QString &message) {
 
 Vec2 toVec(const QPointF &point) { return Vec2(point.x(), point.y()); }
 QVector3D toDisplay(const Vec3 &v) { return QVector3D(float(v.x()), float(v.y()), float(v.z())); }
+
+void reportCurvature(BuildDiagnostic *diagnostic, const OffsetCurvatureError &failure) {
+    if (!diagnostic) return;
+    diagnostic->context = QStringLiteral("Raggio di curvatura locale %1 mm")
+        .arg(failure.radius, 0, 'g', 5);
+    if (failure.sourcePoint)
+        diagnostic->paths.append(QVector<QVector3D>{toDisplay(*failure.sourcePoint)});
+}
 
 // Verifica le coordinate effettivamente inviate al renderer. Il B-rep e la
 // triangolazione double restano invariati; nessuna soglia elimina facce sottili.
@@ -488,8 +497,8 @@ QString microFeatureHint(const Body &body, const std::vector<EdgeId> &edges) {
     const int shown = std::min<int>(4, int(found.size()));
     QString list = found.mid(0, shown).join(QStringLiteral(", "));
     if (found.size() > shown) list += QStringLiteral(" e altre %1").arg(found.size() - shown);
-    return QStringLiteral(". Vicino agli spigoli ci sono micro-geometrie, di solito rumore di una feature a monte: %1. "
-                          "Analisi -> Micro-geometrie le segna nella vista.").arg(list);
+    return QStringLiteral(". Le micro-geometrie vicine agli spigoli possono limitare l'operazione (%1). "
+                          "Analisi → Micro-geometrie le evidenzia nella vista.").arg(list);
 }
 
 }
@@ -801,6 +810,116 @@ QVector<ForgeCurve> forgeProjectedCurves(const ForgeBody &target, const SketchOb
     return result;
 }
 
+namespace {
+SheetPiece describeSheetPiece(const ForgeBody &geometry) {
+    SheetPiece info;
+    info.geometry = geometry;
+    forgeTessellate(*geometry, 0, info.display);
+    double largest = -1.;
+    for (int k = 0; k + 2 < info.display.vertices.size(); k += 3) {
+        const auto toPoint = [](const QVector3D &p) { return Vec3(p.x(), p.y(), p.z()); };
+        const auto a = toPoint(info.display.vertices[k]), b = toPoint(info.display.vertices[k + 1]),
+                   c = toPoint(info.display.vertices[k + 2]);
+        const double twiceArea = norm(cross(b - a, c - a));
+        info.area += .5 * twiceArea;
+        if (twiceArea > largest) {
+            largest = twiceArea;
+            const auto center = (a + b + c) / 3.;
+            info.point = {center.x(), center.y(), center.z()};
+        }
+    }
+    return info;
+}
+
+QVector<ForgeBody> splitTrimSurface(const ForgeBody &target, const ForgeBody &cutter) {
+    std::vector<BodyHistory> histories;
+    auto split = splitSheet(*target, *cutter, {}, &histories);
+    if (split.empty()) throw std::domain_error("il taglio non ha prodotto regioni");
+    QVector<ForgeBody> result;
+    result.reserve(qsizetype(split.size()));
+    for (std::size_t i = 0; i < split.size(); ++i) {
+        auto piece = std::make_shared<const Body>(std::move(split[i]));
+        registerDeclaredHistory(piece, {target, cutter}, std::move(histories[i]));
+        result.append(std::move(piece));
+    }
+    return result;
+}
+
+QVector<QVector<ForgeBody>> splitTrimSurfaces(const QVector<ForgeBody> &operands, bool reciprocal) {
+    if (operands.size() < 2 || std::any_of(operands.cbegin(), operands.cend(), [](const ForgeBody &body) { return !body; }))
+        throw std::domain_error("servono una superficie da tagliare e almeno uno strumento valido");
+    auto surfaces = operands;
+    for (int i = 0; i < (reciprocal ? surfaces.size() : 1); ++i) surfaces[i] = declaredSheet(surfaces[i]);
+    QVector<QVector<ForgeBody>> result;
+    bool divided = false;
+    for (int i = 0; i < (reciprocal ? surfaces.size() : 1); ++i) {
+        QVector<ForgeBody> pieces{surfaces[i]};
+        for (int j = 0; j < surfaces.size(); ++j) {
+            if (i == j) continue;
+            QVector<ForgeBody> next;
+            for (const auto &piece : std::as_const(pieces)) {
+                cancellationPoint();
+                next += splitTrimSurface(piece, surfaces[j]);
+            }
+            pieces = std::move(next);
+        }
+        divided = divided || pieces.size() > 1;
+        result.append(std::move(pieces));
+    }
+    if (!divided) throw std::domain_error("le superfici selezionate non dividono i corpi da rifilare");
+    return result;
+}
+}
+
+QVector<QVector<SheetPiece>> forgeTrimSurfacePieces(const QVector<ForgeBody> &operands, bool reciprocal, QString *error) {
+    try {
+        QVector<QVector<SheetPiece>> result;
+        for (const auto &pieces : splitTrimSurfaces(operands, reciprocal)) {
+            QVector<SheetPiece> described;
+            for (const auto &piece : pieces) described.append(describeSheetPiece(piece));
+            result.append(std::move(described));
+        }
+        return result;
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Taglio non riuscito: %1").arg(QString::fromUtf8(failure.what())));
+        return {};
+    }
+}
+
+QVector<int> forgeTrimRegionIndices(const QVector<ForgeBody> &pieces, const QVector<SpatialPoint> &points) {
+    QVector<int> result;
+    if (pieces.isEmpty()) return result;
+    std::vector<const Body *> regions;
+    regions.reserve(std::size_t(pieces.size()));
+    for (const auto &piece : pieces) regions.push_back(piece.get());
+    for (const auto &p : points) {
+        const int index = int(detail::closestSheetPiece(regions, Vec3(p.x, p.y, p.z)));
+        if (!result.contains(index)) result.append(index);
+    }
+    return result;
+}
+
+ForgeBody forgeTrimSurfaces(const QVector<ForgeBody> &operands, const QVector<QVector<SpatialPoint>> &regions,
+                            bool reciprocal, QString *error) {
+    try {
+        if (regions.size() != operands.size())
+            throw std::domain_error("le regioni da conservare non corrispondono ai corpi selezionati");
+        const auto split = splitTrimSurfaces(operands, reciprocal);
+        QVector<ForgeBody> kept;
+        for (int i = 0; i < split.size(); ++i) {
+            auto indices = forgeTrimRegionIndices(split[i], regions[i]);
+            std::sort(indices.begin(), indices.end());
+            for (int index : indices) kept.append(split[i][index]);
+        }
+        if (kept.isEmpty()) throw std::domain_error("scegli almeno una regione da conservare");
+        if (kept.size() == 1) return kept.front();
+        return forgeSew(kept, scaledAccuracy(1e-6), false, error);
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Taglio non riuscito: %1").arg(QString::fromUtf8(failure.what())));
+        return {};
+    }
+}
+
 QVector<SheetPiece> forgeSheetPieces(const ForgeBody &sheet, const ForgeBody &tool, int plane, QString *error) {
     QVector<SheetPiece> result;
     if (!sheet) {
@@ -808,31 +927,12 @@ QVector<SheetPiece> forgeSheetPieces(const ForgeBody &sheet, const ForgeBody &to
         return result;
     }
     try {
-        const auto target=declaredSheet(sheet);
-        const auto cutter=tool?tool:declaredConstruction([&](FaceAliases &labels){Body b=trimTool(*target,{},plane);labels={{"plane"}};return b;});
-        std::vector<BodyHistory> histories;auto pieces=splitSheet(*target,*cutter,{},&histories);std::size_t pieceIndex=0;
-        for(const Body &piece:pieces) {
-            // La stessa mesh serve per punto, area approssimata e anteprima:
-            // prima si tassellava qui, si integrava anche l'area esatta e poi
-            // il pannello tassellava di nuovo la parte scelta.
-            double largest = -1.0;
-            SheetPiece info;
-            info.geometry = std::make_shared<const Body>(piece);
-            registerDeclaredHistory(info.geometry,{target,cutter},std::move(histories[pieceIndex++]));
-            forgeTessellate(piece, 0, info.display);
-            for (int k = 0; k + 2 < info.display.vertices.size(); k += 3) {
-                const QVector3D &qa = info.display.vertices.at(k), &qb = info.display.vertices.at(k + 1), &qc = info.display.vertices.at(k + 2);
-                const Vec3 a(qa.x(), qa.y(), qa.z()), b(qb.x(), qb.y(), qb.z()), c(qc.x(), qc.y(), qc.z());
-                const double twiceArea = norm(cross(b - a, c - a));
-                info.area += 0.5 * twiceArea;
-                if (twiceArea > largest) {
-                    largest = twiceArea;
-                    const Vec3 m = (a + b + c) / 3.0;
-                    info.point = {m.x(), m.y(), m.z()};
-                }
-            }
-            result.append(info);
-        }
+        const auto target = declaredSheet(sheet);
+        const auto cutter = tool ? tool : declaredConstruction([&](FaceAliases &labels) {
+            labels = {{"plane"}};
+            return trimTool(*target, {}, plane);
+        });
+        for (const auto &piece : splitTrimSurface(target, cutter)) result.append(describeSheetPiece(piece));
         if (result.size() < 2)
             setError(error, QStringLiteral("Lo strumento non interseca il corpo da tagliare oppure non lo divide in due regioni."));
     } catch (const std::exception &failure) {
@@ -931,7 +1031,9 @@ ForgeBody forgeDraft(const ForgeBody &base, const QVector<EdgePoint> &points, co
     }
 }
 
-ForgeBody forgeThicken(const ForgeBody &base, const QVector<EdgePoint> &faces, double thickness, int side, const Vec3 *direction, QString *error) {
+ForgeBody forgeThicken(const ForgeBody &base, const QVector<EdgePoint> &faces, double thickness, int side,
+                       const Vec3 *direction, QString *error, BuildDiagnostic *diagnostic) {
+    if (diagnostic) *diagnostic = {};
     if (!base) {
         setError(error, QStringLiteral("La superficie da ispessire non ha geometria valida."));
         return nullptr;
@@ -957,10 +1059,19 @@ ForgeBody forgeThicken(const ForgeBody &base, const QVector<EdgePoint> &faces, d
             options.direction = *direction;
         }
         return declaredModification({base},[&](BodyHistory &h){return thickenSheet(*base,chosen,options,&h);});
+    } catch (const OffsetCurvatureError &failure) {
+        reportCurvature(diagnostic, failure);
+        setError(error, QStringLiteral("Spessore non riuscito: %1").arg(QString::fromUtf8(failure.what())));
+    } catch (const ThickenCreaseError &failure) {
+        if (diagnostic) {
+            diagnostic->context = QStringLiteral("Spigolo vivo tra le facce da ispessire");
+            appendDiagnosticCurve(*diagnostic, *failure.curve, failure.range);
+        }
+        setError(error, QStringLiteral("Spessore non riuscito: %1").arg(QString::fromUtf8(failure.what())));
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Spessore non riuscito: %1").arg(QString::fromUtf8(failure.what())));
-        return nullptr;
     }
+    return nullptr;
 }
 
 ForgeBody forgeShell(const ForgeBody &base, const QVector<EdgePoint> &points, double thickness, QString *error) {
@@ -1054,7 +1165,9 @@ ForgeBody forgeDeleteFaces(const ForgeBody &base, const QVector<EdgePoint> &poin
     return declaredModification(operands,[&](BodyHistory &h){return sewSheets(bodies,0.0,false,&h).body;});
 }
 
-ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &points, double distance, QString *error, QString *summary, bool preserveSeams) {
+ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &points, double distance, QString *error,
+                           QString *summary, bool preserveSeams, BuildDiagnostic *diagnostic) {
+    if (diagnostic) *diagnostic = {};
     if (!base) {
         setError(error, QStringLiteral("Il corpo di partenza non ha geometria."));
         return nullptr;
@@ -1108,13 +1221,18 @@ ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &poin
         const ForgeBody geometry = std::make_shared<const Body>(std::move(result.body));
         registerDeclaredHistory(geometry, {base}, std::move(result.history));
         return geometry;
+    } catch (const OffsetCurvatureError &failure) {
+        reportCurvature(diagnostic, failure);
+        setError(error, QStringLiteral("Offset non riuscito: %1").arg(QString::fromUtf8(failure.what())));
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Offset non riuscito: %1").arg(QString::fromUtf8(failure.what())));
-        return nullptr;
     }
+    return nullptr;
 }
 
-ForgeBody forgeSew(const QVector<ForgeBody> &sheets, double tolerance, bool solid, QString *error, QString *summary) {
+ForgeBody forgeSew(const QVector<ForgeBody> &sheets, double tolerance, bool solid, QString *error, QString *summary,
+                  BuildDiagnostic *diagnostic) {
+    if (diagnostic) *diagnostic = {};
     std::vector<const Body *> bodies;
     for (const ForgeBody &sheet : sheets) {
         if (!sheet) {
@@ -1131,6 +1249,14 @@ ForgeBody forgeSew(const QVector<ForgeBody> &sheets, double tolerance, bool soli
         BodyHistory declared;
         const SewResult result=sewSheets(bodies,tolerance,solid,&declared);
         if (solid && !result.closed) {
+            if (diagnostic && result.freeEdges > 0) {
+                diagnostic->context = QStringLiteral("Bordi liberi dopo la cucitura (%1)").arg(result.freeEdges);
+                for (EdgeId id : result.body.edges()) {
+                    if (!result.body.isLaminar(id)) continue;
+                    const Edge &edge = result.body.edge(id);
+                    appendDiagnosticCurve(*diagnostic, *edge.curve, edge.range);
+                }
+            }
             setError(error, QStringLiteral("Le superfici non chiudono un volume: restano %1 bordi liberi. Disattiva \"Crea un solido\" "
                                            "per una superficie cucita, oppure chiudi i bordi aperti con altre superfici.").arg(result.freeEdges));
             return nullptr;
@@ -1972,7 +2098,8 @@ ForgeBody forgePlanarCurves(const std::vector<PathSegment> &segments, QString *e
     }
 }
 
-void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
+static void tessellateFaces(const Body &body, int quality, BodyDisplay &display,
+                             const std::vector<FaceId> &faces) {
     display = {};
     display.quality = quality;
     Box box;
@@ -1988,6 +2115,7 @@ void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
     TessellationOptions options;
     options.deflection = diagonal * (quality <= 0 ? 4.0e-3 : quality == 1 ? 1.0e-3 : 2.0e-4);
     options.angle = quality <= 0 ? 0.5 : quality == 1 ? 0.25 : 0.1;
+    options.faces = faces;
     const std::unique_ptr<SurfaceBatchEvaluator> accelerator = makeTessellationAccelerator();
     options.accelerator = accelerator.get();
     const Tessellation mesh = tessellate(body, options);
@@ -2024,7 +2152,8 @@ void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
             display.edgeIds.append(mesh.edgeIds[e].index);
         }
     }
-    for (FaceId f : body.faces()) {
+    const auto selected = faces.empty() ? body.faces() : faces;
+    for (FaceId f : selected) {
         if (display.faceEdges.size() <= f.index) display.faceEdges.resize(f.index + 1);
         auto &indices = display.faceEdges[f.index];
         for (LoopId l : body.face(f).loops)
@@ -2033,6 +2162,70 @@ void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
                 if (found != edgeDisplay.end() && !indices.contains(found->second)) indices.append(found->second);
             }
     }
+}
+
+void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
+    tessellateFaces(body, quality, display, {});
+}
+
+// Le facce interpolate della TPMS sono già triangoli B-rep. Le altre
+// facce mantengono la tassellazione e le normali dei propri supporti.
+void forgeTessellateFacetedSolid(const Body &body, int quality, BodyDisplay &display) {
+    struct Facet {
+        FaceId face;
+        std::array<VertexId, 3> vertices;
+        Vec3 area, normal;
+    };
+    display = {};
+    display.quality = quality;
+    const auto faces = body.faces();
+    const auto vertices = body.vertices();
+    if (faces.empty() || vertices.empty()) return;
+    std::vector<Facet> facets;
+    std::vector<FaceId> exactFaces;
+    facets.reserve(faces.size());
+    std::vector<std::vector<std::size_t>> incident(vertices.back().index + 1);
+    for (const FaceId id : faces) {
+        if (id.index % 4096 == 0) cancellationPoint();
+        const auto &face = body.face(id);
+        const auto fins = face.loops.size() == 1 ? body.loopFins(face.loops.front()) : std::vector<FinId>{};
+        const bool triangular = face.surface->type() == SurfaceType::Plane && fins.size() == 3
+            && std::all_of(fins.begin(), fins.end(), [&](FinId fin) {
+                const auto &curve = body.edge(body.fin(fin).edge).curve;
+                return curve && curve->type() == CurveType::Line;
+            });
+        if (!triangular) {
+            exactFaces.push_back(id);
+            continue;
+        }
+        const std::array<VertexId, 3> triangle{body.finStart(fins[0]), body.finStart(fins[1]), body.finStart(fins[2])};
+        const Vec3 &a = body.vertex(triangle[0]).point;
+        const Vec3 area = cross(body.vertex(triangle[1]).point - a, body.vertex(triangle[2]).point - a);
+        for (const VertexId vertex : triangle) incident[vertex.index].push_back(facets.size());
+        facets.push_back({id, triangle, area, normalized(area)});
+    }
+    if (!exactFaces.empty()) tessellateFaces(body, quality, display, exactFaces);
+    display.vertices.reserve(display.vertices.size() + 3 * qsizetype(facets.size()));
+    display.normals.reserve(display.vertices.capacity());
+    display.triangleFaces.reserve(display.triangleFaces.size() + qsizetype(facets.size()));
+    for (const auto &facet : facets) {
+        if (display.triangleFaces.size() % 4096 == 0) cancellationPoint();
+        std::array<QVector3D, 3> points, normals;
+        for (int i = 0; i < 3; ++i) {
+            const VertexId vertex = facet.vertices[i];
+            Vec3 average;
+            for (const auto neighbour : incident[vertex.index])
+                if (dot(facet.normal, facets[neighbour].normal) > .75)
+                    average += facets[neighbour].area;
+            points[i] = toDisplay(body.vertex(vertex).point);
+            normals[i] = toDisplay(normalized(average));
+        }
+        if (appendDisplayTriangle(display, facet.face.index, points, normals)) {
+            display.faceIds.append(facet.face.index);
+            display.faceLabelPoints.append((points[0] + points[1] + points[2]) / 3.f);
+        }
+    }
+    if (!display.rayIndex) display.rayIndex = std::make_shared<RayFaceIndex>(body);
 }
 
 static void surfaceConstructionCurvesSerial(const Body &body, BodyDisplay &display, int divisions, bool allFaces,

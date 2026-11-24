@@ -75,15 +75,32 @@ inline void patternVariationTests() {
     auto grid=p;grid.pattern.count=2;grid.pattern.count2=2;grid.pattern.spacing2=30;grid.pattern.refs.append({2,1,{},{}});
     close(massProperties(*build(grid,state).forgeBody).volume,325);
     auto bad=p;bad.pattern.featureOnly=false;
-    require(patternParameters(bad,state.sketches,state.extrusions).isEmpty(),"catalogo per corpo intero");
+    require(patternParameters(bad,state.sketches,state.extrusions).isEmpty(),"il corpo da booleana non espone i parametri degli utensili");
     buildGeometry(bad,3,state.sketches,state.extrusions);
-    require(!bad.forgeBody && bad.error.contains("corpo intero"),"variazioni su corpo non rifiutate");
+    require(!bad.forgeBody && bad.error.contains("non appartiene"),"variazione di un utensile accettata dal corpo intero");
     bad=p;bad.pattern.variations[0].increment=-1;buildGeometry(bad,3,state.sketches,state.extrusions);
     require(!bad.forgeBody && bad.error.contains("Istanza 3"),"istanza errata non identificata");
     bad=p;bad.pattern.variations.append(bad.pattern.variations.front());buildGeometry(bad,3,state.sketches,state.extrusions);
     require(!bad.forgeBody && !bad.error.isEmpty(),"parametro duplicato accettato");
     bad=p;bad.pattern.variations[0].increment=std::numeric_limits<double>::infinity();buildGeometry(bad,3,state.sketches,state.extrusions);
     require(!bad.forgeBody && !bad.error.isEmpty(),"incremento infinito accettato");
+    DocumentState primitive;
+    primitive.extrusions = {box};
+    regenerate(primitive);
+    auto whole = p;
+    whole.firstBody = 0;
+    whole.pattern.featureOnly = false;
+    whole.pattern.variations = {parameter(whole, primitive, "size2", 2)};
+    const auto boxes = build(whole, primitive);
+    close(massProperties(*boxes.forgeBody).volume, 168.);
+    whole.pattern.variations.front().increment = 0.;
+    close(massProperties(*build(whole, primitive).forgeBody).volume, 96.);
+    whole.pattern.kind = 2;
+    whole.pattern.refs = {{1, 2, {}, {}}};
+    require(patternParameters(whole, primitive.sketches, primitive.extrusions).isEmpty(),
+            "lo specchio non offre incrementi");
+    buildGeometry(whole, 1, primitive.sketches, primitive.extrusions);
+    require(!whole.forgeBody && whole.error.contains("lineari e circolari"),"lo specchio accetta incrementi");
     auto key=p;key.pattern.variations[0].increment=2;
     require(Gui::FeaturePreviewBuilder::previewKey(p,-1)!=Gui::FeaturePreviewBuilder::previewKey(key,-1),"cache ignora incremento");
     // Una dipendenza dell'utensile non entra nel catalogo e non può essere forzata da file.
@@ -112,6 +129,29 @@ inline void patternVariationTests() {
     double expected=1;for(int i=0;i<4;++i)expected+=M_PI*(2+i)*(2+i)*(5+i);
     close(massProperties(*build(sp,sketches).forgeBody).volume,expected);
     require(sketches.sketches[0].geometricConstraints[0].value==4,"quota originale mutata");
+    auto separate = sketches;
+    separate.extrusions[1].mergeOperation = 0;
+    separate.extrusions[1].mergeBodies.clear();
+    regenerate(separate);
+    auto separatePattern = sp;
+    separatePattern.pattern.featureOnly = false;
+    separatePattern.pattern.kind = 1;
+    separatePattern.pattern.angle = 360.;
+    separatePattern.pattern.refs[0].index = 2;
+    close(massProperties(*build(separatePattern, separate).forgeBody).volume, expected - 1.);
+    separatePattern.pattern.kind = 0;
+    separatePattern.pattern.refs[0].index = 0;
+    separatePattern.pattern.excluded = {1};
+    separatePattern.patternComponent = 0;
+    const auto split = build(separatePattern, separate);
+    require(split.patternResults.size() == 4 && !split.patternResults[1], "slot dell'esclusione perso");
+    for (const int i : {0, 2, 3}) {
+        require(bool(split.patternResults[i]), "istanza variabile assente");
+        close(massProperties(*split.patternResults[i]).volume, M_PI * (2 + i) * (2 + i) * (5 + i));
+    }
+    require(separate.sketches[0].geometricConstraints[0].value == 4 && separate.extrusions[1].distance == 5,
+            "modifica della quota o distanza della sorgente autonoma");
+
     auto moved=sketches;SketchConstraint unrelated;unrelated.type=ConstraintType::Horizontal;unrelated.first={2,1,-1};
     moved.sketches[0].geometricConstraints.prepend(unrelated);normalizeModelHistory(moved);
     const auto movedList=patternParameters(sp,moved.sketches,moved.extrusions);
@@ -160,6 +200,6 @@ inline void patternVariationTests() {
     widget.findChild<QTableWidget *>("patternVariationTable")->setCurrentCell(0,0);
     widget.findChild<QPushButton *>("patternVariationRemove")->click();require(widget.variations().isEmpty(),"rimozione UI");
     auto body=sp;body.pattern.featureOnly=false;widget.setContext(body,old.sketches,old.extrusions);
-    require(widget.dimensions().isEmpty() && combo->count()==0,"parametri corpo esposti");
+    require(widget.hasParameters() && widget.dimensions().size()==1 && combo->count()==1,"parametri del corpo sorgente assenti");
     std::cout<<"Pattern variation scope, geometry, sketches, exclusions, validation, codec and Undo/Redo PASS\n";
 }

@@ -67,8 +67,10 @@ void PatternVariationEditor::setVariations(const QVector<PatternVariation> &valu
 void PatternVariationEditor::setContext(const ExtrusionObject &pattern, const QVector<SketchObject> &s,
                                         const QVector<ExtrusionObject> &b) {
     total_ = pattern.pattern.count * (pattern.pattern.kind == 0 ? pattern.pattern.count2 : 1);
-    if (source_ != pattern.firstBody || feature_ != pattern.pattern.featureOnly) {
+    const bool variableKind = pattern.pattern.kind == 0 || pattern.pattern.kind == 1;
+    if (source_ != pattern.firstBody || feature_ != pattern.pattern.featureOnly || variableKind_ != variableKind) {
         source_ = pattern.firstBody;
+        variableKind_ = variableKind;
         feature_ = pattern.pattern.featureOnly;
         parameters_ = patternParameters(pattern, s, b);
         const QSignalBlocker blocker(available_);
@@ -78,7 +80,7 @@ void PatternVariationEditor::setContext(const ExtrusionObject &pattern, const QV
             if (p.reference.sketch && p.reference.parameter.endsWith("/value")) continue;
             available_->addItem(p.label + QStringLiteral(" [%1 %2]").arg(p.value, 0, 'g', 10).arg(p.unit), i);
         }
-        available_->setToolTip(QStringLiteral("Parametri della sola funzione selezionata; le quote si scelgono nella vista."));
+        available_->setToolTip(QStringLiteral("Parametri della funzione sorgente. Le quote degli schizzi diretti si scelgono nella vista."));
         add_->setEnabled(available_->count() > 0);
         rebuild();
     } else

@@ -211,24 +211,21 @@ void SceneRenderer::drawThreadProfileEdges(OverlayRenderer &overlay, const BodyD
     }
 }
 
-void SceneRenderer::drawTrimPreview(DisplayCache &cache, const BodyDisplay &display, int displayMode) {
-    if (displayMode != 0 && !display.vertices.isEmpty()) {
-        cache.setLightingEnabled(false);
-        cache.setColor(QVector4D(0.25f, 1.0f, 0.42f, 0.62f));
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glDepthMask(GL_FALSE);
+void SceneRenderer::drawTrimRegion(DisplayCache &cache, const BodyDisplay &display, bool kept, bool hovered) {
+    if (!display.vertices.isEmpty()) {
+        cache.setLightingEnabled(true);
+        cache.setColor(hovered ? QVector4D(.28f, .86f, .44f, 1.f) :
+            kept ? QVector4D(1.f, .66f, .24f, 1.f) : QVector4D(.42f, .53f, .62f, 1.f));
         glEnable(GL_POLYGON_OFFSET_FILL);
-        glPolygonOffset(-2.0f, -3.0f);
+        glPolygonOffset(1.f, 1.f);
         cache.displayFaces(display);
         glDisable(GL_POLYGON_OFFSET_FILL);
-        glDepthMask(GL_TRUE);
-        glDisable(GL_BLEND);
     }
-    if (displayMode != 1 && !display.edges.isEmpty()) {
+    if (!display.edges.isEmpty()) {
         cache.setLightingEnabled(false);
-        cache.setColor(QVector4D(0.55f, 1.0f, 0.65f, 1.0f));
-        glLineWidth(3.0f);
+        cache.setColor(hovered ? QVector4D(.73f, 1.f, .79f, 1.f) :
+            kept ? QVector4D(.95f, .79f, .48f, 1.f) : QVector4D(.70f, .77f, .82f, 1.f));
+        glLineWidth(hovered ? 2.f : 1.f);
         cache.edges(display);
         glLineWidth(1.0f);
     }

@@ -152,7 +152,9 @@ public:
         if (!sessionDirectory(root_,entry.directory)) error=QStringLiteral("Copia di recupero non valida.");
         else {
             { QLockFile guard(entry.directory+QStringLiteral("/session.lock"));guard.setStaleLockTime(0);
-              if (!guard.tryLock(0)) error=QStringLiteral("Il documento e' ancora aperto in un'altra sessione.");
+              // Una scansione o lettura concorrente puo' detenere il lock
+              // per poco tempo. L'attesa limitata rimane sul worker.
+              if (!guard.tryLock(500)) error=QStringLiteral("Il documento e' ancora aperto in un'altra sessione.");
               else error=removeSlots(entry.directory); }
             if (error.isEmpty()) QDir().rmdir(entry.directory);
         }
