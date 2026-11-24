@@ -68,25 +68,7 @@ public:
         const Key whole = key(curve, range, tolerance);
         const auto cached = values_.find(whole);
         if (cached != values_.end()) { ++statistics_.hits; return cached->second; }
-        const auto speed = [&curve](double t) {
-            cancellationPoint();
-            if (!std::isfinite(t)) throw std::domain_error("arcLength: parametro non finito");
-            Vec3 d[2];
-            curve.evaluate(t, 1, d);
-            if (!isFinite(d[1])) throw std::domain_error("arcLength: derivata non finita");
-            const double squared = squaredNorm(d[1]);
-            double value;
-            if (std::isnormal(squared)) {
-                value = std::sqrt(squared);
-            } else {
-                bool zero = true;
-                for (int axis = 0; axis < 3; ++axis) zero = zero && d[1][axis] == 0.0;
-                if (zero) value = 0.0;
-                else value = std::hypot(d[1][0], d[1][1], d[1][2]);
-            }
-            if (!std::isfinite(value)) throw std::domain_error("arcLength: velocita' non finita");
-            return value;
-        };
+        const auto speed = [&curve](double t) { return arcLengthSpeed(curve, t); };
         const auto breaks = curve.breakpoints(range);
         if (breaks.empty() || breaks.front() != range.lo || breaks.back() != range.hi)
             throw std::domain_error("arcLength: estremi dei tratti non validi");

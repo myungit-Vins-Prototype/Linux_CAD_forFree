@@ -178,3 +178,14 @@ durante il download dei pacchetti su `us-east-2.ec2.archive.ubuntu.com`.
 Il workflow estende anche ai mirror EC2 il reindirizzamento già usato
 per Azure. I pacchetti e le verifiche delle firme APT sono gli stessi.
 [Log del job Linux](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/45344148977/job/138274546494).
+
+Il run di `b0a9407` ha completato la CI Linux e superato il runner
+generale del kernel anche su macOS. Su macOS restavano quattro
+asserzioni fallite nella suite di quadratura, tutte sulle richieste
+alla cache. La lunghezza d'arco diretta era corretta. La cache del
+loft e la lunghezza diretta condividono ora `arcLengthSpeed` per
+riscalare la derivata e verificare i valori finiti. Il test conserva
+sia la richiesta iniziale sia quella ripetuta dalla cache.
+[Run di b0a9407](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/45346555868).
+
+In locale passano i 16 casi di quadratura e i 6 di lunghezza d'arco.

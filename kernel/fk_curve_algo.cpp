@@ -337,31 +337,34 @@ CurveProjection<N> projectPoint(const Curve<N> &curve, const Vec<N> &p) {
 }
 
 template <int N>
+double detail::arcLengthSpeed(const Curve<N> &curve, double t) {
+    cancellationPoint();
+    if (!std::isfinite(t)) throw std::domain_error("arcLength: parametro non finito");
+    Vec<N> d[2];
+    curve.evaluate(t, 1, d);
+    if (!isFinite(d[1])) throw std::domain_error("arcLength: derivata non finita");
+    const double squared = squaredNorm(d[1]);
+    double value;
+    if (std::isnormal(squared)) {
+        value = std::sqrt(squared);
+    } else {
+        // Normalizza esplicitamente prima del quadrato. Anche una
+        // derivata subnormale può integrare a una lunghezza normale.
+        double scale = 0.0;
+        for (int axis = 0; axis < N; ++axis)
+            scale = std::max(scale, std::fabs(d[1][axis]));
+        value = scale == 0.0 ? 0.0 : scale * norm(d[1] / scale);
+    }
+    if (!std::isfinite(value)) throw std::domain_error("arcLength: velocita' non finita");
+    return value;
+}
+
+template <int N>
 double arcLength(const Curve<N> &curve, const Interval &range, double tolerance) {
     cancellationPoint();
     requireFinite(range);
     if (!std::isfinite(range.length())) throw std::domain_error("arcLength: ampiezza non finita");
-    const auto speed = [&curve](double t) {
-        cancellationPoint();
-        if (!std::isfinite(t)) throw std::domain_error("arcLength: parametro non finito");
-        Vec<N> d[2];
-        curve.evaluate(t, 1, d);
-        if (!isFinite(d[1])) throw std::domain_error("arcLength: derivata non finita");
-        const double squared = squaredNorm(d[1]);
-        double value;
-        if (std::isnormal(squared)) {
-            value = std::sqrt(squared);
-        } else {
-            // Normalizza esplicitamente prima del quadrato. Anche una
-            // derivata subnormale può integrare a una lunghezza normale.
-            double scale = 0.0;
-            for (int axis = 0; axis < N; ++axis)
-                scale = std::max(scale, std::fabs(d[1][axis]));
-            value = scale == 0.0 ? 0.0 : scale * norm(d[1] / scale);
-        }
-        if (!std::isfinite(value)) throw std::domain_error("arcLength: velocita' non finita");
-        return value;
-    };
+    const auto speed = [&curve](double t) { return detail::arcLengthSpeed(curve, t); };
     const std::vector<double> breaks = curve.breakpoints(range);
     if (breaks.empty() || breaks.front() != range.lo || breaks.back() != range.hi)
         throw std::domain_error("arcLength: estremi dei tratti non validi");
@@ -400,6 +403,8 @@ template CurveProjection<2> projectPoint<2>(const Curve<2> &, const Vec2 &, cons
 template CurveProjection<3> projectPoint<3>(const Curve<3> &, const Vec3 &, const Interval &);
 template CurveProjection<2> projectPoint<2>(const Curve<2> &, const Vec2 &);
 template CurveProjection<3> projectPoint<3>(const Curve<3> &, const Vec3 &);
+template double detail::arcLengthSpeed<2>(const Curve<2> &, double);
+template double detail::arcLengthSpeed<3>(const Curve<3> &, double);
 template double arcLength<2>(const Curve<2> &, const Interval &, double);
 template double arcLength<3>(const Curve<3> &, const Interval &, double);
 template double arcLength<2>(const Curve<2> &, double);

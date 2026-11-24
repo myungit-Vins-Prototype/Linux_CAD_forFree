@@ -46,6 +46,14 @@ double arcLength(const Curve<N> &curve, const Interval &range, double tolerance 
 template <int N>
 double arcLength(const Curve<N> &curve, double tolerance = 1.0e-10);
 
+namespace detail {
+
+// Valutazione condivisa dalla lunghezza d'arco e dalla cache del loft.
+template <int N>
+double arcLengthSpeed(const Curve<N> &curve, double parameter);
+
+}
+
 }
 
 #endif
