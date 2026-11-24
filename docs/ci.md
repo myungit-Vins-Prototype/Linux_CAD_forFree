@@ -205,3 +205,10 @@ sia la richiesta iniziale sia quella ripetuta dalla cache.
 [Run di b0a9407](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/45346555868).
 
 In locale passano i 16 casi di quadratura e i 6 di lunghezza d'arco.
+
+### Lampeggio delle guide nelle tavole
+
+Durante i controlli della PR #2 il test GUI delle quote su macOS ha
+campionato la guida prima del secondo evento del timer. La prova ora
+attende nel loop Qt lo spegnimento e la riaccensione, entro due secondi
+per ciascuna transizione. Il timer dell'editor rimane a 350 ms.
