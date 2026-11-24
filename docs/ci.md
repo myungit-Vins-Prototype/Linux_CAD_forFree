@@ -18,8 +18,8 @@ OCCT serve solo a `forgekernel_tests` (`kernel/occt_tests`, opzione
 `FORGECAD_BUILD_OCCT_TESTS`): l'applicazione non lo collega. I toolkit di scambio
 si scelgono secondo la versione (`TKDE*` da OCCT 7.8, nomi storici prima). I runner GitHub standard non forniscono una GPU NVIDIA
 e questa build usa il backend CPU senza installare CUDA.
-L’installazione Linux sostituisce il mirror Azure del runner con il mirror principale
-Ubuntu via HTTPS, conservando le verifiche delle firme APT. Aggiorna sia le
+L’installazione Linux sostituisce i mirror cloud Azure ed EC2 del runner
+con il mirror principale Ubuntu via HTTPS, conservando le verifiche delle firme APT. Aggiorna sia le
 sorgenti `.list`/`.sources` sia `apt-mirrors.txt` e `apt-security-mirrors.txt`,
 utilizzati dai runner tramite `mirror+file:`. Ogni connessione ha
 un timeout di 30 secondi e fino a tre tentativi; il passaggio delle dipendenze
@@ -169,6 +169,12 @@ Il test verifica sia l'API delle lunghezze sia la cache. Il nuovo caso
 dell'estremo a radice quadrata copre la quadratura scalare e vettoriale
 in entrambi i versi. [Esecuzione GitHub iniziale](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/45338480279).
 
-Su Linux locale passano tutti i sei casi riprodotti e le suite dedicate
-alla quadratura e alla quantizzazione. La verifica completa resta affidata
-alla nuova esecuzione su Linux e macOS.
+Su Linux locale la correzione supera i sei casi riprodotti, tutti i 488
+casi del runner generale del kernel e le suite di quadratura e quantizzazione.
+La build Release locale è riuscita.
+
+Il primo job Linux di `1665232` ha raggiunto il limite di 15 minuti
+durante il download dei pacchetti su `us-east-2.ec2.archive.ubuntu.com`.
+Il workflow estende anche ai mirror EC2 il reindirizzamento già usato
+per Azure. I pacchetti e le verifiche delle firme APT sono gli stessi.
+[Log del job Linux](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/45344148977/job/138274546494).

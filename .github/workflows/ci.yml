@@ -47,10 +47,13 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          # Il mirror Azure puo' restare in download fino al timeout del job.
-          # Cambia solo quel mirror sui runner effimeri; firme APT invariate.
+          # I mirror cloud Azure ed EC2 possono bloccarsi durante i download.
+          # Cambia solo quei mirror sui runner effimeri; firme APT invariate.
           sudo python3 - <<'PYAPT'
+          import re
           from pathlib import Path
+          cloud_archive = re.compile(
+              r"https?://(?:azure|[a-z0-9-]+\.ec2)\.archive\.ubuntu\.com/ubuntu(?=/|\s|$)")
           directory = Path('/etc/apt/sources.list.d')
           # Ubuntu usa anche mirror+file:/etc/apt/apt-mirrors.txt:
           # cambiare solo .list/.sources lascia Azure attivo nei download.
@@ -60,10 +63,7 @@ jobs:
               if not path.is_file():
                   continue
               original = path.read_text()
-              updated = original
-              for protocol in ('http', 'https'):
-                  updated = updated.replace(protocol + '://azure.archive.ubuntu.com/ubuntu',
-                                            'https://archive.ubuntu.com/ubuntu')
+              updated = cloud_archive.sub("https://archive.ubuntu.com/ubuntu", original)
               if updated != original:
                   path.write_text(updated)
                   print('Mirror Ubuntu principale:', path)
