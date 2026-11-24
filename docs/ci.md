@@ -150,3 +150,25 @@ dominio del fianco F0. La correzione K12 mantiene invariati test, fixture e
 soglie; suite cavity8/8 e controlli locali correnti PASS. La conferma sul nuovo
 commit remoto è distinta dalle verifiche locali.
 [Diagnosi e stato della verifica](ci-verifica-2026-11-16.md).
+
+### Quadratura portabile
+
+Il 24 novembre 2026 entrambe le build del commit `1a450e0` sono riuscite.
+I test hanno trovato cinque fallimenti nelle prove delle
+booleane e uno nel calcolo effettivo delle proprietà di massa di un raccordo.
+La bisezione assegnava metà budget a ogni figlio anche quando la difficoltà
+era concentrata vicino a una tangente. Il figlio che ha già raggiunto
+l'accuratezza richiesta cede ora il budget inutilizzato. Se entrambi devono
+essere raffinati, la ripartizione segue le rispettive stime d'errore.
+La tolleranza complessiva e il rifiuto a profondità esaurita restano attivi.
+
+Su macOS tre richieste di lunghezza per ciascuna di due B-spline regolari
+restituivano zero con una velocità subnormale. Il calcolo della velocità
+riscalata usa ora la componente massima prima di applicare la norma.
+Il test verifica sia l'API delle lunghezze sia la cache. Il nuovo caso
+dell'estremo a radice quadrata copre la quadratura scalare e vettoriale
+in entrambi i versi. [Esecuzione GitHub iniziale](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/45338480279).
+
+Su Linux locale passano tutti i sei casi riprodotti e le suite dedicate
+alla quadratura e alla quantizzazione. La verifica completa resta affidata
+alla nuova esecuzione su Linux e macOS.

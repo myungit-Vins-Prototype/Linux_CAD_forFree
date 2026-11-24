@@ -135,22 +135,57 @@ double gaussKronrod(const F &f, double a, double b, double &error, double &absol
     return value;
 }
 
-// Oltre alla tolleranza richiesta, un intervallo e' accettato quando l'errore
-// stimato e' sotto l'arrotondamento dei double (50 eps volte l'integrale di
-// |f|, come in QUADPACK): altrimenti con integrandi grandi la bisezione
-// scenderebbe fino in fondo ovunque.
+// Un figlio già entro metà budget cede il residuo all'altro. Se
+// entrambi richiedono raffinamento, ripartisci in base agli errori stimati.
+// La somma delle quote resta la tolleranza del pannello padre.
+struct PanelTolerance {
+    double left, right;
+};
+
+inline PanelTolerance splitQuadratureTolerance(double tolerance, double leftError, double rightError) {
+    const double half = 0.5 * tolerance;
+    if (leftError <= half) return {leftError, tolerance - leftError};
+    if (rightError <= half) return {tolerance - rightError, rightError};
+    if (half > 0.0) {
+        const bool leftLarger = leftError >= rightError;
+        const double ratio = leftLarger ? rightError / leftError : leftError / rightError;
+        const double smaller = tolerance * (ratio / (1.0 + ratio));
+        return leftLarger ? PanelTolerance{tolerance - smaller, smaller}
+                          : PanelTolerance{smaller, tolerance - smaller};
+    }
+    return {half, tolerance - half};
+}
+
+struct ScalarPanel {
+    double value, error, absolute;
+};
+
 template <class F>
-double adaptiveIntegral(const F &f, double a, double b, double tolerance, int depth) {
-    double error, absolute;
-    const double value = gaussKronrod(f, a, b, error, absolute);
-    if (error <= tolerance || error <= 50.0 * 2.220446049250313e-16 * absolute) return value;
+ScalarPanel scalarPanel(const F &f, double a, double b) {
+    ScalarPanel p;
+    p.value = gaussKronrod(f, a, b, p.error, p.absolute);
+    return p;
+}
+
+// È ammesso anche l'errore di arrotondamento dei double (50 eps volte
+// l'integrale di |f|, come in QUADPACK).
+template <class F>
+double adaptiveScalarPanel(const F &f, double a, double b, const ScalarPanel &p, double tolerance, int depth) {
+    if (p.error <= tolerance || p.error <= 50.0 * 2.220446049250313e-16 * p.absolute) return p.value;
     if (depth >= 30) throw std::domain_error("quadratura: profondita massima prima della convergenza");
     const double middle = quadratureMiddle(a, b);
     if (middle == a || middle == b) throw std::domain_error("quadratura: suddivisione non rappresentabile");
-    const double result = adaptiveIntegral(f, a, middle, 0.5 * tolerance, depth + 1)
-                        + adaptiveIntegral(f, middle, b, 0.5 * tolerance, depth + 1);
+    const auto left = scalarPanel(f, a, middle), right = scalarPanel(f, middle, b);
+    const auto budget = splitQuadratureTolerance(tolerance, left.error, right.error);
+    const double result = adaptiveScalarPanel(f, a, middle, left, budget.left, depth + 1)
+                        + adaptiveScalarPanel(f, middle, b, right, budget.right, depth + 1);
     if (!std::isfinite(result)) throw std::domain_error("quadratura: somma non rappresentabile");
     return result;
+}
+
+template <class F>
+double adaptiveIntegral(const F &f, double a, double b, double tolerance, int depth) {
+    return adaptiveScalarPanel(f, a, b, scalarPanel(f, a, b), tolerance, depth);
 }
 
 // Integrale di f su [a, b] con errore assoluto stimato <= tolerance.
@@ -304,10 +339,14 @@ Evaluation<N> adaptivePanel(const F &f, const Panel<N> &p, const Values<N> &tole
         }
         return result;
     }
-    Values<N> halfTolerance;
-    for (std::size_t k = 0; k < N; ++k) halfTolerance[k] = 0.5 * tolerance[k];
-    result = adaptivePanel<N>(f, left, halfTolerance, roundoff, depth + 1, controlled);
-    const Evaluation<N> second = adaptivePanel<N>(f, right, halfTolerance, roundoff, depth + 1, controlled);
+    Values<N> leftTolerance{}, rightTolerance{};
+    for (std::size_t k = 0; k < controlled; ++k) {
+        const auto budget = splitQuadratureTolerance(tolerance[k], left.error[k], right.error[k]);
+        leftTolerance[k] = budget.left;
+        rightTolerance[k] = budget.right;
+    }
+    result = adaptivePanel<N>(f, left, leftTolerance, roundoff, depth + 1, controlled);
+    const Evaluation<N> second = adaptivePanel<N>(f, right, rightTolerance, roundoff, depth + 1, controlled);
     for (std::size_t k = 0; k < N; ++k) {
         result.value[k] += second.value[k];
         result.magnitude[k] += second.magnitude[k];

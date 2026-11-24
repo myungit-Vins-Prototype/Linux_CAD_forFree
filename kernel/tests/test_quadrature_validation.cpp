@@ -370,6 +370,20 @@ FK_TEST(QuadratureUnrecoverableMixedScaleIsRejected) {
     FK_CHECK(calls == 15);
 }
 
+FK_TEST(QuadratureSharesTheRemainingBudgetAtASquareRootEndpoint) {
+    const auto f = [](double t) { return std::sqrt(t); };
+    const auto vector = [&](double t) {
+        const double value = f(t);
+        return detail::Evaluation<1>{{value}, {value}};
+    };
+    for (bool reverse : {false, true}) {
+        const double a = reverse ? 1. : 0., b = reverse ? 0. : 1.;
+        const double expected = (b - a) * (2. / 3.);
+        finiteNear(detail::integrate(f, a, b, 1e-12), expected, 1e-12);
+        finiteNear(detail::integrateVector<1>(vector, a, b, 1e-12, roundoff).value[0], expected, 1e-12);
+    }
+}
+
 FK_TEST(QuadratureScalarReportsDepthExhaustion) {
     int calls = 0;
     const double threshold = 1. / 3;

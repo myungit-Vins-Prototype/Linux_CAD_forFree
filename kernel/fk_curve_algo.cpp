@@ -352,11 +352,12 @@ double arcLength(const Curve<N> &curve, const Interval &range, double tolerance)
         if (std::isnormal(squared)) {
             value = std::sqrt(squared);
         } else {
-            bool zero = true;
-            for (int axis = 0; axis < N; ++axis) zero = zero && d[1][axis] == 0.0;
-            if (zero) value = 0.0;
-            else if constexpr (N == 2) value = std::hypot(d[1][0], d[1][1]);
-            else value = std::hypot(d[1][0], d[1][1], d[1][2]);
+            // Normalizza esplicitamente prima del quadrato. Anche una
+            // derivata subnormale può integrare a una lunghezza normale.
+            double scale = 0.0;
+            for (int axis = 0; axis < N; ++axis)
+                scale = std::max(scale, std::fabs(d[1][axis]));
+            value = scale == 0.0 ? 0.0 : scale * norm(d[1] / scale);
         }
         if (!std::isfinite(value)) throw std::domain_error("arcLength: velocita' non finita");
         return value;
