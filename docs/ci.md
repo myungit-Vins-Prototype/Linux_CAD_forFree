@@ -1,8 +1,23 @@
 # Controlli automatici su GitHub
 
-Il workflow [CI Linux e macOS](../.github/workflows/ci.yml) parte a ogni push e pull
-request. Dalla scheda **Actions → CI Linux e macOS → Run workflow** si può avviare anche
-manualmente, dopo che il file è stato pubblicato sul branch predefinito.
+Il workflow parte sulle pull request e sui push a `main`. Si può avviare
+manualmente da **Actions → CI Linux e macOS → Run workflow**.
+[Configurazione del workflow](../.github/workflows/ci.yml)
+
+## Integrare una modifica
+
+1. Lavora su un branch e fai i controlli locali mirati ai file modificati.
+2. Apri una pull request verso `main` per avviare la suite completa su
+   Linux e macOS. Aggiorna lo stesso branch per correggere eventuali problemi.
+3. Verifica che entrambi i job sulla revisione da integrare siano verdi,
+   poi usa **Squash and merge** per pubblicare un unico commit su `main`.
+
+L'aggiornamento di una pull request avvia la suite una volta. Il push a
+`main` dopo il merge verifica lo stato pubblicato.
+
+La CI di `d1fa1b2` è riuscita su Linux con 121 test superati e 3 skip
+e su macOS con 125 test superati e 2 skip.
+[Esito della CI](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/45351370347)
 
 ## Cosa controlla
 
@@ -44,8 +59,9 @@ Un errore di compilazione o test fa fallire il job. CTest rifiuta anche una
 configurazione senza test. I log di configurazione, compilazione e CTest e il
 rapporto JUnit vengono conservati per sette giorni negli artifact dell'esecuzione,
 anche in caso di errore quando quei file sono stati prodotti. Due compilazioni
-simultanee e due test simultanei limitano il consumo di memoria. Un nuovo push
-sullo stesso branch annulla l'esecuzione precedente ancora in corso.
+simultanee e due test simultanei limitano il consumo di memoria. Aggiornare
+una pull request o fare un nuovo push a `main` annulla la relativa esecuzione
+ancora in corso.
 
 Il limite generale è di quindici minuti per test CTest: la suite generale del
 kernel è una singola voce che racchiude centinaia di casi. I limiti più brevi
@@ -189,3 +205,10 @@ sia la richiesta iniziale sia quella ripetuta dalla cache.
 [Run di b0a9407](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/45346555868).
 
 In locale passano i 16 casi di quadratura e i 6 di lunghezza d'arco.
+
+### Lampeggio delle guide nelle tavole
+
+Durante i controlli della PR #2 il test GUI delle quote su macOS ha
+campionato la guida prima del secondo evento del timer. La prova ora
+attende nel loop Qt lo spegnimento e la riaccensione, entro due secondi
+per ciascuna transizione. Il timer dell'editor rimane a 350 ms.

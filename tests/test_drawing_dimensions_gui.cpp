@@ -71,7 +71,23 @@ void drawingDimensionAlignmentTests(){
   QMouseEvent event(phase==0?QEvent::MouseButtonPress:phase==1?QEvent::MouseMove:QEvent::MouseButtonRelease,local,global,phase==1?Qt::NoButton:Qt::LeftButton,phase==2?Qt::NoButton:Qt::LeftButton,modifiers);QApplication::sendEvent(v->viewport(),&event);
  };
  const auto guide=[](DrawingSheetEditor &e)->QGraphicsPathItem *{for(auto *i:e.canvas()->scene()->items())if(i->data(0).toString()=="dimensionAlignmentGuide")return dynamic_cast<QGraphicsPathItem *>(i);return nullptr;};
- const auto pause=[](int ms){QEventLoop loop;QTimer::singleShot(ms,&loop,&QEventLoop::quit);loop.exec();};
+ const auto waitForGuideVisibility = [&](DrawingSheetEditor &editor, bool visible, const char *message) {
+  const auto matches = [&] {
+   const auto *line = guide(editor);
+   return line && line->isVisible() == visible;
+  };
+  if(matches())return;
+  QEventLoop loop;
+  QTimer poll;
+  poll.setInterval(10);
+  QObject::connect(&poll, &QTimer::timeout, &loop, [&] {
+   if(matches())loop.quit();
+  });
+  QTimer::singleShot(2000, &loop, &QEventLoop::quit);
+  poll.start();
+  loop.exec();
+  require(matches(), message);
+ };
  for(const double zoom:{2.0,5.0}){
   DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};model.snapshot.bodies={source(makeBox(Frame3(),10,6,4),1)};model.choices={{1,"Blocco"}};
   DrawingSheet sheet;sheet.drawing.model=model.snapshot.version;sheet.title="Allineamento grafico delle quote";sheet.style.dimensionHeight=1.5;
@@ -106,8 +122,11 @@ void drawingDimensionAlignmentTests(){
   mouse(e,start+QPointF(5,0),1);require(guide(e)->data(11).toUuid()==left,"inversione del movimento sceglie il bersaglio a sinistra");
   mouse(e,start+QPointF(8,0),1);require(guide(e)->data(11).toUuid()==right,"nuova inversione torna a destra");
   if(zoom==5){
+   const auto *line = guide(e);
+   require(line && line->isVisible(), "guida inizialmente visibile");
    ok(e.exportPdf(output.isEmpty()?pdfDirectory.filePath("durante.pdf"):output+"/durante.pdf",pdfReport));require(encoded(e)==saved&&guide(e),"PDF usa il documento salvato senza importare guida o anteprima");
-   auto *line=guide(e);require(line->isVisible(),"guida inizialmente visibile");pause(410);require(!line->isVisible(),"guida lampeggiante si spegne");pause(350);require(line->isVisible(),"guida lampeggiante si riaccende");
+   waitForGuideVisibility(e, false, "guida lampeggiante si spegne");
+   waitForGuideVisibility(e, true, "guida lampeggiante si riaccende");
    const auto output=qEnvironmentVariable("FORGECAD_ALIGNMENT_OUTPUT");if(!output.isEmpty()){QDir().mkpath(output);require(e.grab().save(output+"/allineamento-orizzontale.png"),"cattura guida orizzontale");}
   }
   mouse(e,start+QPointF(8,20/zoom),1);require(guide(e)->path().isEmpty(),"uscita dalla soglia libera l'aggancio");

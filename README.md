@@ -473,7 +473,7 @@ If you have a local collection of models, open a document through **File → Apr
 ## Tests and development
 
 [GitHub Actions CI](docs/ci.md) builds the complete application and runs the
-self-contained CTest suites on Ubuntu 26.04 and macOS 15 after every push and pull request.
+self-contained CTest suites on Ubuntu 26.04 and macOS 15 on pull requests and pushes to `main`.
 Viewport tests requiring external documents and GPU/native rendering checks
 remain separate; the badge reports the combined workflow result.
 
