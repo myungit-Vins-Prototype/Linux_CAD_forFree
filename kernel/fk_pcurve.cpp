@@ -210,14 +210,15 @@ public:
     bool node(double t, Vec2 uv, HermiteNode &out, bool recoverPole = true) const {
         Vec3 c[2];
         curve_.evaluate(t, 1, c);
-        const int pole = poleIndex(poles_, c[0], tolerance_);
+        // A regular point inside the fitting tolerance of a pole still
+        // has its own UV and derivatives. Snap only within roundoff.
+        const double poleTolerance = std::min(tolerance_, 64.0 * kMachineEpsilon * scale_);
+        const int pole = poleIndex(poles_, c[0], poleTolerance);
         if (pole >= 0) {
             if (!recoverPole) return false;
-            // Nel polo u e' quello della stima (il limite lungo la curva) e la
-            // derivata e' quella di un punto dentro il tratto. Se anche quel
-            // punto e' entro la tolleranza del polo, allontanati con passi
-            // crescenti: la ricorsione a passo fisso esauriva lo stack sugli
-            // edge STEP quasi degeneri. Al massimo un livello di ricorsione.
+            // Cerca un punto regolare da cui ricavare la derivata. Se il
+            // campione cade ancora sul polo aumenta il passo, con un solo
+            // livello di ricorsione anche sugli edge STEP quasi degeneri.
             const bool forward = t < 0.5 * (range_.lo + range_.hi);
             const double available = forward ? range_.hi - t : t - range_.lo;
             double step = 1e-7 * range_.length();
@@ -227,7 +228,11 @@ public:
                 if (inside == t) return false;
                 HermiteNode near;
                 if (node(inside, uv, near, false)) {
-                    out = {t, Vec2(uv[0], poles_[pole].v), near.derivative};
+                    // At an endpoint the limit comes from the adjacent
+                    // regular branch, including its periodic representative.
+                    const bool endpoint = t == range_.lo || t == range_.hi;
+                    const double u = endpoint ? near.uv.x() + (t - inside) * near.derivative.x() : uv.x();
+                    out = {t, Vec2(u, poles_[pole].v), near.derivative};
                     return true;
                 }
                 if (travel == 0.5 * available) break;
@@ -247,9 +252,18 @@ public:
             // Vicino a un polo Newton si ferma sul bordo del dominio (entro la
             // tolleranza ma non sul punto): proiezione, con u vicino alla stima.
             const SurfaceProjection projection = projectPoint(surface_, c[0]);
-            if (!(projection.distance <= tolerance_)) return false;
+            if (!std::isfinite(projection.distance) || !(projection.distance <= tolerance_)) return false;
             Vec2 exact(projection.u, projection.v);
-            if (surface_.isUPeriodic()) exact[0] += surface_.uPeriod() * std::round((uv[0] - exact[0]) / surface_.uPeriod());
+            if (surface_.isUPeriodic()) {
+                const double period = surface_.uPeriod();
+                exact[0] += period * std::round((uv[0] - exact[0]) / period);
+            }
+            if (!isFinite(exact)) return false;
+            // L'aggiunta di molti periodi puo' perdere parte dell'angolo in double.
+            if (exact.x() != projection.u) {
+                const double gap = distance(surface_.point(exact.x(), exact.y()), c[0]);
+                if (!std::isfinite(gap) || !(gap <= tolerance_)) return false;
+            }
             uv = exact;
         } else if (!invertPoint(surface_, c[0], uv, tolerance_, scale_)) {
             return false;

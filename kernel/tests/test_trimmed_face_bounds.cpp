@@ -31,7 +31,98 @@ Body rectangle(const SurfacePtr &surface,Interval u,Interval v) {
     Body::BuildFace face;face.surface=surface;face.loops={{{0,true,nullptr,0},{1,true,nullptr,0},{2,false,nullptr,0},{3,false,nullptr,0}}};
     auto result=Body::buildSheet(points,edges,{face});require(computePCurves(result)==0,"SP-curve rettangolo");return result;
 }
+void checkPeriodicLoopCrossing(const SurfacePtr &surface) {
+    const auto makeSheet = [&](bool crossing, const Vec2 &phase) {
+        std::vector<Vec3> vertices;
+        std::vector<Body::BuildEdge> edges;
+        Body::BuildFace face;
+        face.surface = surface;
+        const auto addLoop = [&](Interval u, Interval v, const Vec2 &shift, bool outer) {
+            const int a = int(vertices.size());
+            for (const Vec2 uv : {Vec2(u.lo, v.lo), Vec2(u.hi, v.lo),
+                                  Vec2(u.hi, v.hi), Vec2(u.lo, v.hi)})
+                vertices.push_back(surface->point(uv.x(), uv.y()));
+            const int e = int(edges.size());
+            edges.insert(edges.end(), {{a, a + 1, surface->vIso(v.lo), u, 0.},
+                                      {a + 1, a + 2, surface->uIso(u.hi), v, 0.},
+                                      {a + 3, a + 2, surface->vIso(v.hi), u, 0.},
+                                      {a, a + 3, surface->uIso(u.lo), v, 0.}});
+            std::vector<Body::BuildFin> loop{
+                {e, true, std::make_shared<Line<2>>(shift + Vec2(0., v.lo), Vec2(1., 0.)), 0.},
+                {e + 1, true, std::make_shared<Line<2>>(shift + Vec2(u.hi, 0.), Vec2(0., 1.)), 0.},
+                {e + 2, false, std::make_shared<Line<2>>(shift + Vec2(0., v.hi), Vec2(1., 0.)), 0.},
+                {e + 3, false, std::make_shared<Line<2>>(shift + Vec2(u.lo, 0.), Vec2(0., 1.)), 0.}};
+            if (!outer) {
+                std::reverse(loop.begin(), loop.end());
+                for (auto &fin : loop) fin.sense = !fin.sense;
+            }
+            face.loops.push_back(std::move(loop));
+        };
+        addLoop({.2, 1.2}, {.1, 2.}, Vec2(), true);
+        addLoop(crossing ? Interval{.8, 1.4} : Interval{.4, .8}, {.5, 1.5}, phase, false);
+        return Body::buildSheet(vertices, edges, {face});
+    };
+    for (double turns : {0., 1., -1., 5., -5., 64., -64.}) {
+        const Vec2 phase(turns * surface->uPeriod(), surface->isVPeriodic() ? -turns * surface->vPeriod() : 0.);
+        const auto valid = makeSheet(false, phase);
+        require(checkBody(valid, {true, true}).empty(), "foro periodico interno segnalato come incrocio");
+        const auto crossing = makeSheet(true, phase);
+        require(checkBody(crossing).empty(), "geometria dei contorni periodici non valida");
+        const auto issues = checkBody(crossing, {true, true});
+        require(issues.size() == 1 && issues.front().code == CheckCode::LoopsCross,
+                "incrocio fra loop in fasi periodiche distanti non rilevato");
+    }
+}
+
+void checkNarrowLoopCrossing() {
+    const auto surface = std::make_shared<Plane>(Frame3());
+    const std::vector<Vec2> uv{{0., 0.}, {10., 0.}, {10., 10.}, {0., 10.},
+                               {2., 2.}, {2., 6.}, {8., 6.}, {8., 2.}};
+    std::vector<Vec3> vertices;
+    for (const Vec2 &p : uv) vertices.push_back(surface->point(p.x(), p.y()));
+    for (bool rational : {false, true}) {
+        for (double peak : {9., 10., 11.}) {
+            // Un solo polo alza la curva, con supporto interamente fra due campioni.
+            const double peakWeight = rational ? 3. : 1.;
+            const double poleY = 6. + (peak - 6.) * (1. + 1. / (3. * peakWeight));
+            const auto spline = std::make_shared<BSplineCurve<2>>(2,
+                std::vector<double>{0., 0., 0., .5034, .5036, .5038, .504, 1., 1., 1.},
+                std::vector<Vec2>{uv[5], {3.5, 6.}, {4.8, 6.}, {5., poleY}, {5.2, 6.}, {6.5, 6.}, uv[6]},
+                rational ? std::vector<double>{1., 1., 1., peakWeight, 1., 1., 1.} : std::vector<double>{});
+            const auto spike = std::make_shared<TrimmedCurve<2>>(spline, 0., 1.);
+            Body::BuildFace face;
+            face.surface = surface;
+            face.loops.resize(2);
+            std::vector<Body::BuildEdge> edges;
+            for (int i = 0; i < 8; ++i) {
+                const int next = i % 4 == 3 ? i - 3 : i + 1;
+                const Vec2 direction = uv[next] - uv[i];
+                CurvePtr<2> pc = std::make_shared<Line<2>>(uv[i], direction);
+                Interval range{0., norm(direction)};
+                if (i == 5) {
+                    pc = spike;
+                    range = {0., 1.};
+                }
+                edges.push_back({i, next, embedCurve(pc, Frame3()), range, 0.});
+                face.loops[i / 4].push_back({i, true, pc, 0.});
+            }
+            const auto direct = intersectCurves(*face.loops[0][2].pcurve, edges[2].range, *spike, {0., 1.}, 1e-9);
+            require(direct.points.empty() == (peak == 9.), "contatto diretto del picco");
+            if (peak == 11.) require(direct.points.size() == 2, "attraversamento del bordo in due punti");
+            const auto sheet = Body::buildSheet(vertices, edges, {face});
+            require(checkBody(sheet).empty(), "contorni con picco geometricamente incoerenti");
+            const auto issues = checkBody(sheet, {true, true});
+            if (peak == 9.) require(issues.empty(), "foro con picco interno erroneamente rifiutato");
+            else require(issues.size() == 1 && issues.front().code == CheckCode::LoopsCross,
+                         "contatto fra contorni perso fra campioni UV");
+        }
+    }
+}
+
 int main(){try{
+    checkNarrowLoopCrossing();
+    checkPeriodicLoopCrossing(std::make_shared<CylindricalSurface>(Frame3(), 2.));
+    checkPeriodicLoopCrossing(std::make_shared<ToroidalSurface>(Frame3(), 20., 3.));
     // Una singola pezza Bezier molto piu' grande della faccia: anche la
     // suddivisione del box sul ritaglio deve conservare tutto il materiale.
     const std::vector<double> knots{0,0,0,1,1,1};std::vector<Vec3> poles;std::vector<double> weights;
@@ -150,5 +241,5 @@ int main(){try{
     require(index.nearest({.4,.08},-1)==allNearest,"ricerca senza esclusioni");
     require(detail::CyclePointIndex({{{0,0},3}}).nearest({0,0},3)==1e300,"ciclo unico escluso");
     require(detail::CyclePointIndex({}).nearest({0,0},0)==1e300,"indice vuoto");
-    std::cout<<"PASS box NURBS, estremi coincidenti e 840 minimi UV identici al confronto completo\n";return 0;
+    std::cout<<"PASS loop periodici, picchi dei trim, box NURBS, estremi coincidenti e 840 minimi UV identici al confronto completo\n";return 0;
 }catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}

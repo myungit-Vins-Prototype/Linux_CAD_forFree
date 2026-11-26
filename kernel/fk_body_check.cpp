@@ -1,11 +1,14 @@
 #include "fk_body_check.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <exception>
+#include <optional>
 #include <set>
 #include <sstream>
 
+#include "fk_classify_uv.h"
 #include "fk_parallel.h"
 #include "fk_pcurve.h"
 #include "fk_precision.h"
@@ -319,8 +322,32 @@ int shellGenus(const Body &body, ShellId s) {
 
 namespace {
 
+struct PeriodicShifts {
+    std::array<double, 6> values{};
+    std::size_t count = 1;
+    const double *begin() const { return values.data(); }
+    const double *end() const { return values.data() + count; }
+};
+
+PeriodicShifts loopShifts(const Box &reference, const Box &other, int axis, double period) {
+    PeriodicShifts shifts;
+    if (!(period > 0.0) || !std::isfinite(period)) return shifts;
+    shifts.values = {-period, 0.0, period};
+    shifts.count = 3;
+    const double center = 0.5 * reference.lo[axis] + 0.5 * reference.hi[axis];
+    const double otherCenter = 0.5 * other.lo[axis] + 0.5 * other.hi[axis];
+    const double turns = std::round((center - otherCenter) / period);
+    // Conserva anche gli spostamenti originari per i bordi di piu' giri.
+    for (double candidate : {turns, turns - 1.0, turns + 1.0}) {
+        const double shift = candidate * period;
+        if (std::isfinite(shift) && std::find(shifts.begin(), shifts.end(), shift) == shifts.end())
+            shifts.values[shifts.count++] = shift;
+    }
+    return shifts;
+}
+
 // Loop della stessa faccia che si toccano o si incrociano: SP-curve di loop
-// diversi intersecate nello spazio (u, v), anche spostate di un periodo.
+// diversi intersecate nello spazio (u, v), anche su rami periodici distanti.
 void checkLoopCrossings(const Body &body, Report &report) {
     for (FaceId f : body.faces()) {
         const Face &face = body.face(f);
@@ -328,8 +355,9 @@ void checkLoopCrossings(const Body &body, Report &report) {
         struct Piece {
             CurvePtr<2> curve;
             Interval range;
-            Box box;
-            std::vector<VertexId> ends;
+            Box sampled;
+            std::optional<Box> bounds;
+            std::array<VertexId, 2> ends;
         };
         std::vector<std::vector<Piece>> loops;
         double size = 0.0;
@@ -339,12 +367,19 @@ void checkLoopCrossings(const Body &body, Report &report) {
                 const Fin &data = body.fin(fin);
                 const Edge &edge = body.edge(data.edge);
                 if (!data.pcurve || !(edge.range.length() > 0.0)) continue;
-                Piece piece{data.pcurve, edge.range, Box(), {body.edgeStart(data.edge), body.edgeEnd(data.edge)}};
+                Piece piece{data.pcurve, edge.range, Box(), conservativePCurveBox(data.pcurve, edge.range),
+                            {body.edgeStart(data.edge), body.edgeEnd(data.edge)}};
+                // I campioni mantengono la scala del confronto e la stima della fase.
+                // Solo l'inviluppo della curva puo' escludere una coppia.
                 for (int k = 0; k <= 16; ++k) {
                     const Vec2 q = data.pcurve->point(edge.range.lo + edge.range.length() * k / 16.0);
-                    piece.box.add(Vec3(q.x(), q.y(), 0.0));
+                    piece.sampled.add(Vec3(q.x(), q.y(), 0.0));
                 }
-                size = std::max(size, piece.box.diagonal());
+                size = std::max(size, piece.sampled.diagonal());
+                if (piece.bounds) {
+                    const double magnitude = std::max(norm(piece.bounds->lo), norm(piece.bounds->hi));
+                    piece.bounds = piece.bounds->padded(64.0 * kMachineEpsilon * magnitude);
+                }
                 pieces.push_back(std::move(piece));
             }
             loops.push_back(std::move(pieces));
@@ -358,16 +393,22 @@ void checkLoopCrossings(const Body &body, Report &report) {
                 for (const Piece &p : loops[a])
                     for (const Piece &q : loops[b]) {
                         if (found) break;
-                        for (int i = uPeriod > 0.0 ? -1 : 0; i <= (uPeriod > 0.0 ? 1 : 0) && !found; ++i)
-                            for (int j = vPeriod > 0.0 ? -1 : 0; j <= (vPeriod > 0.0 ? 1 : 0) && !found; ++j) {
-                                const Vec2 shift(i * uPeriod, j * vPeriod);
-                                Box moved;
-                                moved.add(q.box.lo + Vec3(shift.x(), shift.y(), 0.0));
-                                moved.add(q.box.hi + Vec3(shift.x(), shift.y(), 0.0));
-                                if (!p.box.padded(margin).overlaps(moved.padded(margin))) continue;
-                                const CurvePtr<2> other = i == 0 && j == 0 ? q.curve : translatedCurve(q.curve, shift);
+                        const auto uShifts = loopShifts(p.sampled, q.sampled, 0, uPeriod);
+                        const auto vShifts = loopShifts(p.sampled, q.sampled, 1, vPeriod);
+                        for (double u : uShifts) {
+                            if (found) break;
+                            for (double v : vShifts) {
+                                if (found) break;
+                                const Vec2 shift(u, v);
+                                if (p.bounds && q.bounds) {
+                                    const Vec3 delta(u, v, 0.0);
+                                    const Box moved{q.bounds->lo + delta, q.bounds->hi + delta};
+                                    const double rounding = 64.0 * kMachineEpsilon * std::max(std::fabs(u), std::fabs(v));
+                                    if (!p.bounds->padded(margin).overlaps(moved.padded(margin + rounding))) continue;
+                                }
                                 CurveCurveIntersection hits;
                                 try {
+                                    const CurvePtr<2> other = u == 0.0 && v == 0.0 ? q.curve : translatedCurve(q.curve, shift);
                                     hits = intersectCurves(*p.curve, p.range, *other, q.range, 1e-10 * std::max(1.0, size));
                                 } catch (const std::exception &) {
                                     continue;
@@ -387,6 +428,7 @@ void checkLoopCrossings(const Body &body, Report &report) {
                                     break;
                                 }
                             }
+                        }
                     }
     }
 }

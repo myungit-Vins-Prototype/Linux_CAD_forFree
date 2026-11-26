@@ -2,6 +2,7 @@
 #include "fk_bspline.h"
 #include "fk_cancel.h"
 #include "fk_test.h"
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <memory>
@@ -116,4 +117,86 @@ FK_TEST(PCurveDeviationAndAcceptancePropagateCancellation) {
     double deviation = -123;
     try { (void)fitPCurve(plane, curve, {0, 1}, 1e-8, &deviation); } catch (const OperationCancelled &) { fitCancelled = true; }
     FK_CHECK(metricCancelled && exactCancelled && fitCancelled && deviation == -123);
+}
+
+namespace {
+class PoleArc final : public Curve<3> {
+public:
+    PoleArc(const SphericalSurface &surface, std::vector<Vec2> poles)
+        : surface_(surface), uv_(2, {0., 0., 0., 1., 1., 1.}, std::move(poles)) {}
+
+    CurveType type() const override { return CurveType::Other; }
+    Interval domain() const override { return uv_.domain(); }
+    void evaluate(double t, int order, Vec3 *out) const override {
+        if (order > 2) throw std::invalid_argument("PoleArc: derivative order");
+        Vec2 uv[3];
+        uv_.evaluate(t, 2, uv);
+        Vec3 d[9];
+        surface_.evaluate(uv[0].x(), uv[0].y(), 2, d);
+        const auto at = [&](int u, int v) { return d[Surface::derivativeIndex(u, v, 2)]; };
+        out[0] = at(0, 0);
+        if (order >= 1) out[1] = uv[1].x() * at(1, 0) + uv[1].y() * at(0, 1);
+        if (order >= 2)
+            out[2] = uv[1].x() * uv[1].x() * at(2, 0)
+                   + 2. * uv[1].x() * uv[1].y() * at(1, 1)
+                   + uv[1].y() * uv[1].y() * at(0, 2)
+                   + uv[2].x() * at(1, 0) + uv[2].y() * at(0, 1);
+    }
+
+private:
+    const SphericalSurface &surface_;
+    BSplineCurve<2> uv_;
+};
+}
+
+FK_TEST(PCurveFitDistinguishesPolarEndpointAndNearbyRegularPoints) {
+    const SphericalSurface sphere(Frame3(), 1.);
+    constexpr double cap = 1e-7, startAngle = 6.1, departure = .1;
+    for (bool reversed : {false, true}) for (bool slow : {false, true}) {
+        for (double poleOffset : {0., .5 * cap}) {
+            const double v0 = kHalfPi - poleOffset;
+            std::vector<Vec2> poles{{startAngle, v0},
+                {startAngle, v0 - (slow ? 0. : .5 * departure)}, {startAngle + 1., v0 - departure}};
+            if (reversed) std::reverse(poles.begin(), poles.end());
+            const auto edge = std::make_shared<PoleArc>(sphere, std::move(poles));
+            double deviation = -1.;
+            const auto result = fitPCurve(sphere, edge, {0., 1.}, cap, &deviation);
+            FK_CHECK(bool(result));
+            if (!result) continue;
+            FK_CHECK(deviation >= 0. && deviation <= cap);
+            FK_CHECK(pcurveDeviation(sphere, *edge, *result, {0., 1.}, 128) <= cap);
+            const double endpoint = reversed ? 1. : 0.;
+            const Vec2 polarUv = result->point(endpoint);
+            FK_CHECK_NEAR(std::remainder(polarUv.x() - startAngle, kTwoPi), 0., 1e-6);
+            FK_CHECK_NEAR(polarUv.y(), v0, 1e-9);
+            const double near = reversed ? 1. - .0008 : .0008;
+            if (slow) FK_CHECK(result->point(near).y() < kHalfPi - 1e-8);
+        }
+    }
+
+    const SphericalSurface otherRadius(Frame3(), 1.0002);
+    const auto outside = std::make_shared<PoleArc>(otherRadius, std::vector<Vec2>{
+        {startAngle, kHalfPi}, {startAngle, kHalfPi}, {startAngle + 1., kHalfPi - departure}});
+    double unchanged = -1.;
+    FK_CHECK(!fitPCurve(sphere, outside, {0., 1.}, cap, &unchanged));
+    FK_CHECK(unchanged == -1.);
+}
+
+FK_TEST(PCurveFitPreservesManyTurnsNearPole) {
+    const SphericalSurface sphere(Frame3(), 1.);
+    const auto edge = sphere.vIso(kHalfPi - .0005);
+    constexpr double cap = 1e-10;
+    const double span = 256 * kTwoPi;
+    for (const Interval range : {Interval{.25, .25 + span}, Interval{-.25 - span, -.25}}) {
+        double deviation = -1.;
+        const auto result = fitPCurve(sphere, edge, range, cap, &deviation);
+        FK_CHECK(bool(result));
+        if (!result) continue;
+        FK_CHECK(deviation >= 0. && deviation <= cap);
+        FK_CHECK_NEAR(result->point(range.hi).x() - result->point(range.lo).x(), span, 1e-8);
+        for (int i = 0; i < 256; ++i) {
+            const double lo = range.lo + i * kTwoPi, hi = range.lo + (i + 1) * kTwoPi;
+            FK_CHECK(pcurveDeviation(sphere, *edge, *result, {lo, hi}, 16) <= cap);
+        }
+    }
 }

@@ -42,6 +42,11 @@ public:
             consider(u, v);
     }
 
+    void considerParallelAngle(double u, double v) {
+        if (bringIntoRange(u, uRange_, surface_.isUPeriodic(), surface_.uPeriod(), u))
+            consider(u, v);
+    }
+
     const SurfaceProjection &best() const { return best_; }
     double bestDistance() const { return valid_ ? best_.distance : std::numeric_limits<double>::infinity(); }
 
@@ -88,6 +93,38 @@ private:
     double value_;
 };
 
+// A regular parallel can be too small to construct a Circle. Its
+// angular derivatives still give the two signed radial directions.
+bool projectSmallParallel(const Surface &surface, const Vec3 &p, double v, const Interval &range,
+                          Candidates &candidates) {
+    switch (surface.type()) {
+    case SurfaceType::Cone:
+    case SurfaceType::Sphere:
+    case SurfaceType::Torus:
+    case SurfaceType::Revolution:
+        break;
+    default:
+        return false;
+    }
+
+    Vec3 jet[9];
+    surface.evaluate(0.0, v, 2, jet);
+    const Vec3 radial = -jet[Surface::derivativeIndex(2, 0, 2)];
+    const Vec3 tangent = jet[Surface::derivativeIndex(1, 0, 2)];
+    const double radius = norm(radial);
+    if (radius > 0.0) {
+        const Vec3 offset = p - jet[0];
+        // Relative to the circle center, without subtracting a second
+        // rounded position from p.
+        const double x = dot(offset, radial / radius) + radius;
+        const double y = dot(offset, tangent / radius);
+        if (x != 0.0 || y != 0.0) candidates.considerParallelAngle(std::atan2(y, x), v);
+    }
+    candidates.consider(range.lo, v);
+    if (range.hi != range.lo) candidates.consider(range.hi, v);
+    return true;
+}
+
 // Bordi della pezza, e con `allPatchEdges` anche le isoparametriche dei
 // breakpoint interni: su uno spigolo interno (nodo C0) il minimo non e' un
 // punto stazionario di nessuna delle due pezze, ma e' il minimo della curva
@@ -111,8 +148,9 @@ void projectOnIso(const Surface &surface, const Vec3 &p, bool fixedU, double val
         }
         result = projectPoint(*iso, p, range);
     } else {
+        if (!fixedU && range.isFinite() && projectSmallParallel(surface, p, value, range, candidates)) return;
         const IsoAdapter adapter(surface, fixedU, value);
-        // Isoparametrica degenere (polo della sfera, vertice del cono): un punto solo.
+        // Ripiego per superfici prive di isoparametrica esplicita.
         const Vec3 first = adapter.point(range.lo);
         if (range.isFinite() && distance(first, adapter.point(0.5 * (range.lo + range.hi))) <= linearResolution()
             && distance(first, adapter.point(range.hi)) <= linearResolution()) {
@@ -737,7 +775,15 @@ bool invertPoint(const Surface &surface, const Vec3 &p, Vec2 &uv, double toleran
         const Vec3 &su = d[Surface::derivativeIndex(1, 0, 1)], &sv = d[Surface::derivativeIndex(0, 1, 1)];
         const Vec3 r = p - d[0];
         const double a = dot(su, su), b = dot(su, sv), c = dot(sv, sv), det = a * c - b * b;
-        if (!(det > 1e-24 * a * c) || !(a > 0.0)) break;
+        if (!(det > 1e-24 * a * c) || !(a > 0.0)) {
+            // At a collapsed parallel the point can already be exact
+            // while the Jacobian cannot determine a step. Keep the
+            // current branch if it represents that point in the domain.
+            converged = r.x() == 0.0 && r.y() == 0.0 && r.z() == 0.0 && isFinite(uv)
+                && (surface.isUPeriodic() || uDomain.contains(uv[0]))
+                && (surface.isVPeriodic() || vDomain.contains(uv[1]));
+            break;
+        }
         const double ru = dot(su, r), rv = dot(sv, r);
         const double du = (c * ru - b * rv) / det, dv = (a * rv - b * ru) / det;
         if (!std::isfinite(du) || !std::isfinite(dv)) break;
@@ -758,18 +804,21 @@ bool invertPoint(const Surface &surface, const Vec3 &p, Vec2 &uv, double toleran
             return false;
         }
     }
-    // Bordi coincidenti di una B-spline non periodica: a parita' di
-    // precisione mantieni il ramo della stima, evitando salti tra i due
-    // estremi del dominio durante la costruzione delle SP-curve.
+    // Sulle B-spline piegate anche Newton può convergere sul ramo lontano.
+    // Per un salto grande cerca nella metà del dominio della stima, come
+    // per i bordi coincidenti nella costruzione delle SP-curve.
     if (surface.type() == SurfaceType::BSpline) {
         for (int axis = 0; axis < 2; ++axis) {
             const Interval domain = axis == 0 ? uDomain : vDomain;
             if (std::fabs(uv[axis] - guess[axis]) <= 0.5 * domain.length()) continue;
-            Vec2 low = uv, high = uv;
-            low[axis] = domain.lo;
-            high[axis] = domain.hi;
-            const Vec3 a = surface.point(low[0], low[1]), b = surface.point(high[0], high[1]);
-            if (distance(a, b) > 1e-12 * std::max({1.0, norm(a), norm(b)})) continue;
+            const bool periodic = axis == 0 ? surface.isUPeriodic() : surface.isVPeriodic();
+            if (periodic || !domain.contains(guess[axis])) {
+                Vec2 low = uv, high = uv;
+                low[axis] = domain.lo;
+                high[axis] = domain.hi;
+                const Vec3 a = surface.point(low[0], low[1]), b = surface.point(high[0], high[1]);
+                if (distance(a, b) > 1e-12 * std::max({1.0, norm(a), norm(b)})) continue;
+            }
             Interval local = domain;
             const double middle = 0.5 * (domain.lo + domain.hi);
             if (guess[axis] < middle) local.hi = middle;

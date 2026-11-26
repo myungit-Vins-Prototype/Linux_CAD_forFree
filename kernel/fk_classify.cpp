@@ -419,6 +419,17 @@ Vec3 shellBoundaryPoint(const Body &body, ShellId shell) {
     throw std::domain_error("shell senza punto di riferimento finito");
 }
 
+std::optional<Box> conservativePCurveBox(const CurvePtr<2> &curve, const Interval &range) {
+    if (!curve || !range.isFinite() || !conservativeBoundary(*curve, range)) return std::nullopt;
+    try {
+        const Box box = curveBox(*embedCurve(curve, Frame3()), range);
+        if (!box.isEmpty() && isFinite(box.lo) && isFinite(box.hi)) return box;
+    } catch (const std::logic_error &) {
+        // Un inviluppo non disponibile non permette di scartare la curva.
+    }
+    return std::nullopt;
+}
+
 Box faceBox(const Body &body, FaceId face) {
     Box box;
     const Surface &surface = *body.face(face).surface;
@@ -453,15 +464,14 @@ Box faceBox(const Body &body, FaceId face) {
             if (!fin.pcurve) { boundedUV = false; continue; }
             const Edge &edge = body.edge(fin.edge);
             boundaryTolerance = std::max({boundaryTolerance,fin.pcurveTolerance,edge.tolerance});
-            if (!conservativeBoundary(*fin.pcurve, edge.range)) {
+            const auto uvBox = conservativePCurveBox(fin.pcurve, edge.range);
+            if (!uvBox) {
                 boundedUV = false;
                 continue;
             }
-            // Inviluppo delle curve esatte in UV: campionare gli estremi
-            // intermedi poteva perdere un massimo fra due campioni.
-            const auto uvBox=curveBox(*embedCurve(fin.pcurve,Frame3()),edge.range);
-            pu={std::min(pu.lo,uvBox.lo.x()),std::max(pu.hi,uvBox.hi.x())};
-            pv={std::min(pv.lo,uvBox.lo.y()),std::max(pv.hi,uvBox.hi.y())};any=true;
+            pu = {std::min(pu.lo, uvBox->lo.x()), std::max(pu.hi, uvBox->hi.x())};
+            pv = {std::min(pv.lo, uvBox->lo.y()), std::max(pv.hi, uvBox->hi.y())};
+            any = true;
             const double a = fin.pcurve->point(fin.sense ? edge.range.lo : edge.range.hi)[0];
             const double b = fin.pcurve->point(fin.sense ? edge.range.hi : edge.range.lo)[0];
             if (first) start = a;
