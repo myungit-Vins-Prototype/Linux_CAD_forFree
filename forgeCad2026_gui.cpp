@@ -2338,6 +2338,11 @@ void PdfWindow::initializeFeatureCommands(WindowSetup &setup) {
     connect(helixAction, &QAction::triggered, this, [this, viewport, openHelix, pendingHelix] {
         ExtrusionObject definition;
         definition.feature = BodyFeature::Helix;
+        if (viewport->selectedFaceReference(definition.firstBody, definition.helix.reference)) {
+            definition.helix.source = 2;
+            (*openHelix)(definition);
+            return;
+        }
         const SceneSelection selection = viewport->selection();
         definition.sketchIndex = selection.kind == SceneObjectKind::Sketch ? selection.index : viewport->activeSketchIndex();
         bool circles = false;

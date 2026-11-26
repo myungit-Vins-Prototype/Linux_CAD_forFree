@@ -9,7 +9,7 @@
 #include "fk_sweep.h"
 
 // Curve e percorsi: elica e spirale (fk_helix, esatta; la base da un corpo
-// la legge forgeHelixBase di cad_forge) e percorsi degli sweep (catene di
+// la legge forgeBodyHelix di cad_forge) e percorsi degli sweep (catene di
 // curve del kernel da uno schizzo o da un'elica).
 namespace ForgeCad {
 

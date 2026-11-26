@@ -1666,7 +1666,7 @@ QVector3D CadViewport::polylineMidpoint(const QVector<QVector3D> &polyline) {
 }
 
 QString CadViewport::edgePickMessage() const {
-    if (edgePickHelix_) return QStringLiteral("Elica: clicca uno spigolo circolare o una faccia cilindrica o conica per la base, Esc annulla");
+    if (edgePickHelix_) return QStringLiteral("Elica: scegli uno spigolo circolare o una faccia cilindrica, conica o di rivoluzione. Esc per annullare");
     QString preview;
     if (!pickedEdges_.isEmpty())
         preview = preview_.valid ? QStringLiteral(" - anteprima") : preview_.error.isEmpty() ? QStringLiteral(" - anteprima in calcolo...")

@@ -1331,7 +1331,14 @@ ForgeBody forgeImported(const QByteArray &data, QString *error) {
     }
 }
 
-bool forgeHelixBase(const Body &body, int source, const EdgePoint &point, HelixBase &base, QString *error) {
+static FaceId helixFaceReference(const Body &body, const EdgePoint &point) {
+    Box box;
+    for (VertexId v : body.vertices()) box.add(body.vertex(v).point);
+    return resolveFaceReference(body, point, 1e-3 * std::max(1.0, box.diagonal()));
+}
+
+static bool forgeHelixBase(const Body &body, int source, const EdgePoint &point, HelixBase &base, QString *error,
+                           FaceId targetFace = {}) {
     base = HelixBase();
     try {
         // Estensione lungo l'asse (dall'origine `from`) dei vertici e dei campioni degli edge della faccia.
@@ -1386,10 +1393,7 @@ bool forgeHelixBase(const Body &body, int source, const EdgePoint &point, HelixB
                 break;
             }
         } else {
-            Box box;
-            for (VertexId v : body.vertices()) box.add(body.vertex(v).point);
-            const double tolerance = 1e-6 * std::max(1.0, box.diagonal());
-            const FaceId best = resolveFaceReference(body, point, 1e3 * tolerance);
+            const FaceId best = targetFace.valid() ? targetFace : helixFaceReference(body, point);
             if (!best.valid()) throw std::domain_error("il punto non sta su una faccia del corpo");
             const Surface &surface = *body.face(best).surface;
             Vec3 origin, axis;
@@ -1425,6 +1429,42 @@ bool forgeHelixBase(const Body &body, int source, const EdgePoint &point, HelixB
         setError(error, QString::fromUtf8(failure.what()));
         return false;
     }
+}
+
+ForgeCurve forgeBodyHelix(const Body &body, const HelixParameters &parameters, QString *error) {
+    FaceId face;
+    if (parameters.source == 2) {
+        face = helixFaceReference(body, parameters.reference);
+        if (!face.valid()) {
+            setError(error, QStringLiteral("La faccia della base dell’elica non esiste più."));
+            return nullptr;
+        }
+        const SurfaceType type = body.face(face).surface->type();
+        if (type == SurfaceType::Revolution) {
+            if (parameters.spiral) {
+                setError(error, QStringLiteral("Scegli Elica per seguire la faccia di rivoluzione."));
+                return nullptr;
+            }
+            const bool byTurns = parameters.mode == 1;
+            const SurfaceHelixSpec spec{byTurns ? parameters.turns : parameters.pitch, byTurns,
+                                        parameters.startAngle * kPi / 180.0, parameters.leftHanded, parameters.reverse};
+            try {
+                return std::make_shared<BSplineCurve<3>>(revolutionFaceHelix(body, face, spec));
+            } catch (const OperationCancelled &) {
+                throw;
+            } catch (const std::exception &failure) {
+                setError(error, QString::fromUtf8(failure.what()));
+                return nullptr;
+            }
+        }
+        if (type != SurfaceType::Cylinder && type != SurfaceType::Cone) {
+            setError(error, QStringLiteral("Scegli una faccia cilindrica, conica o una fascia di rivoluzione."));
+            return nullptr;
+        }
+    }
+    HelixBase base;
+    return forgeHelixBase(body, parameters.source, parameters.reference, base, error, face)
+        ? helixCurve(parameters, base, error) : nullptr;
 }
 
 bool forgeThreadFaceInfo(const Body &body, const EdgePoint &reference, ThreadFaceInfo &info, QString *error) {

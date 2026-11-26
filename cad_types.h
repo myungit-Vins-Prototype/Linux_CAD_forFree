@@ -413,9 +413,9 @@ struct PrimitiveParameters {
 //    schizzo, indipendentemente dal punto che definisce il raggio;
 //  - source 1: spigolo circolare del corpo firstBody piu' vicino a `reference`
 //    (asse verso la faccia cilindrica o conica coassiale, se c'e');
-//  - source 2: faccia cilindrica o conica del corpo firstBody che contiene
-//    `reference` (parte dall'estremo della faccia; sul cono la conicita' e'
-//    quella della faccia).
+//  - source 2: faccia associativa del corpo firstBody. Parte da un
+//    estremo della faccia. Sul cono usa la conicità della faccia, sulle
+//    fasce di rivoluzione segue il raggio del meridiano.
 // Modi dell'elica: 0 passo e giri, 1 altezza e giri, 2 altezza e passo (il
 // terzo valore si ricava); la spirale usa passo (crescita del raggio per giro)
 // e giri. Conicita' in gradi (positiva: il raggio cresce lungo l'asse),

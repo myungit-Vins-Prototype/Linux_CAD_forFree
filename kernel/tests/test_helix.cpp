@@ -6,6 +6,7 @@
 
 #include "fk_curve_algo.h"
 #include "fk_helix.h"
+#include "fk_revolve.h"
 #include "fk_test_util.h"
 
 using namespace fktest;
@@ -92,4 +93,36 @@ FK_TEST(HelixBSplineWithinTolerance) {
     }
     FK_CHECK_THROWS(HelixCurve(helixSpec(1.0, 1.0, 5.0, -0.5)));  // il raggio si annullerebbe
     FK_CHECK_THROWS(HelixCurve(helixSpec(1.0, 0.0, 5.0)));
+}
+
+FK_TEST(HelixOnRevolutionFollowsVariableRadiusAndAxialPitch) {
+    const auto meridian = std::make_shared<BSplineCurve<2>>(
+        2, std::vector<double>{0, 0, 0, 1, 1, 1},
+        std::vector<Vec2>{{2, 0}, {4, 3}, {2.5, 6}});
+    const Frame3 frame(Vec3(1, -2, 5), normalized(Vec3(0.1, 0.2, 1.0)), Vec3(1, 0, 0));
+    const Body sheet = makeSheetRevolution(frame, {ProfileLoop{{{meridian, {0, 1}}}}}, kTwoPi);
+    const FaceId face = sheet.faces().front();
+    FK_CHECK_NEAR(revolutionFaceHelixHeight(sheet, face), 6.0, 1e-12);
+    for (bool reverse : {false, true}) {
+        for (bool left : {false, true}) {
+            const SurfaceHelixSpec spec{2.0, false, 0.35, left, reverse};
+            const auto curve = revolutionFaceHelix(sheet, face, spec);
+            FK_CHECK_NEAR(curve.domain().hi, 6 * kPi, 1e-12);
+            for (int i = 0; i <= 200; ++i) {
+                const double f = i / 200.0;
+                const Vec2 rz = meridian->point(reverse ? 1.0 - f : f);
+                const double angle = spec.startAngle + (left ? -1.0 : 1.0) * curve.domain().hi * f;
+                const Vec3 expected = frame.toGlobal(Vec3(rz.x() * std::cos(angle),
+                    (reverse ? -1.0 : 1.0) * rz.x() * std::sin(angle), rz.y()));
+                FK_CHECK(distance(curve.point(curve.domain().hi * f), expected) < 1e-7);
+            }
+        }
+    }
+    const auto byTurns = revolutionFaceHelix(sheet, face, {4.0, true, 0.0, false, false});
+    FK_CHECK_NEAR(byTurns.domain().hi, 8 * kPi, 1e-12);
+    FK_CHECK_NEAR(frame.toLocal(byTurns.point(kTwoPi)).z(), 1.5, 1e-7);
+    FK_CHECK_NEAR(frame.toLocal(byTurns.point(byTurns.domain().hi)).z(), 6.0, 1e-7);
+    FK_CHECK_THROWS(revolutionFaceHelix(sheet, face, {0.0, false, 0.0, false, false}));
+    const Body partial = makeSheetRevolution(frame, {ProfileLoop{{{meridian, {0, 1}}}}}, kPi);
+    FK_CHECK_THROWS(revolutionFaceHelix(partial, partial.faces().front(), {1.0, false, 0.0, false, false}));
 }

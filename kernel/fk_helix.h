@@ -4,7 +4,7 @@
 
 #include "fk_bspline.h"
 
-// Eliche (cilindriche e coniche) e spirali piane (di Archimede).
+// Eliche cilindriche, coniche e su fasce di rivoluzione. Spirali piane di Archimede.
 //
 // Nel sistema `frame` (asse = Z, angolo 0 lungo X), con t = angolo percorso in
 // [0, 2 pi giri] e s = +1 (destrorsa: antioraria attorno a Z) o -1:
@@ -61,6 +61,28 @@ private:
 
 // Approssimazione B-spline (grado 5, nodi tripli: C2) entro `tolerance` dalla curva esatta.
 BSplineCurve<3> helixBSpline(const HelixCurve &helix, double tolerance = scaledAccuracy(1e-9));
+
+class Body;
+template <class Tag> struct Id;
+struct FaceTag;
+
+struct SurfaceHelixSpec {
+    double pitchOrTurns;
+    bool byTurns;
+    double startAngle; // radianti
+    bool leftHanded;
+    bool reverse;
+};
+
+// Distanza assiale tra i due anelli del bordo della faccia.
+double revolutionFaceHelixHeight(const Body &body, Id<FaceTag> face);
+
+// Raggio dal meridiano alla quota descritta dal passo, su tutta l'altezza della faccia.
+// Il passo o il numero di giri dipende da quale dato è imposto. La faccia deve essere
+// una fascia di rivoluzione completa con meridiano monotono lungo l'asse.
+// Il dominio della curva risultante è l'angolo percorso, in radianti.
+BSplineCurve<3> revolutionFaceHelix(const Body &body, Id<FaceTag> face, const SurfaceHelixSpec &spec,
+                                     double tolerance = linearResolution());
 
 }
 

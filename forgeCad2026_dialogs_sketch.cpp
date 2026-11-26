@@ -5,6 +5,7 @@
 #include "cad_curve_extract.h"
 
 #include "kernel/fk_cancel.h"
+#include "fk_helix.h"
 #include "cad_spatial_sketch.h"
 #include "forgeCad2026_viewport.h"
 #include "cuda_support.h"
@@ -83,6 +84,7 @@ HelixDialogResult helixDialog(QWidget *parent, CadViewport *viewport, const QStr
     struct Base {
         int source = 0, sketch = -1, curve = -1, body = -1;
         EdgePoint point;
+        double faceHeight = 0.0;
     };
     QVector<Base> bases;
     QStringList labels;
@@ -99,9 +101,21 @@ HelixDialogResult helixDialog(QWidget *parent, CadViewport *viewport, const QStr
         }
     int current = -1;
     if (initial.helix.source != 0 && initial.firstBody >= 0 && initial.firstBody < bodies.size()) {
-        bases.prepend({initial.helix.source, -1, -1, initial.firstBody, initial.helix.reference});
-        labels.prepend(QStringLiteral("%1 di %2").arg(initial.helix.source == 1 ? QStringLiteral("Spigolo circolare") : QStringLiteral("Faccia cilindrica o conica"),
-                                                      bodies.at(initial.firstBody).name));
+        const auto &reference = initial.helix.reference;
+        Base base{initial.helix.source, -1, -1, initial.firstBody, reference};
+        const auto &shape = bodies.at(base.body).forgeBody;
+        if (base.source == 2 && shape && reference.geometry == int(ForgeCad::Kernel::SurfaceType::Revolution)) {
+            try {
+                const auto face = ForgeCad::resolveFaceReference(*shape, reference, std::numeric_limits<double>::max());
+                base.faceHeight = ForgeCad::Kernel::revolutionFaceHelixHeight(*shape, face);
+            } catch (const std::exception &) {
+                // L'anteprima restituisce la diagnostica del riferimento o del rifilo.
+            }
+        }
+        bases.prepend(base);
+        const QString label = initial.helix.source == 1 ? QStringLiteral("Spigolo circolare")
+            : reference.subshape >= 0 ? QStringLiteral("Faccia F%1").arg(reference.subshape) : QStringLiteral("Faccia");
+        labels.prepend(QStringLiteral("%1 di %2").arg(label, bodies.at(initial.firstBody).name));
         current = 0;
     } else {
         for (int k = 0; k < bases.size(); ++k)
@@ -111,7 +125,7 @@ HelixDialogResult helixDialog(QWidget *parent, CadViewport *viewport, const QStr
             }
     }
     if (bases.isEmpty() && !allowPick) {
-        QMessageBox::information(parent, title, QStringLiteral("Serve un cerchio o un arco in uno schizzo, o uno spigolo circolare o una faccia cilindrica."));
+        QMessageBox::information(parent, title, QStringLiteral("Scegli un cerchio o un arco, uno spigolo circolare oppure una faccia di rivoluzione."));
         return result;
     }
     FunctionDialogPanel dialog(parent);
@@ -129,7 +143,7 @@ HelixDialogResult helixDialog(QWidget *parent, CadViewport *viewport, const QStr
     QPushButton *pickButton = nullptr;
     if (allowPick) {
         pickButton = new QPushButton(QStringLiteral("Scegli nella vista..."), baseRow);
-        pickButton->setToolTip(QStringLiteral("Un clic su uno spigolo circolare o su una faccia cilindrica o conica di un corpo"));
+        pickButton->setToolTip(QStringLiteral("Scegli uno spigolo circolare o una faccia cilindrica, conica o di rivoluzione"));
         baseLayout->addWidget(pickButton);
     }
     baseBox->setEnabled(replaced < 0 || initial.helix.source == 0);
@@ -207,18 +221,34 @@ HelixDialogResult helixDialog(QWidget *parent, CadViewport *viewport, const QStr
     const auto refresh = [&] {
         if (updating) return;
         updating = true;
+        const Base base = bases.value(baseBox->currentIndex());
+        const bool followsFace = base.source == 2
+            && base.point.geometry == int(ForgeCad::Kernel::SurfaceType::Revolution);
+        if (followsFace) typeBox->setCurrentIndex(0);
+        typeBox->setEnabled(!followsFace);
         const bool spiral = typeBox->currentIndex() == 1;
         const int mode = spiral ? 0 : modeBox->currentIndex();
         modeBox->setEnabled(!spiral);
-        taperBox->setEnabled(!spiral);
-        heightBox->setEnabled(!spiral && mode != 0);
-        turnsBox->setEnabled(spiral || mode != 2);
+        taperBox->setEnabled(!spiral && !followsFace);
+        taperLabel->setVisible(!followsFace);
+        taperBox->setVisible(!followsFace);
+        heightBox->setEnabled(!spiral && !followsFace && mode != 0);
+        turnsBox->setEnabled(spiral || (followsFace ? mode == 1 : mode != 2));
         pitchBox->setEnabled(spiral || mode != 1);
         pitchLabel->setText(spiral ? QStringLiteral("Passo (crescita del raggio per giro):") : QStringLiteral("Passo (per giro):"));
-        // Il valore che il modo non usa si ricava dagli altri due.
-        if (!spiral && mode == 0) heightBox->setValue(pitchBox->value() * turnsBox->value());
-        if (!spiral && mode == 1) pitchBox->setValue(heightBox->value() / turnsBox->value());
-        if (!spiral && mode == 2) turnsBox->setValue(heightBox->value() / pitchBox->value());
+        heightBox->setToolTip(followsFace ? QStringLiteral("Altezza calcolata dalla faccia selezionata") : QString());
+        if (followsFace) {
+            if (base.faceHeight > 0.0) {
+                heightBox->setValue(base.faceHeight);
+                if (mode == 1) pitchBox->setValue(base.faceHeight / turnsBox->value());
+                else turnsBox->setValue(base.faceHeight / pitchBox->value());
+            }
+        } else if (!spiral) {
+            // Il valore che il modo non usa si ricava dagli altri due.
+            if (mode == 0) heightBox->setValue(pitchBox->value() * turnsBox->value());
+            if (mode == 1) pitchBox->setValue(heightBox->value() / turnsBox->value());
+            if (mode == 2) turnsBox->setValue(heightBox->value() / pitchBox->value());
+        }
         updating = false;
         if (!bases.isEmpty()) scope.request(currentDefinition());
     };

@@ -508,18 +508,19 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
             body.solid = hasGeometry(body);
             return;
         case BodyFeature::Helix: {
-            ForgeCad::HelixBase base;
-            bool ok = false;
             if (body.helix.source == 0) {
                 const SketchObject *s = sketch(body.sketchIndex);
                 if (!s) body.error = QStringLiteral("Lo schizzo della base dell'elica non esiste piu'.");
-                else ok = ForgeCad::helixBaseFromSketch(*s, body.helix.curve, base, &body.error);
+                else {
+                    ForgeCad::HelixBase base;
+                    if (ForgeCad::helixBaseFromSketch(*s, body.helix.curve, base, &body.error))
+                        body.curve = ForgeCad::helixCurve(body.helix, base, &body.error);
+                }
             } else {
                 const ExtrusionObject *b = operand(body.firstBody);
                 if (!b || !isShapeBody(*b)) body.error = QStringLiteral("Il corpo della base dell'elica non esiste piu'.");
-                else ok = ForgeCad::forgeHelixBase(*b->forgeBody, body.helix.source, body.helix.reference, base, &body.error);
+                else body.curve = ForgeCad::forgeBodyHelix(*b->forgeBody, body.helix, &body.error);
             }
-            if (ok) body.curve = ForgeCad::helixCurve(body.helix, base, &body.error);
             return;
         }
         case BodyFeature::Sweep: {

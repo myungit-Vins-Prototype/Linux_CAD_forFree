@@ -140,10 +140,8 @@ ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &face
 ForgeBody forgeSew(const QVector<ForgeBody> &sheets, double tolerance, bool solid, QString *error, QString *summary = nullptr,
                   BuildDiagnostic *diagnostic = nullptr);
 
-// Base dell'elica da uno spigolo circolare (source 1) o da una faccia
-// cilindrica o conica (source 2) del body, vicino a `point` (come
-// helixBaseFromShape di cad_features).
-bool forgeHelixBase(const Kernel::Body &body, int source, const EdgePoint &point, HelixBase &base, QString *error);
+// Costruisce l'elica da uno spigolo circolare o dalla faccia associativa.
+ForgeCurve forgeBodyHelix(const Kernel::Body &body, const HelixParameters &parameters, QString *error);
 // Sweep del profilo dello schizzo lungo il percorso (fk_sweep; mode 0 torsione
 // minima, 1 Frenet, 2 orientamento costante): solido dai contorni chiusi,
 // lamina dalle catene aperte. Con `surface` sempre una lamina senza coperchi
