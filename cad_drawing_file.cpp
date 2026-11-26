@@ -223,18 +223,13 @@ QString drawingModelDefinitionMatches(const DocumentState &document,const QByteA
         && QCryptographicHash::hash(format60,QCryptographicHash::Sha256)==expected) {
         matches=true; return {};
     }
-    // I vecchi hash non contenevano questi nomi. Un riferimento nuovo o
-    // modificato deve restare una modifica, anche con uguali indici e punti.
-    for(const auto &sketch:document.sketches){
-        if(sketch.support&&!sketch.support->point.name.isEmpty()){matches=false;return {};}
-        for(const auto &constraint:sketch.geometricConstraints)
-            if(constraint.pierce&&!constraint.pierce->surface.point.name.isEmpty()){matches=false;return {};}
-    }
-    for (const auto &body : document.extrusions)
-        if (body.loftStartReverse || body.loftEndReverse || !body.loftGuideCrossConditions.isEmpty()) { matches=false; return {}; }
+    // Il formato 53 è soltanto un candidato per confrontare le vecchie
+    // impronte. Un modello moderno può essere valido e non rappresentabile
+    // in quel formato. L'impronta corrente è già stata calcolata sopra.
     QByteArray legacy;
-    const auto legacyError=encodeDocumentDefinition53ForHash(normalized,legacy);if(!legacyError.isEmpty())return legacyError;
-    matches=QCryptographicHash::hash(legacy,QCryptographicHash::Sha256)==expected;return {};
+    if (encodeDocumentDefinition53ForHash(normalized,legacy).isEmpty())
+        matches=QCryptographicHash::hash(legacy,QCryptographicHash::Sha256)==expected;
+    return {};
 }
 QString prepareDrawingEditorModel(DocumentState &document,DrawingEditorModel &model,DrawingModelPreparation mode){
     try{

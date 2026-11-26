@@ -1,5 +1,7 @@
 #pragma once
 #include "../cad_drawing_window.h"
+#include "../cad_sketch_refs.h"
+#include <QMessageBox>
 #include "test_drawing_workflow.h"
 namespace {
 void linkedDrawingTests(){
@@ -42,12 +44,35 @@ void linkedDrawingTests(){
     {DrawingWindow window;clientOk(window.openPath(drawingPath));require(std::abs(window.editor()->dimensionResult(dimensionId).value-10)<1e-7,"modello senza cache ricostruito senza tassellazione");}
     auto other=working;forkDocumentIdentity(other);const auto otherPath=temporary.filePath("altro.prt");clientOk(saveDocumentFile(otherPath,other));
     auto changed=working;changed.extrusions[0].primitive.size[0]=14;changed.extrusions[0].cachedGeometry=false;
-    {CadViewport viewport;viewport.loadDocument(changed);changed=viewport.currentDocument();}clientOk(saveDocumentFile(sourcePath,changed));
+    SketchObject sourceSketch;sourceSketch.name="Sorgente associativa";sourceSketch.storyId=82001;sourceSketch.storyOrder=1;
+    sourceSketch.segments={{{0,0},{3,0}}};sourceSketch.constraints={-1};sourceSketch.segmentLengths={0};sourceSketch.segmentAngles={-1};
+    SketchObject targetSketch;targetSketch.name="Schizzo con riferimento";targetSketch.storyId=82002;targetSketch.storyOrder=2;
+    GeometryRef reference;reference.kind=7;reference.index=0;reference.featureId=sourceSketch.storyId;reference.element={0,0,-1};
+    clientOk(appendLinkedSketchReference(targetSketch,reference,{sourceSketch},{},false,true,100,nullptr,true));
+    changed.sketches={sourceSketch,targetSketch};
+    {CadViewport viewport;viewport.loadDocument(changed);changed=viewport.currentDocument();}
+    require(changed.sketches[1].linkedReferences.size()==1,"riferimento associativo conservato dopo rigenerazione");
+    clientOk(saveDocumentFile(sourcePath,changed));
+    const auto sourceBeforeUpdate=clientRead(sourcePath);
     {
         DrawingWindow window;clientOk(window.openPath(drawingPath));
         require(window.editor()->isReadOnly()&&std::isnan(window.editor()->dimensionResult(dimensionId).value),"modello cambiato non aggiorna quote silenziosamente");
         require(!window.updateFromSource(otherPath).isEmpty()&&window.editor()->isReadOnly(),"modello con UUID diverso rifiutato");
-        clientOk(window.updateFromSource());require(window.isModified()&&!window.editor()->isReadOnly()&&std::abs(window.editor()->dimensionResult(dimensionId).value-14)<1e-7,"aggiornamento esplicito a 14 mm");
+        auto *reload=window.findChild<QAction *>("drawingReloadSourceAction");
+        require(reload&&reload->isEnabled(),"freccia di aggiornamento abilitata per un modello cambiato");
+        QString warning;
+        QTimer captureWarning;
+        QObject::connect(&captureWarning,&QTimer::timeout,&window,[&]{
+            auto *box=qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
+            if(box&&box->icon()==QMessageBox::Warning){warning=box->text();box->accept();}
+        });
+        captureWarning.start(5);
+        reload->trigger();
+        captureWarning.stop();
+        clientOk(warning);
+        require(window.isModified()&&!window.editor()->isReadOnly()&&std::abs(window.editor()->dimensionResult(dimensionId).value-14)<1e-7,
+                "la freccia aggiorna a 14 mm il modello con riferimenti associativi");
+        require(clientRead(sourcePath)==sourceBeforeUpdate,"la freccia di aggiornamento conserva il file sorgente");
         clientOk(window.savePath(drawingPath));
     }
     require(QFile::rename(sourcePath,temporary.filePath("rinominata.prt")),"sposta solo modello");
