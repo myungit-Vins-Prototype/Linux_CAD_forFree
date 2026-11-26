@@ -265,3 +265,199 @@ static void filletSelectionReviewRegressions(bool openGl) {
     pool->setMaxThreadCount(previousLimit);
     std::cout << "PASS raccordi review: occlusione facce, X-ray, scena editata, evidenziazioni, Esc/Annulla/chiusura/conferma e Undo/Redo" << std::endl;
 }
+
+static void filletCurrentStageRegression(bool openGl) {
+    using namespace ForgeCad;
+    QMainWindow window;
+    auto *view = new CadViewport(&window);
+    window.setCentralWidget(view);
+    window.resize(800, 600);
+    if (openGl) {
+        require(QGuiApplication::platformName() != QStringLiteral("offscreen"), "prova OpenGL richiede una sessione grafica");
+        window.show();
+        QApplication::processEvents();
+    }
+    // Dopo una modifica storica la riga editata rimane selezionata. Una
+    // nuova funzione deve partire dal risultato ancora attivo al cursore.
+    DocumentState chain;
+    SketchObject profile;
+    const QPointF corners[] = {{0., 0.}, {20., 0.}, {20., 16.}, {0., 16.}};
+    for (int i = 0; i < 4; ++i) profile.segments.append({corners[i], corners[(i + 1) % 4]});
+    chain.sketches = {profile};
+    view->loadDocument(chain);
+    ExtrusionObject extrusion;
+    extrusion.sketchIndex = 0;
+    extrusion.distance = 10.;
+    require(view->createExtrusion(extrusion, QStringLiteral("Estrusione")).isEmpty(), "estrusione per la catena dei raccordi");
+    const auto references = [&](int bodyIndex, std::initializer_list<Kernel::Vec3> points) {
+        QVector<EdgePoint> refs;
+        const auto shape = view->extrusions_.at(bodyIndex).forgeBody;
+        for (const auto &point : points) {
+            const auto edge = Kernel::nearestEdge(*shape, point, 1e-7);
+            require(edge.valid(), "spigolo della catena di raccordi");
+            refs.append(edgeReference(*shape, edge, point));
+        }
+        return refs;
+    };
+    require(view->createBlend(0, references(0, {{0., 0., 5.}, {0., 16., 5.}}), .8, false,
+        QStringLiteral("Primo raccordo")).isEmpty(), "primo raccordo su due spigoli");
+    require(view->createBlend(1, references(1, {{20., 0., 5.}, {20., 16., 5.}}), .5, false,
+        QStringLiteral("Secondo raccordo")).isEmpty(), "secondo raccordo su altri due spigoli");
+    const auto secondBefore = view->extrusions_.at(2).forgeBody;
+    const int end = view->storyboardPosition();
+    auto firstChanged = view->extrusions_.at(1);
+    firstChanged.blendSize = 1.;
+    require(view->updateBody(1, firstChanged).isEmpty() && view->selection().index == 1
+            && view->storyboardPosition() == end, "modifica il primo raccordo e lascia la maniglia in fondo");
+    const auto secondAfter = view->extrusions_.at(2).forgeBody;
+    require(secondAfter && secondAfter != secondBefore && view->extrusions_.at(2).error.isEmpty(),
+            "il secondo raccordo e' il risultato rigenerato");
+    require(view->beginEdgePick(false, true).isEmpty() && view->edgePickBody() == 2
+            && view->isBodyVisibleInScene(2) && !view->isBodyVisibleInScene(1)
+            && view->preview_.key.isEmpty(), "il nuovo comando apre una sola geometria, allo stadio attivo");
+    require(view->selection().index == 1 && view->storyboardPosition() == end,
+            "avviare il picker conserva la riga selezionata e la maniglia");
+    if (openGl) require(!view->grabFramebuffer().isNull(), "scena Raccordo al terzo stadio");
+
+    const auto thirdEdges = references(2, {{10., 0., 10.}});
+    view->pickReferences(view->edgePickBody(), thirdEdges);
+    const auto picked = view->edgePickPoints();
+    require(picked.size() == 1, "selezione sul secondo raccordo");
+    view->requestBlendPreview(view->edgePickBody(), picked, .15, false);
+    QElapsedTimer thirdWait;
+    thirdWait.start();
+    while ((view->previewPending() || view->previewRunning_) && thirdWait.elapsed() < 10000)
+        QApplication::processEvents();
+    require(view->preview_.valid && view->preview_.definition.firstBody == 2
+            && !view->isBodyVisibleInScene(1), "anteprima calcolata sul secondo raccordo rigenerato");
+    const auto thirdPreview = view->preview_.geometry;
+    require(view->createBlend(view->edgePickBody(), picked, .15, false, QStringLiteral("Terzo raccordo")).isEmpty(),
+            "conferma terzo raccordo");
+    view->endEdgePick();
+    require(thirdPreview && view->extrusions_.at(3).forgeBody == thirdPreview
+            && view->extrusions_.at(3).firstBody == 2 && view->extrusions_.at(2).forgeBody == secondAfter,
+            "conferma promuove l'anteprima legata al predecessore effettivo");
+
+    const int beforeSecond = view->storyboardIndex(false, 2);
+    view->setStoryboardPosition(beforeSecond);
+    view->selectObject(SceneObjectKind::Extrusion, 0);
+    require(view->beginEdgePick(true, true).isEmpty() && view->edgePickBody() == 1
+            && view->storyboardPosition() == beforeSecond && !view->isBodyVisibleInScene(2),
+            "lo smusso segue la maniglia anticipata senza riaprire stadi futuri");
+    view->endEdgePick();
+
+    view->setStoryboardPosition(view->storyboard().size());
+    PrimitiveParameters independent;
+    independent.size[0] = independent.size[1] = independent.size[2] = 4.;
+    require(view->createPrimitive(independent, QStringLiteral("Corpo indipendente")).isEmpty(),
+            "corpo indipendente a valle dei raccordi");
+    const auto independentBefore = view->extrusions_.at(4).forgeBody;
+    const auto source = view->extrusions_.at(0).forgeBody;
+    const auto firstId = view->extrusions_.at(1).featureId;
+    const auto secondId = view->extrusions_.at(2).featureId;
+    const auto baseVolume = Kernel::massProperties(*source).volume;
+    const auto lossSecond = 2. * .5 * .5 * (1. - M_PI / 4.) * 10.;
+    // Caratterizza il riordino anche con uno snapshot ancora riutilizzabile.
+    // Quello del secondo raccordo comprende la geometria del primo.
+    view->extrusions_[2].cachedGeometry = true;
+    require(view->moveStoryboardStep(view->storyboardIndex(false, 2), view->storyboardIndex(false, 1)).isEmpty(),
+            "sposta il secondo raccordo prima del primo");
+    require(view->extrusions_.at(1).featureId == secondId && view->extrusions_.at(1).firstBody == 0
+            && view->extrusions_.at(2).featureId == firstId && view->extrusions_.at(2).firstBody == 1,
+            "riordino ricollega entrambi i raccordi");
+    require(view->extrusions_.at(1).forgeBody && view->extrusions_.at(1).forgeBody != secondAfter
+            && std::abs(Kernel::massProperties(*view->extrusions_.at(1).forgeBody).volume
+                        - (baseVolume - lossSecond)) < 1e-6,
+            "il raccordo spostato si rigenera sull'estrusione, senza lo snapshot dello stadio precedente");
+    require(view->extrusions_.at(3).forgeBody && view->extrusions_.at(3).forgeBody != thirdPreview
+            && view->extrusions_.at(3).firstBody == 2
+            && view->extrusions_.at(4).forgeBody == independentBefore
+            && view->extrusions_.at(0).forgeBody == source,
+            "ricalcola i discendenti e conserva il creatore e il corpo indipendente");
+
+    const int rollback = view->storyboardIndex(false, 2);
+    view->setStoryboardPosition(rollback);
+    const auto reorderedSecond = view->extrusions_.at(1).forgeBody;
+    require(view->moveFeature(1, 1).isEmpty(), "riporta il secondo raccordo dopo il primo a maniglia anticipata");
+    require(view->storyboardPosition() == rollback && view->extrusions_.at(1).featureId == firstId
+            && view->extrusions_.at(1).forgeBody && view->isBodyVisibleInScene(1)
+            && !view->isBodyVisibleInScene(2), "la maniglia resta al passo scelto e mostra il nuovo risultato");
+    require(view->extrusions_.at(2).featureId == secondId && !view->extrusions_.at(2).forgeBody
+            && view->extrusions_.at(2).historyRebuildPending && view->extrusions_.at(3).historyRebuildPending,
+            "i raccordi oltre la maniglia restano da aggiornare");
+    view->setStoryboardPosition(rollback + 1);
+    require(view->extrusions_.at(2).forgeBody && view->extrusions_.at(2).forgeBody != reorderedSecond
+            && view->extrusions_.at(2).firstBody == 1 && view->isBodyVisibleInScene(2)
+            && view->extrusions_.at(3).historyRebuildPending && view->extrusions_.at(4).forgeBody == independentBefore,
+            "avanzare la maniglia aggiorna la sola lavorazione raggiunta");
+    view->undo();
+    require(view->storyboardPosition() == rollback && view->extrusions_.at(1).featureId == secondId
+            && view->extrusions_.at(1).forgeBody == reorderedSecond, "undo del riordino con la maniglia anticipata");
+
+    // Il bordo lungo arriva sul fianco cilindrico di un raccordo più piccolo.
+    // I due ordini rimuovono quantità di materiale diverse all'intersezione.
+    CadViewport adjacent;
+    PrimitiveParameters block;
+    block.size[0] = 4.; block.size[1] = 3.; block.size[2] = 2.;
+    require(adjacent.createPrimitive(block, QStringLiteral("Blocco")).isEmpty(), "blocco per raccordi adiacenti");
+    const QVector<EdgePoint> longEdge{{2., 0., 2.}}, upright{{4., 0., 1.}};
+    require(adjacent.createBlend(0, longEdge, .55, false, QStringLiteral("Grande")).isEmpty()
+            && adjacent.createBlend(1, upright, .3, false, QStringLiteral("Piccolo")).isEmpty(),
+            "raccordi adiacenti prima dello spostamento");
+    const auto oldTip = adjacent.extrusions().last().forgeBody;
+    require(adjacent.moveFeature(1, 1).isEmpty(), "raccordo grande spostato dopo il piccolo");
+    const auto &small = adjacent.extrusions().at(1);
+    const auto &large = adjacent.extrusions().at(2);
+    require(large.firstBody == 1 && small.blendSize == .3 && large.forgeBody && large.error.isEmpty(),
+            "il raccordo spostato si costruisce sul piccolo");
+    auto selectedOnly = large.chamferSpec;
+    selectedOnly.fillet.propagate = false;
+    QString blendError;
+    const auto clipped = forgeBlend(small.forgeBody, large.blendEdges, .55, false, &blendError, selectedOnly, false);
+    const auto volume = [](const ForgeBody &body) { return Kernel::massProperties(*body).volume; };
+    require(clipped && std::abs(volume(large.forgeBody) - volume(clipped)) < 1e-8
+            && std::abs(volume(large.forgeBody) - volume(oldTip)) > 1e-4
+            && large.forgeBody->shells().size() == 1 && Kernel::checkBody(*large.forgeBody).empty(),
+            "solido valido, raccordo limitato al bordo selezionato e volume diverso dal vecchio ordine");
+
+    // A x=3,7 finisce il tratto rettilineo. Poco oltre, questo punto
+    // era materiale sotto il tappo. È interno al vecchio angolo da 0,3
+    // ed esterno al cilindro di raggio 0,55 della nuova lavorazione.
+    const Kernel::Vec3 lip(3.75, .05, 1.97);
+    require(Kernel::SolidClassifier(*small.forgeBody, 1e-7).classify(lip) == Kernel::PointLocation::Inside
+            && Kernel::SolidClassifier(*large.forgeBody, 1e-7).classify(lip) == Kernel::PointLocation::Outside,
+            "il raccordo rimuove il materiale anche oltre l'inizio del bordo cilindrico");
+    for (Kernel::FaceId id : large.forgeBody->faces()) {
+        const auto *plane = dynamic_cast<const Kernel::Plane *>(large.forgeBody->face(id).surface.get());
+        if (plane && std::abs(plane->frame().zDir().x()) > 1. - 1e-10)
+            require(std::abs(plane->frame().origin().x() - 3.7) > 1e-8, "nessun tappo piano alla sezione di tangenza");
+    }
+
+    QTemporaryDir reorderFiles;
+    const QString cachedPath = reorderFiles.filePath(QStringLiteral("riordino.prt"));
+    require(saveDocumentFile(cachedPath, adjacent.currentDocument(), true).isEmpty(), "salva i raccordi riordinati");
+    DocumentState cached;
+    require(loadDocumentFile(cachedPath, cached).isEmpty() && cached.extrusions.last().cachedGeometry,
+            "il risultato costruito nell'ordine corretto si riusa alla riapertura");
+    QFile file(cachedPath);
+    require(file.open(QIODevice::ReadOnly), "legge il contenitore del riordino");
+    const auto bytes = file.readAll();
+    file.close();
+    const qsizetype cacheOffset = 11 + qsizetype(qFromBigEndian<quint32>(bytes.constData() + 7));
+    auto cache = testDocumentUncompress(bytes, cacheOffset);
+    QDataStream header(&cache, QIODevice::ReadWrite);
+    QByteArray sourceHash, definitionHash;
+    quint32 tag = 0;
+    header >> sourceHash >> definitionHash >> tag;
+    header << quint32(20); // stesso layout, poteva conservare il tappo piano interno al bordo
+    const auto legacyBytes = bytes.left(cacheOffset) + testDocumentCompress(cache, bytes);
+    require(file.open(QIODevice::WriteOnly | QIODevice::Truncate) && file.write(legacyBytes) == legacyBytes.size(),
+            "prepara la cache storica dei raccordi");
+    file.close();
+    DocumentState legacy;
+    require(loadDocumentFile(cachedPath, legacy).isEmpty() && legacy.extrusions[0].cachedGeometry
+            && legacy.extrusions[1].cachedGeometry && !legacy.extrusions[2].cachedGeometry,
+            "la migrazione rigenera solo il raccordo con un possibile tappo nel bordo");
+
+    std::cout << "PASS raccordo: apertura, anteprima, riuso, riordino e rollback" << std::endl;
+}

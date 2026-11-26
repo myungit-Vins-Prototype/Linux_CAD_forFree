@@ -68,7 +68,10 @@ int CadViewport::rebuildAllFeatures() {
     // Rigenerare non cambia il contratto dei risultati storici: le feature
     // successive possono riferirsi a facce/bordi dell'intero aggregato.
     // Solo le ripetizioni create nel nuovo formato espongono componenti.
-    for (ExtrusionObject &body : extrusions_) body.cachedGeometry = false;
+    for (ExtrusionObject &body : extrusions_) {
+        body.cachedGeometry = false;
+        body.suppressedBodyCache.reset();
+    }
     regenerateAll();
     documentChanged();
     int failed = 0;
@@ -452,7 +455,6 @@ QString CadViewport::moveStoryboardStep(int from, int to) {
     }
     recordUndo();
     ForgeCad::placeStorySketches(sketches_, extrusions_, steps);
-    storyPosition_ = historyPosition_ = -1;
     selection_ = {moved.sketch ? SceneObjectKind::Sketch : SceneObjectKind::Extrusion, moved.index, -1};
     documentChanged();
     return {};
@@ -658,6 +660,7 @@ QString CadViewport::setFeaturesSuppressed(const QVector<int> &indices, bool sup
         ExtrusionObject &feature = extrusions_[index];
         const quint64 bodyId = feature.modelBodyId;
         const QVector<int> consumed = ForgeCad::hiddenOperands(feature, extrusions_);
+        if (suppressed) ForgeCad::rememberSuppressedBody(feature, index, extrusions_, calculationAccuracy_);
         feature.suppressed = suppressed;
         for (int operand : consumed) {
             if (operand < 0 || operand >= extrusions_.size() || extrusions_.at(operand).modelBodyId == bodyId) continue;
@@ -851,15 +854,27 @@ QString CadViewport::reorderFeatureTo(int index, int target, const QVector<Story
         }
         previous = current;
     }
-    for (int current = 0; current < reordered.size(); ++current)
-        for (int operand : ForgeCad::bodyOperands(reordered.at(current)))
+    QVector<bool> dirty(reordered.size(), false);
+    for (int current = 0; current < reordered.size(); ++current) {
+        const auto operands = ForgeCad::bodyOperands(reordered.at(current));
+        for (int operand : operands)
             if (operand >= current)
                 return QStringLiteral("Spostamento non consentito: \"%1\" deve restare dopo una feature da cui dipende.")
                     .arg(reordered.at(current).name);
+        const int old = order.at(current);
+        if (old != current) {
+            dirty[current] = true;
+            continue;
+        }
+        // Anche uno stadio fermo puo' avere una nuova base implicita.
+        auto previousOperands = ForgeCad::bodyOperands(extrusions_.at(old));
+        for (int &operand : previousOperands) operand = mapped(operand);
+        dirty[current] = operands != previousOperands;
+    }
 
+    clearPreview();
     recordUndo();
     ForgeCad::placeStorySketches(sketches_, extrusions_, steps);
-    storyPosition_ = historyPosition_ = -1;
     extrusions_ = std::move(reordered);
     int tip = -1;
     for (int candidate = extrusions_.size() - 1; candidate >= 0; --candidate)
@@ -867,9 +882,10 @@ QString CadViewport::reorderFeatureTo(int index, int target, const QVector<Story
     for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
         if (bodyId && extrusions_.at(candidate).modelBodyId == bodyId) extrusions_[candidate].visible = candidate == tip && bodyVisible;
     ForgeCad::remapSketchSupports(sketches_, mapped);
-    regenerateAll();
-    const int moved = map.value(index, -1);
-    selection_ = moved >= 0 ? SceneSelection{SceneObjectKind::Extrusion, moved, -1} : SceneSelection{};
+    if (storyPosition_ >= 0)
+        historyPosition_ = ForgeCad::storyFeatureLimit(extrusions_, storyboard(), storyPosition_);
+    selection_ = {SceneObjectKind::Extrusion, mapped(index), -1};
+    regenerateFrom(0, std::move(dirty), {});
     documentChanged();
     return {};
 }

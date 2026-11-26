@@ -1,6 +1,7 @@
 #include "cad_volume_structure.h"
 #include "fk_classify.h"
 #include "cad_feature_build.h"
+#include "cad_document_io.h"
 #include "cad_kernel.h"
 #include "cad_surface_tools.h"
 #include "cad_element_names.h"
@@ -67,6 +68,7 @@ void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sk
     QElapsedTimer timer;
     timer.start();
     assignCreationFeatureId(body, bodies);
+    reuseSuppressedBody(body, index, bodies, Kernel::linearResolution());
     bool usedSnapshot = body.cachedGeometry && body.forgeBody;
     // La madre ricrea anche i risultati condivisi dai corpi derivati.
     if (body.feature == BodyFeature::Pattern && (body.patternComponent == 0
@@ -498,30 +500,6 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
             const bool sameState = body.blendBaseFeature != 0 && body.blendBaseFeature == base->featureId;
             body.forgeBody = ForgeCad::forgeBlend(base->forgeBody, body.blendEdges, body.blendSize, body.blendChamfer, &body.error, body.chamferSpec,
                                                   sameState);
-            // Due raccordi/smussi adiacenti possono intersecare le rispettive
-            // zone. Se il secondo e' piu' grande, applicarlo sul raccordo
-            // piccolo puo' non avere una superficie offset valida. Rigenera
-            // allora dalla base comune in ordine decrescente di misura: la
-            // lavorazione grande consuma la zona d'intersezione e quella
-            // piccola viene rifatta sugli spigoli rimasti.
-            if (!body.forgeBody && base->feature == BodyFeature::Blend
-                && body.chamferSpec.fillet.mode == 0 && base->chamferSpec.fillet.mode == 0
-                && body.blendSize > base->blendSize + 1e-12 * qMax(body.blendSize, base->blendSize)) {
-                const ExtrusionObject *source = operand(base->firstBody);
-                if (source && source->forgeBody) {
-                    QString reorderedError;
-                    ForgeCad::ForgeBody larger = ForgeCad::forgeBlend(source->forgeBody, body.blendEdges, body.blendSize,
-                                                                      body.blendChamfer, &reorderedError, body.chamferSpec, false);
-                    if (larger) {
-                        ForgeCad::ForgeBody rebuilt = ForgeCad::forgeBlend(larger, base->blendEdges, base->blendSize,
-                                                                           base->blendChamfer, &reorderedError, base->chamferSpec, false);
-                        if (rebuilt) {
-                            body.forgeBody = std::move(rebuilt);
-                            body.error.clear();
-                        }
-                    }
-                }
-            }
             body.solid = body.forgeBody && !body.forgeBody->isSheet();
             return;
         }

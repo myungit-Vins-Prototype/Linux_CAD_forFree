@@ -787,7 +787,8 @@ namespace {
 // vertice liscio): gli spigoli che continuano tangenti quelli scelti, tra le
 // stesse facce o facce tangenti a quelle nel vertice. Le distanze degli smussi
 // passano allo spigolo aggiunto.
-void propagateTangent(const Body &body, std::vector<EdgeId> &edges, std::vector<ChamferSides> *sides) {
+void propagateTangent(const Body &body, std::vector<EdgeId> &edges, std::vector<ChamferSides> *sides,
+                      double size = 0.0, bool chamfer = false) {
     const double tolerance = 1e-9;
     std::set<int> chosen;
     for (EdgeId e : edges) chosen.insert(e.index);
@@ -832,6 +833,31 @@ void propagateTangent(const Body &body, std::vector<EdgeId> &edges, std::vector<
                 ++candidates;
             }
             if (candidates != 1 || chosen.count(found.index)) continue;
+            // Il centro della palla non puo' proseguire dentro un cilindro
+            // oltre il collasso del suo offset. A 90 gradi lo stesso limite
+            // vale per l'arretramento dello smusso simmetrico sul piano.
+            if (size > 0.0 && (!chamfer || std::fabs(dot(na, nb)) <= tolerance)) {
+                const Vec3 tangent = body.edgeStart(e) == v ? te : -te;
+                const bool convex = dot(cross(nb, -tangent), na) < 0.0;
+                const Edge &continuation = body.edge(found);
+                const auto collapsed = [&](FinId fin, FinId other) {
+                    const FaceId id = body.finFace(fin);
+                    if (id == fa || id == fb) return false;
+                    const auto &face = body.face(id);
+                    const auto *cylinder = dynamic_cast<const CylindricalSurface *>(face.surface.get());
+                    if (!cylinder || face.sense != convex || size < cylinder->radius()) return false;
+                    const auto &mate = body.face(body.finFace(other));
+                    const auto *cap = dynamic_cast<const Plane *>(mate.surface.get());
+                    const bool axialCap = cap && parallel(cap->frame().zDir(), cylinder->frame().zDir());
+                    // A raggio uguale, l'arco sul piano normale all'asse
+                    // genera una sfera con centro fisso e la catena prosegue.
+                    if (!chamfer) return !(axialCap && continuation.curve->type() == CurveType::Circle
+                                          && size == cylinder->radius());
+                    return axialCap;
+                };
+                if (collapsed(continuation.forward, continuation.backward)
+                    || collapsed(continuation.backward, continuation.forward)) continue;
+            }
             chosen.insert(found.index);
             edges.push_back(found);
             if (sides) sides->push_back((*sides)[k]);
@@ -847,7 +873,8 @@ Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, doubl
     std::vector<EdgeId> edges = selected;
     std::vector<ChamferSides> propagatedSides;
     if (selectedSides) propagatedSides = *selectedSides;
-    if (propagate) propagateTangent(body, edges, selectedSides ? &propagatedSides : nullptr);
+    if (propagate) propagateTangent(body, edges, selectedSides ? &propagatedSides : nullptr,
+                                    selectedSides ? 0.0 : size, chamfer);
     const std::vector<ChamferSides> *sides = selectedSides ? &propagatedSides : nullptr;
     if (!chamfer) if (auto polar = detail::blendPolarEdges(body,edges,size,history)) return std::move(*polar);
     if (!propagate) {
@@ -1111,6 +1138,77 @@ Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, doubl
                                     "due andrebbero rifilati l'uno sull'altro: non ancora gestito. " + crossing);
         throw;
     }
+}
+
+// Un raccordo rettilineo può arrivare a un bordo già arrotondato. Se la
+// palla non può proseguire sul cilindro, la sua superficie deve essere
+// rifilata sul bordo reale. Il piano di tangenza iniziale è interno al corpo.
+double convexRimExtension(const Body &body, const BlendEdge &info, VertexId vertex,
+                          const std::vector<FaceId> &rim, const Vec3 &outward, double size, double tolerance) {
+    if (!info.straight || !info.convex || info.chain >= 0 || info.composite || rim.empty()
+        || info.section[0].circle || info.section[1].circle) return 0.0;
+    const Vec3 p = body.vertex(vertex).point;
+    FaceId cap;
+    double depth = 0.0;
+    for (FaceId f : rim) {
+        const Face &face = body.face(f);
+        const auto *cylinder = dynamic_cast<const CylindricalSurface *>(face.surface.get());
+        if (!cylinder || !face.sense || size < cylinder->radius()
+            || std::fabs(dot(outward, cylinder->frame().zDir())) > 1e-9) return 0.0;
+        FaceId end;
+        for (LoopId loop : face.loops) for (FinId fin : body.loopFins(loop)) {
+            const FinId mate = body.otherFin(fin);
+            if (!mate.valid()) continue;
+            const FaceId neighbor = body.finFace(mate);
+            const Face &adjacent = body.face(neighbor);
+            const auto *plane = dynamic_cast<const Plane *>(adjacent.surface.get());
+            if (!plane || body.edge(body.fin(fin).edge).curve->type() != CurveType::Line) continue;
+            const Vec3 n = adjacent.sense ? plane->frame().zDir() : -plane->frame().zDir();
+            if (!parallel(n, outward) || dot(n, outward) <= 0.0) continue;
+            const double distance = dot(plane->frame().origin() - p, n);
+            if (std::fabs(distance - cylinder->radius()) > tolerance) continue;
+            // Il piano deve essere tangente al cilindro, non una sua sezione.
+            if (std::fabs(dot(plane->frame().origin() - cylinder->frame().origin(), n)
+                          - cylinder->radius()) > tolerance) continue;
+            if (end.valid() && end != neighbor) return 0.0;
+            end = neighbor;
+            depth = distance;
+        }
+        if (!end.valid() || (cap.valid() && end != cap)) return 0.0;
+        cap = end;
+    }
+    // Circoscrive la sola porzione aggiunta; una faccia estranea al giunto
+    // che entra nella zona richiede un rifilo differente.
+    const double extension = depth + 4.0 * booleanConnectionTolerance();
+    // Su due piani il profilo convesso asportato è contenuto nel triangolo
+    // formato dal vertice e dai due contatti, anche per un angolo obliquo.
+    Vec3 section[3];
+    Box addition;
+    for (int i = 0; i < 3; ++i) {
+        const Vec2 q = info.extent[i] - info.corner;
+        section[i] = p + q.x() * info.e1 + q.y() * info.e2;
+        addition.add(section[i]);
+        addition.add(section[i] + extension * outward);
+    }
+    addition = addition.padded(tolerance);
+    // A pezzo ruotato i box cartesiani possono sovrapporsi. La sfera
+    // circoscritta al prisma dà anche una prova indipendente dagli assi.
+    const Vec3 center = 0.5 * (section[1] + section[2] + extension * outward);
+    double radius = 0.0;
+    for (const Vec3 &q : section)
+        radius = std::max({radius, distance(q, center), distance(q + extension * outward, center)});
+    for (FaceId f : body.faces()) {
+        if (f == cap || f == info.faces[0] || f == info.faces[1]
+            || std::find(rim.begin(), rim.end(), f) != rim.end()) continue;
+        if (!addition.overlaps(faceBox(body, f))) continue;
+        const Surface &support = *body.face(f).surface;
+        const SurfaceType type = support.type();
+        if ((type == SurfaceType::Plane || type == SurfaceType::Cylinder || type == SurfaceType::Cone
+             || type == SurfaceType::Sphere || type == SurfaceType::Torus)
+            && projectPoint(support, center).distance > radius + tolerance) continue;
+        throw std::domain_error("blendEdges: spazio insufficiente per verificare il rifilo sul bordo arrotondato");
+    }
+    return extension;
 }
 
 Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, const std::vector<ChamferSides> *sides, BodyHistory *history) {
@@ -1541,7 +1639,13 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
                     }
                 }
             }
-            if (flush) continue;
+            if (flush) {
+                const Vec3 outward = end == 0 ? -tangent : tangent;
+                const double extension = sides ? 0.0 : convexRimExtension(body, info, v, others, outward, size, tolerance);
+                if (end == 0) info.from -= extension;
+                else info.to += extension;
+                continue;
+            }
             if (info.composite)
                 throw std::domain_error("blendEdges: faccia piu' corta del raggio accanto a uno spigolo che finisce contro una faccia obliqua (non gestita)");
             if (others.size() != 1 || body.face(others.front()).surface->type() != SurfaceType::Plane)

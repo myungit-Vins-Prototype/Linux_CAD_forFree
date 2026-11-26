@@ -261,7 +261,7 @@ QString CadViewport::beginBlendEdit(int blend, double size, bool chamfer) {
     selection_ = {SceneObjectKind::Extrusion, body.firstBody, -1};
     selectedFace_ = {};
     edgePickSize_ = size;
-    const QString error = startEdgePick(chamfer);
+    const QString error = startEdgePick(chamfer, false, false, false, body.firstBody);
     if (!error.isEmpty()) return error;
     edgePickEdit_ = blend;
     pickReferences(body.firstBody, body.blendEdges,
@@ -286,21 +286,35 @@ void CadViewport::setEdgePickChamferSpec(const ChamferSpec &spec) {
 
 const ChamferSpec &CadViewport::edgePickChamferSpec() const { return edgePickSpec_; }
 
-QString CadViewport::startEdgePick(bool chamfer, bool extend , bool helix , bool deferPreview ) {
+QString CadViewport::startEdgePick(bool chamfer, bool extend, bool helix, bool deferPreview, int explicitBase) {
     if (sketchMode_) return QStringLiteral("Esci prima dalla modalita' schizzo.");
     edgePickChamfer_ = chamfer;
     edgePickExtend_ = extend;
     edgePickHelix_ = helix;
     edgePickPreviewEnabled_ = !deferPreview;
     edgePickBody_ = -1;
-    // Il corpo selezionato vale anche se nascosto (la base di un raccordo da modificare).
-    if (!helix && selection_.kind == SceneObjectKind::Extrusion && selection_.index >= 0 && selection_.index < extrusions_.size()) {
-        const ExtrusionObject &selected = extrusions_.at(selection_.index);
-        if (ForgeCad::isShapeBody(selected) && (!extend || !selected.solid)) edgePickBody_ = selection_.index;
+    int base = explicitBase;
+    if (base < 0 && selection_.kind == SceneObjectKind::Extrusion)
+        base = selection_.index;
+    if (!helix && base >= 0 && base < extrusions_.size()) {
+        const auto &selected = extrusions_.at(base);
+        // La riga selezionata dopo una modifica puo' essere uno stadio
+        // consumato. In creazione usa il risultato visibile alla maniglia.
+        if (explicitBase < 0 && !extend && !isBodyDrawn(base, false)) {
+            base = -1;
+            if (selected.modelBodyId)
+                for (int candidate : resultBodiesBefore(-1))
+                    if (extrusions_.at(candidate).modelBodyId == selected.modelBodyId && isBodyDrawn(candidate, false)) {
+                        base = candidate;
+                        break;
+                    }
+        }
+        if (base >= 0 && ForgeCad::isShapeBody(extrusions_.at(base)) && (!extend || !extrusions_.at(base).solid))
+            edgePickBody_ = base;
     }
     bool any = edgePickBody_ >= 0;
     for (int index = 0; index < extrusions_.size() && !any; ++index) any = edgePickEligible(index);
-    if (!any) return helix ? QStringLiteral("Nella scena non ci sono corpi visibili con spigoli circolari o facce cilindriche.")
+    if (!any) return helix ? QStringLiteral("Nella scena non ci sono corpi visibili per scegliere la base dell’elica.")
                  : extend ? QStringLiteral("Nella scena non ci sono superfici (estrusioni di profili aperti) visibili da estendere.")
                           : QStringLiteral("Nella scena non ci sono solidi o superfici cucite visibili da raccordare.");
     edgePicking_ = true;
@@ -324,7 +338,8 @@ void CadViewport::resumeEdgePick(int body, const QVector<EdgePoint> &edges, bool
     if (body < 0 || body >= extrusions_.size()) return;
     selection_ = {SceneObjectKind::Extrusion, body, -1};
     selectedFace_ = {};
-    if (!beginEdgePick(chamfer, deferPreview).isEmpty()) return;
+    edgePickEdit_ = -1;
+    if (!startEdgePick(chamfer, false, false, deferPreview, body).isEmpty()) return;
     pickReferences(body, edges);
     edgePicked();
 }

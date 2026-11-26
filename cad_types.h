@@ -26,6 +26,13 @@ namespace ForgeCad {
 using ForgeBody = std::shared_ptr<const Kernel::Body>;
 // Curva esatta del kernel proprio (le funzioni curva: elica, spirale).
 using ForgeCurve = std::shared_ptr<const Kernel::Curve<3>>;
+
+// Il B-rep della funzione attiva, indipendente dallo stadio di passaggio.
+struct SuppressedBodyCache {
+    ForgeBody result;
+    QByteArray definition;
+    QVector<std::weak_ptr<const Kernel::Body>> operands;
+};
 }
 
 // Precisione: tutte le coordinate del modello sono in double (QPointF usa
@@ -943,6 +950,7 @@ struct ExtrusionObject {
     // forgeBody, display ed error vengono dallo snapshot salvato: alla prima
     // apertura si usano invece di ricalcolare e ritassellare il corpo.
     bool cachedGeometry = false;
+    std::shared_ptr<const ForgeCad::SuppressedBodyCache> suppressedBodyCache;
     bool historyRebuildPending = false; // risultato da rigenerare quando il cursore raggiunge la feature
 };
 

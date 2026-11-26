@@ -14,8 +14,8 @@ B-rep intermedio, ma possiede un `featureId` persistente e un `modelBodyId`.
   invece un nuovo corpo. Datum ed eliche restano geometria di riferimento.
 - Le booleane appartengono al corpo dell'operando A. I corpi strumento rimangono
   corpi logici distinti e vengono soltanto nascosti mentre sono consumati.
-- La soppressione rende la feature un passaggio trasparente: il suo risultato e'
-  quello dello stadio precedente e le feature successive vengono rigenerate.
+- La soppressione mostra e passa alle lavorazioni dipendenti il risultato
+  dello stadio precedente. Le lavorazioni indipendenti conservano il risultato.
 - Eliminare una feature ricollega la base implicita allo stadio precedente. Le
   feature successive non vengono cancellate; un riferimento esplicito a una
   faccia o a un bordo scomparso produce un errore visibile nella storyboard.
@@ -23,9 +23,48 @@ B-rep intermedio, ma possiede un `featureId` persistente e un `modelBodyId`.
   le basi implicite e viene accettato solo se ogni dipendenza resta precedente
   alla feature che la usa. Gli schizzi si spostano come passi autonomi;
   le righe informative restano figlie della propria lavorazione. La feature
-  iniziale di un corpo non puo' superare gli altri stadi del corpo.
+  iniziale di un corpo non puo' superare gli altri stadi del corpo. Dopo lo
+  spostamento si invalidano gli stadi riordinati, quelli con operandi cambiati
+  e i loro dipendenti. La maniglia resta al passo scelto e le lavorazioni
+  coinvolte oltre la maniglia si aggiornano quando vengono raggiunte.
 - Schizzi, datum e lavorazioni compaiono nella sequenza di calcolo. I corpi
   logici hanno un gruppo separato per consultare i risultati.
+
+## Cache delle lavorazioni soppresse
+
+La soppressione conserva l'ultimo B-rep valido per i reticoli, le booleane,
+le primitive, la scala, i raccordi, il guscio, l'eliminazione di facce,
+l'estensione, l'offset, la cucitura e lo spessore con direzione automatica.
+La scena usa lo stadio di passaggio mentre la lavorazione è soppressa.
+
+Con **Opzioni → Salva nel documento i corpi calcolati**, il `.prt` contiene
+anche i risultati conservati che corrispondono ancora alla definizione.
+La riattivazione riusa il B-rep se parametri, precisione e risultati
+degli operandi corrispondono. Se un operando è stato rigenerato o la
+definizione è cambiata, la lavorazione viene calcolata. Si aggiornano le
+dipendenze entro il cursore. Gli stadi oltre il cursore vengono calcolati
+quando diventano necessari.
+
+La cache versione 19 aggiunge i risultati delle lavorazioni soppresse
+alla definizione FCAD76. La versione 20 registra i raccordi e gli smussi
+calcolati nell'ordine della storia. All'apertura di un documento di lavoro
+con una cache precedente, ForgeCAD rigenera le lavorazioni che potevano
+essere state invertite e i relativi dipendenti.
+La versione 21 aggiorna anche i raccordi e gli smussi che potevano
+lasciare materiale dove lo spigolo raggiunge un bordo cilindrico già
+arrotondato. Al salvataggio successivo si conserva il rifilo corretto.
+Il lettore riusa l'identità del B-rep condiviso con lo stadio precedente
+quando legge due record di passaggio identici. Questo conserva la
+genealogia codificata nel salvataggio.
+
+Su una copia di Applicatore4 con 19 lavorazioni, la riapertura del file
+salvato con il TPMS soppresso ha ripristinato la cache. La riattivazione
+ha riusato lo stesso B-rep di 5.113 facce in entrambe le prove. I tempi
+totali sono stati di 7,17 e 8,07 s, in gran parte per ricostruire
+Rivoluzione 19 e Unione 20. Passano entrambi i test CTest mirati,
+`forgecad_document_read_tests` e `forgecad_history_suppression_tests`.
+Coprono anche gli operandi o parametri modificati, i rami indipendenti
+e la lettura dei record condivisi delle cache precedenti.
 
 ## Schizzi come passi della storia
 

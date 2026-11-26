@@ -643,6 +643,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_sketch_projection_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_extrusion_next_body_gui_tests --extrusion-next-body-gui)
     forgecad_add_view_test(forgecad_fillet_selection_review_tests --fillet-selection-review)
+    forgecad_add_view_test(forgecad_fillet_current_stage_tests --fillet-current-stage)
+    set_tests_properties(forgecad_fillet_current_stage_tests PROPERTIES TIMEOUT 60)
     set_tests_properties(forgecad_revision_access_gui_tests forgecad_extrusion_next_body_tests
         forgecad_extrusion_next_body_gui_tests forgecad_fillet_selection_review_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_topology_label_tests --topology-labels)

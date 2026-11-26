@@ -10535,7 +10535,7 @@ static void solidTrims() {
         require(xy.width() >= 60.0, "la misura comune segue la dimensione maggiore del corpo");
 
         // Una seconda lavorazione piu' grande, adiacente a una gia' presente,
-        // viene rigenerata dalla base comune in ordine di misura. Copre tutte
+        // deve usare la geometria della lavorazione precedente. Copre tutte
         // le combinazioni raccordo/smusso sulla zona d'intersezione.
         for (bool firstChamfer : {false, true})
             for (bool secondChamfer : {false, true}) {
@@ -12040,6 +12040,11 @@ int main(int argc, char **argv) {
     }
     if (app.arguments().contains(QStringLiteral("--gui-3d-review"))) {
         try { ViewportInteractionTest::gui3dReviewRegressions(app.arguments().contains(QStringLiteral("--gl"))); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--fillet-current-stage"))) {
+        try { ViewportInteractionTest::filletCurrentStageRegression(app.arguments().contains(QStringLiteral("--gl"))); }
         catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         return 0;
     }

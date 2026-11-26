@@ -4,6 +4,7 @@
 #include "fk_blend_surface.h"
 #include "fk_body_check.h"
 #include "fk_curve_ops.h"
+#include "fk_classify.h"
 #include "fk_loft.h"
 #include "fk_mass.h"
 #include "fk_quadrature.h"
@@ -190,6 +191,34 @@ FK_TEST(BlendSequentialNearbyEdges) {
             const double volume = checkedVolume(second, 1e-9);
             FK_CHECK(volume > 0.0 && volume < checkedVolume(first));
         }
+    }
+}
+
+FK_TEST(BlendStraightEdgeThroughRoundedRim) {
+    // I due cilindri da 0,3 del bordo superiore si incontrano sull'angolo
+    // verticale. La nuova faccia da 0,5 deve terminare sulle loro intersezioni.
+    for (const Frame3 &frame : {Frame3(), Frame3({1., -3., 5.}, {2., 3., -1.}, {3., -2., 0.})}) {
+        const Body box = makeBox(frame, 4., 3., 2.);
+        const FaceId top = planarFace(box, frame.zDir());
+        const Body rim = blendEdges(box, contour(box, top), .3, false);
+        const EdgeId edge = nearestEdge(rim, frame.toGlobal({0., 0., 1.}), 1e-7);
+        FK_CHECK(edge.valid());
+        const Body result = blendEdges(rim, {edge}, .5, false);
+        FK_CHECK(result.shells().size() == 1 && checkBody(result, {true, true}).empty());
+        const Vec3 lip = frame.toGlobal({.10, .10, 1.73});
+        FK_CHECK(SolidClassifier(rim, 1e-7).classify(lip) == PointLocation::Inside);
+        SolidClassifier material(result, 1e-7);
+        FK_CHECK(material.classify(lip) == PointLocation::Outside);
+        FK_CHECK(material.classify(frame.toGlobal({.22, .22, 1.73})) == PointLocation::Inside);
+        int intersections = 0;
+        for (EdgeId id : result.edges()) {
+            const Edge &e = result.edge(id);
+            const auto *a = dynamic_cast<const CylindricalSurface *>(result.face(result.finFace(e.forward)).surface.get());
+            const auto *b = dynamic_cast<const CylindricalSurface *>(result.face(result.finFace(e.backward)).surface.get());
+            if (a && b && std::abs(std::min(a->radius(), b->radius()) - .3) < 1e-8
+                && std::abs(std::max(a->radius(), b->radius()) - .5) < 1e-8) ++intersections;
+        }
+        FK_CHECK(intersections == 2);
     }
 }
 

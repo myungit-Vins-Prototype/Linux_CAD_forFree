@@ -27,7 +27,9 @@
 #include "cad_constraints.h"
 #include "cad_ellipse.h"
 #include "cad_model_history.h"
+#include "cad_history_chain.h"
 #include "cad_element_names.h"
+#include "cad_feature_dependencies.h"
 #include "cad_snapshot_chunks.h"
 #include "cad_topology_ref.h"
 #include "fk_body_io.h"
@@ -1069,10 +1071,76 @@ constexpr quint32 kBodyCacheTag = 0x46434332;  // "FCC2"
 // 9: raccordi ricalcolati sui nodi degli appoggi; derivate laterali corrette.
 // 11: griglie loft senza molteplicita' superflue nei nodi adattivi delle guide.
 // 12: lift G1 cubico indipendente dal grado e raccordi con jet unilaterali.
-constexpr quint32 kBodyCacheVersion = 18;
+constexpr quint32 kBodyCacheVersion = 21; // rifilo degli estremi su bordi già arrotondati
 constexpr qsizetype kMaxDisplayValues = 200000000;
 
 QByteArray definitionHash(const QByteArray &payload) { return QCryptographicHash::hash(payload, QCryptographicHash::Sha256); }
+
+bool supportsSuppressedBodyCache(const ExtrusionObject &body) {
+    if (body.operation >= 0) return true;
+    switch (body.feature) {
+    case BodyFeature::Primitive:
+    case BodyFeature::VolumetricStructure:
+    case BodyFeature::Scale:
+    case BodyFeature::Blend:
+    case BodyFeature::Shell:
+    case BodyFeature::DeleteFace:
+    case BodyFeature::SheetExtend:
+    case BodyFeature::SurfaceOffset:
+    case BodyFeature::Sew:
+        return true;
+    case BodyFeature::Thicken:
+        return body.thickenDirection.kind < 0;
+    default:
+        return false;
+    }
+}
+
+QByteArray suppressedBodyDefinition(const ExtrusionObject &body, double accuracy) {
+    ExtrusionObject definition = body;
+    definition.name.clear();
+    definition.visible = false;
+    definition.suppressed = false;
+    QByteArray data;
+    QDataStream stream(&data, QIODevice::WriteOnly);
+    stream.setVersion(QDataStream::Qt_6_0);
+    stream.setFloatingPointPrecision(QDataStream::DoublePrecision);
+    stream << accuracy;
+    write(stream, definition, kVersion);
+    return definitionHash(data);
+}
+
+std::shared_ptr<const SuppressedBodyCache> makeSuppressedBodyCache(const ExtrusionObject &body, int index,
+                            const QVector<ExtrusionObject> &bodies, double accuracy) {
+    if (!supportsSuppressedBodyCache(body) || !body.forgeBody || !body.error.isEmpty()) return {};
+    auto cache = std::make_shared<SuppressedBodyCache>();
+    cache->result = body.forgeBody;
+    for (int operand : bodyOperands(body)) {
+        if (operand < 0 || operand >= index || operand >= bodies.size()) return {};
+        const auto &source = bodies.at(operand);
+        if (source.historyRebuildPending || !source.forgeBody || !source.error.isEmpty()
+            || source.forgeBody == body.forgeBody) return {};
+        cache->operands.append(source.forgeBody);
+    }
+    cache->definition = suppressedBodyDefinition(body, accuracy);
+    return cache;
+}
+
+bool suppressedBodyCacheMatches(const ExtrusionObject &body, int index,
+                                const QVector<ExtrusionObject> &bodies, double accuracy) {
+    const auto &cache = body.suppressedBodyCache;
+    if (!cache || !supportsSuppressedBodyCache(body)) return false;
+    const auto operands = bodyOperands(body);
+    if (operands.size() != cache->operands.size()) return false;
+    for (int i = 0; i < operands.size(); ++i) {
+        const int operand = operands.at(i);
+        if (operand < 0 || operand >= index || operand >= bodies.size()) return false;
+        const auto &source = bodies.at(operand);
+        if (source.historyRebuildPending || !source.forgeBody || !source.error.isEmpty()
+            || cache->operands.at(i).lock() != source.forgeBody) return false;
+    }
+    return cache->definition == suppressedBodyDefinition(body, accuracy);
+}
 
 bool hasDisplaySnapshot(const BodyDisplay &display) {
     return display.quality >= 0
@@ -1159,9 +1227,9 @@ QByteArray writeDeclaredHistory(const DeclaredHistorySnapshot &snapshot, const Q
     return out.status() == QDataStream::Ok ? data : QByteArray();
 }
 
-bool readDeclaredHistory(const QByteArray &data, int index, const QVector<ExtrusionObject> &bodies, DeclaredHistorySnapshot &snapshot) {
+bool readDeclaredHistory(const QByteArray &data, const ExtrusionObject &body, int index,
+                         const QVector<ExtrusionObject> &bodies, DeclaredHistorySnapshot &snapshot) {
     if (data.isEmpty()) return true;
-    const auto &body = bodies.at(index);
     if (!body.forgeBody) return false;
     ReadStream in(data);
     in.setVersion(QDataStream::Qt_6_0);
@@ -1239,6 +1307,12 @@ bool readDeclaredHistory(const QByteArray &data, int index, const QVector<Extrus
 }
 
 QByteArray bodyCache(const QByteArray &payload, const DocumentState &state, quint8 compression) {
+    QVector<int> suppressedResults;
+    for (int index = 0; index < state.extrusions.size(); ++index) {
+        const auto &body = state.extrusions.at(index);
+        if (body.suppressed && suppressedBodyCacheMatches(body, index, state.extrusions, state.calculationAccuracy))
+            suppressedResults.append(index);
+    }
     QByteArray cache;
     QBuffer buffer(&cache);
     buffer.open(QIODevice::WriteOnly);
@@ -1269,6 +1343,23 @@ QByteArray bodyCache(const QByteArray &payload, const DocumentState &state, quin
         if (display) writeDisplay(out, body.display);
         const auto declared = data.empty() ? DeclaredHistorySnapshot() : declaredHistorySnapshot(body, index, state.extrusions);
         chunks.write(writeDeclaredHistory(declared, state.extrusions));
+    }
+    out << quint32(suppressedResults.size());
+    for (int index : suppressedResults) {
+        auto active = state.extrusions.at(index);
+        active.forgeBody = active.suppressedBodyCache->result;
+        active.suppressed = false;
+        QByteArray geometry;
+        try {
+            const auto exact = Kernel::writeBodyBinary(*active.forgeBody);
+            geometry = QByteArray(exact.data(), qsizetype(exact.size()));
+        } catch (const std::exception &) {
+            // Geometria opzionale: il risultato puo' essere rigenerato.
+        }
+        out << qint32(index);
+        chunks.write(geometry);
+        chunks.write(geometry.isEmpty() ? QByteArray()
+                      : writeDeclaredHistory(declaredHistorySnapshot(active, index, state.extrusions), state.extrusions));
     }
     return out.status() == QDataStream::Ok ? DocumentReadDetail::compress(cache, compression, 9) : QByteArray();
 }
@@ -1364,8 +1455,42 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
         if (in.status() != QDataStream::Ok) return;
         records.push_back(std::move(record));
     }
+    struct SuppressedRecord {
+        int index;
+        QByteArray data, declared;
+    };
+    std::vector<SuppressedRecord> suppressedResults;
+    if (cacheVersion >= 19) {
+        quint32 saved = 0;
+        if (!in.readCount(saved, 12) || saved > count) return;
+        int previous = -1;
+        for (quint32 i = 0; i < saved; ++i) {
+            qint32 index = -1;
+            in >> index;
+            if (index <= previous || index >= int(count) || !state.extrusions.at(index).suppressed) return;
+            auto geometry = chunks.read();
+            auto declared = chunks.read();
+            if (in.status() != QDataStream::Ok) return;
+            suppressedResults.push_back({index, std::move(geometry), std::move(declared)});
+            previous = index;
+        }
+    }
     if (!in.atEnd()) return;
     stage("record e mesh");
+
+    // Uno stadio soppresso passa lo stesso corpo dello stadio precedente.
+    // La condivisione va ripristinata prima di confrontare la genealogia.
+    QVector<int> passThrough(count, -1);
+    QHash<quint64, int> lastByBody;
+    for (quint32 i = 0; i < count; ++i) {
+        const auto &feature = state.extrusions.at(int(i));
+        if (!feature.modelBodyId) continue;
+        const int previous = lastByBody.value(feature.modelBodyId, -1);
+        if (feature.suppressed && previous >= 0 && records[i].hasBody
+            && records[std::size_t(previous)].hasBody && records[i].data == records[std::size_t(previous)].data)
+            passThrough[int(i)] = previous;
+        lastByBody.insert(feature.modelBodyId, int(i));
+    }
 
     // I body sono indipendenti nello snapshot: lettura binaria e indici per il
     // picking vengono ricostruiti su tutti i core. Eventuali record non piu'
@@ -1374,7 +1499,7 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     const auto geometryPool = Kernel::makeBodyReadPool();
     std::vector<std::shared_ptr<const Kernel::RayFaceIndex>> rayIndices(count);
     Kernel::parallelFor(count, Kernel::threadCount(0), [&](std::size_t i) {
-        if (!records[i].hasBody) return;
+        if (!records[i].hasBody || passThrough.at(int(i)) >= 0) return;
         try {
             bodies[i] = std::make_shared<const Kernel::Body>(
                 Kernel::readBodyBinary(std::string_view(records[i].data.constData(), std::size_t(records[i].data.size())), *geometryPool));
@@ -1389,8 +1514,14 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
             bodies[i].reset();
         }
     });
-    for (quint32 i = 0; i < count; ++i)
+    for (quint32 i = 0; i < count; ++i) {
+        const int previous = passThrough.at(int(i));
+        if (previous >= 0) {
+            bodies[i] = bodies[std::size_t(previous)];
+            rayIndices[i] = rayIndices[std::size_t(previous)];
+        }
         if (records[i].hasBody && !bodies[i]) return;  // snapshot atomico: niente dipendenze miste
+    }
     stage("B-rep e indici");
     // Si validano anche tutte le dichiarazioni prima di applicare lo snapshot
     // o di registrarle. Una cache incoerente ricade nella rigenerazione dalla
@@ -1399,7 +1530,7 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     for (quint32 i = 0; i < count; ++i) snapshotBodies[int(i)].forgeBody = bodies[i];
     std::vector<DeclaredHistorySnapshot> histories(count);
     for (quint32 i = 0; i < count; ++i)
-        if (!readDeclaredHistory(records[i].declared, int(i), snapshotBodies, histories[i])) return;
+        if (!readDeclaredHistory(records[i].declared, snapshotBodies.at(int(i)), int(i), snapshotBodies, histories[i])) return;
     stage("storia");
     // Cache precedenti: le copie di una funzione potevano perdere le
     // dichiarazioni delle facce costruite dallo strumento. Il B-rep era
@@ -1407,20 +1538,37 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     // queste feature e i loro derivati, conservando gli altri snapshot.
     // Cache 18 riusa gli attraversamenti del B-rep per il contorno campionato della TPMS.
     // I check-in mantengono sempre la propria geometria storica.
-    std::vector<bool> rebuildFeature(count, false);
-    if (cacheVersion < 18 && state.version.checkinId.isNull()) {
+    QVector<bool> rebuildFeature(count, false);
+    if (cacheVersion < 21 && state.version.checkinId.isNull()) {
         for (quint32 i = 0; i < count; ++i) {
-            const auto &feature = snapshotBodies[int(i)];
-            const auto &structure = feature.volumeStructure;
-            bool rebuild = (cacheVersion < 16 && feature.feature == BodyFeature::Pattern && feature.pattern.featureOnly)
-                || (feature.feature == BodyFeature::VolumetricStructure
-                    && structure.mode == VolumeStructureMode::CurvedGyroid);
-            if (feature.firstBody >= 0 && feature.firstBody < int(i))
-                rebuild = rebuild || rebuildFeature[std::size_t(feature.firstBody)];
-            for (int operand : featureGenealogyOperandIndices(feature, int(i), snapshotBodies))
-                rebuild = rebuild || rebuildFeature[std::size_t(operand)];
-            rebuildFeature[i] = rebuild;
+            const auto &feature = snapshotBodies.at(int(i));
+            bool obsolete = (cacheVersion < 16 && feature.feature == BodyFeature::Pattern && feature.pattern.featureOnly)
+                || (cacheVersion < 18 && feature.feature == BodyFeature::VolumetricStructure
+                    && feature.volumeStructure.mode == VolumeStructureMode::CurvedGyroid);
+            // Fino alla cache 19 il secondo raccordo poteva essere costruito
+            // prima del suo predecessore quando aveva misura maggiore.
+            if (feature.operation < 0 && feature.feature == BodyFeature::Blend && feature.chamferSpec.fillet.mode == 0
+                && feature.firstBody >= 0 && feature.firstBody < int(i)) {
+                const auto &base = snapshotBodies.at(feature.firstBody);
+                obsolete = obsolete || (cacheVersion < 20 && base.feature == BodyFeature::Blend
+                                        && base.chamferSpec.fillet.mode == 0 && feature.blendSize > base.blendSize);
+                // Fino alla cache 20 il raccordo poteva lasciare una faccia
+                // piana dentro il bordo cilindrico, anche su un corpo importato.
+                if (!obsolete && (!feature.blendChamfer || feature.chamferSpec.mode == 0)) {
+                    if (!base.forgeBody) obsolete = true;
+                    else for (Kernel::FaceId id : base.forgeBody->faces()) {
+                        const auto &face = base.forgeBody->face(id);
+                        const auto *cylinder = dynamic_cast<const Kernel::CylindricalSurface *>(face.surface.get());
+                        if (face.sense && cylinder && cylinder->radius() <= feature.blendSize) {
+                            obsolete = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            rebuildFeature[int(i)] = obsolete;
         }
+        rebuildFeature = historyDependents(state.sketches, snapshotBodies, rebuildFeature, {}).features;
     }
     for (quint32 i = 0; i < count; ++i) {
         ExtrusionObject &body = state.extrusions[int(i)];
@@ -1444,8 +1592,51 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
                                    histories[i].labels ? *histories[i].labels : Kernel::FaceAliases{});
         }
     }
+
+    for (const auto &saved : suppressedResults) {
+        if (saved.data.isEmpty() || rebuildFeature.at(saved.index)) continue;
+        try {
+            auto active = state.extrusions.at(saved.index);
+            active.suppressed = false;
+            active.error.clear();
+            active.forgeBody = std::make_shared<const Kernel::Body>(
+                Kernel::readBodyBinary(std::string_view(saved.data.constData(), std::size_t(saved.data.size())), *geometryPool));
+            const auto retained = makeSuppressedBodyCache(active, saved.index, state.extrusions, state.calculationAccuracy);
+            if (!retained) continue;
+            DeclaredHistorySnapshot history;
+            if (!readDeclaredHistory(saved.declared, active, saved.index, state.extrusions, history)) continue;
+            if (history.history) {
+                std::vector<ForgeBody> operands;
+                for (int operand : history.operandIndices) operands.push_back(state.extrusions.at(operand).forgeBody);
+                registerDeclaredHistory(active.forgeBody, operands, *history.history,
+                                        history.labels ? *history.labels : Kernel::FaceAliases{});
+            }
+            state.extrusions[saved.index].suppressedBodyCache = retained;
+        } catch (const std::exception &) {
+            // Un risultato opzionale illeggibile non e' necessario alla scena.
+        }
+    }
 }
 
+}
+
+void rememberSuppressedBody(ExtrusionObject &body, int index, const QVector<ExtrusionObject> &bodies, double accuracy) {
+    body.suppressedBodyCache = body.historyRebuildPending ? nullptr : makeSuppressedBodyCache(body, index, bodies, accuracy);
+}
+
+void reuseSuppressedBody(ExtrusionObject &body, int index, const QVector<ExtrusionObject> &bodies, double accuracy) {
+    if (body.suppressed || !body.suppressedBodyCache) return;
+    body.cachedGeometry = false; // Lo snapshot di passaggio vale solo durante la soppressione.
+    if (suppressedBodyCacheMatches(body, index, bodies, accuracy)) {
+        body.forgeBody = body.suppressedBodyCache->result;
+        body.cachedGeometry = true;
+        body.error.clear();
+        body.notice.clear();
+        body.referenceResolutions.clear();
+        body.buildDiagnostic = {};
+        body.display = {};
+    }
+    body.suppressedBodyCache.reset();
 }
 
 DocumentReadLimits documentOpenReadLimits(quint64 availableBytes,int requestedMiB) {

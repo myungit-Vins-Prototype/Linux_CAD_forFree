@@ -504,7 +504,7 @@ public:
     // Non serve scegliere prima il corpo: se quello selezionato va bene si parte
     // da lui, altrimenti lo decide il primo spigolo cliccato (su qualsiasi
     // solido visibile, o superficie per l'estensione).
-    QString startEdgePick(bool chamfer, bool extend = false, bool helix = false, bool deferPreview = false);
+    QString startEdgePick(bool chamfer, bool extend = false, bool helix = false, bool deferPreview = false, int explicitBase = -1);
     // Di nuovo alla scelta degli spigoli, con quelli dati gia' scelti (dalla
     // finestra della misura, per cambiarli dopo un raccordo non riuscito).
     void resumeEdgePick(int body, const QVector<EdgePoint> &edges, bool chamfer, bool deferPreview = false);

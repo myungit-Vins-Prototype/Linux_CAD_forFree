@@ -71,6 +71,11 @@ struct DocumentReadLimits {
 DocumentReadLimits documentOpenReadLimits();
 DocumentReadLimits documentOpenReadLimits(quint64 availableBytes,int requestedMiB);
 
+// Conserva o ripristina il risultato preciso delle funzioni con operandi
+// B-rep espliciti. Un'applicazione incompatibile ricade sul kernel.
+void rememberSuppressedBody(ExtrusionObject &body, int index, const QVector<ExtrusionObject> &bodies, double accuracy);
+void reuseSuppressedBody(ExtrusionObject &body, int index, const QVector<ExtrusionObject> &bodies, double accuracy);
+
 // Codec senza accesso al filesystem, usato anche dall'archivio revisioni.
 // La codifica puo' rappresentare uno snapshot archiviato; il normale Salva
 // su file richiede invece una copia di lavoro.

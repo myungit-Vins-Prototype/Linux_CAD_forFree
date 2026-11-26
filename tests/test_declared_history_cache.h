@@ -157,8 +157,8 @@ static void declaredHistoryCacheTest() {
     QDataStream cacheIn(cacheData); cacheIn.setVersion(QDataStream::Qt_6_0);
     QByteArray sourceHash, payloadHash; quint32 tag = 0, version = 0, count = 0;
     cacheIn >> sourceHash >> payloadHash >> tag >> version >> count;
-    require(version == 16 && count == 4 && payloadHash == QCryptographicHash::hash(testDocumentUncompress(bytes,11, payloadSize), QCryptographicHash::Sha256),
-        "cache 16 legata alla stessa definizione");
+    require(version == 21 && count == 4 && payloadHash == QCryptographicHash::hash(testDocumentUncompress(bytes,11, payloadSize), QCryptographicHash::Sha256),
+        "cache 21 legata alla stessa definizione");
     struct Record { bool has = false; QString error; QByteArray body, history; };
     std::vector<Record> records(count);
     SnapshotChunkReader chunks(cacheIn);
@@ -176,7 +176,9 @@ static void declaredHistoryCacheTest() {
         }
         record.history = chunks.read();
     }
-    require(cacheIn.status() == QDataStream::Ok && cacheIn.atEnd() && !records[1].history.isEmpty(), "fixture con genealogia reale");
+    quint32 suppressedCount = 0;
+    cacheIn >> suppressedCount;
+    require(suppressedCount == 0 && cacheIn.status() == QDataStream::Ok && cacheIn.atEnd() && !records[1].history.isEmpty(), "fixture con genealogia reale");
     const auto fixture = [&](const QString &name, quint32 cacheVersion, const std::vector<Record> &entries) {
         QByteArray encoded;
         QDataStream out(&encoded, QIODevice::WriteOnly); out.setVersion(QDataStream::Qt_6_0);
