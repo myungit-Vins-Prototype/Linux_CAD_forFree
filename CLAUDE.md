@@ -1,6 +1,6 @@
 # CLAUDE.md — memoria operativa ForgeCAD
 
-Aggiornato **24 novembre 2026**.
+Aggiornato **26 novembre 2026**.
 
 [Cronologia](docs/history/claude-2026-11-02.md); [stato prima di Part23](docs/history/claude-prima-part23-2026-11-14.md).
 
@@ -37,7 +37,7 @@ CAD parametrico 2D/3D Linux/macOS, C++17/Qt6/OpenGL3.3 Core. Finestra storica `P
 | Area | Moduli e comportamento attuale |
 | --- | --- |
 | Finestra e interfaccia | `forgeCad2026_gui*`, `forgeCad2026_dialogs*`, `forgeCad2026_storyboard*`: ribbon, menu, Fusion chiaro/scuro/desktop persistente, pannelli incorporati agganciabili sinistra/destra o liberi, altezza piena opzionale e preferenze persistenti. |
-| Vista e anteprime | `forgeCad2026_viewport*`, `cad_display_cache*`: camera, picking, rendering e passate separati; anteprime asincrone cancellabili e riuso del B-rep pronto alla conferma. Cache CPU/GL e rilascio della memoria; backend GPU per carichi specifici, senza sostituire la geometria esatta. |
+| Vista e anteprime | `forgeCad2026_viewport*`, `cad_display_cache*`: camera, picking, rendering e passate separati; anteprime asincrone cancellabili e riuso del B-rep pronto alla conferma. Cache CPU/GL con rilascio. GPU mirata. Sezione 3D: anelli, angolo modificabile, snap Shift (3 CTest e Wayland). |
 | Schizzi e vincoli | `cad_types.h`, `cad_constraints*`, `cad_sketch_refs*`, `cad_expression*`: 2D/3D, cerchio3/asole/punti, polilinee, solver. Prima quota lineare: omotetia locale su tracce di piano, cache fisse, inquadratura/Undo. Trapezio 1,74→50 e 6 CTest OK. Snap univoci a piani/assi/bordi/curve, cache nascoste, conversioni conservate, costruzione opzionale fuori modifica. Priorità quote alle entità locali visibili. |
 | Solidi e superfici | `cad_forge*`, `kernel/fk_*`: primitive, estrusione (anche fino al prossimo corpo), rivoluzione, sweep/loft, booleane, sformo, svuotamento/spessore, filettatura, cucitura, taglio/estensione, reti U/V e poli NURBS. Estendi apre il pannello prima della scelta dei bordi. Raccordi costanti, conici, variabili e tra facce; percorsi tangenti con leggi indipendenti e maniglie R. |
 | Storia e genealogia | `cad_history*`, `cad_element_names*`, viewport e storyboard: schizzi/piani autonomi, riordino, rollback, soppressione, riparazione e Undo/Redo. Specchi/ripetizioni: evento unico, corpi separati, esclusioni, identità e dipendenze. Maniglia ferma in modifica, calcolo al cursore. 5 test OK. |
@@ -110,8 +110,8 @@ ctest --test-dir forgecad-release --output-on-failure
 
 21/11 [Errori in viewport](docs/diagnostica-errori-viewport.md). Richiami anche fuori campo. Frecce Offset/Spessore e diagnostica antialias raster, prova Wayland 100/150% e 4 test OK.
 21/11 [Superfici_Riv_Tut](docs/review-superfici-riv-tut-2026-11-21.md). R15 2–4 mm: Spessore 108 facce/0 liberi, Offset cucito 36/20. Copia 2,5 mm riaperta. 11 test kernel. Offset16 e quadratura verificati.
-21/11 [Review](docs/review-generale-2026-11-20.md): 6 semplificazioni/17CTest+SAN. K10.3 pesi/quote, estremi Bézier/rientri: Release/9CTest/SAN/Fraction/mappa. Rifilo 13 regioni/5 clic. Cuci crash corretto Qt/Wayland. Guscio F8/1mm 19facce/6CTest/18Shell. Spessore UV/Cesto 1mm e riuso anteprime OK.
-24/11 [TPMS](docs/roadmap.md#giroide-a-parete-sperimentale) FCAD76, 17/Wayland/App4. STEP 0,956mm. [CI d1fa1b2, flusso PR e timer quote](docs/ci.md).
+21–26/11 [Review](docs/review-generale-2026-11-20.md) 6 semplificazioni. Rifilo, Cuci, Guscio F8 e Spessore Cesto verificati. [Aperti](docs/review-punti-aperti-2026-11-17.md) K10.3 parziale. Tavola FCAD53. K10.4 fasi SP-curve ai poli, K10.5 UV razionali. Raccordi 63/63. K10.6 quintico, 5 CTest.
+24–26/11 [TPMS](docs/roadmap.md#giroide-a-parete-sperimentale) PR #2. Cache App4 5113 facce, 7–8 s, 2/2 OK. Senza nome1 TPMS 30488 facce.
 17/11 CI 18d0adc→78d7268 Linux/macOS PASS. K10 numerico e carrier a quota affine, separabili/obliqui anche a rango incerto e istanziati: app/mappa/8CTest/36globali/26SAN PASS. [Prove](docs/review-k10-quota-zero-toro-2026-11-18.md).
 18/11 Cesto: offset4CTest PASS. Spessore 2mm interno su Cucitura11 originale, 85facce/3asole, copia rigenerata. Shower5CTest PASS. Giunto R7: fasce0,05mm, R0,02 e Spessore2 PASS. [Offset](docs/review-cesto-offset-2026-11-18.md), [Spessore](docs/review-cesto-spessore-2026-11-18.md).
 18/11 PRE9 Proiezione: reset picker/pulsanti/istruzioni al cambio modo. Baseline FAIL, app/2 test UI PASS. 35 rilievi.
@@ -159,7 +159,7 @@ UI8: [prove storiche e limiti](docs/review-theme-tabs-2026-11-16.md).
 [Audit734fin campionato e stato storico](docs/review-blend-cavity-2026-11-16.md).
 
 K10 Helix/orfane e cucitura/PRE8: app/Wayland/sanitizer/Fraction e mappa PASS;
-limiti campionati e dettagli nella [memoria precedente](docs/history/claude-prima-k10-noniso-2026-11-16.md),
+[Elica su faccia](docs/roadmap.md#elica-su-una-faccia-di-rivoluzione) F1 altezza automatica 3/3 OK.
 [Helix](docs/review-k10-helix-orphans-2026-11-16.md), [cucitura](docs/review-k10-sew-preview-2026-11-16.md).
 
 UV/PRE7: Plane e picker corretti e verificati; [prove e limiti](docs/review-k10-uv-preview-2026-11-16.md).
