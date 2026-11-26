@@ -484,6 +484,39 @@ campionamento 0,42 mm, il kernel ha prodotto un unico guscio
 chiuso di 4281 facce, di cui 4097 spline sulle pareti. Il
 controllo geometrico e topologico esteso non riporta problemi.
 
+**Diagnosi rifilo spline su Senza nome1 (26 novembre).** Con
+intero solido, campionamento 0,20 mm, periodo 3,00 mm e parete
+nominale 0,80 mm, la copia di `Senza nome1.prt` riproduce
+l’errore F47391, operando 1. Il solido di rivoluzione ha 3 facce
+e supera il controllo B-rep esteso. I due taglienti spline
+totalizzano 112670 facce. Durante la differenza booleana, un
+bordo della faccia F47391 e la curva di intersezione entrano
+nello stesso nodo, circa (0,123381; −1,842142; 13,280502) mm.
+L’ordinamento angolare assegna loro lo stesso tratto uscente.
+Il grafo ha due ingressi e due uscite, ma il percorso incontra
+un tratto già visitato e interrompe la ricostruzione dei
+contorni. I parametri passano la validazione e il taglio
+arriva al nodo con estremi separati di circa 0,00000032 mm,
+entro la tolleranza di 0,000001 mm. La prova ha richiesto 48 s.
+La booleana ricava la successione dagli usi topologici quando
+un unico taglio interno arriva nel mezzo di uno spigolo e
+l’ordinamento angolare assegna due volte lo stesso tratto.
+Il nuovo test imprime una spline quasi tangente su una lamina.
+Prima della correzione fallisce la divisione della faccia.
+Dopo la correzione si ottengono due facce valide.
+
+Nella build Release il calcolo della feature su una copia di
+Senza nome1 con i valori originali ha prodotto in 74 s un unico
+solido chiuso di 30488 facce. Preserva tutti e tre i supporti
+originali e supera il controllo B-rep esteso. Superati i 38
+test Booleane, i 39 test di genealogia, i 17 di quantizzazione
+e le suite su bordi condivisi e cuciture booleane. A 0,25 mm
+la build finale conferma l’errore distinto di chiusura sullo
+spigolo 259.
+A 0,25 mm, mantenendo periodo e parete, la divisione supera
+quel passaggio ma il risultato della booleana resta aperto
+(spigolo 259 senza due fin opposte, 42 s).
+
 Prova di risoluzione del 23 novembre sulla copia con periodo
 4 mm e parete 1,3 mm. Il passo di campionamento dimensiona la
 griglia che genera le facce piane della parete. A 0,25 mm, il

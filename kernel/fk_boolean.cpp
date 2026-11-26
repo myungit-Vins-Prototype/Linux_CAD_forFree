@@ -1429,6 +1429,11 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
     };
     for (std::size_t h = 0; h < count; ++h) startAngle[h] = angleOf(from[h], startDirection(int(h)));
 
+    auto isTwin = [&](int a, int b) {
+        const Piece &p = halfEdges[a], &q = halfEdges[b];
+        return p.curve == q.curve && p.range.lo == q.range.lo && p.range.hi == q.range.hi
+            && p.forward != q.forward;
+    };
     auto next = [&](int h) {
         const int v = to[h];
         const double reverse = angleOf(v, endDirection(h));
@@ -1440,9 +1445,7 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
             if (rotation < 0.0) rotation += kTwoPi;
             // Tornare indietro (lo stesso tratto nell'altro verso): solo se non
             // c'e' altro. Con le corde i due angoli possono differire di un arrotondamento.
-            const bool twin = halfEdges[o].curve == halfEdges[h].curve && halfEdges[o].range.lo == halfEdges[h].range.lo
-                           && halfEdges[o].range.hi == halfEdges[h].range.hi && halfEdges[o].forward != halfEdges[h].forward;
-            if (rotation <= 1e-12 || rotation >= kTwoPi - 1e-12 || twin) rotation = kTwoPi;
+            if (rotation <= 1e-12 || rotation >= kTwoPi - 1e-12 || isTwin(o, h)) rotation = kTwoPi;
             if (rotation < bestRotation) {
                 bestRotation = rotation;
                 best = o;
@@ -1456,14 +1459,17 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
     // allora mandare due archi entranti sullo stesso uscente, pur avendo un
     // grafo bilanciato. Allontana il campione SOLO nei nodi tangenti con una
     // successione non biunivoca; non cambiare l'ordine dei nodi gia' regolari.
-    for (int pass = 0; pass < 5; ++pass) {
+    std::vector<int> successors(count), predecessors(count);
+    for (int pass = 0;; ++pass) {
         cancellationPoint();
-        std::vector<int> predecessors(count, 0);
+        std::fill(predecessors.begin(), predecessors.end(), 0);
         for (std::size_t h = 0; h < count; ++h) {
             cancellationPoint();
             const int n = next(int(h));
+            successors[h] = n;
             if (n >= 0) ++predecessors[std::size_t(n)];
         }
+        if (pass == 5) break;
         bool changed = false;
         for (std::size_t v = 0; v < nodes.size(); ++v) {
             cancellationPoint();
@@ -1478,6 +1484,29 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
         }
         if (!changed) break;
         for (std::size_t h = 0; h < count; ++h) startAngle[h] = angleOf(from[h], startDirection(int(h)));
+    }
+
+    // Un solo taglio interno che arriva nel mezzo di una fin divide il
+    // bordo in due tratti. I due cicli devono passare da quel bordo al
+    // taglio e viceversa. La tangente di un'intersezione approssimata
+    // vicino all'estremo può invece puntare sul lato esterno del trim.
+    for (std::size_t v = 0; v < nodes.size(); ++v) {
+        cancellationPoint();
+        const auto &out = outgoing[v];
+        if (out.size() != 2 || (predecessors[out[0]] == 1 && predecessors[out[1]] == 1)
+            || halfEdges[out[0]].cut == halfEdges[out[1]].cut) continue;
+        const int cutOut = halfEdges[out[0]].cut ? out[0] : out[1];
+        const int rimOut = halfEdges[out[0]].cut ? out[1] : out[0];
+        int rimIn = -1, cutIn = -1, incomingCount = 0;
+        for (std::size_t h = 0; h < count; ++h) {
+            if (to[h] != int(v)) continue;
+            ++incomingCount;
+            (halfEdges[h].cut ? cutIn : rimIn) = int(h);
+        }
+        if (incomingCount != 2 || rimIn < 0 || cutIn < 0 || !isTwin(cutIn, cutOut)
+            || halfEdges[rimIn].sourceFin != halfEdges[rimOut].sourceFin) continue;
+        successors[rimIn] = cutOut;
+        successors[cutIn] = rimOut;
     }
 
     std::vector<Cycle> cycles;
@@ -1539,7 +1568,7 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
             }
             used[h] = true;
             sequence.push_back(h);
-            h = next(h);
+            h = successors[h];
             if (h == int(start)) break;
         }
         addCycle(sequence);

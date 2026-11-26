@@ -22,6 +22,7 @@
 #include "fk_sweep.h"
 #include "fk_curve_ops.h"
 #include "fk_body_io.h"
+#include "fk_body_check.h"
 #include "fk_bspline_surface.h"
 #include "fk_sheet.h"
 #include "fk_sew.h"
@@ -575,6 +576,29 @@ FK_TEST(HistoryImprintDeclaresBeforeAndAfterUnify) {
             FK_CHECK(origins.size() == 1 && origins.front().index == sheet.faces().front().index);
         }
     }
+}
+
+FK_TEST(ImprintClosesAnAlmostTangentCutAtTheRim) {
+    const Body sheet = makePlaneSheet(Frame3(), 2);
+    const Vec3 first(-1, -2, 0), last(1, 2, 0);
+    ImprintCurve cut;
+    cut.face = sheet.faces().front();
+    // La tangente in partenza punta appena fuori dal bordo. L'escursione
+    // della curva prima di entrare nel trim è sotto la risoluzione lineare.
+    cut.curve = std::make_shared<BSplineCurve<3>>(
+        2, std::vector<double>{0, 0, 0, 1, 1, 1},
+        std::vector<Vec3>{first, {0, -2.00005, 0}, last});
+    cut.range = {0, 1};
+    cut.loOnEdge = cut.hiOnEdge = true;
+    cut.loPoint = first;
+    cut.hiPoint = last;
+
+    BooleanOptions options;
+    options.unifySameDomain = false;
+    const Body result = imprintCurves(sheet, {cut}, {}, options);
+    FK_CHECK(result.isSheet());
+    FK_CHECK(result.faces().size() == 2);
+    FK_CHECK(checkBody(result, {true, true}).empty());
 }
 
 FK_TEST(HistoryBooleanDeclarationsAreThreadDeterministic) {
