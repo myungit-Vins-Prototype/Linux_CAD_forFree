@@ -110,7 +110,7 @@ ctest --test-dir forgecad-release --output-on-failure
 
 21/11 [Errori in viewport](docs/diagnostica-errori-viewport.md). Richiami anche fuori campo. Frecce Offset/Spessore e diagnostica antialias raster, prova Wayland 100/150% e 4 test OK.
 21/11 [Superfici_Riv_Tut](docs/review-superfici-riv-tut-2026-11-21.md). R15 2–4 mm: Spessore 108 facce/0 liberi, Offset cucito 36/20. Copia 2,5 mm riaperta. 11 test kernel. Offset16 e quadratura verificati.
-21–26/11 [Review](docs/review-generale-2026-11-20.md) 6 semplificazioni. Rifilo, Cuci, Guscio F8 e Spessore Cesto verificati. [Aperti](docs/review-punti-aperti-2026-11-17.md) K10.3 parziale. Tavola FCAD53. K10.4 fasi SP-curve ai poli, K10.5 UV razionali. Raccordi 63/63. K10.6 quintico, 5 CTest.
+21–26/11 [Review](docs/review-generale-2026-11-20.md) 6 semplificazioni. Rifilo, Cuci, Guscio F8 e Spessore Cesto verificati. [Aperti](docs/review-punti-aperti-2026-11-17.md) K10.3 parziale. Tavola FCAD53. K10.4 fasi SP-curve ai poli, K10.5 UV razionali. Raccordi 63/63. K10.6 quintico, 5 CTest. Fixture OK.
 24–26/11 [TPMS](docs/roadmap.md#giroide-a-parete-sperimentale) PR #2. Cache App4 5113 facce, 7–8 s, 2/2 OK. Senza nome1 TPMS 30488 facce.
 17/11 CI 18d0adc→78d7268 Linux/macOS PASS. K10 numerico e carrier a quota affine, separabili/obliqui anche a rango incerto e istanziati: app/mappa/8CTest/36globali/26SAN PASS. [Prove](docs/review-k10-quota-zero-toro-2026-11-18.md).
 18/11 Cesto: offset4CTest PASS. Spessore 2mm interno su Cucitura11 originale, 85facce/3asole, copia rigenerata. Shower5CTest PASS. Giunto R7: fasce0,05mm, R0,02 e Spessore2 PASS. [Offset](docs/review-cesto-offset-2026-11-18.md), [Spessore](docs/review-cesto-spessore-2026-11-18.md).

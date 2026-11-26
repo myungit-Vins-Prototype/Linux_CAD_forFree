@@ -236,7 +236,7 @@ static void filletSelectionReviewRegressions(bool openGl) {
                 require(view->previewPending() && view->preview_.key == CadViewport::previewKey(view->preview_.definition, edit ? 1 : -1),
                         "apply entra con la stessa anteprima ancora pendente");
                 if (!edit) return view->createBlend(body, edges, radius, chamfer, QStringLiteral("Raccordo anticipato"), spec);
-                auto changed = view->extrusions_[1];
+                auto changed = view->extrusions_.at(1);
                 changed.blendEdges = edges; changed.blendSize = radius; changed.chamferSpec = spec;
                 return view->updateBody(1, changed);
             });

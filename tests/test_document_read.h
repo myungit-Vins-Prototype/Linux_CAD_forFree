@@ -188,7 +188,16 @@ QByteArray documentWithCacheVersion(const QByteArray &document, quint32 version)
     require(cacheHeader.status() == QDataStream::Ok && tag == 0x46434332u,
             "intestazione cache nativa per migrazione loft");
     const auto at = cacheHeader.device()->pos();
-    require(at + 4 <= cache.size(), "versione cache presente");
+    quint32 sourceVersion = 0;
+    cacheHeader >> sourceVersion;
+    require(cacheHeader.status() == QDataStream::Ok, "versione cache presente");
+    if (sourceVersion >= 19 && version < 19) {
+        // Queste fixture non contengono corpi soppressi conservati. Nelle
+        // versioni prima della 19 manca anche il conteggio vuoto in coda.
+        require(cache.size() >= at + 8 && qFromBigEndian<quint32>(cache.constData() + cache.size() - 4) == 0,
+                "fixture legacy priva di cache per funzioni soppresse");
+        cache.chop(4);
+    }
     qToBigEndian(version, cache.data() + at);
     auto result = document;
     result.replace(offset, result.size() - offset, testDocumentCompress(cache, document));
