@@ -18,6 +18,7 @@
 #include "fk_classify_uv.h"
 #include "fk_curve_surface.h"
 #include <iostream>
+#include <optional>
 #include <stdexcept>
 using namespace ForgeCad::Kernel;
 void require(bool v,const char*m){if(!v)throw std::runtime_error(m);}
@@ -630,15 +631,17 @@ void checkContinuousConvexTrimCoverage() {
 
 void checkContinuousSplineSupportTrims() {
     using Coverage = detail::MappingTrimCoverage;
-    const auto panel = [](bool left, double bow) {
-        const Vec3 bottom(0., -.8, 0.), top(0., .8, 0.), point(left ? -.6 : .6, 0., 0.);
-        const std::vector<double> knots{0.,0.,0.,1.,1.,1.}, weights{1., .75, 1.};
-        const auto curve = std::make_shared<BSplineCurve<3>>(2, knots, std::vector<Vec3>{bottom, {bow, 0., 0.}, top}, weights);
-        const Vec3 from = left ? top : bottom, to = left ? bottom : top;
+    const auto panel = [](bool left, const std::shared_ptr<const BSplineCurve<3>> &curve) {
+        const auto &bottom = curve->poles().front(), &top = curve->poles().back();
+        const Vec3 point(left ? -.6 : .6, 0., 0.);
+        const auto segment = [](const Vec3 &from, const Vec3 &to) {
+            return std::make_shared<BSplineCurve<3>>(1, std::vector<double>{0., 0., 1., 1.},
+                                                    std::vector<Vec3>{from, to});
+        };
         const std::vector<Body::BuildEdge> edges{
-            {0, 1, curve, {0., 1.}, 0.},
-            {left ? 1 : 0, 2, std::make_shared<Line<3>>(from, point - from), {0., 1.}, 0.},
-            {2, left ? 0 : 1, std::make_shared<Line<3>>(point, to - point), {0., 1.}, 0.}
+            {0, 1, curve, curve->domain(), 0.},
+            {left ? 1 : 0, 2, segment(left ? top : bottom, point), {0., 1.}, 0.},
+            {2, left ? 0 : 1, segment(point, left ? bottom : top), {0., 1.}, 0.}
         };
         Body::BuildFace face;
         face.surface = std::make_shared<Plane>(Frame3());
@@ -647,7 +650,12 @@ void checkContinuousSplineSupportTrims() {
         require(computePCurves(body) == 0 && checkBody(body, {true, true}).empty(), "pezza con giunzione spline valida");
         return body;
     };
-    const auto left = panel(true, .25), right = panel(false, .25), separated = panel(false, .5);
+    const auto bowed = [](double bow) {
+        return std::make_shared<BSplineCurve<3>>(2, std::vector<double>{0., 0., 0., 1., 1., 1.},
+            std::vector<Vec3>{{0., -.8, 0.}, {bow, 0., 0.}, {0., .8, 0.}}, std::vector<double>{1., .75, 1.});
+    };
+    const auto left = panel(true, bowed(.25)), right = panel(false, bowed(.25));
+    const auto separated = panel(false, bowed(.5));
     const auto inLeft = makePlaneSheet(Frame3({-.2, 0., 0.}, {0., 0., 1.}, {1., 0., 0.}), .0625);
     const auto source = makePlaneSheet(Frame3(), .25);
     const auto certify = [](const Body &body, const std::vector<SurfaceTargetFace> &targets) {
@@ -663,6 +671,76 @@ void checkContinuousSplineSupportTrims() {
     const auto wrapped = wrapBodyOnFaces(source, targets, SurfaceWrapOptions());
     require(wrapped.isSheet() && wrapped.faces().size() == 1 && checkBody(wrapped, {true, true}).empty(),
             "wrap su una giunzione spline razionale");
+
+    const Vec3 bottom(0., -.75, 0.), middle(.375, 0., 0.), top(0., .75, 0.);
+    const auto original = panel(true, std::make_shared<BSplineCurve<3>>(2,
+        std::vector<double>{0., 0., 0., 1., 1., 1.}, std::vector<Vec3>{bottom, middle, top},
+        std::vector<double>{1., .5, 1.}));
+    const auto refined = [&](double shift, double start = 0., double end = 1.) {
+        // Exact insertion at the midpoint in the homogeneous quadratic.
+        return panel(false, std::make_shared<BSplineCurve<3>>(2,
+            std::vector<double>{start, start, start, .5 * (start + end), end, end, end},
+            std::vector<Vec3>{bottom, {.125 + shift, -.5, 0.}, {.125, .5, 0.}, top},
+            std::vector<double>{1., .75, .75, 1.}));
+    };
+    const auto elevated = [&](double shift) {
+        // Exact elevation, with all homogeneous coordinates scaled by 3.
+        return panel(false, std::make_shared<BSplineCurve<3>>(3,
+            std::vector<double>{0., 0., 0., 0., 1., 1., 1., 1.},
+            std::vector<Vec3>{bottom, {.1875 + shift, -.375, 0.}, {.1875, .375, 0.}, top},
+            std::vector<double>{3., 2., 2., 3.}));
+    };
+    const auto checkSeam = [&](const Body &base, const Body &match, const Body &gap, const Vec3 &witness) {
+        const SurfaceTargetFace exterior{&base, base.faces().front()};
+        const SurfaceTargetFace equivalent{&match, match.faces().front()};
+        const SurfaceTargetFace changed{&gap, gap.faces().front()};
+        require(certify(source, {exterior}) != Coverage::Covered &&
+                certify(source, {equivalent}) != Coverage::Covered &&
+                certify(source, {exterior, equivalent}) == Coverage::Covered &&
+                certify(source, {equivalent, exterior}) == Coverage::Covered,
+                "giunzione continua con rappresentazioni diverse in entrambi gli ordini");
+        require(classifyPointOnFace(source, source.faces().front(), witness, linearResolution()) == PointLocation::Inside &&
+                classifyPointOnFace(base, exterior.face, witness, linearResolution()) == PointLocation::Outside &&
+                classifyPointOnFace(gap, changed.face, witness, linearResolution()) == PointLocation::Outside &&
+                certify(source, {exterior, changed}) != Coverage::Covered &&
+                certify(source, {changed, exterior}) != Coverage::Covered,
+                "i poli perturbati lasciano una fessura nonostante gli estremi condivisi");
+        const auto joined = wrapBodyOnFaces(source, {exterior, equivalent}, SurfaceWrapOptions());
+        require(joined.isSheet() && joined.faces().size() == 1 && checkBody(joined, {true, true}).empty(),
+                "wrap valido con due rappresentazioni della giunzione");
+    };
+    const Vec3 rationalGap(.140625, 0., 0.);
+    checkSeam(original, refined(0.), refined(.0625), rationalGap);
+    checkSeam(original, refined(0., 2., 6.), refined(.0625, 2., 6.), rationalGap);
+    checkSeam(original, elevated(0.), elevated(.0625), rationalGap);
+    const auto projective = [&](double shift) {
+        // The same arc with u = 2*t/(1+t) and a positive weight scale.
+        return panel(false, std::make_shared<BSplineCurve<3>>(2,
+            std::vector<double>{0., 0., 0., 1., 1., 1.},
+            std::vector<Vec3>{bottom, middle + Vec3(shift, 0., 0.), top},
+            std::vector<double>{1., 1., 4.}));
+    };
+    checkSeam(original, projective(0.), projective(.0625), rationalGap);
+
+    const auto factored = [&](double shift) {
+        // Multiply the quadratic's homogeneous polynomials by 1+2*t.
+        return panel(false, std::make_shared<BSplineCurve<3>>(3,
+            std::vector<double>{0., 0., 0., 0., 1., 1., 1., 1.},
+            std::vector<Vec3>{bottom, {.09375 + shift, -.5625, 0.}, {.28125, .1875, 0.}, top},
+            std::vector<double>{3., 4., 4., 9.}));
+    };
+    checkSeam(original, factored(0.), factored(.0625), rationalGap);
+
+    const auto graph = panel(true, std::make_shared<BSplineCurve<3>>(2,
+        std::vector<double>{0., 0., 0., 1., 1., 1.}, std::vector<Vec3>{bottom, middle, top}));
+    const auto nonlinear = [&](double bow) {
+        // The polynomial parabola with u = (t+t*t)/2, in Bernstein form.
+        return panel(false, std::make_shared<BSplineCurve<3>>(4,
+            std::vector<double>{0., 0., 0., 0., 0., 1., 1., 1., 1., 1.},
+            std::vector<Vec3>{bottom, {.09375 * bow, -.5625, 0.}, {.21875 * bow, -.25, 0.},
+                              {.28125 * bow, .1875, 0.}, top}));
+    };
+    checkSeam(graph, nonlinear(1.), nonlinear(1.25), {.203125, 0., 0.});
 }
 
 enum class InteriorTrimCut { Rational, SimpleKnot, RoundedPoles };
@@ -866,9 +944,16 @@ void checkIntervalBezierTrimCut(IntervalTrimEndpoint variant) {
             "Wrap valido con coefficienti omogenei racchiusi");
 }
 
-void checkRoundedTrimEndpoint() {
+enum class RoundedTrimEndpoint { Saturated, SimpleKnots, NonBinaryParameter, AffineDomains };
+
+void checkRoundedTrimEndpoint(RoundedTrimEndpoint type) {
     using Coverage = detail::MappingTrimCoverage;
-    const Vec3 cut(.5625, 0., 0.), bottom(.5625, -.75, 0.), top(.5625, .75, 0.);
+    const bool affineDomains = type == RoundedTrimEndpoint::AffineDomains;
+    const bool simpleKnots = type == RoundedTrimEndpoint::SimpleKnots || affineDomains;
+    const bool nonBinaryParameter = type == RoundedTrimEndpoint::NonBinaryParameter;
+    const double endParameter = nonBinaryParameter ? 3. : 1.;
+    const double cutParameter = nonBinaryParameter ? 1. : .5;
+    const Vec3 cut(.5625, 0., 0.), bottom(.5625, nonBinaryParameter ? -.09375 : -.75, 0.), top(.5625, .75, 0.);
     constexpr double weight = 0x1.ccccccccccd31p-1;
     require(std::fma(.8125, weight, -(.8125 * weight)) != 0.,
             "il prodotto omogeneo di un polo nativo richiede arrotondamento");
@@ -876,16 +961,32 @@ void checkRoundedTrimEndpoint() {
         return std::make_shared<BSplineCurve<3>>(1, std::vector<double>{0., 0., 1., 1.}, std::vector<Vec3>{a, b});
     };
     const auto panel = [&](bool left, bool clipped, double bulge, double endOffset = 0.) {
-        const auto curve = std::make_shared<BSplineCurve<3>>(3, std::vector<double>{0., 0., 0., 0., 1., 1., 1., 1.},
-            std::vector<Vec3>{bottom, cut + Vec3(bulge, -.25, 0.), cut - Vec3(bulge, -.25, 0.), top},
-            std::vector<double>{1., weight, weight, 1.});
+        std::vector<double> knots(4, 0.);
+        std::vector<Vec3> poles{bottom, cut + Vec3(bulge, -.25, 0.), cut - Vec3(bulge, -.25, 0.), top};
+        std::vector<double> weights{1., weight, weight, 1.};
+        if (simpleKnots) {
+            // Only the simple knot at the symmetry point separates the
+            // non-saturated cells. Its Cartesian position is exact.
+            knots.push_back(.5);
+            poles.insert(poles.begin() + 2, cut);
+            weights.insert(weights.begin() + 2, .75);
+        } else if (nonBinaryParameter) {
+            // At t=1/3 the unnormalized Bernstein weights are 8, 12, 6, 1.
+            // Both symmetric pairs still cancel about the exact trim point.
+            poles[1] = cut + Vec3(bulge, -.0625, 0.);
+            poles[2] = cut - Vec3(2. * bulge, -.125, 0.);
+        }
+        knots.insert(knots.end(), 4, endParameter);
+        const auto parameter = [&](double t) { return affineDomains && !left ? 2. + 4. * t : t; };
+        for (double &knot : knots) knot = parameter(knot);
+        const auto curve = std::make_shared<BSplineCurve<3>>(3, knots, poles, weights);
         const Vec3 start = clipped ? cut + Vec3(endOffset, 0., 0.) : bottom;
         const Vec3 corner(left ? -.1875 : 1.3125, .75, 0.);
         const int from = left ? 1 : 0, to = left ? 0 : 1;
         Body::BuildFace face;
         face.surface = std::make_shared<Plane>(Frame3());
         face.loops = {{{0, left, nullptr, 0.}, {1, true, nullptr, 0.}, {2, true, nullptr, 0.}}};
-        auto body = Body::buildSheet({start, top, corner}, {{0, 1, curve, {clipped ? .5 : 0., 1.}, 0.},
+        auto body = Body::buildSheet({start, top, corner}, {{0, 1, curve, {parameter(clipped ? cutParameter : 0.), parameter(endParameter)}, 0.},
             {from, 2, segment(left ? top : start, corner), {0., 1.}, 0.},
             {2, to, segment(corner, left ? start : top), {0., 1.}, 0.}}, {face});
         require(computePCurves(body) == 0 && checkBody(body, {true, true}).empty(),
@@ -998,7 +1099,8 @@ void checkContinuousReentrantSplineSeam() {
     const Vec3 bottom(0., -.5, 0.), junction(0., .5, 0.), top(0., 1., 0.);
     const Vec3 seamPole(.25, 0., 0.);
     const auto panel = [](const std::vector<Vec3> &points, CurvePtr<3> spline,
-                          Interval range = {0., 1.}, bool forward = true) {
+                          Interval range = {0., 1.}, bool forward = true, bool exactSegments = false,
+                          CurvePtr<3> secondCurve = {}) {
         Body::BuildFace face;
         face.surface = std::make_shared<Plane>(Frame3());
         face.loops.resize(1);
@@ -1006,7 +1108,15 @@ void checkContinuousReentrantSplineSeam() {
         for (int i = 1; i < static_cast<int>(points.size()); ++i) {
             const int next = (i + 1) % static_cast<int>(points.size());
             const Vec3 delta = points[next] - points[i];
-            edges.push_back({i, next, std::make_shared<Line<3>>(points[i], delta), {0., norm(delta)}, 0.});
+            if (i == 2 && secondCurve) {
+                edges.push_back({i, next, secondCurve, secondCurve->domain(), 0.});
+            } else if (exactSegments) {
+                const auto segment = std::make_shared<BSplineCurve<3>>(1, std::vector<double>{0., 0., 1., 1.},
+                    std::vector<Vec3>{points[i], points[next]});
+                edges.push_back({i, next, segment, {0., 1.}, 0.});
+            } else {
+                edges.push_back({i, next, std::make_shared<Line<3>>(points[i], delta), {0., norm(delta)}, 0.});
+            }
         }
         for (int i = 0; i < static_cast<int>(edges.size()); ++i)
             face.loops.front().push_back({i, i != 0 || forward, nullptr, 0.});
@@ -1091,17 +1201,37 @@ void checkContinuousReentrantSplineSeam() {
             certify(onResidual, {selected(inwardCubic), refinedTargets.back()}) != Coverage::Covered,
             "la suddivisione non copre materiale oltre il residuo cubico rivolto all'interno");
 
-    const auto leftwardPanel = [&](double residualBow, double seamBow = -.25) {
+    const auto leftwardPanel = [&](double residualBow, double seamBow = -.25, double residualWeight = .75) {
         return panel({bottom, top, {-1., 1., 0.}, {-1., -.5, 0.}},
             std::make_shared<BSplineCurve<3>>(2, std::vector<double>{0., 0., 0., .5, .5, 1., 1., 1.},
                 std::vector<Vec3>{bottom, {seamBow, 0., 0.}, junction, {residualBow, .75, 0.}, top},
-                std::vector<double>{1., .75, 1., .75, 1.}));
+                std::vector<double>{1., .75, 1., residualWeight, 1.}));
     };
     const auto oppositePanel = [&](double seamBow) {
         return panel({junction, bottom, {1., -.5, 0.}, {1., .5, 0.}},
             std::make_shared<BSplineCurve<3>>(2, std::vector<double>{0., 0., 0., 1., 1., 1.},
                 std::vector<Vec3>{junction, {seamBow, 0., 0.}, bottom}, std::vector<double>{1., .75, 1.}));
     };
+
+    const auto tangentLeft = leftwardPanel(-.375, -.625, .5);
+    const auto tangentRight = oppositePanel(-.625);
+    const std::vector<SurfaceTargetFace> tangentTargets{selected(tangentLeft), selected(tangentRight)};
+    const auto tangentSource = sheet({-.4375, .5625, 0.}, .3125);
+    const auto crossingSource = sheet({-.4375 + 0x1p-24, .5625, 0.}, .3125);
+    require(certify(tangentSource, {tangentTargets.front()}) != Coverage::Covered &&
+            certify(tangentSource, {tangentTargets.back()}) != Coverage::Covered &&
+            certify(tangentSource, tangentTargets) == Coverage::Covered &&
+            certify(tangentSource, {tangentTargets.back(), tangentTargets.front()}) == Coverage::Covered,
+            "il contatto tangente col rientro lascia coperta la lamina in entrambi gli ordini");
+    require(certify(crossingSource, tangentTargets) != Coverage::Covered &&
+            certify(crossingSource, {tangentTargets.back(), tangentTargets.front()}) != Coverage::Covered,
+            "un attraversamento di 2^-24 mm non si confonde con un contatto tangente");
+    const auto checkTangentWrap = [](const Body &source, const std::vector<SurfaceTargetFace> &supports) {
+        const auto result = wrapBodyOnFaces(source, supports, SurfaceWrapOptions());
+        require(result.isSheet() && result.faces().size() == 1 &&
+                checkBody(result, {true, true}).empty(), "wrap valido al contatto tangente");
+    };
+    checkTangentWrap(tangentSource, tangentTargets);
     const auto clearedLeft = leftwardPanel(-.125), gougedLeft = leftwardPanel(-.5);
     const auto leftwardRight = oppositePanel(-.25);
     const auto bridge = sheet({-.171875, .4375, 0.}, .125);
@@ -1109,6 +1239,177 @@ void checkContinuousReentrantSplineSeam() {
     const auto locate = [](const Body &body, const Vec3 &point) {
         return classifyPointOnFace(body, body.faces().front(), point, linearResolution());
     };
+    // A similarity with integer coefficients makes the contact oblique
+    // while keeping every input and the point of tangency exact.
+    const auto placed = [](const Vec3 &p) { return Vec3(3. * p.x() - 4. * p.y(), 4. * p.x() + 3. * p.y(), 0.); };
+    const auto placedPoints = [&](std::vector<Vec3> points) {
+        for (auto &p : points) p = placed(p);
+        return points;
+    };
+    const Vec3 high(0., 1.125, 0.), lowSeam(-1.75, .5, 0.);
+    const auto obliqueLeft = panel(placedPoints({bottom, high, {-1., 1.125, 0.}, {-1., -.5, 0.}}),
+        std::make_shared<BSplineCurve<3>>(2, std::vector<double>{0., 0., 0., .5, .5, 1., 1., 1.},
+            placedPoints({bottom, lowSeam, junction, {-.375, .625, 0.}, high}),
+            std::vector<double>{1., .75, 1., .5, 1.}), {0., 1.}, true, true);
+    const auto obliqueRight = panel(placedPoints({junction, bottom, {1., -.5, 0.}, {1., .5, 0.}}),
+        std::make_shared<BSplineCurve<3>>(2, std::vector<double>{0., 0., 0., 1., 1., 1.},
+            placedPoints({junction, lowSeam, bottom}), std::vector<double>{1., .75, 1.}), {0., 1.}, true, true);
+    const std::vector<SurfaceTargetFace> obliqueTargets{selected(obliqueLeft), selected(obliqueRight)};
+    const auto placedDisk = [&](double radius) {
+        const Vec3 center = placed({-.4375, .75, 0.});
+        const auto curve = std::make_shared<Circle<2>>(Vec2(center.x(), center.y()), Vec2(1., 0.), Vec2(0., 1.), 5. * radius);
+        return planarSheet(Frame3(), {{ProfileLoop{{{curve, {0., kTwoPi}}}}, {}}});
+    };
+    const auto tangentDisk = placedDisk(.3125), crossingDisk = placedDisk(.3125 + 0x1p-12);
+    const Vec3 overSeam = placed({-.34375, .46875, 0.}), inDiskGap = placed({-.125 + 0x1p-13, .75, 0.});
+    require(locate(tangentDisk, overSeam) == PointLocation::Inside &&
+            locate(obliqueLeft, overSeam) == PointLocation::Outside &&
+            locate(obliqueRight, overSeam) == PointLocation::Inside &&
+            certify(tangentDisk, {obliqueTargets.front()}) != Coverage::Covered &&
+            certify(tangentDisk, {obliqueTargets.back()}) != Coverage::Covered &&
+            certify(tangentDisk, obliqueTargets) == Coverage::Covered &&
+            certify(tangentDisk, {obliqueTargets.back(), obliqueTargets.front()}) == Coverage::Covered,
+            "il disco tangente al rientro obliquo resta interamente coperto");
+    require(locate(crossingDisk, inDiskGap) == PointLocation::Inside &&
+            locate(obliqueLeft, inDiskGap) == PointLocation::Outside &&
+            locate(obliqueRight, inDiskGap) == PointLocation::Outside &&
+            certify(crossingDisk, obliqueTargets) != Coverage::Covered,
+            "il disco che attraversa il contorno non viene certificato");
+    checkTangentWrap(tangentDisk, obliqueTargets);
+
+    // The straight wall from Y=1/2 to Y=5/4 touches the disk at
+    // Y=3/4, exactly one third of the way along the residual segment.
+    const auto linearLeft = panel(placedPoints({bottom, junction, {-.125, .5, 0.}, {-.125, 1.25, 0.},
+                                                {-1., 1.25, 0.}, {-1., -.5, 0.}}),
+        std::make_shared<BSplineCurve<3>>(2, std::vector<double>{0., 0., 0., 1., 1., 1.},
+            placedPoints({bottom, lowSeam, junction}), std::vector<double>{1., .75, 1.}), {0., 1.}, true, true);
+    const std::vector<SurfaceTargetFace> linearTargets{selected(linearLeft), selected(obliqueRight)};
+    require(locate(linearLeft, overSeam) == PointLocation::Outside &&
+            locate(linearLeft, placed({-.125, .75, 0.})) == PointLocation::Boundary &&
+            certify(tangentDisk, linearTargets) == Coverage::Covered &&
+            certify(tangentDisk, {linearTargets.back(), linearTargets.front()}) == Coverage::Covered,
+            "il disco tangente alla parete nel parametro 1/3 resta coperto");
+    require(locate(linearLeft, inDiskGap) == PointLocation::Outside &&
+            certify(crossingDisk, linearTargets) != Coverage::Covered,
+            "la prova quadratica del contatto distingue un disco che attraversa la parete");
+    checkTangentWrap(tangentDisk, linearTargets);
+
+    // A curved wall with X=-1/8-(3t-1)^2/64 and Y=1/2+3t/4
+    // enters the tangent half-plane while staying outside the disk.
+    const auto curvedWall = [&](double bend) {
+        const Vec3 arcStart(-.125 - bend, .5, 0.), arcEnd(-.125 - 4. * bend, 1.25, 0.);
+        return panel(placedPoints({bottom, arcEnd, {-1., 1.25, 0.}, {-1., -.5, 0.}}),
+            std::make_shared<BSplineCurve<3>>(2, std::vector<double>{0., 0., 0., .25, .25, .5, .5, 1., 1., 1.},
+                placedPoints({bottom, lowSeam, junction, .5 * (junction + arcStart), arcStart,
+                              {-.125 + 2. * bend, .875, 0.}, arcEnd}),
+                std::vector<double>{1., .75, 1., 1., 1., 1., 1.}), {0., 1.}, true, true);
+    };
+    const auto quarticLeft = curvedWall(.015625);
+    const std::vector<SurfaceTargetFace> quarticTargets{selected(quarticLeft), selected(obliqueRight)};
+    require(locate(quarticLeft, overSeam) == PointLocation::Outside &&
+            locate(quarticLeft, placed({-.125, .75, 0.})) == PointLocation::Boundary &&
+            certify(tangentDisk, {quarticTargets.front()}) != Coverage::Covered &&
+            certify(tangentDisk, {quarticTargets.back()}) != Coverage::Covered &&
+            certify(tangentDisk, quarticTargets) == Coverage::Covered &&
+            certify(tangentDisk, {quarticTargets.back(), quarticTargets.front()}) == Coverage::Covered,
+            "tangenza quartica interna al parametro non binario 1/3");
+    require(locate(quarticLeft, inDiskGap) == PointLocation::Outside &&
+            certify(crossingDisk, quarticTargets) != Coverage::Covered &&
+            certify(crossingDisk, {quarticTargets.back(), quarticTargets.front()}) != Coverage::Covered,
+            "il segno negativo della quartica esclude il disco che oltrepassa il bordo curvo");
+    checkTangentWrap(tangentDisk, quarticTargets);
+    const auto penetratingWall = curvedWall(.109375);
+    const Vec3 curvedGap = placed({-155. / 1024., .875, 0.});
+    const std::vector<SurfaceTargetFace> penetratingTargets{selected(penetratingWall), selected(obliqueRight)};
+    require(locate(penetratingWall, placed({-.125, .75, 0.})) == PointLocation::Boundary &&
+            locate(tangentDisk, curvedGap) == PointLocation::Inside &&
+            locate(penetratingWall, curvedGap) == PointLocation::Outside &&
+            locate(obliqueRight, curvedGap) == PointLocation::Outside &&
+            certify(tangentDisk, penetratingTargets) != Coverage::Covered,
+            "lo stesso zero doppio non certifica il disco se il quoziente diventa negativo");
+
+    const auto wallWithBezier = [&](const std::vector<Vec3> &poles) {
+        const Vec3 &start = poles.front(), &end = poles.back();
+        std::vector<double> knots(poles.size(), 0.);
+        knots.insert(knots.end(), poles.size(), 1.);
+        const auto arc = std::make_shared<BSplineCurve<3>>(int(poles.size()) - 1,
+            std::move(knots), placedPoints(poles));
+        return panel(placedPoints({bottom, junction, start, end, {-1., end.y(), 0.}, {-1., -.5, 0.}}),
+            std::make_shared<BSplineCurve<3>>(2, std::vector<double>{0., 0., 0., 1., 1., 1.},
+                placedPoints({bottom, lowSeam, junction}), std::vector<double>{1., .75, 1.}),
+            {0., 1.}, true, true, arc);
+    };
+    // Native X is -1/8-c*(3t-1)^2*(1+t). Its squared distance
+    // to the circle has degree six and retains the double root at 1/3.
+    constexpr double bend = 3. / 128.;
+    const auto sexticWall = wallWithBezier({{-.125 - bend, .5, 0.},
+        {-.125 + 2. * bend / 3., .75, 0.}, {-.125 + 4. * bend / 3., 1., 0.},
+        {-.125 - 8. * bend, 1.25, 0.}});
+    const std::vector<SurfaceTargetFace> sexticTargets{selected(sexticWall), selected(obliqueRight)};
+    require(locate(sexticWall, overSeam) == PointLocation::Outside &&
+            locate(sexticWall, placed({-.125, .75, 0.})) == PointLocation::Boundary &&
+            certify(tangentDisk, sexticTargets) == Coverage::Covered &&
+            certify(tangentDisk, {sexticTargets.back(), sexticTargets.front()}) == Coverage::Covered,
+            "tangenza di grado sei al parametro non binario 1/3");
+    require(locate(sexticWall, inDiskGap) == PointLocation::Outside &&
+            certify(crossingDisk, sexticTargets) != Coverage::Covered,
+            "una perturbazione del raggio non conserva il fattore doppio certificabile");
+    checkTangentWrap(tangentDisk, sexticTargets);
+
+    // Reparametrize a quadratic wall by s=t^2. Its physical contact
+    // at s=1/3 is now irrational in the quartic's native parameter.
+    const auto reparametrizedWall = [&](double scale) {
+        std::vector<Vec3> poles;
+        for (int i = 0; i <= 4; ++i) {
+            const double offset = 1. - i * (i - 1) / 2. + (i == 4 ? 9. : 0.);
+            poles.emplace_back(-.125 - scale * offset, .5 + i * (i - 1) / 16., 0.);
+        }
+        return wallWithBezier(poles);
+    };
+    const auto irrationalWall = reparametrizedWall(1. / 64.), irrationalGapWall = reparametrizedWall(7. / 64.);
+    const std::vector<SurfaceTargetFace> irrationalTargets{selected(irrationalWall), selected(obliqueRight)};
+    const std::vector<SurfaceTargetFace> irrationalGapTargets{selected(irrationalGapWall), selected(obliqueRight)};
+    const Vec3 contact = placed({-.125, .75, 0.});
+    require(locate(irrationalWall, contact) == PointLocation::Boundary &&
+            locate(irrationalGapWall, contact) == PointLocation::Boundary &&
+            locate(irrationalGapWall, curvedGap) == PointLocation::Outside &&
+            certify(tangentDisk, irrationalGapTargets) != Coverage::Covered &&
+            certify(tangentDisk, {irrationalGapTargets.back(), irrationalGapTargets.front()}) != Coverage::Covered,
+            "la parete riparametrizzata puo' lasciare un vuoto pur conservando il contatto");
+    require(certify(tangentDisk, irrationalTargets) == Coverage::Covered &&
+            certify(tangentDisk, {irrationalTargets.back(), irrationalTargets.front()}) == Coverage::Covered,
+            "la distanza di grado otto certifica la tangenza irrazionale");
+    checkTangentWrap(tangentDisk, irrationalTargets);
+
+    // These cubics share the same tangency at t=21/65. The deeper
+    // one enters the disk farther along the arc without moving that point.
+    const auto finelyLocatedWall = [&](double scale) {
+        constexpr double p = 21., q = 65.;
+        const double a = p * p, b = a - 2. * p * q, c = q * q - 2. * p * q;
+        const auto pole = [&](double offset, int i) {
+            return Vec3(-.125 - scale * offset, .75 + (i * q - 3. * p) / 256., 0.);
+        };
+        return wallWithBezier({pole(3. * a, 0), pole(3. * a + b, 1),
+                               pole(3. * a + 2. * b + c, 2), pole(6. * (q - p) * (q - p), 3)});
+    };
+    const auto fineWall = finelyLocatedWall(0x1p-15), fineGapWall = finelyLocatedWall(0x1p-14);
+    const std::vector<SurfaceTargetFace> fineTargets{selected(fineWall), selected(obliqueRight)};
+    const std::vector<SurfaceTargetFace> fineGapTargets{selected(fineGapWall), selected(obliqueRight)};
+    const Vec3 fineContact = placed({-.125, .75, 0.});
+    const Vec3 fineGap = placed({-81. / 512., 453. / 512., 0.});
+    require(locate(fineWall, fineContact) == PointLocation::Boundary &&
+            locate(fineGapWall, fineContact) == PointLocation::Boundary &&
+            locate(tangentDisk, fineGap) == PointLocation::Inside &&
+            locate(fineGapWall, fineGap) == PointLocation::Outside &&
+            locate(obliqueRight, fineGap) == PointLocation::Outside &&
+            certify(tangentDisk, fineGapTargets) != Coverage::Covered &&
+            certify(tangentDisk, {fineGapTargets.back(), fineGapTargets.front()}) != Coverage::Covered,
+            "il contatto a 21/65 resta ma il secondo trim lascia un vuoto nel disco");
+    require(certify(tangentDisk, fineTargets) == Coverage::Covered &&
+            certify(tangentDisk, {fineTargets.back(), fineTargets.front()}) == Coverage::Covered,
+            "il certificato di distanza sestica trova la tangenza esatta a 21/65");
+    checkTangentWrap(tangentDisk, fineTargets);
+
     const Vec3 acrossSeam(-.0546875, .34375, 0.), inNotch(-.0625, .546875, 0.);
     require(locate(bridge, acrossSeam) == PointLocation::Inside &&
             locate(clearedLeft, acrossSeam) == PointLocation::Outside &&
@@ -1173,7 +1474,8 @@ void checkContinuousReentrantSplineSeam() {
 
     const std::vector<Vec3> sourceVertices{{-.28125, .3125, 0.}, {-.03125, .375, 0.},
                                            {-.046875, .5, 0.}, {-.171875, .625, 0.}};
-    const auto splineSheet = [](const std::vector<Vec3> &points) {
+    const auto splineSheet = [](const std::vector<Vec3> &points, bool curvedContact = false,
+                                std::optional<Vec3> interiorPole = {}) {
         Body::BuildFace sourceFace;
         sourceFace.surface = std::make_shared<Plane>(Frame3());
         sourceFace.loops.resize(1);
@@ -1181,9 +1483,15 @@ void checkContinuousReentrantSplineSeam() {
         for (int i = 0; i < int(points.size()); ++i) {
             const int next = (i + 1) % int(points.size());
             const Vec3 a = points[i], b = points[next];
-            const auto curve = i == 0
+            const bool contact = curvedContact && (i == 2 || i == 3);
+            auto middle = .5 * (a + b);
+            const bool interior = i == 2 && interiorPole;
+            if (interior) middle = *interiorPole;
+            else if (contact) middle[0] = points[3].x();
+            else if (i == 0) middle[1] -= .015625;
+            const auto curve = i == 0 || contact || interior
                 ? std::make_shared<BSplineCurve<3>>(2, std::vector<double>{0., 0., 0., 1., 1., 1.},
-                    std::vector<Vec3>{a, .5 * (a + b) + Vec3(0., -.015625, 0.), b}, std::vector<double>{1., .75, 1.})
+                    std::vector<Vec3>{a, middle, b}, std::vector<double>{1., interior ? 1. : .75, 1.})
                 : std::make_shared<BSplineCurve<3>>(1, std::vector<double>{0., 0., 1., 1.}, std::vector<Vec3>{a, b});
             sourceEdges.push_back({i, next, curve, {0., 1.}, 0.});
             sourceFace.loops.front().push_back({i, true, nullptr, 0.});
@@ -1193,6 +1501,41 @@ void checkContinuousReentrantSplineSeam() {
                 "sorgente spline valida per la prova sul rientro");
         return result;
     };
+    std::vector<Vec3> contactVertices{{-.75, .25, 0.}, {-.125, .25, 0.}, {-.15625, .5, 0.},
+                                      {-.125, .75, 0.}, {-.25, .875, 0.}, {-.75, .875, 0.}};
+    const auto tangentSpline = splineSheet(contactVertices, true);
+    for (auto &point : contactVertices) point[0] += 0x1p-12;
+    const auto crossingSpline = splineSheet(contactVertices, true);
+    const Vec3 overSplineSeam(-.140625, .3125, 0.), inSplineGap(-.125 + 0x1p-13, .75, 0.);
+    require(locate(tangentSpline, overSplineSeam) == PointLocation::Inside &&
+            locate(tangentLeft, overSplineSeam) == PointLocation::Outside &&
+            locate(tangentRight, overSplineSeam) == PointLocation::Inside &&
+            certify(tangentSpline, {tangentTargets.front()}) != Coverage::Covered &&
+            certify(tangentSpline, {tangentTargets.back()}) != Coverage::Covered &&
+            certify(tangentSpline, tangentTargets) == Coverage::Covered &&
+            certify(tangentSpline, {tangentTargets.back(), tangentTargets.front()}) == Coverage::Covered,
+            "la sorgente spline è coperta fino al contatto del bordo curvo col rientro");
+    require(locate(crossingSpline, inSplineGap) == PointLocation::Inside &&
+            locate(tangentLeft, inSplineGap) == PointLocation::Outside &&
+            locate(tangentRight, inSplineGap) == PointLocation::Outside &&
+            certify(crossingSpline, tangentTargets) != Coverage::Covered,
+            "la sorgente spline che oltrepassa il rientro non è coperta");
+    checkTangentWrap(tangentSpline, tangentTargets);
+    std::vector<Vec3> midContactVertices{{-.75, .25, 0.}, {-.125, .25, 0.}, {-.1875, .625, 0.},
+                                         {-.1875, .875, 0.}, {-.75, .875, 0.}};
+    // At t=1/2 the source touches X=-1/8, even though its middle pole
+    // has X=-1/16 and the unsplit hull extends beyond the support.
+    const auto midContact = splineSheet(midContactVertices, false, Vec3(-.0625, .75, 0.));
+    for (auto &point : midContactVertices) point[0] += 0x1p-12;
+    const auto midCrossing = splineSheet(midContactVertices, false, Vec3(-.0625 + 0x1p-12, .75, 0.));
+    require(locate(midContact, overSplineSeam) == PointLocation::Inside &&
+            certify(midContact, tangentTargets) == Coverage::Covered &&
+            certify(midContact, {tangentTargets.back(), tangentTargets.front()}) == Coverage::Covered,
+            "la suddivisione della sorgente prova la tangenza interna alla campata");
+    require(locate(midCrossing, inSplineGap) == PointLocation::Inside &&
+            certify(midCrossing, tangentTargets) != Coverage::Covered,
+            "la suddivisione conserva il materiale scoperto al contatto interno");
+    checkTangentWrap(midContact, tangentTargets);
     const auto splineSource = splineSheet(sourceVertices);
     const Vec3 acrossSpline(-.0615234375, .390625, 0.);
     require(locate(splineSource, boxCorner) == PointLocation::Outside &&
@@ -2085,7 +2428,10 @@ int main(){try{
     checkIntervalBezierTrimCut(IntervalTrimEndpoint::Saturated);
     checkIntervalBezierTrimCut(IntervalTrimEndpoint::SimpleKnot);
     checkIntervalBezierTrimCut(IntervalTrimEndpoint::ScaledWeights);
-    checkRoundedTrimEndpoint();
+    checkRoundedTrimEndpoint(RoundedTrimEndpoint::Saturated);
+    checkRoundedTrimEndpoint(RoundedTrimEndpoint::SimpleKnots);
+    checkRoundedTrimEndpoint(RoundedTrimEndpoint::NonBinaryParameter);
+    checkRoundedTrimEndpoint(RoundedTrimEndpoint::AffineDomains);
     checkContinuousPartialSplineSeam();
     checkContinuousReentrantSplineSeam();
     checkContinuousSplineOpeningCoverage();

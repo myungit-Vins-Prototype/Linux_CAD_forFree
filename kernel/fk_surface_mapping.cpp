@@ -343,20 +343,14 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
                 require(std::isfinite(fin.pcurveTolerance) && fin.pcurveTolerance >= 0
                         && fin.pcurveTolerance <= pcurveBudget,
                     "Deformazione: budget finale della fin non valido.");
-                double residual = 0;
+                // Per Surface il residuo è già incluso in worst. Le verifiche
+                // sopra dimostrano che E, S, Q, intervallo e cap sono gli stessi.
+                // Per Plane la tolleranza del B-rep può essere più stretta.
                 if (kind == FinProof::Plane) {
-                    residual = detail::requirePCurveOnPlane(edge.curve, face.surface, fin.pcurve,
-                        edge.range, std::min(pcurveBudget, fin.pcurveTolerance));
-                } else {
-                    const auto proof = detail::surfaceCurveResidualBound(edge.curve, face.surface,
-                        fin.pcurve, edge.range, fin.pcurveTolerance);
-                    require(proof.status == detail::SurfaceCurveBoundStatus::Certified
-                            && std::isfinite(proof.upperBound) && proof.upperBound >= 0
-                            && proof.upperBound <= fin.pcurveTolerance,
-                        "Deformazione: fin finale fuori dal budget continuo.");
-                    residual = proof.upperBound;
+                    const double residual = detail::requirePCurveOnPlane(edge.curve, face.surface, fin.pcurve,
+                        edge.range, fin.pcurveTolerance);
+                    worst = std::max(worst, residual);
                 }
-                worst = std::max(worst, residual);
             }
         }
         for (const auto &planned : finOrigins)

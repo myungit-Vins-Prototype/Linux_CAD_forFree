@@ -11,8 +11,11 @@
 #include <array>
 #include <cfenv>
 #include <cmath>
+#include <cstdint>
 #include <functional>
+#include <limits>
 #include <map>
+#include <numeric>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -745,6 +748,12 @@ static std::optional<double> exactTrimQuotient(double numerator, double denomina
     return quotient;
 }
 
+static I trimQuotientBound(I numerator, I denominator) {
+    if (numerator.lo == numerator.hi && denominator.lo == denominator.hi)
+        if (const auto exact = exactTrimQuotient(numerator.lo, denominator.lo)) return I(*exact);
+    return numerator / denominator;
+}
+
 static std::optional<double> exactTrimParameter(double t, Interval domain) {
     if (t == domain.lo) return 0.;
     if (t == domain.hi) return 1.;
@@ -757,6 +766,10 @@ static I trimSumBound(I a, I b) {
     if (a.lo == a.hi && b.lo == b.hi)
         if (const auto exact = exactTrimSum(a.lo, b.lo)) return I(*exact);
     return a + b;
+}
+
+static I trimDifferenceBound(I a, I b) {
+    return trimSumBound(a, {-b.hi, -b.lo});
 }
 
 static I trimProductBound(I a, I b) {
@@ -860,13 +873,9 @@ static std::optional<Vec2> exactBezierTrimEnd(const ExactTrimSpan &span, const F
     }();
     if (normalizedEnd) return normalizedEnd;
 
-    // On a saturated cell the exact parameter chooses the Bernstein
-    // basis. Expansion arithmetic also covers rounded native products.
-    if (knots[offset + 1] != domain.lo || knots[offset + 2 * (count - 1)] != domain.hi ||
-        work < 2 * count * count)
-        return {};
-    const auto parameter = exactTrimParameter(t, domain);
-    if (!parameter) return {};
+    // Exact de Boor in homogeneous coordinates also works when the cell
+    // is not saturated or its normalized trim parameter is not binary64.
+    if (work < 2 * count * count) return {};
     work -= 2 * count * count;
     std::array<Vec2, 9> poles;
     std::array<double, 9> weights;
@@ -876,7 +885,7 @@ static std::optional<Vec2> exactBezierTrimEnd(const ExactTrimSpan &span, const F
         poles[i] = *projected;
         weights[i] = span.curve->weight(int(offset + i));
     }
-    return exactRationalBezierPoint(poles.data(), weights.data(), count, *parameter);
+    return exactRationalSplinePoint(poles.data(), weights.data(), count, knots.data() + offset + 1, t);
 }
 
 // Polar de Boor directly on the original knot cell. Evaluating the blossom
@@ -925,11 +934,8 @@ static bool extractBezierTrim(ExactTrimSpan &span, Interval range, const Frame3 
             return value.lo != value.hi;
         });
         std::array<I, 2> box;
-        for (std::size_t j = 0; j < box.size(); ++j) {
-            const auto exact = pole[j].lo == pole[j].hi && pole[2].lo == pole[2].hi ?
-                exactTrimQuotient(pole[j].lo, pole[2].lo) : std::nullopt;
-            box[j] = exact ? I(*exact) : pole[j] / pole[2];
-        }
+        for (std::size_t j = 0; j < box.size(); ++j)
+            box[j] = trimQuotientBound(pole[j], pole[2]);
         if ((box[0].lo != box[0].hi || box[1].lo != box[1].hi) && (i == 0 || i + 1 == count)) {
             const auto end = exactBezierTrimEnd(span, chart, i == 0 ? range.lo : range.hi, original, count, work);
             if (!end) return false;
@@ -1223,7 +1229,8 @@ static void appendInscribedSplineTriangles(const std::vector<ExactTrimSpan> &spa
 // When both ends of a span have multiplicity at least p, its degree-p
 // Bezier poles are already present. Ordinary knot insertion could round
 // two distinct curves to the same coefficients.
-static std::vector<ExactTrimSpan> splitSplineTrim(const std::vector<ExactTrimSpan> &loop, std::size_t &work) {
+static std::vector<ExactTrimSpan> splitSplineTrim(const std::vector<ExactTrimSpan> &loop, std::size_t &work,
+                                                const Frame3 *chart = nullptr) {
     std::vector<ExactTrimSpan> pieces;
     bool split = false;
     for (const auto &span : loop) {
@@ -1253,10 +1260,24 @@ static std::vector<ExactTrimSpan> splitSplineTrim(const std::vector<ExactTrimSpa
                 continue;
             }
         }
+        if (chart && span.curve && !span.bezierPoleOffset) {
+            if (!appendExactTrimCells(span, span.range, *chart, work, pieces)) return {};
+            split = true;
+            continue;
+        }
         pieces.push_back(span);
     }
     if (!split) pieces.clear();
     return pieces;
+}
+
+static bool sameLocalTrimParameter(double a, double b, Interval first, Interval second) {
+    if (first.lo == second.lo && first.hi == second.hi) return a == b;
+    const auto offsetA = exactTrimSum(a, -first.lo), offsetB = exactTrimSum(b, -second.lo);
+    const auto widthA = exactTrimSum(first.hi, -first.lo), widthB = exactTrimSum(second.hi, -second.lo);
+    if (!offsetA || !offsetB || !widthA || !widthB) return false;
+    const auto lhs = exactTrimProduct(*offsetA, *widthB), rhs = exactTrimProduct(*offsetB, *widthA);
+    return lhs && rhs && *lhs == *rhs;
 }
 
 static bool sameNativeTrimCell(const ExactTrimSpan &a, const ExactTrimSpan &b) {
@@ -1264,8 +1285,10 @@ static bool sameNativeTrimCell(const ExactTrimSpan &a, const ExactTrimSpan &b) {
     const auto first = *a.bezierPoleOffset, second = *b.bezierPoleOffset;
     const auto degree = a.poles.size() - 1;
     const auto &knotsA = a.curve->knots(), &knotsB = b.curve->knots();
-    if (!std::equal(knotsA.begin() + first + 1, knotsA.begin() + first + 2 * degree + 1,
-                    knotsB.begin() + second + 1)) return false;
+    const auto domainA = a.bezierDomain(), domainB = b.bezierDomain();
+    for (std::size_t i = 1; i <= 2 * degree; ++i) {
+        if (!sameLocalTrimParameter(knotsA[first + i], knotsB[second + i], domainA, domainB)) return false;
+    }
     const double scaleA = a.curve->weight(int(first)), scaleB = b.curve->weight(int(second));
     for (std::size_t i = 0; i < a.poles.size(); ++i) {
         const auto &p = a.curve->poles()[first + i], &q = b.curve->poles()[second + i];
@@ -1283,34 +1306,213 @@ static bool sameNativeTrimCell(const ExactTrimSpan &a, const ExactTrimSpan &b) {
     return true;
 }
 
-static bool oppositeSplineTrim(const ExactTrimSpan &a, const ExactTrimSpan &b) {
-    if (!a.curve || !b.curve || a.curve->degree() != b.curve->degree() || a.poles.size() != b.poles.size() ||
-        !sameTrimPoint(a.first(), b.last()) || !sameTrimPoint(a.last(), b.first()))
+static TrimHomogeneousPoint homogeneousTrimPole(const ExactTrimSpan &span, std::size_t i) {
+    if (!span.restriction.empty()) return span.restriction[i].homogeneous;
+    const I weight = span.weight(i);
+    return {trimProductBound(I(span.poles[i].x()), weight), trimProductBound(I(span.poles[i].y()), weight), weight};
+}
+
+static std::vector<TrimHomogeneousPoint> elevatedTrimBezier(const ExactTrimSpan &span,
+                                                          std::size_t count, bool reverse) {
+    std::vector<TrimHomogeneousPoint> poles;
+    for (std::size_t i = 0; i < span.poles.size(); ++i)
+        poles.push_back(homogeneousTrimPole(span, reverse ? span.poles.size() - 1 - i : i));
+    while (poles.size() < count) {
+        const auto size = poles.size();
+        // Elevation in homogeneous coordinates has one common divisor.
+        // Keeping the numerator avoids rounding fractional coefficients.
+        poles.emplace_back();
+        for (std::size_t j = 0; j < poles.back().size(); ++j) {
+            for (std::size_t i = size; i > 0; --i) {
+                const I left = trimProductBound(I(double(i)), poles[i - 1][j]);
+                const I right = i == size ? I() : trimProductBound(I(double(size - i)), poles[i][j]);
+                poles[i][j] = trimSumBound(left, right);
+            }
+            poles.front()[j] = trimProductBound(I(double(size)), poles.front()[j]);
+        }
+    }
+    return poles;
+}
+
+// Coefficients relative to t^i (1-t)^(n-i). Omitting the common
+// Bernstein denominators preserves exact zeros and coefficient signs.
+using TrimPolynomial = std::vector<I>;
+
+static TrimPolynomial trimPolynomialProduct(const TrimPolynomial &a, const TrimPolynomial &b) {
+    TrimPolynomial product(a.size() + b.size() - 1);
+    for (std::size_t i = 0; i < a.size(); ++i)
+        for (std::size_t j = 0; j < b.size(); ++j)
+            product[i + j] = trimSumBound(product[i + j], trimProductBound(a[i], b[j]));
+    return product;
+}
+
+static bool equalTrimPolynomials(const TrimPolynomial &a, const TrimPolynomial &b) {
+    return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](I x, I y) {
+        return surface_bounds::exact(trimDifferenceBound(x, y), 0.);
+    });
+}
+
+// A positive projective parameter change multiplies the ith rational
+// Bézier weight by a common scale times lambda^i, leaving every pole fixed.
+static bool projectiveTrimCoincidence(const ExactTrimSpan &a, const ExactTrimSpan &b, bool reverse,
+                                      std::size_t &work) {
+    const auto count = a.poles.size();
+    if (count < 2 || count != b.poles.size() || work < 4 * count) return false;
+    work -= 4 * count;
+    const auto opposed = [&](std::size_t i) { return reverse ? count - 1 - i : i; };
+    for (std::size_t i = 0; i < count; ++i) {
+        const auto j = opposed(i);
+        if (!a.exactCartesian(i) || !b.exactCartesian(j) || !sameTrimPoint(a.poles[i], b.poles[j])) return false;
+    }
+    const I scaleA = a.weight(0), scaleB = b.weight(opposed(0));
+    const I from = trimProductBound(a.weight(1), scaleB), to = trimProductBound(b.weight(opposed(1)), scaleA);
+    if (!(from.lo > 0. && to.lo > 0.)) return false;
+    I fromPower = from, toPower = to;
+    for (std::size_t i = 2; i < count; ++i) {
+        fromPower = trimProductBound(fromPower, from);
+        toPower = trimProductBound(toPower, to);
+        const I lhs = trimProductBound(trimProductBound(b.weight(opposed(i)), scaleA), fromPower);
+        const I rhs = trimProductBound(trimProductBound(a.weight(i), scaleB), toPower);
+        if (!surface_bounds::exact(trimDifferenceBound(lhs, rhs), 0.)) return false;
+    }
+    return true;
+}
+
+static std::array<TrimPolynomial, 3> trimHomogeneousPolynomials(const ExactTrimSpan &span, bool reverse) {
+    std::array<TrimPolynomial, 3> result;
+    const auto count = span.poles.size();
+    for (std::size_t i = 0; i < count; ++i) {
+        const auto pole = homogeneousTrimPole(span, reverse ? count - 1 - i : i);
+        const I binomial(surface_bounds::choose(int(count - 1), int(i)));
+        for (std::size_t j = 0; j < result.size(); ++j)
+            result[j].push_back(trimProductBound(pole[j], binomial));
+    }
+    return result;
+}
+
+// Equality of Cartesian ratios allows any common positive polynomial
+// factor in homogeneous coordinates. Compare both cross products over
+// the aligned unit interval, keeping the native degrees.
+static bool rationalTrimCoincidence(const ExactTrimSpan &a, const ExactTrimSpan &b, bool reverse,
+                                    std::size_t &work) {
+    const auto cost = 4 * a.poles.size() * b.poles.size();
+    if (work < cost) return false;
+    work -= cost;
+    const auto left = trimHomogeneousPolynomials(a, false), right = trimHomogeneousPolynomials(b, reverse);
+    for (std::size_t axis = 0; axis < 2; ++axis) {
+        if (!equalTrimPolynomials(trimPolynomialProduct(left[axis], right[2]),
+                                  trimPolynomialProduct(right[axis], left[2]))) return false;
+    }
+    return true;
+}
+
+// If one coordinate of A is affine, it determines the parameter on A.
+// Monotone Cartesian poles of B in that coordinate certify orientation
+// for positive weights. Check the other coordinate by exact composition.
+static bool graphTrimCoincidence(const ExactTrimSpan &a, const ExactTrimSpan &b, bool reverse,
+                                 std::size_t &work) {
+    const auto degreeA = a.poles.size() - 1, degreeB = b.poles.size() - 1;
+    const auto composedDegree = degreeA * degreeB;
+    if (composedDegree + degreeB > 20) return false;
+    const auto left = trimHomogeneousPolynomials(a, false), right = trimHomogeneousPolynomials(b, reverse);
+    for (std::size_t axis = 0; axis < 2; ++axis) {
+        const double first = a.poles.front()[axis], last = a.poles.back()[axis];
+        if (first == last) continue;
+        const I sign(first < last ? 1. : -1.);
+        bool monotone = true;
+        double previous = sign.lo * first;
+        for (std::size_t i = 0; i <= degreeB && monotone; ++i) {
+            const auto j = reverse ? degreeB - i : i;
+            const double current = sign.lo * b.poles[j][axis];
+            monotone = b.exactCartesian(j) && current >= previous;
+            previous = current;
+        }
+        if (!monotone ||
+            !equalTrimPolynomials(trimPolynomialProduct(left[axis], {I(1.), I(1.)}),
+                                  trimPolynomialProduct(left[2], {I(first), I(last)}))) continue;
+        const auto cost = 8 * (degreeA + 1) * (composedDegree + 1) * (degreeB + 1);
+        if (work < cost) return false;
+        work -= cost;
+
+        // Positive scale times W_B gives the common denominator. The
+        // two polynomials below give the factors u and 1-u respectively.
+        TrimPolynomial parameter(degreeB + 1), complement(degreeB + 1);
+        for (std::size_t i = 0; i <= degreeB; ++i) {
+            parameter[i] = trimProductBound(sign, trimDifferenceBound(right[axis][i],
+                                                                     trimProductBound(I(first), right[2][i])));
+            complement[i] = trimProductBound(sign, trimDifferenceBound(trimProductBound(I(last), right[2][i]),
+                                                                      right[axis][i]));
+        }
+        std::vector<TrimPolynomial> powers{{I(1.)}}, complements{{I(1.)}};
+        for (std::size_t i = 1; i <= degreeA; ++i) {
+            powers.push_back(trimPolynomialProduct(powers.back(), parameter));
+            complements.push_back(trimPolynomialProduct(complements.back(), complement));
+        }
+        const auto other = 1 - axis;
+        TrimPolynomial numerator(composedDegree + 1), weight(composedDegree + 1);
+        for (std::size_t i = 0; i <= degreeA; ++i) {
+            const auto basis = trimPolynomialProduct(powers[i], complements[degreeA - i]);
+            for (std::size_t j = 0; j < basis.size(); ++j) {
+                numerator[j] = trimSumBound(numerator[j], trimProductBound(left[other][i], basis[j]));
+                weight[j] = trimSumBound(weight[j], trimProductBound(left[2][i], basis[j]));
+            }
+        }
+        if (equalTrimPolynomials(trimPolynomialProduct(numerator, right[2]),
+                                 trimPolynomialProduct(weight, right[other]))) return true;
+    }
+    return false;
+}
+
+static bool oppositeSplineTrim(const ExactTrimSpan &a, const ExactTrimSpan &b, std::size_t &work) {
+    if (!a.curve || !b.curve || !sameTrimPoint(a.first(), b.last()) || !sameTrimPoint(a.last(), b.first()))
         return false;
-    if (a.poles.size() != std::size_t(a.curve->degree()) + 1)
-        return a.forward != b.forward && a.curve->knots() == b.curve->knots() &&
+    if (!a.bezierPoleOffset || !b.bezierPoleOffset)
+        return a.forward != b.forward && a.curve->degree() == b.curve->degree() &&
+            a.poles.size() == b.poles.size() && a.curve->knots() == b.curve->knots() &&
             a.curve->weights() == b.curve->weights() &&
             std::equal(a.poles.begin(), a.poles.end(), b.poles.begin(), sameTrimPoint);
 
-    // Enclosures alone establish no identity. The local native basis, poles,
-    // proportional weights and exact parameter interval prove coincidence.
+    // Identical native data can prove equality even if extracted
+    // coefficients are only known through enclosures.
     if (a.intervalRestriction || b.intervalRestriction)
-        return a.forward != b.forward && a.range.lo == b.range.lo && a.range.hi == b.range.hi &&
-               sameNativeTrimCell(a, b);
+        return a.forward != b.forward && sameNativeTrimCell(a, b) &&
+               sameLocalTrimParameter(a.range.lo, b.range.lo, a.bezierDomain(), b.bezierDomain()) &&
+               sameLocalTrimParameter(a.range.hi, b.range.hi, a.bezierDomain(), b.bezierDomain());
 
-    // Clamped Bezier pieces have the same basis on the unit interval,
-    // after an affine change of parameter and possible reversal.
-    for (std::size_t i = 0; i < a.poles.size(); ++i) {
-        const auto j = a.forward == b.forward ? b.poles.size() - 1 - i : i;
-        if (!a.restriction.empty() && !b.restriction.empty()) {
-            const auto &pa = a.restriction[i].homogeneous, &pb = b.restriction[j].homogeneous;
-            if (!std::equal(pa.begin(), pa.end(), pb.begin(), [](I x, I y) { return x.lo == y.lo; })) return false;
-        } else if (!a.exactCartesian(i) || !b.exactCartesian(j) ||
-                   a.weight(i).lo != b.weight(j).lo || !sameTrimPoint(a.poles[i], b.poles[j])) {
-            return false;
+    const bool reverse = a.forward == b.forward;
+    if (a.poles.size() == b.poles.size()) {
+        bool identical = true;
+        for (std::size_t i = 0; i < a.poles.size() && identical; ++i) {
+            const auto j = reverse ? b.poles.size() - 1 - i : i;
+            if (!a.restriction.empty() && !b.restriction.empty()) {
+                const auto &first = a.restriction[i].homogeneous, &second = b.restriction[j].homogeneous;
+                identical = std::equal(first.begin(), first.end(), second.begin(), [](I x, I y) { return x.lo == y.lo; });
+            } else {
+                identical = a.exactCartesian(i) && b.exactCartesian(j) &&
+                            a.weight(i).lo == b.weight(j).lo && sameTrimPoint(a.poles[i], b.poles[j]);
+            }
         }
+        if (identical) return true;
     }
-    return true;
+
+    const auto count = std::max(a.poles.size(), b.poles.size());
+    const auto degreeDifference = count - std::min(a.poles.size(), b.poles.size());
+    const auto cost = 3 * count * (1 + degreeDifference);
+    if (count > 9 || work < cost) return false;
+    work -= cost;
+    const auto first = elevatedTrimBezier(a, count, false);
+    const auto second = elevatedTrimBezier(b, count, reverse);
+    const I wa = first.front()[2], wb = second.front()[2];
+    bool proportional = wa.lo > 0. && wb.lo > 0.;
+    for (std::size_t i = 0; i < count && proportional; ++i)
+        for (std::size_t j = 0; j < first[i].size() && proportional; ++j) {
+            const I lhs = trimProductBound(first[i][j], wb);
+            const I rhs = trimProductBound(second[i][j], wa);
+            proportional = surface_bounds::exact(trimDifferenceBound(lhs, rhs), 0.);
+        }
+    return proportional || projectiveTrimCoincidence(a, b, reverse, work) ||
+           rationalTrimCoincidence(a, b, reverse, work) ||
+           graphTrimCoincidence(a, b, reverse, work) || graphTrimCoincidence(b, a, reverse, work);
 }
 
 static void appendInscribedSplinePair(const std::vector<ExactTrimSpan> &a, const std::vector<ExactTrimSpan> &b,
@@ -1329,7 +1531,7 @@ static void appendInscribedSplinePair(const std::vector<ExactTrimSpan> &a, const
                 return;
             }
             work -= cost;
-            if (!oppositeSplineTrim(spanA, spanB)) break;
+            if (!oppositeSplineTrim(spanA, spanB, work)) break;
         }
         if (!shared) continue;
         const auto count = a.size() + b.size() - 2 * shared;
@@ -1380,11 +1582,23 @@ static std::vector<ExactTrimSpan> extractUnsplitTrim(const std::vector<ExactTrim
     return result;
 }
 
-// A declared opposing trim endpoint supplies the cut parameter on a common
-// native knot cell. The restricted poles still undergo oppositeSplineTrim's
-// exact coefficient check before either piece can be removed.
+static std::optional<double> correspondingTrimParameter(double parameter, Interval from, Interval to) {
+    if (from.lo == to.lo && from.hi == to.hi) return parameter;
+    if (parameter == from.lo) return to.lo;
+    if (parameter == from.hi) return to.hi;
+    const auto normalized = exactTrimParameter(parameter, from);
+    const auto width = exactTrimSum(to.hi, -to.lo);
+    if (!normalized || !width) return {};
+    const auto offset = exactTrimProduct(*normalized, *width);
+    return offset ? exactTrimSum(to.lo, *offset) : std::nullopt;
+}
+
+// Use declared opposing cuts in the same native basis, or map them
+// exactly between the whole parameter ranges. Coefficients still prove
+// coincidence independently of this choice of cuts.
 static std::vector<ExactTrimSpan> alignBezierTrim(const std::vector<ExactTrimSpan> &loop,
-    const std::vector<ExactTrimSpan> &opposite, const Frame3 &chart, std::size_t &work) {
+    const std::vector<ExactTrimSpan> &opposite, const Frame3 &chart, std::size_t &work,
+    bool requireNativeCell) {
     std::vector<ExactTrimSpan> result;
     bool changed = false;
     for (const auto &span : loop) {
@@ -1393,16 +1607,35 @@ static std::vector<ExactTrimSpan> alignBezierTrim(const std::vector<ExactTrimSpa
             cancellationPoint();
             if (!work) return {};
             --work;
-            if (!other.bezierPoleOffset || other.forward == span.forward ||
-                span.poles.size() != other.poles.size()) continue;
-            const auto first = other.range.lo, last = other.range.hi;
+            if (!other.bezierPoleOffset || other.forward == span.forward) continue;
+            double first = other.range.lo, last = other.range.hi;
+            if (!requireNativeCell) {
+                const auto own = span.curve->domain(), opposing = other.curve->domain();
+                if (own.lo != opposing.lo || own.hi != opposing.hi) {
+                    const auto &poles = span.curve->poles(), &opposingPoles = other.curve->poles();
+                    const auto start = exactTrimProjection(poles.front(), chart);
+                    const auto end = exactTrimProjection(poles.back(), chart);
+                    const auto opposingStart = exactTrimProjection(opposingPoles.front(), chart);
+                    const auto opposingEnd = exactTrimProjection(opposingPoles.back(), chart);
+                    if (!start || !end || !opposingStart || !opposingEnd ||
+                        !sameTrimPoint(*start, *opposingStart) || !sameTrimPoint(*end, *opposingEnd)) continue;
+                }
+                const auto mappedFirst = correspondingTrimParameter(first, opposing, own);
+                const auto mappedLast = correspondingTrimParameter(last, opposing, own);
+                if (!mappedFirst || !mappedLast) continue;
+                first = *mappedFirst;
+                last = *mappedLast;
+            }
             if (last <= span.range.lo || first >= span.range.hi ||
                 (first <= span.range.lo && last >= span.range.hi)) continue;
-            const auto degree = span.poles.size() - 1;
-            const auto cost = 2 * degree + span.poles.size();
-            if (work < cost) return {};
-            work -= cost;
-            if (!sameNativeTrimCell(span, other)) continue;
+            if (requireNativeCell) {
+                const auto a = span.bezierDomain(), b = other.bezierDomain();
+                if (a.lo != b.lo || a.hi != b.hi) continue;
+                const auto cost = 3 * span.poles.size();
+                if (work < cost) return {};
+                work -= cost;
+                if (!sameNativeTrimCell(span, other)) continue;
+            }
             if (first > span.range.lo) cuts.push_back(first);
             if (last < span.range.hi) cuts.push_back(last);
         }
@@ -1457,21 +1690,44 @@ static void appendInscribedSplineUnions(const std::vector<std::vector<ExactTrimS
             const auto cellsB = extractUnsplitTrim(baseB, baseA, chart, remaining);
             const auto &a = cellsA.empty() ? baseA : cellsA;
             const auto &b = cellsB.empty() ? baseB : cellsB;
-            const auto alignedA = alignBezierTrim(a, b, chart, remaining);
-            const auto alignedB = alignBezierTrim(b, a, chart, remaining);
+            const auto alignedA = alignBezierTrim(a, b, chart, remaining, true);
+            const auto alignedB = alignBezierTrim(b, a, chart, remaining, true);
             if (!cellsA.empty() || !cellsB.empty() || !alignedA.empty() || !alignedB.empty() ||
                 (hasInteriorCut(a) && hasInteriorCut(b)))
                 appendInscribedSplinePair(alignedA.empty() ? a : alignedA, alignedB.empty() ? b : alignedB,
                                           true, inner, residual, remaining);
         }
+    // Different knot layouts may still describe the same curve. Extract
+    // the remaining native cells and align their declared parameter cuts.
+    if (remaining) {
+        std::vector<std::vector<ExactTrimSpan>> extracted(loops.size());
+        for (std::size_t i = 0; i < loops.size() && remaining; ++i)
+            extracted[i] = splitSplineTrim(split[i].empty() ? loops[i] : split[i], remaining, &chart);
+        const auto cells = [&](std::size_t i) -> const std::vector<ExactTrimSpan> & {
+            if (!extracted[i].empty()) return extracted[i];
+            return split[i].empty() ? loops[i] : split[i];
+        };
+        for (std::size_t i = 0; i < loops.size() && remaining; ++i)
+            for (std::size_t j = 0; j < i && remaining; ++j) {
+                const auto &a = cells(i), &b = cells(j);
+                const auto alignedA = alignBezierTrim(a, b, chart, remaining, false);
+                const auto alignedB = alignBezierTrim(b, a, chart, remaining, false);
+                if (!alignedA.empty() || !alignedB.empty() || !extracted[i].empty() || !extracted[j].empty())
+                    appendInscribedSplinePair(alignedA.empty() ? a : alignedA, alignedB.empty() ? b : alignedB,
+                                              true, inner, residual, remaining);
+            }
+    }
     work -= allowance - remaining;
 }
 
 using TrimBezier = std::vector<TrimHomogeneousPoint>;
 
 static TrimHomogeneousPoint blendTrimPoles(const TrimHomogeneousPoint &a, const TrimHomogeneousPoint &b, I t) {
-    const I complement = I(1) - t;
-    return {a[0] * complement + b[0] * t, a[1] * complement + b[1] * t, a[2] * complement + b[2] * t};
+    const I complement = trimDifferenceBound(I(1.), t);
+    TrimHomogeneousPoint point;
+    for (std::size_t i = 0; i < point.size(); ++i)
+        point[i] = trimSumBound(trimProductBound(a[i], complement), trimProductBound(b[i], t));
+    return point;
 }
 
 // Polar de Boor extracts the Bernstein coefficients of a closed knot
@@ -1490,14 +1746,7 @@ static bool appendOpeningBezier(const ExactTrimSpan &span, std::vector<TrimBezie
         auto &bezier = out.emplace_back();
         for (std::size_t i = 0; i < span.poles.size(); ++i) {
             const auto j = span.forward ? i : span.poles.size() - 1 - i;
-            if (!span.restriction.empty()) {
-                const auto &pole = span.restriction[j].homogeneous;
-                bezier.push_back({I(pole[0]), I(pole[1]), I(pole[2])});
-            } else {
-                const auto &pole = span.poles[j];
-                const I w(span.weight(j));
-                bezier.push_back({I(pole.x()) * w, I(pole.y()) * w, w});
-            }
+            bezier.push_back(homogeneousTrimPole(span, j));
         }
         return true;
     }
@@ -1516,9 +1765,7 @@ static bool appendOpeningBezier(const ExactTrimSpan &span, std::vector<TrimBezie
         TrimBezier original(width);
         for (int j = 0; j <= degree; ++j) {
             const int index = cell - degree + j;
-            const auto &p = span.poles[std::size_t(index)];
-            const I w(curve.weight(index));
-            original[std::size_t(j)] = {I(p.x()) * w, I(p.y()) * w, w};
+            original[std::size_t(j)] = homogeneousTrimPole(span, std::size_t(index));
         }
         TrimBezier bezier(width);
         for (int pole = 0; pole <= degree; ++pole) {
@@ -1641,6 +1888,14 @@ struct ResidualTrimSource {
     std::vector<TrimBezier> outerBoundary;
 };
 
+static I enclosureSideValue(const Vec2 &a, const Vec2 &b, const TrimHomogeneousPoint &pole) {
+    const I dx = trimDifferenceBound(I(b.x()), I(a.x()));
+    const I dy = trimDifferenceBound(I(b.y()), I(a.y()));
+    const I x = trimDifferenceBound(pole[0], trimProductBound(I(a.x()), pole[2]));
+    const I y = trimDifferenceBound(pole[1], trimProductBound(I(a.y()), pole[2]));
+    return trimDifferenceBound(trimProductBound(dx, y), trimProductBound(dy, x));
+}
+
 static std::vector<TrimEnclosureSide> trimPoleEnclosure(const std::vector<Vec2> &poles, std::size_t &work) {
     // Reserve most of the remaining budget for the winding and box tests.
     const auto allowance = work / 4;
@@ -1679,7 +1934,7 @@ static std::vector<TrimEnclosureSide> trimPoleEnclosure(const std::vector<Vec2> 
         const auto &a = outline[i], &b = outline[(i + 1) % outline.size()];
         double lower = INFINITY;
         for (const auto &point : poles)
-            lower = std::min(lower, trimHalfPlane(a, b, point).side.lo);
+            lower = std::min(lower, enclosureSideValue(a, b, {I(point.x()), I(point.y()), I(1.)}).lo);
         if (std::isfinite(lower)) result.push_back({a, b, lower});
     }
     return result;
@@ -1741,11 +1996,265 @@ static bool residualTrimCovers(const TrimWindow &box, const ResidualTrimSource &
     });
 }
 
-// Separate each piece of the residual boundary from the closed convex
-// source. A positive winding at one source point is then constant over
-// the whole connected source, including areas missed by a coarse box cover.
+static bool quadraticTrimNonnegative(double a, double b, double c) {
+    if (a < 0. || c < 0.) return false;
+    if (b >= 0.) return true;
+    // a*(1-t)^2+b*t*(1-t)+c*t^2 is nonnegative for
+    // a,c >= 0 and b >= -2*sqrt(a*c), including an interior zero.
+    const I determinant = trimDifferenceBound(trimProductBound(I(4.), trimProductBound(I(a), I(c))),
+                                              trimProductBound(I(b), I(b)));
+    return determinant.lo >= 0.;
+}
+
+using TrimIntegerPolynomial = std::vector<std::int64_t>;
+// Products, four-term convolutions, and differences fit in int64_t
+// when the coefficients entering each operation satisfy this limit.
+constexpr std::int64_t trimIntegerLimit = std::int64_t(1) << 30;
+
+static bool reduceTrimIntegerPolynomial(TrimIntegerPolynomial &remainder, TrimIntegerPolynomial &quotient) {
+    std::int64_t common = 0;
+    for (auto value : remainder) common = std::gcd(common, value);
+    for (auto value : quotient) common = std::gcd(common, value);
+    if (common > 1) {
+        for (auto &value : remainder) value /= common;
+        for (auto &value : quotient) value /= common;
+    }
+    while (!remainder.empty() && remainder.back() == 0) remainder.pop_back();
+    const auto bounded = [](std::int64_t value) { return -trimIntegerLimit <= value && value <= trimIntegerLimit; };
+    return std::all_of(remainder.begin(), remainder.end(), bounded) &&
+           std::all_of(quotient.begin(), quotient.end(), bounded);
+}
+
+static bool pseudoDivideTrimPolynomial(TrimIntegerPolynomial &remainder, const TrimIntegerPolynomial &divisor,
+                                       TrimIntegerPolynomial &quotient) {
+    const auto lead = divisor.back();
+    while (remainder.size() >= divisor.size()) {
+        const auto shift = remainder.size() - divisor.size();
+        const auto pivot = remainder.back();
+        for (auto &value : remainder) value *= lead;
+        for (std::size_t i = 0; i < divisor.size(); ++i)
+            remainder[shift + i] -= pivot * divisor[i];
+        if (!quotient.empty()) {
+            for (auto &value : quotient) value *= lead;
+            quotient[shift] += pivot;
+        }
+        if (!reduceTrimIntegerPolynomial(remainder, quotient)) return false;
+    }
+    return true;
+}
+
+// On z=t/(1-t) >= 0 the scaled Bernstein coefficients are power
+// coefficients, up to the positive factor (1-t)^degree. A positive
+// scale of their lower bounds gives an exact integer lower polynomial.
+static std::optional<TrimIntegerPolynomial> trimIntegerLowerPolynomial(const TrimPolynomial &coefficients) {
+    if (coefficients.front().lo < 0. || coefficients.back().lo < 0.) return {};
+    double largest = 0.;
+    for (I value : coefficients) largest = std::max(largest, std::abs(value.lo));
+    if (!(largest > 0.)) return {};
+    // Recover the dyadic coefficients before removing their common
+    // divisor. The primitive polynomial can be much smaller.
+    constexpr int digits = std::numeric_limits<double>::digits;
+    const int exponent = digits - 1 - std::ilogb(largest);
+    const double conversionLimit = std::ldexp(1., digits);
+    TrimIntegerPolynomial polynomial;
+    for (I value : coefficients) {
+        const double scaled = std::scalbn(value.lo, exponent);
+        if (std::abs(scaled) >= conversionLimit || scaled != std::trunc(scaled) ||
+            std::scalbn(scaled, -exponent) != value.lo) return {};
+        polynomial.push_back(std::int64_t(scaled));
+    }
+    TrimIntegerPolynomial discarded;
+    if (!reduceTrimIntegerPolynomial(polynomial, discarded) || polynomial.size() < 3) return {};
+
+    return polynomial;
+}
+
+static bool nonnegativeWithTrimFactor(TrimIntegerPolynomial polynomial, const TrimIntegerPolynomial &factor) {
+    TrimIntegerPolynomial square(2 * factor.size() - 1), discarded;
+    for (std::size_t i = 0; i < factor.size(); ++i)
+        for (std::size_t j = 0; j < factor.size(); ++j)
+            square[i + j] += factor[i] * factor[j];
+    if (!reduceTrimIntegerPolynomial(square, discarded) || square.size() > polynomial.size()) return false;
+    TrimIntegerPolynomial quotient(polynomial.size() - square.size() + 1);
+    if (!pseudoDivideTrimPolynomial(polynomial, square, quotient) || !polynomial.empty()) return false;
+    if (std::all_of(quotient.begin(), quotient.end(), [](auto value) { return value >= 0; })) return true;
+    return quotient.size() == 3 &&
+           quadraticTrimNonnegative(double(quotient[0]), double(quotient[1]), double(quotient[2]));
+}
+
+// The GCD with the derivative can recover rational and irrational
+// contacts without calculating the contact parameter.
+static bool nonnegativeWithRepeatedTrimFactor(const TrimIntegerPolynomial &polynomial) {
+    TrimIntegerPolynomial discarded;
+    auto factor = polynomial;
+    TrimIntegerPolynomial derivative;
+    for (std::size_t i = 1; i < polynomial.size(); ++i)
+        derivative.push_back(std::int64_t(i) * polynomial[i]);
+    if (!reduceTrimIntegerPolynomial(derivative, discarded)) return false;
+    while (derivative.size() > 1) {
+        if (!pseudoDivideTrimPolynomial(factor, derivative, discarded)) return false;
+        factor.swap(derivative);
+    }
+    return derivative.empty() && factor.size() >= 2 && factor.size() <= 4 &&
+           nonnegativeWithTrimFactor(polynomial, factor);
+}
+
+// The Euclidean remainders can exceed the integer cap on sextics.
+// Continued fractions of stationary points propose rational factors,
+// which still require exact division and a certified quotient sign.
+static bool nonnegativeWithRationalTrimFactor(const TrimIntegerPolynomial &polynomial) {
+    std::vector<double> bernstein;
+    const int degree = int(polynomial.size()) - 1;
+    for (int i = 0; i <= degree; ++i)
+        bernstein.push_back(double(polynomial[i]) / surface_bounds::choose(degree, i));
+    const auto stationary = BernsteinPolynomial(std::move(bernstein)).derivative().roots();
+    // For q at this cap the coefficients of (q-p)*z-p squared still
+    // fit the arithmetic used by the exact division.
+    constexpr std::int64_t denominatorLimit = std::int64_t(1) << 15;
+    for (double t : stationary) {
+        if (!(t > 0. && t < 1.)) continue;
+        std::array<std::int64_t, 2> previous{0, 1}, current{1, 0};
+        for (double rest = t; std::isfinite(rest);) {
+            const double integerPart = std::floor(rest);
+            if (integerPart > double(denominatorLimit)) break;
+            const auto digit = std::int64_t(integerPart);
+            const auto p = digit * current[0] + previous[0];
+            const auto q = digit * current[1] + previous[1];
+            if (q > denominatorLimit) break;
+            if (p > 0 && p < q && std::abs(t - double(p) / double(q)) <= 1e-11) {
+                // t = p/q corresponds to z = p/(q-p).
+                if (nonnegativeWithTrimFactor(polynomial, {-p, q - p})) return true;
+                break;
+            }
+            const double fraction = rest - integerPart;
+            if (fraction == 0.) break;
+            previous = current;
+            current = {p, q};
+            rest = 1. / fraction;
+        }
+    }
+    return false;
+}
+
+constexpr std::int64_t trimFactorPrime = 1000003;
+
+static std::int64_t trimFactorResidue(std::int64_t value) {
+    value %= trimFactorPrime;
+    return value < 0 ? value + trimFactorPrime : value;
+}
+
+static std::int64_t trimFactorInverse(std::int64_t value) {
+    std::int64_t inverse = 1;
+    for (std::int64_t power = trimFactorPrime - 2; power > 0; power /= 2) {
+        if (power % 2) inverse = trimFactorResidue(inverse * value);
+        value = trimFactorResidue(value * value);
+    }
+    return inverse;
+}
+
+static std::optional<std::array<std::int64_t, 2>> reconstructTrimRatio(std::int64_t residue) {
+    // 2 * limit^2 < prime keeps the reconstructed ratio unique.
+    constexpr std::int64_t limit = 707;
+    std::int64_t r0 = trimFactorPrime, r1 = residue, d0 = 0, d1 = 1;
+    while (r1 > limit) {
+        const auto quotient = r0 / r1;
+        r0 = std::exchange(r1, r0 - quotient * r1);
+        d0 = std::exchange(d1, d0 - quotient * d1);
+    }
+    if (d1 == 0 || std::abs(d1) > limit) return {};
+    return std::array<std::int64_t, 2>{d1 < 0 ? -r1 : r1, std::abs(d1)};
+}
+
+// For degree eight the integer Euclidean remainders often outgrow
+// the cap. A modular GCD can propose a small linear or quadratic
+// factor. Exact division and the quotient sign remain mandatory.
+static bool nonnegativeWithModularTrimFactor(const TrimIntegerPolynomial &polynomial) {
+    auto factor = polynomial;
+    for (auto &coefficient : factor) coefficient = trimFactorResidue(coefficient);
+    if (factor.back() == 0) return false;
+    TrimIntegerPolynomial derivative;
+    for (std::size_t i = 1; i < factor.size(); ++i)
+        derivative.push_back(trimFactorResidue(std::int64_t(i) * factor[i]));
+    while (derivative.size() > 1) {
+        const auto inverse = trimFactorInverse(derivative.back());
+        while (factor.size() >= derivative.size()) {
+            const auto shift = factor.size() - derivative.size();
+            const auto scale = trimFactorResidue(factor.back() * inverse);
+            for (std::size_t i = 0; i < derivative.size(); ++i)
+                factor[i + shift] = trimFactorResidue(factor[i + shift] - scale * derivative[i]);
+            while (!factor.empty() && factor.back() == 0) factor.pop_back();
+        }
+        factor.swap(derivative);
+    }
+    if (!derivative.empty() || factor.size() < 2 || factor.size() > 3) return false;
+    const auto inverse = trimFactorInverse(factor.back());
+    std::array<std::array<std::int64_t, 2>, 2> ratios{};
+    std::int64_t denominator = 1;
+    for (std::size_t i = 0; i + 1 < factor.size(); ++i) {
+        const auto ratio = reconstructTrimRatio(trimFactorResidue(factor[i] * inverse));
+        if (!ratio) return false;
+        ratios[i] = *ratio;
+        denominator = std::lcm(denominator, (*ratio)[1]);
+    }
+    for (std::size_t i = 0; i + 1 < factor.size(); ++i)
+        factor[i] = ratios[i][0] * (denominator / ratios[i][1]);
+    factor.back() = denominator;
+    return nonnegativeWithTrimFactor(polynomial, factor);
+}
+
+static bool repeatedTrimContactNonnegative(const TrimPolynomial &coefficients, std::size_t &work) {
+    constexpr std::array<std::size_t, 3> costs{128, 320, 512};
+    const auto cost = costs[(coefficients.size() - 5) / 2];
+    if (work < cost) return false;
+    work -= cost;
+    const auto polynomial = trimIntegerLowerPolynomial(coefficients);
+    return polynomial &&
+           ((coefficients.size() == 7 && nonnegativeWithRationalTrimFactor(*polynomial)) ||
+            (coefficients.size() == 9 && nonnegativeWithModularTrimFactor(*polynomial)) ||
+            nonnegativeWithRepeatedTrimFactor(*polynomial));
+}
+
+static bool trimBezierOutsideDisk(const TrimBezier &poles, const TrimDisk &disk, bool testRepeatedFactor, std::size_t &work) {
+    const auto count = poles.size();
+    const auto cost = 3 * count * count;
+    if (count > 9 || work < cost) return false;
+    work -= cost;
+    TrimPolynomial x(count), y(count), radius(count);
+    for (std::size_t i = 0; i < count; ++i) {
+        const auto &pole = poles[i];
+        const I factor(surface_bounds::choose(int(count - 1), int(i)));
+        x[i] = trimProductBound(factor, trimDifferenceBound(pole[0], trimProductBound(I(disk.center.x()), pole[2])));
+        y[i] = trimProductBound(factor, trimDifferenceBound(pole[1], trimProductBound(I(disk.center.y()), pole[2])));
+        radius[i] = trimProductBound(factor, trimProductBound(I(disk.radius), pole[2]));
+    }
+    const auto xx = trimPolynomialProduct(x, x), yy = trimPolynomialProduct(y, y);
+    const auto rr = trimPolynomialProduct(radius, radius);
+    TrimPolynomial distance(xx.size());
+    for (std::size_t i = 0; i < distance.size(); ++i) {
+        distance[i] = trimDifferenceBound(trimSumBound(xx[i], yy[i]), rr[i]);
+        if (!surface_bounds::finite(distance[i])) return false;
+    }
+    if (std::all_of(distance.begin(), distance.end(), [](I c) { return c.lo >= 0.; })) return true;
+    if (distance.size() == 3)
+        return quadraticTrimNonnegative(distance[0].lo, distance[1].lo, distance[2].lo);
+    return testRepeatedFactor && distance.size() >= 5 && distance.size() <= 9 &&
+           repeatedTrimContactNonnegative(distance, work);
+}
+
+// A rational Bézier stays in the closed exterior half-plane if all the
+// homogeneous side numerators are nonpositive and the weights are positive.
+static bool trimBezierOutsideInterior(const TrimBezier &poles, const TrimEnclosureSide &side) {
+    return std::all_of(poles.begin(), poles.end(), [&](const auto &pole) {
+        const I numerator = trimDifferenceBound(enclosureSideValue(side.first, side.last, pole),
+                                               trimProductBound(I(side.minimum), pole[2]));
+        return surface_bounds::finite(numerator) && numerator.hi <= 0.;
+    });
+}
+
+constexpr unsigned trimSeparationDepth = 16;
+
 static bool trimBezierOutsideSource(const TrimBezier &poles, const ResidualTrimSource &source,
-                                    unsigned depth, std::size_t &work) {
+                                    bool allowContact, unsigned depth, std::size_t &work) {
     cancellationPoint();
     const auto cost = poles.size() + source.sides.size();
     if (work < cost) return false;
@@ -1759,12 +2268,78 @@ static bool trimBezierOutsideSource(const TrimBezier &poles, const ResidualTrimS
         box.add(Vec2(x.hi, y.hi));
     }
     if (residualBoxOutsideSource(box, source)) return true;
+    if (allowContact && source.disk &&
+        trimBezierOutsideDisk(poles, *source.disk, depth == trimSeparationDepth, work)) return true;
+    if (allowContact) for (const auto &side : source.sides) {
+        if (work < poles.size()) return false;
+        work -= poles.size();
+        if (trimBezierOutsideInterior(poles, side)) return true;
+    }
     const auto splitCost = poles.size() * poles.size();
     if (depth == 0 || work < splitCost) return false;
     work -= splitCost;
     const auto [left, right] = splitTrimBezier(poles);
-    return trimBezierOutsideSource(left, source, depth - 1, work) &&
-           trimBezierOutsideSource(right, source, depth - 1, work);
+    return trimBezierOutsideSource(left, source, allowContact, depth - 1, work) &&
+           trimBezierOutsideSource(right, source, allowContact, depth - 1, work);
+}
+
+static bool residualWindingCovers(const ResidualTrimSource &source, const std::vector<Vec2> &vertices,
+                                  bool enclosed, const std::vector<std::vector<TrimBezier>> &boundaries,
+                                  std::size_t &work) {
+    Vec2 witness;
+    bool allowContact = source.disk.has_value();
+    if (source.disk) {
+        witness = source.disk->center;
+    } else {
+        for (const auto &point : vertices)
+            witness += point / double(vertices.size());
+        allowContact = !source.sides.empty() && std::all_of(source.sides.begin(), source.sides.end(), [&](const auto &side) {
+            return enclosureSideValue(side.first, side.last, {I(witness.x()), I(witness.y()), I(1.)}).lo > side.minimum;
+        });
+        if (!allowContact) {
+            if (enclosed) return false;
+            witness = vertices.front();
+        }
+    }
+    // The closed disk or intersection of source half-planes has a
+    // connected interior. Prove its winding constant, then take the
+    // closure to include points of tangency.
+    return std::any_of(boundaries.begin(), boundaries.end(), [&](const auto &boundary) {
+        return certifiedTrimWinding(boundary, witness, Vec2(), work).value_or(0) > 0 &&
+            std::all_of(boundary.begin(), boundary.end(), [&](const auto &piece) {
+                return trimBezierOutsideSource(piece, source, allowContact, trimSeparationDepth, work);
+            });
+    });
+}
+
+static std::vector<Vec2> subdividedSourceHull(const std::vector<TrimBezier> &boundary, std::size_t &work) {
+    std::vector<Vec2> corners;
+    const auto append = [&](const TrimBezier &poles) {
+        for (const auto &pole : poles) {
+            const I x = trimQuotientBound(pole[0], pole[2]), y = trimQuotientBound(pole[1], pole[2]);
+            if (!surface_bounds::finite(x) || !surface_bounds::finite(y)) return false;
+            corners.emplace_back(x.lo, y.lo);
+            if (x.lo != x.hi) corners.emplace_back(x.hi, y.lo);
+            if (y.lo != y.hi) {
+                corners.emplace_back(x.lo, y.hi);
+                if (x.lo != x.hi) corners.emplace_back(x.hi, y.hi);
+            }
+        }
+        return true;
+    };
+    for (const auto &piece : boundary) {
+        cancellationPoint();
+        const auto cost = piece.size() * (piece.size() + 8);
+        if (cost > work) return {};
+        work -= cost;
+        if (piece.size() <= 2) {
+            if (!append(piece)) return {};
+        } else {
+            const auto [left, right] = splitTrimBezier(piece);
+            if (!append(left) || !append(right)) return {};
+        }
+    }
+    return corners;
 }
 
 static bool residualTrimCoversSource(const ConvexTrim &trim, bool enclosed,
@@ -1782,15 +2357,12 @@ static bool residualTrimCoversSource(const ConvexTrim &trim, bool enclosed,
     constexpr unsigned maxDepth = 6;
     if (residualTrimCovers(box, source, boundaries, maxDepth, work)) return true;
     if (!work) return false;
-    if (!enclosed) {
-        const Vec2 witness = trim.disk ? trim.disk->center : trim.vertices.front();
-        return std::any_of(boundaries.begin(), boundaries.end(), [&](const auto &boundary) {
-            return certifiedTrimWinding(boundary, witness, Vec2(), work).value_or(0) > 0 &&
-                std::all_of(boundary.begin(), boundary.end(), [&](const auto &piece) {
-                    return trimBezierOutsideSource(piece, source, 16, work);
-                });
-        });
-    }
+    if (!enclosed) return residualWindingCovers(source, trim.vertices, false, boundaries, work);
+    const auto enclosureAllowance = work / 4;
+    auto enclosureWork = enclosureAllowance;
+    const bool covered = residualWindingCovers(source, trim.vertices, true, boundaries, enclosureWork);
+    work -= enclosureAllowance - enclosureWork;
+    if (covered) return true;
 
     // The first pass uses the inexpensive enclosure. Reuse the remaining
     // winding budget for a retry with the actual spline outer boundary.
@@ -1803,7 +2375,17 @@ static bool residualTrimCoversSource(const ConvexTrim &trim, bool enclosed,
     work -= allowance - extractionWork;
     if (!extracted) return false;
     source.outerBoundary = prepareTrimWindingBoundary(spans, work);
-    return !source.outerBoundary.empty() && residualTrimCovers(box, source, boundaries, maxDepth, work);
+    if (source.outerBoundary.empty()) return false;
+    // Subdivision can expose the supporting line through an exact contact
+    // even when the original control hull extends through that line.
+    const auto subdivisionAllowance = work / 3;
+    auto subdivisionWork = subdivisionAllowance;
+    const auto poles = subdividedSourceHull(source.outerBoundary, subdivisionWork);
+    const ResidualTrimSource refined{{}, trimPoleEnclosure(poles, subdivisionWork), {}};
+    const bool refinedCoverage = !refined.sides.empty() &&
+        residualWindingCovers(refined, poles, true, boundaries, subdivisionWork);
+    work -= subdivisionAllowance - subdivisionWork;
+    return refinedCoverage || residualTrimCovers(box, source, boundaries, maxDepth, work);
 }
 
 struct SplineTrimOpening {

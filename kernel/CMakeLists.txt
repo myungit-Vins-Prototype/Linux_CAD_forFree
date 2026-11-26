@@ -242,7 +242,7 @@ target_compile_options(forgekernel PUBLIC
 # I validatori usano intervalli outward: niente riassociazioni o assunzioni
 # di finitezza implicite, anche se una configurazione esterna abilita fast-math.
 set_source_files_properties(fk_mass.cpp fk_profile.cpp fk_curve_algo.cpp fk_loft.cpp fk_sweep_surface_validation.cpp fk_sweep_caps.cpp
-    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_helix_projection.cpp fk_project.cpp fk_mapping_carrier.cpp fk_surface_mapping.cpp fk_sheet.cpp fk_blend_mitre.cpp fk_blend_surface.cpp fk_blend_section_curve.cpp fk_affine_surface_fit.cpp fk_surface_curve_bounds.cpp fk_surface_mapping_bounds.cpp fk_mapping_trim_witness.cpp fk_offset_support.cpp fk_sheet_join_validation.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS
+    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_helix_projection.cpp fk_project.cpp fk_mapping_carrier.cpp fk_surface_mapping.cpp fk_sheet.cpp fk_blend_mitre.cpp fk_blend_surface.cpp fk_blend_section_curve.cpp fk_affine_surface_fit.cpp fk_surface_curve_bounds.cpp fk_surface_mapping_bounds.cpp fk_mapping_trim_witness.cpp fk_open_offset.cpp fk_offset_support.cpp fk_sheet_join_validation.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS
     "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
 set_target_properties(forgekernel PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 

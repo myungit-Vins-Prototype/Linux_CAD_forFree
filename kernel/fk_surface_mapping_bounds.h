@@ -32,6 +32,15 @@ struct SurfaceMappingBoundResult {
 SurfaceMappingBoundResult planarMappingResidualBound(
     const Surface &source, const Surface &target, const SurfaceWrapOptions &options,
     double scaleU, double scaleV, const Surface &image, Interval u, Interval v, double budget);
+// Continuous signed normal-offset residual along one UV trace. Native
+// polynomial B-splines up to bicubic on the source, native polynomial
+// bicubic image, and a line or UV spline of degree at most 3 with positive
+// weights. Rational traces retain their homogeneous denominator.
+// Positive-width knot spans, bounded work and all applicable closed cells.
+// Both surfaces are composed with the same trace parameter.
+SurfaceMappingBoundResult offsetTraceResidualBound(
+    const Surface &source, const Surface &image, const Curve<2> &pcurve,
+    Interval range, double distance, double budget);
 // Continuous residual where contact exists on the selected spline graphs.
 // Recognizes affine charts and regular nonlinear charts whose footprints
 // have disjoint interiors or coincident contacts. Clamped rational charts

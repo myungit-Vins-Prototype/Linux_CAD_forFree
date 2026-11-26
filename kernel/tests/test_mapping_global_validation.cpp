@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <array>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -708,7 +709,7 @@ FK_TEST(MappingGlobalQuarticCoincidentProjectedOverlap) {
 namespace {
 constexpr double quinticShear = .125, quinticHeightScale = 1. / 262144.;
 
-Body quinticOverlapPanel(double lo, double hi, double uScale, bool split, double peak = 0.) {
+Body quinticOverlapPanel(double lo, double hi, double uScale, bool split, double peak = 0., bool sextic = false) {
     const std::vector<double> ku{lo, lo, lo, hi, hi, hi};
     const std::vector<double> kv = split
         ? std::vector<double>{-2., -2., -2., 0., 2., 2., 2.}
@@ -721,15 +722,17 @@ Body quinticOverlapPanel(double lo, double hi, double uScale, bool split, double
         // Native height is (uScale*u)² v. Undoing the projected
         // quadratic shear yields the physical quintic (x-a*y²)² y.
         poles.emplace_back(.5 * (a + b) + quinticShear * c * d, v,
-                           quinticHeightScale * a * b * v + (j == nv - 1 ? peak : 0.));
+                           quinticHeightScale * a * b * (sextic ? c * d : v) + (j == nv - 1 ? peak : 0.));
     }
     return rectangularSplinePatch(std::make_shared<BSplineSurface>(2, 2, ku, kv, 3, nv, poles));
 }
 }
 
-FK_TEST(MappingGlobalQuinticCoincidentProjectedOverlap) {
+namespace {
+void checkShearedHeightOverlap(bool sextic) {
     const auto source = makePlaneSheet(Frame3(), 1.);
-    const auto left = quinticOverlapPanel(-2., 2., 1.5, false, 0.), right = quinticOverlapPanel(-.5, 3.5, 1., true, 0.);
+    const auto left = quinticOverlapPanel(-2., 2., 1.5, false, 0., sextic);
+    const auto right = quinticOverlapPanel(-.5, 3.5, 1., true, 0., sextic);
     FK_CHECK(checkBody(left, {true, true}).empty() && checkBody(right, {true, true}).empty());
     const std::vector<SurfaceTargetFace> targets{{&left, left.faces().front()}, {&right, right.faces().front()}};
     const auto options = wrapOptions();
@@ -748,11 +751,20 @@ FK_TEST(MappingGlobalQuinticCoincidentProjectedOverlap) {
     FK_CHECK(proof.upperBound <= deviation);
     for (double u : {-.75, 0., .75}) for (double v : {-.75, 0., .75}) {
         const double native = u - quinticShear * v * v;
-        FK_CHECK(distance(image.point(u, v), Vec3(u, v, quinticHeightScale * native * native * v)) <= deviation + 1e-12);
+        FK_CHECK(distance(image.point(u, v), Vec3(u, v, quinticHeightScale * native * native * (sextic ? v * v : v))) <= deviation + 1e-12);
     }
-    const auto conflict = quinticOverlapPanel(-.5, 3.5, 1., true, 0x1p-40);
+    const auto conflict = quinticOverlapPanel(-.5, 3.5, 1., true, 0x1p-40, sextic);
     const std::vector<SurfaceTargetFace> conflicting{{&left, left.faces().front()}, {&conflict, conflict.faces().front()}};
     FK_CHECK(prove(conflicting).status == detail::SurfaceMappingBoundStatus::Unsupported);
+}
+}
+
+FK_TEST(MappingGlobalQuinticCoincidentProjectedOverlap) {
+    checkShearedHeightOverlap(false);
+}
+
+FK_TEST(MappingGlobalSexticCoincidentProjectedOverlap) {
+    checkShearedHeightOverlap(true);
 }
 
 FK_TEST(MappingGlobalRationalHeightCoincidentProjectedOverlap) {
@@ -815,16 +827,17 @@ FK_TEST(MappingGlobalRationalHeightCoincidentProjectedOverlap) {
 }
 
 namespace {
-void checkRationalDenominatorCoincidentProjectedOverlap(bool cubicNumerator) {
+void checkRationalDenominatorCoincidentProjectedOverlap(int numeratorDegree) {
     constexpr double yRadius = 105. / 128.;
     constexpr double heightScale = 21. / 67108864.;
     constexpr double radius = .625;
-    const auto panel = [cubicNumerator](double xRadius, double q, bool split, double peak) {
+    const auto panel = [numeratorDegree, yRadius](double xRadius, double q, bool split, double peak) {
         const std::vector<double> ku{-xRadius, -xRadius, -xRadius, xRadius, xRadius, xRadius};
-        const std::vector<double> kv = split
-            ? std::vector<double>{-yRadius, -yRadius, -yRadius, 0., yRadius, yRadius, yRadius}
-            : std::vector<double>{-yRadius, -yRadius, -yRadius, yRadius, yRadius, yRadius};
-        const int nv = split ? 4 : 3;
+        std::vector<double> kv(3, -yRadius);
+        if (split) kv.push_back(0.);
+        else if (numeratorDegree == 4) kv.insert(kv.end(), 2, 0.);
+        kv.insert(kv.end(), 3, yRadius);
+        const int nv = int(kv.size()) - 3;
         const std::array<double, 3> x{-xRadius, -xRadius * xRadius / 4., xRadius};
         const std::array<double, 3> dx{4. - xRadius, 4., 4. + xRadius};
         const std::array<double, 3> wx{dx[0], q * dx[1], q * q * dx[2]};
@@ -839,7 +852,8 @@ void checkRationalDenominatorCoincidentProjectedOverlap(bool cubicNumerator) {
             // the physical denominator, and q changes the U projection.
             // For the cubic numerator Xh has the cross coefficient
             // of X times the degree-elevated linear Möbius weight.
-            const double numeratorX = cubicNumerator ? (i == 1 ? 0. : x[i]) : 1.;
+            const double numeratorX = numeratorDegree == 4 ? (i == 1 ? -1. : 1.) * xRadius * xRadius
+                : numeratorDegree == 3 ? (i == 1 ? 0. : x[i]) : 1.;
             const double z = (heightScale / dx[i]) * numeratorX * (a * b) / wy;
             poles.emplace_back(x[i], y, z + (j == nv - 1 ? peak : 0.));
             weights.push_back(wx[i] * wy);
@@ -873,8 +887,8 @@ void checkRationalDenominatorCoincidentProjectedOverlap(bool cubicNumerator) {
     // anchor is therefore x=-1 and the denominator has a nonzero XY term.
     for (double u : {-.5, 0., .5}) for (double v : {-.5, 0., .5}) {
         const double x = u - 1., y = v / yRadius;
-        const double height = heightScale * (cubicNumerator ? x : 1.) * y * y /
-            ((x + 4.) * (1.5 + .5 * y));
+        const double numeratorX = numeratorDegree == 4 ? x * x : numeratorDegree == 3 ? x : 1.;
+        const double height = heightScale * numeratorX * y * y / ((x + 4.) * (1.5 + .5 * y));
         FK_CHECK(distance(image.point(u, v), Vec3(x, v, height)) <= deviation + 1e-12);
     }
     const auto conflict = panel(2., .5, true, 0x1p-40);
@@ -887,11 +901,65 @@ void checkRationalDenominatorCoincidentProjectedOverlap(bool cubicNumerator) {
 }
 
 FK_TEST(MappingGlobalQuadraticDenominatorCoincidentProjectedOverlap) {
-    checkRationalDenominatorCoincidentProjectedOverlap(false);
+    checkRationalDenominatorCoincidentProjectedOverlap(2);
 }
 
 FK_TEST(MappingGlobalCubicNumeratorCoincidentProjectedOverlap) {
-    checkRationalDenominatorCoincidentProjectedOverlap(true);
+    checkRationalDenominatorCoincidentProjectedOverlap(3);
+}
+
+FK_TEST(MappingGlobalQuarticNumeratorCoincidentProjectedOverlap) {
+    checkRationalDenominatorCoincidentProjectedOverlap(4);
+}
+
+FK_TEST(MappingGlobalCubicDenominatorCoincidentProjectedOverlap) {
+    constexpr double yRadius = 33. / 32.;
+    constexpr double heightScale = 16632. / 68719476736.;
+    constexpr double radius = .625;
+    const auto panel = [](double xRadius, double peak) {
+        const std::vector<double> ku{-xRadius, -xRadius, -xRadius, xRadius, xRadius, xRadius};
+        const std::vector<double> kv{-yRadius, -yRadius, -yRadius, -yRadius, yRadius, yRadius, yRadius, yRadius};
+        const std::array<double, 3> x{-xRadius, -xRadius * xRadius / 4., xRadius};
+        const std::array<double, 3> dx{4. - xRadius, 4., 4. + xRadius};
+        const std::array<double, 3> wx{dx[0], .5 * dx[1], .25 * dx[2]};
+        // V is physically affine. Its cubic homogeneous weight represents
+        // 3*(1+t)*(1+2*t), with t the unit parameter in V.
+        const std::array<double, 4> y{-yRadius, -22. / 32., -3. / 32., yRadius};
+        const std::array<double, 4> wy{3., 6., 11., 18.}, numerator{3., -1., -1., 3.};
+        std::vector<Vec3> poles;
+        std::vector<double> weights;
+        for (std::size_t i = 0; i < x.size(); ++i) for (std::size_t j = 0; j < y.size(); ++j) {
+            poles.emplace_back(x[i], y[j], (heightScale / dx[i]) * numerator[j] / wy[j] + (j == 3 ? peak : 0.));
+            weights.push_back(wx[i] * wy[j]);
+        }
+        return rectangularSplinePatch(std::make_shared<BSplineSurface>(2, 3, ku, kv, 3, 4, poles, weights));
+    };
+    const auto left = panel(3., 0.), right = panel(2., 0.);
+    const auto source = makePlaneSheet(Frame3(), radius);
+    FK_CHECK(checkBody(left, {true, true}).empty() && checkBody(right, {true, true}).empty());
+    const std::vector<SurfaceTargetFace> targets{{&left, left.faces().front()}, {&right, right.faces().front()}};
+    const auto options = wrapOptions();
+    double deviation = -1.;
+    const auto result = wrapBodyOnFaces(source, targets, options, nullptr, &deviation);
+    FK_CHECK(result.isSheet() && result.faces().size() == 1 && checkBody(result, {true, true}).empty());
+    if (result.faces().size() != 1) return;
+    const auto &image = *result.face(result.faces().front()).surface;
+    const double budget = .2 * std::min(options.tolerance, linearResolution());
+    const auto prove = [&](const std::vector<SurfaceTargetFace> &patches) {
+        return detail::projectedMappingResidualBound(source, source.faces().front(), patches, options,
+            Frame3({-1., 0., 0.}, {0., 0., 1.}, {1., 0., 0.}), image, {-radius, radius}, {-radius, radius}, budget);
+    };
+    const auto proof = prove(targets);
+    FK_CHECK(proof.status == detail::SurfaceMappingBoundStatus::Certified && proof.upperBound <= budget);
+    FK_CHECK(proof.upperBound <= deviation);
+    for (double u : {-.5, 0., .5}) for (double v : {-.5, 0., .5}) {
+        const double x = u - 1., y = v / yRadius, t = .5 * (1. + y);
+        const double height = heightScale * y * y / ((x + 4.) * (1. + t) * (1. + 2. * t));
+        FK_CHECK(distance(image.point(u, v), Vec3(x, v, height)) <= deviation + 1e-12);
+    }
+    const auto conflict = panel(2., 0x1p-40);
+    FK_CHECK(prove({targets.front(), {&conflict, conflict.faces().front()}}).status ==
+        detail::SurfaceMappingBoundStatus::Unsupported);
 }
 
 FK_TEST(MappingGlobalRationalStripBoundaryOrder) {
@@ -1537,24 +1605,26 @@ FK_TEST(MappingGlobalCubicAndSteepInclinedSource) {
 }
 
 namespace {
-void checkForwardSourceOnRationalCharts(int supportDegree, bool joined = false) {
-    const bool squareX = joined || supportDegree == 4, squareY = supportDegree >= 3;
-    const auto panel = [&](double lo, double hi, bool rational, double curvature, double level = 0., double slope = 0.) {
+void checkForwardSourceOnRationalCharts(int supportDegree, bool joined = false, bool splitJoin = false) {
+    const bool squareX = joined || supportDegree == 4, squareY = supportDegree == 4 || (!joined && supportDegree == 3);
+    const bool constantTransverse = joined && supportDegree == 2;
+    const auto panel = [&](double lo, double hi, bool rational, double curvature, double level = 0., double slope = 0.,
+                           double vLo = -5., double vHi = 5.) {
         const int pu = squareX ? 2 : 1, pv = squareY ? 2 : 1;
-        const std::array<double, 3> x{lo, .5 * (lo + hi), hi}, y{-5., 0., 5.};
-        const std::array<double, 3> xx{lo * lo, lo * hi, hi * hi}, yy{25., -25., 25.};
+        const std::array<double, 3> x{lo, .5 * (lo + hi), hi}, y{vLo, .5 * (vLo + vHi), vHi};
+        const std::array<double, 3> xx{lo * lo, lo * hi, hi * hi}, yy{vLo * vLo, vLo * vHi, vHi * vHi};
         const std::array<double, 3> weight{1., 2., 4.};
         std::vector<Vec3> poles;
         std::vector<double> weights;
         for (int i = 0; i <= pu; ++i) for (int j = 0; j <= pv; ++j) {
             const double px = x[squareX ? i : 2 * i], py = y[squareY ? j : 2 * j];
-            const double transverse = squareY ? yy[j] : joined ? 1. : py;
+            const double transverse = squareY ? yy[j] : constantTransverse ? 1. : py;
             poles.emplace_back(px, py, level + slope * px + curvature * (squareX ? xx[i] : px) * transverse);
             if (rational) weights.push_back(squareX ? weight[i] : (i == 0 ? 1.25 : 1.));
         }
-        std::vector<double> ku(pu + 1, lo), kv(pv + 1, -5.);
+        std::vector<double> ku(pu + 1, lo), kv(pv + 1, vLo);
         ku.insert(ku.end(), pu + 1, hi);
-        kv.insert(kv.end(), pv + 1, 5.);
+        kv.insert(kv.end(), pv + 1, vHi);
         return rectangularSplinePatch(std::make_shared<BSplineSurface>(pu, pv, ku, kv, pu + 1, pv + 1, poles, weights));
     };
     auto options = wrapOptions();
@@ -1591,8 +1661,11 @@ void checkForwardSourceOnRationalCharts(int supportDegree, bool joined = false) 
             ? (quartic ? 1. / 131072. : 1. / 8388608.)
             : (quartic ? 1. / 1048576. : 1. / 134217728.);
         const double leftCurvature = joined ? .5 * curvature : curvature;
-        const auto left = panel(-5., 0., false, leftCurvature), right = panel(0., 5., true, curvature);
-        const std::vector<SurfaceTargetFace> targets{{&left,left.faces().front()}, {&right,right.faces().front()}};
+        const auto left = panel(-5., 0., false, leftCurvature);
+        const auto right = panel(0., 5., true, curvature, 0., 0., -5., splitJoin ? 0. : 5.);
+        const auto upper = splitJoin ? std::optional<Body>(panel(0., 5., true, curvature, 0., 0., 0., 5.)) : std::nullopt;
+        std::vector<SurfaceTargetFace> targets{{&left,left.faces().front()}, {&right,right.faces().front()}};
+        if (upper) targets.push_back({&*upper, upper->faces().front()});
         const auto &target = *right.face(right.faces().front()).surface;
         FK_CHECK(std::abs(target.point(2.5, 0.).x() - 2.5) > .1);
         if (supportDegree != 0) FK_CHECK(std::abs(target.point(2.5, 3.).z()) > budget);
@@ -1603,9 +1676,9 @@ void checkForwardSourceOnRationalCharts(int supportDegree, bool joined = false) 
             const auto p = frame.toLocal(Vec3(u, v, h));
             const double x = p.x(), y = p.y();
             const double k = x < 0. ? leftCurvature : curvature;
-            const double gx = squareX ? x * x : x, gy = squareY ? y * y : joined ? 1. : y;
+            const double gx = squareX ? x * x : x, gy = squareY ? y * y : constantTransverse ? 1. : y;
             const auto normal = normalized(Vec3(-k * (squareX ? 2. * x : 1.) * gy,
-                -k * gx * (squareY ? 2. * y : joined ? 0. : 1.), 1.));
+                -k * gx * (squareY ? 2. * y : constantTransverse ? 0. : 1.), 1.));
             return Vec3(x, y, k * gx * gy) + (p.z() + options.normalOffset) * normal;
         };
         FK_CHECK(distance(wrongImage.point(1.25, .25), expected(1.25, .25)) > budget);
@@ -1631,11 +1704,12 @@ void checkForwardSourceOnRationalCharts(int supportDegree, bool joined = false) 
             FK_CHECK(rejected.status == detail::SurfaceMappingBoundStatus::Unsupported);
         }
         if (joined) {
-            const auto crease = panel(0., 5., true, curvature, 0., 1. / 1024.);
-            const auto gap = panel(.125, 5.125, true, curvature);
+            const auto crease = panel(0., 5., true, curvature, 0., 1. / 1024., -5., splitJoin ? 0. : 5.);
+            const auto gap = panel(.125, 5.125, true, curvature, 0., 0., -5., splitJoin ? 0. : 5.);
             for (const auto *invalid : {&crease, &gap}) {
-                const std::vector<SurfaceTargetFace> brokenJoin{{&left,left.faces().front()},
+                std::vector<SurfaceTargetFace> brokenJoin{{&left,left.faces().front()},
                     {invalid,invalid->faces().front()}};
+                if (upper) brokenJoin.push_back({&*upper, upper->faces().front()});
                 const auto rejected = detail::projectedMappingResidualBound(source, face, brokenJoin, options,
                     Frame3(), wrongImage, domain, domain, budget);
                 FK_CHECK(rejected.status == detail::SurfaceMappingBoundStatus::Unsupported);
@@ -1730,6 +1804,698 @@ FK_TEST(MappingGlobalForwardQuarticSourceOnQuinticCharts) {
     FK_CHECK(prove(wrong).status == detail::SurfaceMappingBoundStatus::Failed);
 }
 
+FK_TEST(MappingGlobalForwardQuinticSourceOnQuarticCharts) {
+    constexpr Interval domain{-1.25, 1.25};
+    constexpr double curvature = 1. / 8388608., relief = 1. / 33554432.;
+    constexpr double endHeight = relief * 3125. / 1024.;
+    std::vector<double> ku(6, domain.lo);
+    ku.insert(ku.end(), 6, domain.hi);
+    const std::vector<double> kv{domain.lo, domain.lo, domain.hi, domain.hi};
+    std::vector<Vec3> poles;
+    for (int i = 0; i <= 5; ++i) for (double v : {domain.lo, domain.hi})
+        poles.emplace_back(domain.lo + .5 * i, v, i % 2 ? endHeight : -endHeight);
+    const auto source = rectangularSplinePatch(std::make_shared<BSplineSurface>(5, 1, ku, kv, 6, 2, poles));
+    FK_CHECK(checkBody(source, {true, true}).empty());
+
+    const auto panel = [](double lo, double hi, bool rational) {
+        const std::array<double, 3> x{lo, .5 * (lo + hi), hi}, xx{lo * lo, lo * hi, hi * hi};
+        const std::array<double, 3> y{-4., 0., 4.}, yy{16., -16., 16.}, weight{1., 2., 4.};
+        std::vector<Vec3> points;
+        std::vector<double> weights;
+        for (int u = 0; u < 3; ++u) for (int v = 0; v < 3; ++v) {
+            points.emplace_back(x[u], y[v], curvature * xx[u] * yy[v]);
+            if (rational) weights.push_back(weight[u]);
+        }
+        return rectangularSplinePatch(std::make_shared<BSplineSurface>(2, 2,
+            std::vector<double>{lo, lo, lo, hi, hi, hi}, std::vector<double>{-4., -4., -4., 4., 4., 4.},
+            3, 3, points, weights));
+    };
+    const auto left = panel(-4., 0., false), right = panel(0., 4., true);
+    const std::vector<SurfaceTargetFace> targets{{&left, left.faces().front()}, {&right, right.faces().front()}};
+    auto options = wrapOptions();
+    options.sourcePlane = Frame3({}, {.125, -.125, 1.}, {1., 0., 0.});
+    const double budget = .2 * std::min(options.tolerance, linearResolution());
+    const auto expected = [&](double u, double v) {
+        const auto p = options.sourcePlane.toLocal(Vec3(u, v, relief * u * u * u * u * u));
+        const double x = p.x(), y = p.y();
+        const auto normal = normalized(Vec3(-2. * curvature * x * y * y, -2. * curvature * x * x * y, 1.));
+        return Vec3(x, y, curvature * x * x * y * y) + p.z() * normal;
+    };
+    double deviation = -1.;
+    const auto result = wrapBodyOnFaces(source, targets, options, nullptr, &deviation);
+    FK_CHECK(result.isSheet() && result.faces().size() == 1 && checkBody(result, {true, true}).empty());
+    if (result.faces().size() != 1) return;
+    const auto *image = dynamic_cast<const BSplineSurface *>(result.face(result.faces().front()).surface.get());
+    FK_CHECK(image && !image->isRational());
+    if (!image || image->isRational()) return;
+    const auto prove = [&](const Surface &carrier) {
+        return detail::projectedMappingResidualBound(source, source.faces().front(), targets, options,
+            Frame3(), carrier, domain, domain, budget);
+    };
+    const auto proof = prove(*image);
+    FK_CHECK(proof.status == detail::SurfaceMappingBoundStatus::Certified && proof.upperBound <= budget);
+    FK_CHECK(proof.upperBound <= deviation);
+    for (double u : {-.875, 0., .875}) for (double v : {-.875, 0., .875})
+        FK_CHECK(distance(image->point(u, v), expected(u, v)) <= deviation + 1e-12);
+
+    poles.clear();
+    for (int i = 0; i < image->uPoleCount(); ++i) for (int j = 0; j < image->vPoleCount(); ++j)
+        poles.push_back(image->pole(i, j) + Vec3(0., 0., 1. / 65536.));
+    const BSplineSurface wrong(image->uDegree(), image->vDegree(), image->uKnots(), image->vKnots(),
+                              image->uPoleCount(), image->vPoleCount(), poles);
+    FK_CHECK(prove(wrong).status == detail::SurfaceMappingBoundStatus::Failed);
+}
+
 FK_TEST(MappingGlobalForwardSourceOnJoinedQuadraticCharts) {
     checkForwardSourceOnRationalCharts(2, true);
+}
+
+FK_TEST(MappingGlobalForwardSourceOnJoinedCubicCharts) {
+    checkForwardSourceOnRationalCharts(3, true);
+}
+
+FK_TEST(MappingGlobalForwardSourceOnCubicTJunction) {
+    checkForwardSourceOnRationalCharts(3, true, true);
+}
+
+FK_TEST(MappingGlobalManyInactiveTargetSpans) {
+    const auto source = makePlaneSheet(Frame3(), 1.);
+    const auto options = wrapOptions();
+    const double budget = .2 * std::min(options.tolerance, linearResolution());
+
+    // X is monotone but not affine in U. Y=V and Z=0, so the projected
+    // surface is the plane exactly, regardless of the number of V knots.
+    const auto panel = [](double lo, double hi) {
+        const std::vector<double> u{lo, lo, lo, hi, hi, hi};
+        const std::vector<double> breaks = [] {
+            std::vector<double> values;
+            for (int y = -9000; y <= 2; ++y) values.push_back(double(y));
+            return values;
+        }();
+        std::vector<double> v{breaks.front()};
+        v.insert(v.end(), breaks.begin(), breaks.end());
+        v.push_back(breaks.back());
+        std::vector<Vec3> poles;
+        for (double x : {lo, .5 * (lo + hi) + .125, hi})
+            for (double y : breaks) poles.emplace_back(x, y, 0.);
+        return rectangularSplinePatch(
+            std::make_shared<BSplineSurface>(2, 1, u, v, 3, int(breaks.size()), std::move(poles)));
+    };
+    const auto left = panel(-2., 0.), right = panel(0., 2.);
+    std::vector<SurfaceTargetFace> targets{{&left, left.faces().front()}, {&right, right.faces().front()}};
+    const std::vector<double> knots{-1., -1., -1., -1., 1., 1., 1., 1.};
+    std::vector<Vec3> poles;
+    for (double u : {-1., -1. / 3., 1. / 3., 1.})
+        for (double v : {-1., -1. / 3., 1. / 3., 1.}) poles.emplace_back(u, v, 0.);
+    const BSplineSurface flat(3, 3, knots, knots, 4, 4, poles);
+    // Put the violating witness strictly inside a span and the source
+    // rectangle. Keep the flat proof exactly on knots at Y=±1.
+    auto raisedOptions = options;
+    raisedOptions.shift = {0., .25};
+    for (auto &pole : poles) {
+        pole[1] += raisedOptions.shift.y();
+        pole[2] = 2. * budget;
+    }
+    const BSplineSurface raised(3, 3, knots, knots, 4, 4, poles);
+    const auto proof = [&](const BSplineSurface &image, const SurfaceWrapOptions &wrap) {
+        return detail::projectedMappingResidualBound(source, source.faces().front(), targets,
+            wrap, Frame3(), image, {-1., 1.}, {-1., 1.}, budget);
+    };
+    for (int direction = 0; direction < 2; ++direction) {
+        const auto accepted = proof(flat, options);
+        FK_CHECK(accepted.status == detail::SurfaceMappingBoundStatus::Certified);
+        FK_CHECK(accepted.upperBound <= budget);
+        FK_CHECK(proof(raised, raisedOptions).status == detail::SurfaceMappingBoundStatus::Failed);
+        std::reverse(targets.begin(), targets.end());
+    }
+}
+
+FK_TEST(MappingGlobalCoplanarChartsWithManyActiveSpans) {
+    constexpr int spanCount = 64;
+    const auto panel = [](double lo, double hi) {
+        const std::vector<double> u{lo, lo, hi, hi};
+        std::vector<double> breaks{-1.25};
+        for (int i = 1; i < spanCount; ++i)
+            breaks.push_back(-1. + 2. * i / spanCount);
+        breaks.push_back(1.25);
+        std::vector<double> v{breaks.front()};
+        v.insert(v.end(), breaks.begin(), breaks.end());
+        v.push_back(breaks.back());
+        std::vector<Vec3> poles;
+        std::vector<double> weights;
+        for (double x : {lo, hi}) for (double y : breaks) {
+            poles.emplace_back(x, y, .375);
+            weights.push_back(x == lo ? 1. : 1.125);
+        }
+        return rectangularSplinePatch(std::make_shared<BSplineSurface>(1, 1, u, v, 2,
+            int(breaks.size()), std::move(poles), std::move(weights)));
+    };
+    const auto source = makePlaneSheet(Frame3(), 1.);
+    const auto left = panel(-1.25, 0.), right = panel(0., 1.25);
+    const std::vector<SurfaceTargetFace> targets{{&right, right.faces().front()}, {&left, left.faces().front()}};
+    auto options = wrapOptions();
+    const double budget = .2 * std::min(options.tolerance, linearResolution());
+    const std::vector<double> knots{-1., -1., -1., -1., 1., 1., 1., 1.};
+    for (double offset : {0., .25, -.25}) {
+        options.normalOffset = offset;
+        const auto image = [&](double deviation, double shift) {
+            std::vector<Vec3> poles;
+            for (double u : {-1., -1. / 3., 1. / 3., 1.})
+                for (double v : {-1., -1. / 3., 1. / 3., 1.})
+                    poles.emplace_back(u + shift, v, .375 + offset + deviation);
+            return BSplineSurface(3, 3, knots, knots, 4, 4, std::move(poles));
+        };
+        const auto proof = [&](const BSplineSurface &surface) {
+            return detail::projectedMappingResidualBound(source, source.faces().front(), targets,
+                options, Frame3(), surface, {-1., 1.}, {-1., 1.}, budget);
+        };
+        const auto flat = proof(image(0., 0.));
+        FK_CHECK(flat.status == detail::SurfaceMappingBoundStatus::Certified && flat.upperBound <= budget);
+        FK_CHECK(proof(image(2. * budget, 0.)).status == detail::SurfaceMappingBoundStatus::Failed);
+        double deviation = -1.;
+        const auto result = wrapBodyOnFaces(source, targets, options, nullptr, &deviation);
+        FK_CHECK(result.isSheet() && result.faces().size() == 1 && checkBody(result, {true, true}).empty());
+        if (result.faces().size() != 1) continue;
+        const auto *carrier = dynamic_cast<const BSplineSurface *>(result.face(result.faces().front()).surface.get());
+        FK_CHECK(carrier != nullptr);
+        if (!carrier) continue;
+        const auto certified = proof(*carrier);
+        FK_CHECK(certified.status == detail::SurfaceMappingBoundStatus::Certified && certified.upperBound <= deviation);
+        for (double u : {-.5, 0., .5})
+            FK_CHECK(distance(carrier->point(u, .25), Vec3(u, .25, .375 + offset)) <= budget);
+    }
+    // A flat support outside the source footprint cannot witness a contact.
+    options.normalOffset = 0.;
+    options.shift = {4., 0.};
+    const std::vector<Vec3> poles(16, Vec3(0., 0., .375));
+    const BSplineSurface outside(3, 3, knots, knots, 4, 4, poles);
+    const auto noContact = detail::projectedMappingResidualBound(source, source.faces().front(), targets,
+        options, Frame3(), outside, {-1., 1.}, {-1., 1.}, budget);
+    FK_CHECK(noContact.status == detail::SurfaceMappingBoundStatus::Unsupported);
+}
+
+FK_TEST(MappingGlobalDensePlanarImageControlNet) {
+    const auto source = makePlaneSheet(Frame3(), 1.5);
+    const auto left = rationalGraphPanel(-2., 0., 0., false);
+    auto options = wrapOptions();
+    constexpr double halfSide = 1.5;
+    const double budget = .2 * std::min(options.tolerance, linearResolution());
+    const auto knots = [halfSide](int spans) {
+        std::vector<double> result(3, -halfSide);
+        for (int i = 0; i <= spans; ++i) result.push_back(-halfSide + 2. * halfSide * i / spans);
+        result.insert(result.end(), 3, halfSide);
+        return result;
+    };
+    const auto u = knots(128), v = knots(64);
+    const int nu = int(u.size()) - 4, nv = int(v.size()) - 4;
+    const auto greville = [](const std::vector<double> &k, int i) {
+        return (k[i + 1] + k[i + 2] + k[i + 3]) / 3.;
+    };
+    // The outer footprints cover the source in both orientations.
+    // The zero warp has an exact affine XY projection even with unequal weights.
+    for (double warp : {0., .125}) {
+        const auto right = rationalGraphPanel(0., 2., 0., true, warp);
+        const std::vector<SurfaceTargetFace> targets{{&left, left.faces().front()}, {&right, right.faces().front()}};
+        for (double angle : {0., .125}) {
+            options.angle = angle;
+            options.normalOffset = angle == 0. ? -.25 : 0.;
+            const double c = std::cos(options.angle), s = std::sin(options.angle);
+            std::vector<Vec3> poles;
+            for (int i = 0; i < nu; ++i) for (int j = 0; j < nv; ++j) {
+                const double a = greville(u, i), b = greville(v, j);
+                poles.emplace_back(c * a - s * b, s * a + c * b, options.normalOffset);
+            }
+            const auto prove = [&](const BSplineSurface &image) {
+                return detail::projectedMappingResidualBound(source, source.faces().front(), targets,
+                    options, Frame3(), image, {-halfSide, halfSide}, {-halfSide, halfSide}, budget);
+            };
+            const auto proof = prove(BSplineSurface(3, 3, u, v, nu, nv, poles));
+            FK_CHECK(proof.status == detail::SurfaceMappingBoundStatus::Certified && proof.upperBound <= budget);
+            for (auto &p : poles) p[2] += 2. * budget;
+            FK_CHECK(prove(BSplineSurface(3, 3, u, v, nu, nv, poles)).status == detail::SurfaceMappingBoundStatus::Failed);
+        }
+    }
+}
+
+FK_TEST(MappingGlobalCommonQuadraticHeightWithManyActiveSpans) {
+    const auto panel = [](double lo, double hi) {
+        const std::vector<double> u{lo, lo, hi, hi};
+        std::vector<double> v(2, -1.);
+        for (int i = 0; i <= 64; ++i) v.push_back(-1. + i / 32.);
+        v.insert(v.end(), 2, 1.);
+        const int nv = int(v.size()) - 3;
+        std::vector<Vec3> poles;
+        std::vector<double> weights;
+        // Native U is Möbius-reparameterized. The physical height
+        // Z = Y^2 / 512 is the same on both strips and all V spans.
+        for (double x : {lo, hi}) for (int i = 0; i < nv; ++i) {
+            const double a = v[i + 1], b = v[i + 2];
+            poles.emplace_back(x, (a + b) / 2., a * b / 512.);
+            weights.push_back(x == lo ? 1. : 1.125);
+        }
+        return rectangularSplinePatch(std::make_shared<BSplineSurface>(1, 2, u, v, 2, nv,
+            std::move(poles), std::move(weights)));
+    };
+    const auto source = makePlaneSheet(Frame3(), 1.);
+    const auto left = panel(-2., 0.), right = panel(0., 2.);
+    const std::vector<SurfaceTargetFace> targets{{&right, right.faces().front()}, {&left, left.faces().front()}};
+    const auto options = wrapOptions();
+    const double budget = .2 * std::min(options.tolerance, linearResolution());
+    const std::vector<double> k{-1., -1., -1., -1., 1., 1., 1., 1.};
+    const std::array<double, 4> coordinates{-1., -1. / 3., 1. / 3., 1.};
+    const std::array<double, 4> heights{1., -1. / 3., -1. / 3., 1.};
+    std::vector<Vec3> poles;
+    for (double u : coordinates) for (int j = 0; j < 4; ++j)
+        poles.emplace_back(u, coordinates[j], heights[j] / 512.);
+    const auto prove = [&](const BSplineSurface &image) {
+        return detail::projectedMappingResidualBound(source, source.faces().front(), targets,
+            options, Frame3(), image, {-1., 1.}, {-1., 1.}, budget);
+    };
+    const auto correct = prove(BSplineSurface(3, 3, k, k, 4, 4, poles));
+    FK_CHECK(correct.status == detail::SurfaceMappingBoundStatus::Certified && correct.upperBound <= budget);
+    for (auto &pole : poles) pole[2] += 2. * budget;
+    FK_CHECK(prove(BSplineSurface(3, 3, k, k, 4, 4, poles)).status == detail::SurfaceMappingBoundStatus::Failed);
+    double deviation = -1.;
+    const auto result = wrapBodyOnFaces(source, targets, options, nullptr, &deviation);
+    FK_CHECK(result.isSheet() && result.faces().size() == 1 && checkBody(result, {true, true}).empty());
+    if (result.faces().size() != 1) return;
+    const auto *image = dynamic_cast<const BSplineSurface *>(result.face(result.faces().front()).surface.get());
+    FK_CHECK(image != nullptr);
+    if (!image) return;
+    const auto emitted = prove(*image);
+    FK_CHECK(emitted.status == detail::SurfaceMappingBoundStatus::Certified && emitted.upperBound <= deviation);
+    for (double y : {-.75, -.25, .25, .75})
+        FK_CHECK(distance(image->point(.5, y), Vec3(.5, y, y * y / 512.)) <= budget);
+}
+
+FK_TEST(MappingGlobalDenseImageUsesOnlyActiveControls) {
+    const auto source = makePlaneSheet(Frame3(), 1.5);
+    const auto left = rationalGraphPanel(-2., 0., 0., false);
+    const auto right = rationalGraphPanel(0., 2., 0., true);
+    const std::vector<SurfaceTargetFace> targets{{&left, left.faces().front()}, {&right, right.faces().front()}};
+    auto options = wrapOptions();
+    options.angle = .125;
+    constexpr Interval window{-1.5, 1.5};
+    const double budget = .2 * std::min(options.tolerance, linearResolution());
+    const auto knots = [window](int halfSpans, bool repeatedBoundary) {
+        std::vector<double> result(3, -halfSpans / 32.);
+        for (int i = -halfSpans; i <= halfSpans; ++i) {
+            const double t = i / 32.;
+            result.push_back(t);
+            if (repeatedBoundary && (t == window.lo || t == window.hi))
+                result.insert(result.end(), 2, t);
+        }
+        result.insert(result.end(), 3, halfSpans / 32.);
+        return result;
+    };
+    const auto ku = knots(128, false), kv = knots(96, true);
+    const int nu = int(ku.size()) - 4, nv = int(kv.size()) - 4;
+    const auto active = [window](const std::vector<double> &k, int pole) {
+        return k[pole] < window.hi && k[pole + 4] > window.lo;
+    };
+    const auto greville = [](const std::vector<double> &k, int i) {
+        return (k[i + 1] + k[i + 2] + k[i + 3]) / 3.;
+    };
+    const double c = std::cos(options.angle), s = std::sin(options.angle);
+    std::vector<Vec3> poles;
+    int used = 0, firstActiveU = nu;
+    for (int i = 0; i < nu; ++i) for (int j = 0; j < nv; ++j) {
+        const bool contributes = active(ku, i) && active(kv, j);
+        if (contributes) {
+            ++used;
+            firstActiveU = std::min(firstActiveU, i);
+        }
+        const double u = greville(ku, i), v = greville(kv, j);
+        poles.emplace_back(c * u - s * v, s * u + c * v, contributes ? 0. : .001);
+    }
+    FK_CHECK(poles.size() == 51541 && used == 9801);
+    const auto prove = [&](const BSplineSurface &image) {
+        return detail::projectedMappingResidualBound(source, source.faces().front(), targets,
+            options, Frame3(), image, window, window, budget);
+    };
+    const BSplineSurface flat(3, 3, ku, kv, nu, nv, poles);
+    const auto proof = prove(flat);
+    FK_CHECK(proof.status == detail::SurfaceMappingBoundStatus::Certified && proof.upperBound <= budget);
+    for (double u : {window.lo, 0., window.hi}) for (double v : {window.lo, 0., window.hi})
+        FK_CHECK(std::abs(flat.point(u, v).z()) <= budget);
+    FK_CHECK(flat.point(-3., 0.).z() > 1000. * budget);
+
+    // Even the first column has nonzero support on the first included span.
+    for (int j = 0; j < nv; ++j)
+        poles[firstActiveU * nv + j][2] += .001;
+    const BSplineSurface wrong(3, 3, ku, kv, nu, nv, std::move(poles));
+    FK_CHECK(wrong.point(window.lo + 1. / 128., 0.).z() > 2. * budget);
+    FK_CHECK(prove(wrong).status != detail::SurfaceMappingBoundStatus::Certified);
+}
+
+FK_TEST(MappingGlobalDenseImageOverAdaptiveWorkLimit) {
+    constexpr double halfSide = 1.5;
+    constexpr Interval window{-halfSide, halfSide};
+    const auto source = makePlaneSheet(Frame3(), halfSide);
+    const auto left = rationalGraphPanel(-2., 0., 0., false);
+    const auto right = rationalGraphPanel(0., 2., 0., true);
+    const std::vector<SurfaceTargetFace> targets{{&left, left.faces().front()}, {&right, right.faces().front()}};
+    auto options = wrapOptions();
+    options.angle = .125;
+    options.normalOffset = -.25;
+    const double budget = .2 * std::min(options.tolerance, linearResolution());
+    const auto knots = [halfSide](int spans) {
+        std::vector<double> values(3, -halfSide);
+        for (int i = 0; i <= spans; ++i)
+            values.push_back(-halfSide + 2. * halfSide * i / spans);
+        values.insert(values.end(), 3, halfSide);
+        return values;
+    };
+    const auto ku = knots(192), kv = knots(128);
+    const int nu = int(ku.size()) - 4, nv = int(kv.size()) - 4;
+    const auto greville = [](const std::vector<double> &k, int i) {
+        return (k[i + 1] + k[i + 2] + k[i + 3]) / 3.;
+    };
+    const double c = std::cos(options.angle), s = std::sin(options.angle);
+    std::vector<Vec3> poles;
+    for (int i = 0; i < nu; ++i) for (int j = 0; j < nv; ++j) {
+        const double u = greville(ku, i), v = greville(kv, j);
+        poles.emplace_back(c * u - s * v, s * u + c * v, options.normalOffset);
+    }
+    FK_CHECK(poles.size() == 25545);
+    const auto prove = [&](const BSplineSurface &image) {
+        return detail::projectedMappingResidualBound(source, source.faces().front(), targets,
+            options, Frame3(), image, window, window, budget);
+    };
+    const auto correct = prove(BSplineSurface(3, 3, ku, kv, nu, nv, poles));
+    FK_CHECK(correct.status == detail::SurfaceMappingBoundStatus::Certified && correct.upperBound <= budget);
+
+    // The point witness must reject a real deviation even on a dense image.
+    auto raised = poles;
+    for (auto &pole : raised) pole[2] += 2. * budget;
+    FK_CHECK(prove(BSplineSurface(3, 3, ku, kv, nu, nv, std::move(raised))).status ==
+        detail::SurfaceMappingBoundStatus::Failed);
+
+    // The last pole is active. The center witness alone would miss this bump.
+    poles.back()[2] += .001;
+    const BSplineSurface cornerBump(3, 3, ku, kv, nu, nv, std::move(poles));
+    FK_CHECK(cornerBump.point(halfSide - .001, halfSide - .001).z() > options.normalOffset + 2. * budget);
+    FK_CHECK(prove(cornerBump).status == detail::SurfaceMappingBoundStatus::Failed);
+}
+
+FK_TEST(MappingGlobalPlanarSourceOnJoinedQuadraticCharts) {
+    const auto panel = [](double lo, double hi, double bottom, double top, double curvature,
+                          double vStep = 1. / 64.) {
+        const std::vector<double> u{lo, lo, lo, hi, hi, hi};
+        std::vector<double> v{bottom, bottom};
+        for (double y = bottom + vStep; y < top; y += vStep) v.push_back(y);
+        v.insert(v.end(), 2, top);
+        const int nv = int(v.size()) - 2;
+        const std::array<double, 3> x{lo, .5 * (lo + hi), hi};
+        const std::array<double, 3> xx{lo * lo, lo * hi, hi * hi};
+        std::vector<Vec3> poles;
+        std::vector<double> weights;
+        // The rational native U coordinate differs from the physical X.
+        for (int i = 0; i < 3; ++i) for (int j = 0; j < nv; ++j) {
+            poles.emplace_back(x[i], v[j + 1], curvature * xx[i]);
+            weights.push_back(double(1 << i));
+        }
+        return rectangularSplinePatch(std::make_shared<BSplineSurface>(2, 1, u, v, 3, nv, poles, weights));
+    };
+    constexpr double leftCurvature = 1. / 64., rightCurvature = 1. / 32.;
+    const auto left = panel(-2., 0., -2., 2., leftCurvature);
+    const auto right = panel(0., 2., -2., 2., rightCurvature);
+    const auto lower = panel(0., 2., -2., 0., rightCurvature);
+    const auto upper = panel(0., 2., 0., 2., rightCurvature);
+    const auto source = makePlaneSheet(Frame3(), 1.);
+    const auto options = wrapOptions();
+    constexpr Interval domain{-1., 1.};
+    const double budget = .2 * std::min(options.tolerance, linearResolution());
+    // A double cubic knot gives the image the same C1 join as the two
+    // physical quadratics. Use each quadratic's blossom on its own side.
+    const std::vector<double> u{-1., -1., -1., -1., 0., 0., 1., 1., 1., 1.};
+    const std::vector<double> v{-1., -1., -1., -1., 0., 1., 1., 1., 1.};
+    const int nu = int(u.size()) - 4, nv = int(v.size()) - 4;
+    const auto image = [&](double rightLift) {
+        std::vector<Vec3> poles;
+        for (int i = 0; i < nu; ++i) {
+            const double a = u[i + 1], b = u[i + 2], c = u[i + 3];
+            const double h = (a * b + a * c + b * c) / 3.;
+            for (int j = 0; j < nv; ++j)
+                poles.emplace_back((a + b + c) / 3., (v[j + 1] + v[j + 2] + v[j + 3]) / 3.,
+                    h * (i < 3 ? leftCurvature : rightCurvature + rightLift));
+        }
+        return BSplineSurface(3, 3, u, v, nu, nv, std::move(poles));
+    };
+    const auto correct = image(0.), wrong = image(16. * budget);
+    FK_CHECK(std::abs(correct.point(.75, .5).z() - rightCurvature * .75 * .75) <= 1e-15);
+    FK_CHECK(distance(correct.point(.75, .5), wrong.point(.75, .5)) > budget);
+    for (const bool split : {false, true}) {
+        std::vector<SurfaceTargetFace> targets{{&left, left.faces().front()}};
+        if (split) {
+            targets.push_back({&lower, lower.faces().front()});
+            targets.push_back({&upper, upper.faces().front()});
+        } else {
+            targets.push_back({&right, right.faces().front()});
+        }
+        const auto prove = [&](const BSplineSurface &result) {
+            return detail::projectedMappingResidualBound(source, source.faces().front(), targets,
+                options, Frame3(), result, domain, domain, budget);
+        };
+        for (int order = 0; order < 2; ++order) {
+            const auto valid = prove(correct);
+            FK_CHECK(valid.status == detail::SurfaceMappingBoundStatus::Certified && valid.upperBound <= budget);
+            FK_CHECK(prove(wrong).status == detail::SurfaceMappingBoundStatus::Failed);
+            std::reverse(targets.begin(), targets.end());
+        }
+    }
+
+    // Certify the actual carrier emitted by Wrap. The fitted spline need
+    // not have a knot at the join, so one span can require subdivision.
+    const auto simpleLeft = panel(-2., 0., -2., 2., leftCurvature, 4.);
+    const auto simpleRight = panel(0., 2., -2., 2., rightCurvature, 4.);
+    const std::vector<SurfaceTargetFace> targets{
+        {&simpleLeft, simpleLeft.faces().front()}, {&simpleRight, simpleRight.faces().front()}};
+    double deviation = -1.;
+    const auto wrapped = wrapBodyOnFaces(source, targets, options, nullptr, &deviation);
+    FK_CHECK(wrapped.isSheet() && wrapped.faces().size() == 1 && checkBody(wrapped, {true, true}).empty());
+    if (wrapped.faces().size() != 1) return;
+    const auto &carrier = *wrapped.face(wrapped.faces().front()).surface;
+    const auto proof = detail::projectedMappingResidualBound(source, source.faces().front(), targets,
+        options, Frame3(), carrier, domain, domain, budget);
+    FK_CHECK(proof.status == detail::SurfaceMappingBoundStatus::Certified && proof.upperBound <= budget);
+    FK_CHECK(proof.upperBound <= deviation);
+}
+
+FK_TEST(MappingGlobalPlanarSourceOnJoinedCubicCharts) {
+    const auto panel = [](double lo, double hi, double coefficient, int vSpans) {
+        std::vector<double> u(4, lo), v{-2.};
+        u.insert(u.end(), 4, hi);
+        for (int j = 0; j <= vSpans; ++j) v.push_back(-2. + 4. * j / vSpans);
+        v.push_back(2.);
+        const int nv = int(v.size()) - 2;
+        const std::array<double, 4> x{lo, lo + .5, hi - .5, hi};
+        const std::array<double, 4> xxx{lo * lo * lo, lo * lo * hi, lo * hi * hi, hi * hi * hi};
+        std::vector<Vec3> poles;
+        std::vector<double> weights;
+        // A projective reparameterization of the cubic in physical X.
+        for (int i = 0; i < 4; ++i) for (int j = 0; j < nv; ++j) {
+            poles.emplace_back(x[i], v[j + 1], coefficient * xxx[i]);
+            weights.push_back(double(1 << i));
+        }
+        return rectangularSplinePatch(std::make_shared<BSplineSurface>(3, 1, u, v, 4, nv,
+            std::move(poles), std::move(weights)));
+    };
+    constexpr double leftCoeff = 1. / 128., rightCoeff = 1. / 64.;
+    const auto left = panel(-1.5, 0., leftCoeff, 256), right = panel(0., 1.5, rightCoeff, 256);
+    const auto source = makePlaneSheet(Frame3(), 1.);
+    const auto options = wrapOptions();
+    constexpr Interval domain{-1., 1.};
+    const double budget = .2 * std::min(options.tolerance, linearResolution());
+    const std::vector<double> u{-1., -1., -1., -1., 0., 1., 1., 1., 1.};
+    const std::vector<double> v{-1., -1., -1., -1., 1., 1., 1., 1.};
+    const auto image = [&](double lift) {
+        std::vector<Vec3> poles;
+        for (int i = 0; i < 5; ++i) {
+            const double a = u[i + 1], b = u[i + 2], c = u[i + 3];
+            for (int j = 0; j < 4; ++j)
+                poles.emplace_back((a + b + c) / 3., (v[j + 1] + v[j + 2] + v[j + 3]) / 3.,
+                    a * b * c * (i == 0 ? leftCoeff : rightCoeff + lift));
+        }
+        return BSplineSurface(3, 3, u, v, 5, 4, std::move(poles));
+    };
+    const auto correct = image(0.), wrong = image(64. * budget);
+    for (double x : {-.75, .75}) {
+        const double z = x * x * x * (x < 0. ? leftCoeff : rightCoeff);
+        FK_CHECK(distance(correct.point(x, .125), Vec3(x, .125, z)) < 1e-15);
+    }
+    FK_CHECK(distance(correct.point(.75, .125), wrong.point(.75, .125)) > budget);
+    std::vector<SurfaceTargetFace> targets{{&left, left.faces().front()}, {&right, right.faces().front()}};
+    const auto prove = [&](const BSplineSurface &result) {
+        return detail::projectedMappingResidualBound(source, source.faces().front(), targets,
+            options, Frame3(), result, domain, domain, budget);
+    };
+    for (int order = 0; order < 2; ++order) {
+        const auto valid = prove(correct);
+        FK_CHECK(valid.status == detail::SurfaceMappingBoundStatus::Certified && valid.upperBound <= budget);
+        FK_CHECK(prove(wrong).status == detail::SurfaceMappingBoundStatus::Failed);
+        std::reverse(targets.begin(), targets.end());
+    }
+
+    const auto simpleLeft = panel(-1.5, 0., leftCoeff, 1), simpleRight = panel(0., 1.5, rightCoeff, 1);
+    targets = {{&simpleLeft, simpleLeft.faces().front()}, {&simpleRight, simpleRight.faces().front()}};
+    double deviation = -1.;
+    const auto wrapped = wrapBodyOnFaces(source, targets, options, nullptr, &deviation);
+    FK_CHECK(wrapped.isSheet() && wrapped.faces().size() == 1 && checkBody(wrapped, {true, true}).empty());
+    if (wrapped.faces().size() != 1) return;
+    const auto &carrier = *wrapped.face(wrapped.faces().front()).surface;
+    const auto proof = detail::projectedMappingResidualBound(source, source.faces().front(), targets,
+        options, Frame3(), carrier, domain, domain, budget);
+    FK_CHECK(proof.status == detail::SurfaceMappingBoundStatus::Certified && proof.upperBound <= budget);
+    FK_CHECK(proof.upperBound <= deviation);
+}
+
+FK_TEST(MappingGlobalPlanarSourceOnJoinedQuarticCharts) {
+    const auto panel = [](double lo, double hi, double coefficient, int vSpans) {
+        const std::vector<double> u{lo, lo, lo, hi, hi, hi};
+        std::vector<double> v(2, -2.);
+        for (int j = 0; j <= vSpans; ++j) v.push_back(-2. + 4. * j / vSpans);
+        v.insert(v.end(), 2, 2.);
+        const int nv = int(v.size()) - 3;
+        const std::array<double, 3> x{lo, .5 * (lo + hi), hi};
+        const std::array<double, 3> xx{lo * lo, lo * hi, hi * hi};
+        std::vector<Vec3> poles;
+        std::vector<double> weights;
+        // A quadratic tensor net represents the physical quartic X²Y².
+        // The X coordinate has a different rational parameterization.
+        for (int i = 0; i < 3; ++i) for (int j = 0; j < nv; ++j) {
+            const double a = v[j + 1], b = v[j + 2];
+            poles.emplace_back(x[i], .5 * (a + b), coefficient * xx[i] * a * b);
+            weights.push_back(double(1 << i));
+        }
+        return rectangularSplinePatch(std::make_shared<BSplineSurface>(2, 2, u, v, 3, nv,
+            std::move(poles), std::move(weights)));
+    };
+    constexpr double leftCoeff = 1. / 512., rightCoeff = 1. / 256.;
+    const auto left = panel(-2., 0., leftCoeff, 256), right = panel(0., 2., rightCoeff, 256);
+    const auto source = makePlaneSheet(Frame3(), 1.);
+    const auto options = wrapOptions();
+    constexpr Interval domain{-1., 1.};
+    const double budget = .2 * std::min(options.tolerance, linearResolution());
+    const std::vector<double> u{-1., -1., -1., -1., 0., 0., 1., 1., 1., 1.};
+    const std::vector<double> v{-1., -1., -1., -1., 0., 1., 1., 1., 1.};
+    const auto square = [](const std::vector<double> &k, int i) {
+        const double a = k[i + 1], b = k[i + 2], c = k[i + 3];
+        return (a * b + a * c + b * c) / 3.;
+    };
+    const auto greville = [](const std::vector<double> &k, int i) {
+        return (k[i + 1] + k[i + 2] + k[i + 3]) / 3.;
+    };
+    const auto image = [&](double lift) {
+        std::vector<Vec3> poles;
+        for (int i = 0; i < 6; ++i) for (int j = 0; j < 5; ++j)
+            poles.emplace_back(greville(u, i), greville(v, j),
+                square(u, i) * square(v, j) * (i < 3 ? leftCoeff : rightCoeff + lift));
+        return BSplineSurface(3, 3, u, v, 6, 5, std::move(poles));
+    };
+    const auto correct = image(0.), wrong = image(64. * budget);
+    for (double x : {-.75, .75}) {
+        constexpr double y = .75;
+        const double z = x * x * y * y * (x < 0. ? leftCoeff : rightCoeff);
+        FK_CHECK(distance(correct.point(x, y), Vec3(x, y, z)) < 1e-15);
+    }
+    FK_CHECK(distance(correct.point(.75, .75), wrong.point(.75, .75)) > budget);
+    std::vector<SurfaceTargetFace> targets{{&left, left.faces().front()}, {&right, right.faces().front()}};
+    const auto prove = [&](const BSplineSurface &result) {
+        return detail::projectedMappingResidualBound(source, source.faces().front(), targets,
+            options, Frame3(), result, domain, domain, budget);
+    };
+    for (int order = 0; order < 2; ++order) {
+        const auto valid = prove(correct);
+        FK_CHECK(valid.status == detail::SurfaceMappingBoundStatus::Certified && valid.upperBound <= budget);
+        FK_CHECK(prove(wrong).status == detail::SurfaceMappingBoundStatus::Failed);
+        std::reverse(targets.begin(), targets.end());
+    }
+
+    const auto simpleLeft = panel(-2., 0., leftCoeff, 1), simpleRight = panel(0., 2., rightCoeff, 1);
+    targets = {{&simpleLeft, simpleLeft.faces().front()}, {&simpleRight, simpleRight.faces().front()}};
+    double deviation = -1.;
+    const auto wrapped = wrapBodyOnFaces(source, targets, options, nullptr, &deviation);
+    FK_CHECK(wrapped.isSheet() && wrapped.faces().size() == 1 && checkBody(wrapped, {true, true}).empty());
+    if (wrapped.faces().size() != 1) return;
+    const auto &carrier = *wrapped.face(wrapped.faces().front()).surface;
+    const auto proof = detail::projectedMappingResidualBound(source, source.faces().front(), targets,
+        options, Frame3(), carrier, domain, domain, budget);
+    FK_CHECK(proof.status == detail::SurfaceMappingBoundStatus::Certified && proof.upperBound <= budget);
+    FK_CHECK(proof.upperBound <= deviation);
+}
+
+FK_TEST(MappingGlobalPlanarSourceOnJoinedQuinticCharts) {
+    const auto panel = [](double lo, double hi, double coefficient, int uSpans) {
+        std::vector<double> u(4, lo);
+        for (int i = 1; i < uSpans; ++i) u.insert(u.end(), 3, lo + (hi - lo) * i / uSpans);
+        u.insert(u.end(), 4, hi);
+        const int nu = int(u.size()) - 4;
+        const std::vector<double> v{-2., -2., -2., 2., 2., 2.};
+        const std::array<double, 3> ys{-4., -1., 2.}, yy{16., -8., 4.};
+        std::vector<Vec3> poles;
+        std::vector<double> weights;
+        // The cubic native degree comes from X³. The nonaffine rational
+        // reparameterization of Y depends only on the quadratic axis.
+        for (int i = 0; i < nu; ++i) {
+            const double a = u[i + 1], b = u[i + 2], c = u[i + 3];
+            for (int j = 0; j < 3; ++j) {
+                poles.emplace_back((a + b + c) / 3., ys[j], coefficient * a * b * c * yy[j]);
+                weights.push_back(double(1 << j));
+            }
+        }
+        return rectangularSplinePatch(std::make_shared<BSplineSurface>(3, 2, u, v, nu, 3,
+            std::move(poles), std::move(weights)));
+    };
+    constexpr double leftCoeff = 1. / 4096., rightCoeff = 1. / 2048.;
+    const auto left = panel(-3., 0., leftCoeff, 256), right = panel(0., 3., rightCoeff, 256);
+    const auto source = makePlaneSheet(Frame3(), 1.);
+    const auto options = wrapOptions();
+    constexpr Interval domain{-1., 1.};
+    const double budget = .2 * std::min(options.tolerance, linearResolution());
+    const std::vector<double> u{-1., -1., -1., -1., 0., 1., 1., 1., 1.};
+    const std::vector<double> v{-1., -1., -1., -1., 0., 1., 1., 1., 1.};
+    const auto image = [&](double lift) {
+        std::vector<Vec3> poles;
+        for (int i = 0; i < 5; ++i) {
+            const double a = u[i + 1], b = u[i + 2], c = u[i + 3];
+            for (int j = 0; j < 5; ++j) {
+                const double p = v[j + 1], q = v[j + 2], r = v[j + 3];
+                const double yy = (p * q + p * r + q * r) / 3.;
+                poles.emplace_back((a + b + c) / 3., (p + q + r) / 3.,
+                    a * b * c * yy * (i == 0 ? leftCoeff : rightCoeff + lift));
+            }
+        }
+        return BSplineSurface(3, 3, u, v, 5, 5, std::move(poles));
+    };
+    const auto correct = image(0.), wrong = image(128. * budget);
+    for (double x : {-.75, .75}) {
+        constexpr double y = .75;
+        const double z = x * x * x * y * y * (x < 0. ? leftCoeff : rightCoeff);
+        FK_CHECK(distance(correct.point(x, y), Vec3(x, y, z)) < 1e-15);
+    }
+    FK_CHECK(distance(correct.point(.75, .75), wrong.point(.75, .75)) > budget);
+    std::vector<SurfaceTargetFace> targets{{&left, left.faces().front()}, {&right, right.faces().front()}};
+    const auto prove = [&](const BSplineSurface &result) {
+        return detail::projectedMappingResidualBound(source, source.faces().front(), targets,
+            options, Frame3(), result, domain, domain, budget);
+    };
+    for (int order = 0; order < 2; ++order) {
+        const auto valid = prove(correct);
+        FK_CHECK(valid.status == detail::SurfaceMappingBoundStatus::Certified && valid.upperBound <= budget);
+        FK_CHECK(prove(wrong).status == detail::SurfaceMappingBoundStatus::Failed);
+        std::reverse(targets.begin(), targets.end());
+    }
+
+    const auto simpleLeft = panel(-3., 0., leftCoeff, 1), simpleRight = panel(0., 3., rightCoeff, 1);
+    targets = {{&simpleLeft, simpleLeft.faces().front()}, {&simpleRight, simpleRight.faces().front()}};
+    double deviation = -1.;
+    const auto wrapped = wrapBodyOnFaces(source, targets, options, nullptr, &deviation);
+    FK_CHECK(wrapped.isSheet() && wrapped.faces().size() == 1 && checkBody(wrapped, {true, true}).empty());
+    if (wrapped.faces().size() != 1) return;
+    const auto &carrier = *wrapped.face(wrapped.faces().front()).surface;
+    const auto proof = detail::projectedMappingResidualBound(source, source.faces().front(), targets,
+        options, Frame3(), carrier, domain, domain, budget);
+    FK_CHECK(proof.status == detail::SurfaceMappingBoundStatus::Certified && proof.upperBound <= budget);
+    FK_CHECK(proof.upperBound <= deviation);
 }

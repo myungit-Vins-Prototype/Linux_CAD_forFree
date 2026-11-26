@@ -11,6 +11,8 @@
 #include "fk_classify_uv.h"
 #include "fk_intersect.h"
 #include "fk_surface_curve_bounds.h"
+#include "fk_surface_bound_math.h"
+#include "fk_surface_mapping_bounds.h"
 
 #include <algorithm>
 #include <array>
@@ -463,11 +465,6 @@ Layer restoreOpenings(const Body &sheet, Layer layer, const std::vector<HoleLoop
                 const auto uv = fin.pcurve->point(t);
                 if (classifier.classify(uv) != PointLocation::Inside)
                     throw std::domain_error("spessore: il foro non è interno al supporto rifilato");
-                const double signedDistance = original.sense ? distanceValue : -distanceValue;
-                const auto expected = original.surface->point(uv.x(), uv.y())
-                    + signedDistance * original.surface->normal(uv.x(), uv.y());
-                if (!(distance(expected, lift(t)) <= connection))
-                    throw std::domain_error("spessore: la parametrizzazione del foro non corrisponde alla pelle a distanza");
             }
             // A continuous curve starting inside a nonperiodic face can
             // leave its trimmed region only through one of its boundaries.
@@ -481,6 +478,8 @@ Layer restoreOpenings(const Body &sheet, Layer layer, const std::vector<HoleLoop
                 if (hits.overlap || !hits.points.empty())
                     throw std::domain_error("spessore: il foro incontra il bordo del supporto rifilato");
             }
+            const double signedDistance = original.sense ? distanceValue : -distanceValue;
+            requireOpeningOffset(*original.surface, *face.surface, *fin.pcurve, edge.range, signedDistance, connection);
             const auto rail = fitCurve(lift, edge.range, fin.pcurve->breakpoints(edge.range), .01 * connection);
             requireHoleFin(rail, face.surface, fin.pcurve, edge.range, connection);
             const auto a = point(sheet.edgeStart(fin.edge), rail->point(edge.range.lo));
@@ -553,6 +552,47 @@ bool sharp(const Body &body) {
     return false;
 }
 } // namespace
+
+void requireOpeningOffset(const Surface &source, const Surface &image, const Curve<2> &pcurve,
+                          Interval range, double signedDistance, double budget) {
+    cancellationPoint();
+    const auto *line = dynamic_cast<const Line<2> *>(&pcurve);
+    SurfaceMappingBoundResult proof;
+    if (line && (line->direction().x() == 0. || line->direction().y() == 0.)) {
+        using surface_bounds::I;
+        using surface_bounds::infinity;
+        const std::array<Interval, 2> sourceDomains{source.uDomain(), source.vDomain()};
+        const std::array<Interval, 2> imageDomains{image.uDomain(), image.vDomain()};
+        std::array<Interval, 2> window;
+        for (int axis = 0; axis < 2; ++axis) {
+            const I span = I(line->origin()[axis]) + I(line->direction()[axis]) * I(range.lo, range.hi);
+            // Il certificatore lavora su un rettangolo. Sul parametro fisso
+            // basta includere la coordinata in una fascia di un ULP per lato.
+            window[axis] = {span.lo, span.hi};
+            if (span.lo == span.hi && sourceDomains[axis].contains(span.lo) && imageDomains[axis].contains(span.lo)) {
+                window[axis].lo = std::max({std::nextafter(span.lo, -infinity), sourceDomains[axis].lo, imageDomains[axis].lo});
+                window[axis].hi = std::min({std::nextafter(span.hi, infinity), sourceDomains[axis].hi, imageDomains[axis].hi});
+            }
+        }
+        SurfaceWrapOptions options;
+        options.normalOffset = signedDistance;
+        proof = planarMappingResidualBound(Plane(Frame3()), source, options, 1., 1., image,
+                                           window[0], window[1], budget);
+    } else {
+        proof = offsetTraceResidualBound(source, image, pcurve, range, signedDistance, budget);
+    }
+    if (proof.status == SurfaceMappingBoundStatus::Certified) return;
+    if (proof.status == SurfaceMappingBoundStatus::Failed)
+        throw std::domain_error("spessore: corrispondenza del foro con la pelle a distanza non dimostrata");
+
+    for (double fraction : {0., .25, .5, .75, 1.}) {
+        const auto uv = pcurve.point(range.lo + fraction * range.length());
+        const auto expected = source.point(uv.x(), uv.y()) + signedDistance * source.normal(uv.x(), uv.y());
+        if (!(distance(image.point(uv.x(), uv.y()), expected) <= budget))
+            throw std::domain_error("spessore: la parametrizzazione del foro non corrisponde alla pelle a distanza");
+    }
+}
+
 bool canOffsetOpenSheet(const Body &sheet, double tolerance) {
     if (!sheet.isSheet())
         return false;

@@ -21,11 +21,11 @@ int orient2d(const Vec2 &a, const Vec2 &b, const Vec2 &c);
 int orient3d(const Vec3 &a, const Vec3 &b, const Vec3 &c, const Vec3 &d);
 
 namespace detail {
-// Exact Cartesian value of a rational Bézier at a binary64 parameter in
-// (0,1). Returns empty outside the bounded expansion regime or when the
-// final Cartesian value cannot be proved to equal two binary64 values.
-std::optional<Vec2> exactRationalBezierPoint(const Vec2 *poles, const double *weights,
-                                            std::size_t count, double parameter);
+// Exact Cartesian value on a nonempty rational spline knot cell. The
+// knot array contains the 2 * degree active knots, with the cell at its
+// center. Empty means the point could not be proved in binary64.
+std::optional<Vec2> exactRationalSplinePoint(const Vec2 *poles, const double *weights,
+                                            std::size_t count, const double *knots, double parameter);
 }
 
 }

@@ -391,13 +391,17 @@ Polynomial dot(const VectorPolynomial &a, const VectorPolynomial &b) {
     for (std::size_t k = 0; k < 3; ++k) out = sum(std::move(out), product(a[k], b[k]));
     return out;
 }
-VectorPolynomial cross(const VectorPolynomial &a, const VectorPolynomial &b) {
-    VectorPolynomial out;
+template<class Q, class Multiply>
+std::array<Q, 3> polynomialCross(const std::array<Q, 3> &a, const std::array<Q, 3> &b, Multiply multiply) {
+    std::array<Q, 3> out;
     for (int k = 0; k < 3; ++k) {
         const auto i = std::size_t((k + 1) % 3), j = std::size_t((k + 2) % 3);
-        out[std::size_t(k)] = sum(product(a[i], b[j]), product(a[j], b[i]), true);
+        out[std::size_t(k)] = sum(multiply(a[i], b[j]), multiply(a[j], b[i]), true);
     }
     return out;
+}
+VectorPolynomial cross(const VectorPolynomial &a, const VectorPolynomial &b) {
+    return polynomialCross(a, b, [](const Polynomial &x, const Polynomial &y) { return product(x, y); });
 }
 I hull(const Polynomial &p) { return hull(p.values); }
 // With positive denominator coefficients the rational value lies in the
@@ -419,7 +423,7 @@ double magnitude(I h) {
     if (!finite(h)) throw ProofFailed{};
     return std::max(std::abs(h.lo), std::abs(h.hi));
 }
-I squaredUpper(const VectorPolynomial &p) {
+template<class Q> I squaredUpper(const std::array<Q, 3> &p) {
     I result;
     for (const auto &component : p) { const I m(magnitude(hull(component))); result = result + m * m; }
     if (!finite(result)) throw ProofFailed{};
@@ -506,9 +510,9 @@ Polynomial graphZOn(const SourceGraph &graph, const Q &u, const Q &v, const Q *w
 // natural target derivatives, with no source-to-target rates in the cross product.
 template<std::size_t N, class Q, class Pole>
 PolynomialTuple<N> derivativeTensor(const BSplineSurface &s, int cu, int cv, const Q &u, const Q &v,
-                                  bool alongU, UVLayout layout, Pole pole) {
+                                  bool alongU, UVLayout layout, Pole pole, const Q *weight = nullptr) {
     const int pu = s.uDegree(), pv = s.vDegree(), du = pu - int(alongU), dv = pv - int(!alongU);
-    const auto bu = basis(s.uKnots(), cu, u, du), bv = basis(s.vKnots(), cv, v, dv);
+    const auto bu = basis(s.uKnots(), cu, u, du, weight), bv = basis(s.vKnots(), cv, v, dv, weight);
     return weightedSurface<N>(bu, bv, layout, [&](int i, int j) {
         const int pi = cu - pu + i, pj = cv - pv + j;
         auto a = pole(pi, pj);
@@ -573,8 +577,8 @@ I squareRoot(I value) {
     return outward(std::sqrt(std::max(0.0, value.lo)), std::sqrt(value.hi));
 }
 
-Polynomial projection(const VectorPolynomial &p, const IP &direction) {
-    Polynomial result;
+template<class Q> Q projection(const std::array<Q, 3> &p, const IP &direction) {
+    Q result{I(0)};
     for (std::size_t i = 0; i < p.size(); ++i)
         result = sum(std::move(result), scaled(p[i], direction[i]));
     return result;
@@ -645,8 +649,9 @@ double coneUpper(VectorPolynomial residual, const VectorPolynomial &su, const Ve
     return bound.hi;
 }
 
-double projectedNormalUpper(const VectorPolynomial &d, const VectorPolynomial &c,
-                            const HeightPatch &height, double lowerC) {
+template<class Q, class Multiply>
+double projectedNormalUpper(const std::array<Q, 3> &d, const std::array<Q, 3> &c,
+                            I heightRange, const Q &height, double lowerC, Multiply multiply) {
     Vec3 seed;
     for (std::size_t i = 0; i < c.size(); ++i) {
         const I h = hull(c[i]);
@@ -660,18 +665,25 @@ double projectedNormalUpper(const VectorPolynomial &d, const VectorPolynomial &c
     // With unit n0 and rho=C dot n0>0, |C|-rho equals
     // |C cross n0|^2 / (|C|+rho). Keeping rho polynomial captures
     // the changing normal scale without dividing by the signed height.
-    const VectorPolynomial n{Polynomial(direction[0]), Polynomial(direction[1]), Polynomial(direction[2])};
-    const I normalError = squaredUpper(cross(c, n)) / (I(lowerC) + I(rhoRange.lo));
-    VectorPolynomial residual;
+    const std::array<Q, 3> n{Q{direction[0]}, Q{direction[1]}, Q{direction[2]}};
+    const I normalError = squaredUpper(polynomialCross(c, n, multiply)) / (I(lowerC) + I(rhoRange.lo));
+    std::array<Q, 3> residual;
     for (std::size_t i = 0; i < residual.size(); ++i)
-        residual[i] = sum(product(d[i], rho), product(c[i], height.polynomial), true);
-    const I upper = (squareRoot(squaredUpper(residual)) + I(magnitude(height.range)) * normalError)
+        residual[i] = sum(multiply(d[i], rho), multiply(c[i], height), true);
+    const I upper = (squareRoot(squaredUpper(residual)) + I(magnitude(heightRange)) * normalError)
         / I(rhoRange.lo);
     if (!finite(upper)) throw ProofFailed{};
     return upper.hi;
 }
 
-double regularNormalLower(const VectorPolynomial &su, const VectorPolynomial &sv, const VectorPolynomial &c) {
+double projectedNormalUpper(const VectorPolynomial &d, const VectorPolynomial &c,
+                            const HeightPatch &height, double lowerC) {
+    return projectedNormalUpper(d, c, height.range, height.polynomial, lowerC,
+        [](const Polynomial &a, const Polynomial &b) { return product(a, b); });
+}
+
+template<class Q>
+double regularNormalLower(const std::array<Q, 3> &su, const std::array<Q, 3> &sv, const std::array<Q, 3> &c) {
     I lowerSquared;
     for (const auto &component : c) {
         const I h = hull(component);
@@ -1744,6 +1756,224 @@ SurfaceMappingBoundResult planarMappingResidualBound(
       catch (const ProofFailed &) { return {SurfaceMappingBoundStatus::Failed, infinity}; }
 }
 namespace {
+struct TraceCoordinates {
+    std::array<P, 2> uv;
+    P weight;
+    double minimumWeight = 1.;
+
+    I range(int axis) const {
+        if (weight.empty()) return hull(uv[axis]);
+        // Positive homogeneous Bernstein coefficients enclose the ratio
+        // by the associated Euclidean values on the same trace interval.
+        I bounds(infinity, -infinity);
+        for (std::size_t i = 0; i < weight.size(); ++i) {
+            const I w = weight[i];
+            if (!(w.lo > 0.)) {
+                const I interval = hull(weight);
+                return hull(uv[axis]) / I(std::max(minimumWeight, interval.lo), interval.hi);
+            }
+            const I value = uv[axis][i] / w;
+            bounds.lo = std::min(bounds.lo, value.lo);
+            bounds.hi = std::max(bounds.hi, value.hi);
+        }
+        return bounds;
+    }
+};
+
+struct OffsetTrace {
+    const Line<2> *line;
+    const BSplineCurve<2> *spline;
+
+    TraceCoordinates coordinates(Interval t) const {
+        const P parameter{I(t.lo), I(t.hi)};
+        if (line)
+            return {{sum(P{I(line->origin().x())}, scaled(parameter, I(line->direction().x()))),
+                     sum(P{I(line->origin().y())}, scaled(parameter, I(line->direction().y())))}, {}};
+
+        const auto &knots = spline->knots();
+        const int degree = spline->degree();
+        const int cell = containing(knots, degree, spline->poleCount(), t);
+        const auto b = basis(knots, cell, parameter, degree);
+        TraceCoordinates trace{{P{I(0)}, P{I(0)}}, {}};
+        const bool rational = spline->isRational();
+        double scale = 1.;
+        if (rational) {
+            const auto first = spline->weights().begin() + cell - degree;
+            scale = *std::max_element(first, first + degree + 1);
+            trace.weight = P{I(0)};
+        }
+        for (int i = 0; i <= degree; ++i) {
+            const int index = cell - degree + i;
+            const Vec2 &pole = spline->poles()[std::size_t(index)];
+            const I weight = rational ? I(spline->weight(index)) / I(scale) : I(1);
+            const auto value = scaled(b[std::size_t(i)], weight);
+            for (int axis = 0; axis < 2; ++axis)
+                trace.uv[axis] = sum(std::move(trace.uv[axis]), scaled(value, I(pole[axis])));
+            if (rational) {
+                trace.weight = sum(std::move(trace.weight), value);
+                trace.minimumWeight = std::min(trace.minimumWeight, weight.lo);
+            }
+        }
+        return trace;
+    }
+};
+
+struct TraceSpanPair { int source, image; };
+std::vector<TraceSpanPair> traceSpanPairs(const BSplineSurface &source, const BSplineSurface &image,
+                                        bool alongU, I query, Work &work) {
+    const auto sourceDomain = alongU ? source.uDomain() : source.vDomain();
+    const auto imageDomain = alongU ? image.uDomain() : image.vDomain();
+    if (!sourceDomain.contains(query.lo) || !sourceDomain.contains(query.hi) ||
+        !imageDomain.contains(query.lo) || !imageDomain.contains(query.hi)) return {};
+
+    const auto &a = alongU ? source.uKnots() : source.vKnots();
+    const auto &b = alongU ? image.uKnots() : image.vKnots();
+    std::vector<TargetCell> first, second;
+    try {
+        first = cells(a, alongU ? source.uDegree() : source.vDegree(),
+            alongU ? source.uPoleCount() : source.vPoleCount(), query, sourceDomain, ParameterWrap::None);
+        second = cells(b, alongU ? image.uDegree() : image.vDegree(),
+            alongU ? image.uPoleCount() : image.vPoleCount(), query, imageDomain, ParameterWrap::None);
+    } catch (const ProofFailed &) {
+        // Too many candidate spans for this node: split the trace first.
+        return {};
+    }
+    std::vector<TraceSpanPair> pairs;
+    auto start = second.begin();
+    for (const auto &x : first) {
+        while (start != second.end() && b[start->span + 1] < a[x.span]) ++start;
+        for (auto y = start; y != second.end() && b[y->span] <= a[x.span + 1]; ++y) {
+            work.visit();
+            if (pairs.size() == maxCells) return {};
+            pairs.push_back({x.span, y->span});
+        }
+    }
+    return pairs;
+}
+
+double traceUpper(const BSplineSurface &source, const BSplineSurface &image, const IP &origin,
+                  double distance, const TraceCoordinates &trace, double budget, Work &work) {
+    const auto &uv = trace.uv;
+    const auto us = traceSpanPairs(source, image, true, trace.range(0), work);
+    const auto vs = traceSpanPairs(source, image, false, trace.range(1), work);
+    if (us.empty() || vs.empty() || us.size() > maxCells / vs.size()) return infinity;
+
+    // D has degree <= 18, Su x Sv <= 30. The projected normalization
+    // needs D*(C dot n0), of degree <= 48, without squaring C.
+    const auto multiply = [](const P &a, const P &b) {
+        if (a.size() == 1) return scaled(b, a.front());
+        if (b.size() == 1) return scaled(a, b.front());
+        return surface_bounds::product<48, ProofFailed>(a, b);
+    };
+    constexpr auto layout = UVLayout::DiagonalU;
+    const auto pole = [&](int i, int j) { return point(source.pole(i, j)); };
+    const P *weight = trace.weight.empty() ? nullptr : &trace.weight;
+    P imageDenominator{I(1)}, promoteSource{I(1)};
+    double denominatorLower = 1.;
+    if (weight) {
+        const I range = hull(*weight);
+        const double lowerW = std::max(trace.minimumWeight, range.lo);
+        if (!(lowerW > 0.) || !finite(range) || lowerW > range.hi) return infinity;
+        const int sourceDegree = source.uDegree() + source.vDegree();
+        I lower(1.);
+        for (int degree = 1; degree <= 6; ++degree) {
+            imageDenominator = product(imageDenominator, *weight);
+            lower = lower * I(lowerW);
+            if (degree == 6 - sourceDegree) promoteSource = imageDenominator;
+        }
+        denominatorLower = std::max(lower.lo, hull(imageDenominator).lo);
+        if (!(denominatorLower > 0.)) return infinity;
+    }
+    const P height = scaled(imageDenominator, I(distance));
+    const I heightRange = hull(height);
+    double upper = 0.;
+    for (const auto u : us) for (const auto v : vs) {
+        work.visit(weight ? 24 : (uv[0].size() > 2 ? 16 : 4));
+        auto wanted = surfaceOn(source, u.source, v.source, uv[0], uv[1], origin, layout, weight);
+        auto actual = surfaceOn(image, u.image, v.image, uv[0], uv[1], origin, layout, weight);
+        std::array<P, 3> delta;
+        for (int axis = 0; axis < 3; ++axis)
+            delta[axis] = sum(std::move(actual[axis].values),
+                promoteSource.size() > 1 ? product(wanted[axis].values, promoteSource) : std::move(wanted[axis].values), true);
+
+        double bound = squareRoot(squaredUpper(delta)).hi;
+        if (distance != 0.) {
+            const auto derivatives = [&](bool alongU) {
+                // Both natural tangent numerators carry the same positive
+                // W power. This factor cancels in the oriented normal.
+                auto jet = derivativeTensor<3>(source, u.source, v.source, uv[0], uv[1], alongU, layout, pole, weight);
+                return std::array<P, 3>{std::move(jet[0].values), std::move(jet[1].values), std::move(jet[2].values)};
+            };
+            const auto su = derivatives(true), sv = derivatives(false);
+            const auto normal = polynomialCross(su, sv, multiply);
+            const double lower = regularNormalLower(su, sv, normal);
+            if (!(lower > 0.)) return infinity;
+            bound = projectedNormalUpper(delta, normal, heightRange, height, lower, multiply);
+        }
+        if (weight) bound = (I(bound) / I(denominatorLower)).hi;
+        if (!(bound <= budget)) return infinity;
+        upper = std::max(upper, bound);
+    }
+    return upper;
+}
+
+double proveTrace(const BSplineSurface &source, const BSplineSurface &image, const IP &origin,
+                  const OffsetTrace &trace, Interval t, double distance, double budget, int depth, Work &work) {
+    work.visit();
+    const double upper = traceUpper(source, image, origin, distance, trace.coordinates(t), budget, work);
+    if (upper <= budget) return upper;
+    const double middle = .5 * t.lo + .5 * t.hi;
+    if (depth == maxDepth || !(t.lo < middle && middle < t.hi)) throw ProofFailed{};
+    const double left = proveTrace(source, image, origin, trace, {t.lo, middle}, distance, budget, depth + 1, work);
+    return std::max(left, proveTrace(source, image, origin, trace, {middle, t.hi}, distance, budget, depth + 1, work));
+}
+}
+
+SurfaceMappingBoundResult offsetTraceResidualBound(
+    const Surface &source, const Surface &image, const Curve<2> &pcurve,
+    Interval range, double distance, double budget) {
+    cancellationPoint();
+    try {
+        if (!range.isFinite() || !(range.lo < range.hi) || !std::isfinite(distance)
+            || !std::isfinite(budget) || !(budget > 0.)) throw ProofFailed{};
+        const auto *a = dynamic_cast<const BSplineSurface *>(&source);
+        const auto *b = dynamic_cast<const BSplineSurface *>(&image);
+        if (!a || !b || a->isUPeriodic() || a->isVPeriodic() ||
+            a->uDegree() > 3 || a->vDegree() > 3) throw Unsupported{};
+
+        const Curve<2> *curve = &pcurve;
+        for (int depth = 0; const auto *trim = dynamic_cast<const TrimmedCurve<2> *>(curve); ++depth) {
+            cancellationPoint();
+            if (depth == 32 || !trim->domain().contains(range.lo) || !trim->domain().contains(range.hi))
+                throw ProofFailed{};
+            curve = trim->basis().get();
+        }
+        const OffsetTrace trace{dynamic_cast<const Line<2> *>(curve), dynamic_cast<const BSplineCurve<2> *>(curve)};
+        if (!trace.line && (!trace.spline || trace.spline->degree() > 3))
+            throw Unsupported{};
+        if (validate(*a, false)) throw Unsupported{};
+        validate(*b, true);
+
+        std::vector<double> intervals{range.lo, range.hi};
+        if (trace.spline) {
+            const auto &q = *trace.spline;
+            if (q.poleCount() > int(maxPoles) || !knotsValid(q.knots(), q.degree(), q.poleCount())
+                || !q.domain().contains(range.lo) || !q.domain().contains(range.hi)) throw ProofFailed{};
+            intervals = cuts(q.knots(), range);
+            if (intervals.size() > maxVisits) throw ProofFailed{};
+        }
+        Work work;
+        const auto origin = point(a->pole(0, 0));
+        double upper = 0.;
+        for (std::size_t i = 1; i < intervals.size(); ++i)
+            upper = std::max(upper, proveTrace(*a, *b, origin, trace,
+                {intervals[i - 1], intervals[i]}, distance, budget, 0, work));
+        return {SurfaceMappingBoundStatus::Certified, upper};
+    } catch (const Unsupported &) { return {}; }
+      catch (const ProofFailed &) { return {SurfaceMappingBoundStatus::Failed, infinity}; }
+}
+
+namespace {
 // Expansion addition keeps the exact sum of the binary64 data. A projected
 // pole must reproduce its Greville parameter exactly, even on a long chart.
 bool exactZeroSum(const double *first, std::size_t count) {
@@ -1783,7 +2013,7 @@ int cartesianAxis(const Vec3 &axis) {
 
 bool grevilleCoordinate(double pole, const std::vector<double> &knots, int index, int degree) {
     if (degree == 1) return pole == knots[index + 1];
-    std::array<double, 8> terms;
+    std::array<double, 10> terms;
     if (degree < 2 || std::size_t(degree) > terms.size() / 2) return false;
     for (int i = 0; i < degree; ++i) {
         terms[2 * i] = knots[index + i + 1];
@@ -2156,13 +2386,12 @@ OverlapBasis overlapBasis(const std::vector<double> &knots, int span, int degree
     return previous;
 }
 
-constexpr int maxPhysicalHeightDegree = 5;
+constexpr int maxPhysicalHeightDegree = 6;
 constexpr int maxOverlapDegree = 2 * maxPhysicalHeightDegree;
 
 struct OverlapPolynomial {
     int u, v;
-    // The largest products come from homogenizing a quintic on a
-    // quadratic native chart.
+    // Bound the degree of each native factor after homogenization.
     std::array<std::array<double, maxOverlapDegree + 1>, maxOverlapDegree + 1> coefficients{};
 };
 
@@ -2298,7 +2527,32 @@ OverlapCoordinates overlapCoordinates(const BSplineSurface &s, int i, int j,
     return {px, py, pz, w};
 }
 
-HeightEquations heightEquations(const OverlapCoordinates &coordinates, int degree) {
+void compactHeightCoordinates(OverlapCoordinates &coordinates) {
+    // Only exactly zero coefficients may lower a homogeneous degree.
+    auto &[px, py, pz, w] = coordinates;
+    for (auto *p : {&px, &py, &pz, &w}) {
+        int u = 0, v = 0;
+        for (int i = 0; i <= p->u; ++i) for (int j = 0; j <= p->v; ++j) {
+            if (p->coefficients[i][j] == 0.) continue;
+            u = std::max(u, i);
+            v = std::max(v, j);
+        }
+        p->u = u;
+        p->v = v;
+    }
+}
+
+void boundHeightEquations(HeightEquations &terms, std::size_t count) {
+    // Include powers that are present only on the left of the identity.
+    auto &rhs = terms[count];
+    for (std::size_t k = 0; k < count; ++k) {
+        rhs.u = std::max(rhs.u, terms[k].u);
+        rhs.v = std::max(rhs.v, terms[k].v);
+    }
+}
+
+HeightEquations heightEquations(OverlapCoordinates coordinates, int degree) {
+    if (degree > 4) compactHeightCoordinates(coordinates);
     const auto &[px, py, pz, w] = coordinates;
     HeightEquations terms{w, px, py};
     for (int order = 2; order <= degree; ++order) {
@@ -2312,16 +2566,41 @@ HeightEquations heightEquations(const OverlapCoordinates &coordinates, int degre
         if (order == degree) terms[heightTermCount(degree)] = overlapProduct(pz, terms[0]);
         for (std::size_t k = 0; k < lowerTerms; ++k) terms[k] = overlapProduct(terms[k], w);
     }
+    boundHeightEquations(terms, heightTermCount(degree));
     return terms;
 }
 
 using HeightCoefficients = std::array<double, heightPowers.size()>;
 
+// Substitution needs only the terms present in the derived model.
+HeightEquations sparseHeightEquations(OverlapCoordinates coordinates, int degree, const HeightCoefficients &coefficients) {
+    compactHeightCoordinates(coordinates);
+    const auto &[px, py, pz, w] = coordinates;
+    OverlapPolynomial one{0, 0};
+    one.coefficients[0][0] = 1.;
+    std::vector<OverlapPolynomial> xp{one}, yp{one}, wp{one};
+    const auto power = [](std::vector<OverlapPolynomial> &powers, const OverlapPolynomial &p, int exponent)
+                           -> const OverlapPolynomial & {
+        while (int(powers.size()) <= exponent) powers.push_back(overlapProduct(powers.back(), p));
+        return powers[std::size_t(exponent)];
+    };
+    HeightEquations terms{};
+    const auto count = heightTermCount(degree);
+    for (std::size_t k = 0; k < count; ++k) {
+        if (coefficients[k] == 0.) continue;
+        const auto [i, j] = heightPowers[k];
+        terms[k] = overlapProduct(overlapProduct(power(xp, px, i), power(yp, py, j)), power(wp, w, degree - i - j));
+    }
+    terms[count] = overlapProduct(pz, power(wp, w, degree - 1));
+    boundHeightEquations(terms, count);
+    return terms;
+}
+
 template<class Equations>
 bool certifyHeightEquations(const BSplineSurface &s, const HeightCoefficients &coefficients,
     std::size_t count, const Equations &equationsAt) {
     const auto u = overlapAxis(s, true), v = overlapAxis(s, false);
-    if (u.degree > 2 || v.degree > 2) return false;
+    if (u.degree > 3 || v.degree > 3) return false;
     std::size_t cells = 0;
     for (int i = u.degree; i < u.count; ++i) for (int j = v.degree; j < v.count; ++j) {
         cancellationPoint();
@@ -2348,7 +2627,9 @@ bool certifyPhysicalHeight(const BSplineSurface &s, int axisX, int axisY, int ax
         coefficients[col] = height.coefficients[a][b];
     }
     return certifyHeightEquations(s, coefficients, count, [&](int i, int j) {
-        return heightEquations(overlapCoordinates(s, i, j, axisX, axisY, axisZ, x, y), degree);
+        auto coordinates = overlapCoordinates(s, i, j, axisX, axisY, axisZ, x, y);
+        return degree > 4 ? sparseHeightEquations(std::move(coordinates), degree, coefficients)
+                          : heightEquations(std::move(coordinates), degree);
     });
 }
 
@@ -2444,7 +2725,7 @@ struct PhysicalHeightModel {
 std::optional<PhysicalHeightModel> derivePhysicalHeightModel(const BSplineSurface &s,
     int axisX, int axisY, int axisZ, int degree) {
     const auto u = overlapAxis(s, true), v = overlapAxis(s, false);
-    if (degree < 2 || degree > maxPhysicalHeightDegree || u.degree > 2 || v.degree > 2) return {};
+    if (degree < 2 || degree > maxPhysicalHeightDegree || u.degree > 3 || v.degree > 3) return {};
     const int i = firstOverlapSpan(u), j = firstOverlapSpan(v);
     if (i == u.count || j == v.count) return {};
     try {
@@ -2469,7 +2750,8 @@ std::optional<PhysicalHeightModel> derivePhysicalHeightModel(const BSplineSurfac
 }
 
 std::optional<bool> equalNonaffineHeight(const BSplineSurface &a, const BSplineSurface &b, int axisX, int axisY, int axisZ) {
-    if (b.uDegree() > 2 || b.vDegree() > 2) return {};
+    // This overlap recognizer uses the quadratic native chart family.
+    if (std::max({a.uDegree(), a.vDegree(), b.uDegree(), b.vDegree()}) > 2) return {};
     for (int degree = 2; degree <= maxPhysicalHeightDegree; ++degree) {
         const auto model = derivePhysicalHeightModel(a, axisX, axisY, axisZ, degree);
         if (!model) continue;
@@ -2494,17 +2776,12 @@ HeightEquations rationalHeightEquations(const OverlapCoordinates &coordinates, R
     // normalized physical frame the constant term of D is one.
     const int degree = std::max(order.numerator, order.denominator + 1);
     auto equations = heightEquations(coordinates, degree);
-    equations[order.terms()] = equations[heightTermCount(degree)];
-    const auto zx = overlapProduct(coordinates.z, coordinates.x);
-    const auto zy = overlapProduct(coordinates.z, coordinates.y);
+    const auto rhs = equations[heightTermCount(degree)];
+    const auto denominator = heightEquations(coordinates, degree - 1);
     const auto n = order.numeratorTerms();
-    equations[n] = degree == 2 ? zx : overlapProduct(zx, coordinates.weight);
-    equations[n + 1] = degree == 2 ? zy : overlapProduct(zy, coordinates.weight);
-    if (order.denominator == 2) {
-        equations[n + 2] = overlapProduct(zx, coordinates.x);
-        equations[n + 3] = overlapProduct(zx, coordinates.y);
-        equations[n + 4] = overlapProduct(zy, coordinates.y);
-    }
+    for (std::size_t k = 1; k < heightTermCount(order.denominator); ++k)
+        equations[n + k - 1] = overlapProduct(coordinates.z, denominator[k]);
+    equations[order.terms()] = rhs;
     return equations;
 }
 
@@ -2538,8 +2815,8 @@ bool positiveAffineOverlapDenominator(const BSplineSurface &s, int axisX, int ax
     return true;
 }
 
-bool positiveQuadraticOverlapDenominator(const std::array<Interval, 2> &bounds,
-    Interval x, Interval y, const HeightCoefficients &coefficients, std::size_t offset) {
+bool positivePolynomialOverlapDenominator(const std::array<Interval, 2> &bounds,
+    Interval x, Interval y, const HeightCoefficients &coefficients, std::size_t offset, int degree) {
     const auto normalized = [](double coordinate, Interval reference) {
         return (I(coordinate) - I(reference.lo)) / (I(reference.hi) - I(reference.lo));
     };
@@ -2548,10 +2825,13 @@ bool positiveQuadraticOverlapDenominator(const std::array<Interval, 2> &bounds,
     px.at(1, 0) = normalized(bounds[0].hi, x);
     py.at(0, 0) = normalized(bounds[1].lo, y);
     py.at(0, 1) = normalized(bounds[1].hi, y);
-    const std::array<Polynomial, 3> xp{Polynomial(I(1.)), px, product(px, px)};
-    const std::array<Polynomial, 3> yp{Polynomial(I(1.)), py, product(py, py)};
+    std::vector<Polynomial> xp{Polynomial(I(1.))}, yp{Polynomial(I(1.))};
+    for (int k = 1; k <= degree; ++k) {
+        xp.push_back(product(xp.back(), px));
+        yp.push_back(product(yp.back(), py));
+    }
     Polynomial denominator(I(1.));
-    for (std::size_t k = 1; k < heightTermCount(2); ++k) {
+    for (std::size_t k = 1; k < heightTermCount(degree); ++k) {
         const double coefficient = coefficients[offset + k - 1];
         if (coefficient == 0.) continue;
         const auto [a, b] = heightPowers[k];
@@ -2563,16 +2843,80 @@ bool positiveQuadraticOverlapDenominator(const std::array<Interval, 2> &bounds,
     return finite(enclosure) && enclosure.lo > 0.;
 }
 
+// Large rational systems can exceed the mantissa during exact
+// elimination. A scaled solve only proposes coefficients; callers
+// publish a model solely after exact substitution on every cell.
+std::optional<HeightCoefficients> estimateHeightCoefficients(const HeightEquations &equations, std::size_t count) {
+    using Equation = std::array<double, heightPowers.size() + 1>;
+    const auto &rhs = equations[count];
+    Equation largest{};
+    std::vector<Equation> rows;
+    for (int u = 0; u <= rhs.u; ++u) for (int v = 0; v <= rhs.v; ++v) {
+        Equation row{};
+        for (std::size_t i = 0; i <= count; ++i) {
+            row[i] = equations[i].coefficients[u][v];
+            largest[i] = std::max(largest[i], std::abs(row[i]));
+        }
+        rows.push_back(row);
+    }
+    if (rows.size() < count) return {};
+    std::array<int, heightPowers.size() + 1> exponents{};
+    for (std::size_t i = 0; i <= count; ++i) {
+        if (!(largest[i] > 0.)) return {};
+        exponents[i] = std::ilogb(largest[i]);
+        for (auto &row : rows) row[i] = std::scalbn(row[i], -exponents[i]);
+    }
+    for (std::size_t i = 0; i < count; ++i) {
+        cancellationPoint();
+        const auto pivot = std::max_element(rows.begin() + i, rows.end(),
+            [i](const Equation &a, const Equation &b) { return std::abs(a[i]) < std::abs(b[i]); });
+        if (!(std::abs((*pivot)[i]) > 1e-12)) return {};
+        std::iter_swap(rows.begin() + i, pivot);
+        for (std::size_t j = i + 1; j < rows.size(); ++j) {
+            const double factor = rows[j][i] / rows[i][i];
+            for (std::size_t k = i + 1; k <= count; ++k)
+                rows[j][k] -= factor * rows[i][k];
+        }
+    }
+    HeightCoefficients result{};
+    for (std::size_t i = count; i-- > 0;) {
+        double value = rows[i][count];
+        for (std::size_t j = i + 1; j < count; ++j) value -= rows[i][j] * result[j];
+        result[i] = value / rows[i][i];
+    }
+    for (std::size_t i = 0; i < count; ++i) {
+        result[i] = std::scalbn(result[i], exponents[count] - exponents[i]);
+        if (!std::isfinite(result[i])) return {};
+    }
+    return result;
+}
+
+HeightCoefficients dyadicHeightCandidate(HeightCoefficients candidate, RationalHeightOrder order, int bits) {
+    const auto roundBlock = [&](std::size_t begin, std::size_t end) {
+        double largest = 0.;
+        for (std::size_t i = begin; i < end; ++i) largest = std::max(largest, std::abs(candidate[i]));
+        if (!(largest > 0.)) return;
+        const int exponent = bits - std::ilogb(largest);
+        for (std::size_t i = begin; i < end; ++i)
+            candidate[i] = std::scalbn(std::round(std::scalbn(candidate[i], exponent)), -exponent);
+    };
+    roundBlock(0, order.numeratorTerms());
+    roundBlock(order.numeratorTerms(), order.terms());
+    return candidate;
+}
+
 bool equalRationalPhysicalHeight(const BSplineSurface &a, const BSplineSurface &b,
     int axisX, int axisY, int axisZ) {
     const auto u = overlapAxis(a, true), v = overlapAxis(a, false);
-    if (u.degree > 2 || v.degree > 2 || b.uDegree() > 2 || b.vDegree() > 2) return false;
+    if (u.degree > 3 || v.degree > 3 || b.uDegree() > 3 || b.vDegree() > 3) return false;
     const int i = firstOverlapSpan(u), j = firstOverlapSpan(v);
     if (i == u.count || j == v.count) return false;
     const auto bounds = overlapPhysicalBounds(a, axisX, axisY);
     const auto [x, y] = bounds;
     if (!(x.lo < x.hi && y.lo < y.hi)) return false;
-    constexpr std::array<RationalHeightOrder, 4> orders{{{2,1}, {2,2}, {3,1}, {3,2}}};
+    constexpr std::array<RationalHeightOrder, 9> orders{{
+        {2,1}, {2,2}, {3,1}, {3,2}, {4,1}, {4,2}, {2,3}, {3,3}, {4,3}
+    }};
     for (auto order : orders) {
         try {
             const auto count = order.terms();
@@ -2580,18 +2924,33 @@ bool equalRationalPhysicalHeight(const BSplineSurface &a, const BSplineSurface &
                 return rationalHeightEquations(overlapCoordinates(s, tu, tv, axisX, axisY, axisZ, x, y),
                     order);
             };
-            const auto coefficients = deriveHeightCoefficients(equationsAt(a, i, j), count, order.numerator > 2);
-            if (!coefficients) continue;
-            const auto certify = [&](const BSplineSurface &s) {
+            const auto equations = equationsAt(a, i, j);
+            const auto certify = [&](const BSplineSurface &s, const HeightCoefficients &coefficients) {
                 const auto offset = order.numeratorTerms();
                 const bool positive = order.denominator == 1
-                    ? positiveAffineOverlapDenominator(s, axisX, axisY, x, y, *coefficients, offset)
-                    : positiveQuadraticOverlapDenominator(&s == &a ? bounds : overlapPhysicalBounds(s, axisX, axisY),
-                                                          x, y, *coefficients, offset);
-                return positive && certifyHeightEquations(s, *coefficients, count,
+                    ? positiveAffineOverlapDenominator(s, axisX, axisY, x, y, coefficients, offset)
+                    : positivePolynomialOverlapDenominator(&s == &a ? bounds : overlapPhysicalBounds(s, axisX, axisY),
+                                                            x, y, coefficients, offset, order.denominator);
+                return positive && certifyHeightEquations(s, coefficients, count,
                     [&](int tu, int tv) { return equationsAt(s, tu, tv); });
             };
-            if (certify(a)) return certify(b);
+            try {
+                const auto coefficients = deriveHeightCoefficients(equations, count, order.numerator > 2);
+                if (coefficients && certify(a, *coefficients) && certify(b, *coefficients)) return true;
+            } catch (const OverlapArithmeticFailed &) {
+                // Exact elimination may grow even when a small model exists.
+            }
+            if (order.numerator < 4 && order.denominator < 3) continue;
+            const auto estimate = estimateHeightCoefficients(equations, count);
+            if (!estimate) continue;
+            for (int bits : {48, 40, 32, 24, 16}) {
+                const auto candidate = dyadicHeightCandidate(*estimate, order, bits);
+                try {
+                    if (certify(a, candidate) && certify(b, candidate)) return true;
+                } catch (const OverlapArithmeticFailed &) {
+                    // This candidate did not give an exact identity.
+                }
+            }
         } catch (const OverlapArithmeticFailed &) {
             // Another order may admit exact coefficients.
         }
@@ -2868,7 +3227,10 @@ double nonlinearProjectedNode(const ProjectedStrip &strip, const BSplineSurface 
     const I normalSign((axisX + 1) % 3 == axisY ? 1. : -1.);
     const auto &a = world[0], &b = world[1];
     const I determinant = a.du * b.dv - a.dv * b.du;
-    const IP origin = point(target.pole(0, 0));
+    const auto pu = target.uDegree(), pv = target.vDegree();
+    // Center both polynomial enclosures on the active control net.
+    // A distant first pole widens the interval residual during subtraction.
+    const IP origin = point(target.pole(tu - pu, tv - pv));
     const bool rational = target.isRational();
     const bool coupled = adjustment && !adjustment->fixedAxis;
     const auto localParameter = [&](Polynomial x, Polynomial y, const Polynomial &w) {
@@ -2902,7 +3264,6 @@ double nonlinearProjectedNode(const ProjectedStrip &strip, const BSplineSurface 
         return coordinates;
     };
     const auto &ku = target.uKnots(), &kv = target.vKnots();
-    const auto pu = target.uDegree(), pv = target.vDegree();
     const auto bu = basis(ku, tu, P{I(targetBox.u.lo), I(targetBox.u.hi)}, pu);
     const auto bv = basis(kv, tv, P{I(targetBox.v.lo), I(targetBox.v.hi)}, pv);
     const auto homogeneousPole = [&](int i, int j) {
@@ -3223,7 +3584,7 @@ Rectangle projectedChartInterior(const BSplineSurface &s, int axisX, int axisY) 
 }
 
 struct DirectSourceProjection {
-    const SourceGraph &source;
+    const SourceGraph *source; // null for a planar source
     std::array<Affine, 2> world;
     Affine height;
     std::array<int, 2> axes;
@@ -3241,7 +3602,9 @@ struct DirectSourceSample {
 };
 
 DirectSourceSample directSourceOn(const DirectSourceProjection &map, Rectangle box, const IP &origin) {
-    const auto relief = graphZOn(map.source, P{I(box.u.lo), I(box.u.hi)}, P{I(box.v.lo), I(box.v.hi)});
+    const auto *source = map.source;
+    const auto relief = source ? graphZOn(*source, P{I(box.u.lo), I(box.u.hi)}, P{I(box.v.lo), I(box.v.hi)}) :
+                                 Polynomial(I(0.));
     const auto [x, y] = map.axes;
     const int z = 3 - x - y;
     const auto &graph = map.graph;
@@ -3249,10 +3612,12 @@ DirectSourceSample directSourceOn(const DirectSourceProjection &map, Rectangle b
     const auto projectedOn = [&](int axis, I center) {
         auto affine = map.world[axis];
         affine.origin = affine.origin - center;
-        return sum(affineOn(affine, box), scaled(relief, map.source.zUV[axis]));
+        auto coordinate = affineOn(affine, box);
+        return source ? sum(std::move(coordinate), scaled(relief, source->zUV[axis])) : coordinate;
     };
     auto u = projectedOn(0, x0), v = projectedOn(1, y0);
-    auto height = sum(affineOn(map.height, box), scaled(relief, map.source.zHeight));
+    auto height = affineOn(map.height, box);
+    if (source) height = sum(std::move(height), scaled(relief, source->zHeight));
     DirectSourceSample sample;
     if (!graph) {
         sample.support[x] = std::move(u);
@@ -3322,13 +3687,27 @@ double directGraphNormalUpper(const VectorPolynomial &residual, const VectorPoly
         I(magnitude(height.range)) * I(magnitude(length - reference))) / reference).hi;
 }
 
+constexpr std::array<std::array<double, 2>, 5> directWitnessFractions{{
+    {.5,.5}, {.25,.5}, {.75,.5}, {.5,.25}, {.5,.75}
+}};
+
 double directSourceNode(const DirectSourceProjection &map, const BSplineSurface &image, int iu, int iv,
                       Rectangle r, double budget, int depth, Work &work, bool &hasInterior) {
     work.visit();
+    if (map.footprint && !map.source) {
+        // Each polynomial applies only inside its own physical rectangle.
+        // Clip on the affine projection before evaluating either surface.
+        const auto &box = *map.footprint;
+        const I px = range(map.world[0], r.u, r.v), py = range(map.world[1], r.u, r.v);
+        // Joined coverage and matching normals extend the interior
+        // bound to seams. A boundary-only touch needs no separate proof.
+        if (finite(px) && finite(py) && !overlapsInterior({{px.lo, px.hi}, {py.lo, py.hi}}, box)) return 0.;
+        if (!clipObliqueCell(map.world, {{box.u, box.v}, true}, r)) return 0.;
+    }
     const IP origin = point(image.pole(iu - 3, iv - 3));
     const auto wanted = directSourceOn(map, r, origin);
     const auto [x, y] = map.axes;
-    if (map.footprint) {
+    if (map.footprint && map.source) {
         const I px = hull(wanted.support[x]) + origin[x], py = hull(wanted.support[y]) + origin[y];
         const auto &box = *map.footprint;
         if (px.hi < box.u.lo || px.lo > box.u.hi || py.hi < box.v.lo || py.lo > box.v.hi) return 0.;
@@ -3341,8 +3720,7 @@ double directSourceNode(const DirectSourceProjection &map, const BSplineSurface 
     const double upper = wanted.height ? directGraphNormalUpper(residual, wanted.normal, *wanted.height) :
                                          squareRoot(squaredUpper(residual)).hi;
     if (!hasInterior || upper > budget) {
-        for (const auto &[fu, fv] : std::array<std::array<double, 2>, 5>{
-                 {{.5,.5}, {.25,.5}, {.75,.5}, {.5,.25}, {.5,.75}}}) {
+        for (const auto &[fu, fv] : directWitnessFractions) {
             const double u = (1. - fu) * r.u.lo + fu * r.u.hi;
             const double v = (1. - fv) * r.v.lo + fv * r.v.hi;
             if (!(r.u.lo < u && u < r.u.hi && r.v.lo < v && v < r.v.hi)) continue;
@@ -3365,7 +3743,9 @@ double directSourceNode(const DirectSourceProjection &map, const BSplineSurface 
         }
     }
     if (upper <= budget) return upper;
-    const auto halves = depth < maxDepth ? bisect(r) : std::nullopt;
+    // Tighten the clipped join or the forward relief enclosure locally.
+    // The planar pass with a common height still checks each span once.
+    const auto halves = (map.source || map.footprint) && depth < maxDepth ? bisect(r) : std::nullopt;
     if (!halves) return infinity;
     const double first = directSourceNode(map, image, iu, iv, halves->front(), budget, depth + 1, work, hasInterior);
     return std::max(first, directSourceNode(map, image, iu, iv, halves->back(), budget, depth + 1, work, hasInterior));
@@ -3387,17 +3767,29 @@ std::optional<PhysicalHeightModel> commonDirectHeight(const std::vector<Projecte
     return {};
 }
 
-std::array<double, 5> quadraticSeam(const PhysicalHeightModel &model, double seam, bool alongX) {
-    // The derived frames have unit scales and the same transverse origin.
-    // The height and the crossing derivative determine the full normal.
-    const auto c = [&](int n, int t) {
-        return alongX ? model.height.coefficients[n][t] : model.height.coefficients[t][n];
-    };
+std::array<std::array<double, maxPhysicalHeightDegree + 1>, 2> polynomialSeam(
+    const PhysicalHeightModel &model, double seam, double transverseOrigin, bool alongX) {
+    // Height and its crossing derivative determine the full normal.
+    // Express both in powers about the same physical transverse origin.
     const double d = overlapAdd(seam, -(alongX ? model.x.lo : model.y.lo));
-    const double linear = overlapAdd(c(1, 0), overlapMultiply(c(2, 0), d));
-    return {overlapAdd(c(0, 0), overlapMultiply(linear, d)),
-            overlapAdd(c(0, 1), overlapMultiply(c(1, 1), d)), c(0, 2),
-            overlapAdd(linear, overlapMultiply(c(2, 0), d)), c(1, 1)};
+    const double shift = overlapAdd(transverseOrigin, -(alongX ? model.y.lo : model.x.lo));
+    std::array<double, maxPhysicalHeightDegree + 1> powers{1.};
+    for (int i = 1; i <= model.degree; ++i) powers[i] = overlapMultiply(powers[i - 1], shift);
+    std::array<std::array<double, maxPhysicalHeightDegree + 1>, 2> result{};
+    for (int t = 0; t <= model.degree; ++t) {
+        double height = 0., derivative = 0.;
+        for (int n = model.degree - t; n >= 0; --n) {
+            const auto &c = model.height.coefficients;
+            derivative = overlapAdd(height, overlapMultiply(d, derivative));
+            height = overlapAdd(alongX ? c[n][t] : c[t][n], overlapMultiply(d, height));
+        }
+        for (int k = 0; k <= t; ++k) {
+            const double basis = overlapMultiply(surface_bounds::choose(t, k), powers[t - k]);
+            result[0][k] = overlapAdd(result[0][k], overlapMultiply(height, basis));
+            result[1][k] = overlapAdd(result[1][k], overlapMultiply(derivative, basis));
+        }
+    }
+    return result;
 }
 
 struct DirectHeightPiece {
@@ -3405,32 +3797,60 @@ struct DirectHeightPiece {
     PhysicalHeightModel graph;
 };
 
-std::optional<Rectangle> joinedQuadraticFootprint(std::vector<DirectHeightPiece> &pieces, bool alongX, Work &work) {
-    const auto crossing = [alongX](Rectangle box) { return alongX ? box.u : box.v; };
-    const auto transverse = [alongX](Rectangle box) { return alongX ? box.v : box.u; };
-    std::sort(pieces.begin(), pieces.end(), [&](const auto &a, const auto &b) {
-        return crossing(a.footprint).lo < crossing(b.footprint).lo;
-    });
-    const Interval across = transverse(pieces.front().footprint);
-    Interval extent = crossing(pieces.front().footprint);
+bool joinedPolynomialCoverage(const std::vector<DirectHeightPiece> &pieces, Rectangle needed, Work &work) {
+    // Check each shared edge at a common transverse origin. T-junctions
+    // can have different transverse extents on either side of a seam.
     try {
-        for (std::size_t i = 1; i < pieces.size(); ++i) {
+        for (std::size_t i = 0; i < pieces.size(); ++i) for (std::size_t j = 0; j < i; ++j) {
             work.visit();
-            const auto &next = pieces[i];
-            const Interval adjacent = crossing(next.footprint), side = transverse(next.footprint);
-            if (adjacent.lo != extent.hi || side.lo != across.lo || side.hi != across.hi ||
-                quadraticSeam(pieces[i - 1].graph, extent.hi, alongX) != quadraticSeam(next.graph, extent.hi, alongX))
-                return {};
-            extent.hi = adjacent.hi;
+            const auto &a = pieces[i], &b = pieces[j];
+            const Interval x{std::max(a.footprint.u.lo, b.footprint.u.lo), std::min(a.footprint.u.hi, b.footprint.u.hi)};
+            const Interval y{std::max(a.footprint.v.lo, b.footprint.v.lo), std::min(a.footprint.v.hi, b.footprint.v.hi)};
+            if (x.lo > x.hi || y.lo > y.hi) continue;
+            if (x.lo < x.hi && y.lo < y.hi) return false;
+            const bool alongX = x.lo == x.hi;
+            const Interval crossing = alongX ? x : y, transverse = alongX ? y : x;
+            const auto first = polynomialSeam(a.graph, crossing.lo, transverse.lo, alongX);
+            const auto second = polynomialSeam(b.graph, crossing.lo, transverse.lo, alongX);
+            if (transverse.lo < transverse.hi) {
+                if (first != second) return false;
+            } else if (first[0][0] != second[0][0] || first[0][1] != second[0][1] || first[1][0] != second[1][0]) {
+                return false;
+            }
         }
     } catch (const OverlapArithmeticFailed &) {
-        return {};
+        return false;
     }
-    return alongX ? Rectangle{extent, across} : Rectangle{across, extent};
+
+    // On each open X slab the active closed rectangles are constant.
+    // Their Y intervals must cover the source enclosure, with no gaps.
+    std::vector<double> cuts{needed.u.lo, needed.u.hi};
+    for (const auto &piece : pieces) {
+        for (double boundary : {piece.footprint.u.lo, piece.footprint.u.hi})
+            if (needed.u.lo < boundary && boundary < needed.u.hi) cuts.push_back(boundary);
+    }
+    std::sort(cuts.begin(), cuts.end());
+    cuts.erase(std::unique(cuts.begin(), cuts.end()), cuts.end());
+    for (std::size_t i = 1; i < cuts.size(); ++i) {
+        std::vector<Interval> cover;
+        for (const auto &piece : pieces) {
+            work.visit();
+            if (piece.footprint.u.lo <= cuts[i - 1] && cuts[i] <= piece.footprint.u.hi)
+                cover.push_back(piece.footprint.v);
+        }
+        std::sort(cover.begin(), cover.end(), [](Interval a, Interval b) { return a.lo < b.lo; });
+        double covered = needed.v.lo;
+        for (const auto interval : cover) {
+            if (interval.lo > covered) break;
+            covered = std::max(covered, interval.hi);
+        }
+        if (covered < needed.v.hi) return false;
+    }
+    return cuts.size() > 1;
 }
 
 std::vector<DirectSourceProjection> joinedDirectProjections(const DirectSourceProjection &projection,
-    const std::vector<ProjectedStrip> &strips, Rectangle sourceBox, Work &work) {
+    const std::vector<ProjectedStrip> &strips, Rectangle sourceBox, int maxDegree, Work &work) {
     const auto [x, y] = projection.axes;
     std::vector<DirectHeightPiece> pieces;
     pieces.reserve(strips.size());
@@ -3438,7 +3858,11 @@ std::vector<DirectSourceProjection> joinedDirectProjections(const DirectSourcePr
         work.visit();
         const auto inner = projectedChartInterior(*strip.surface, x, y);
         const auto &box = strip.footprint;
-        auto graph = derivePhysicalHeightModel(*strip.surface, x, y, 3 - x - y, 2);
+        std::optional<PhysicalHeightModel> graph;
+        for (int degree = 2; degree <= maxDegree && !graph; ++degree) {
+            work.visit();
+            graph = derivePhysicalHeightModel(*strip.surface, x, y, 3 - x - y, degree);
+        }
         // Winding on the interior and the outer control hull prove the
         // entire closed chart rectangle in physical coordinates.
         if (!graph || inner.u.lo != box.u.lo || inner.u.hi != box.u.hi ||
@@ -3446,13 +3870,10 @@ std::vector<DirectSourceProjection> joinedDirectProjections(const DirectSourcePr
             graph->x.lo != box.u.lo || graph->y.lo != box.v.lo) return {};
         pieces.push_back({box, std::move(*graph)});
     }
-    auto footprint = joinedQuadraticFootprint(pieces, true, work);
-    if (!footprint) footprint = joinedQuadraticFootprint(pieces, false, work);
-    if (!footprint) return {};
     const auto projected = directSourceOn(projection, sourceBox, {});
     const I px = hull(projected.support[x]), py = hull(projected.support[y]);
-    if (!(px.lo >= footprint->u.lo && px.hi <= footprint->u.hi &&
-          py.lo >= footprint->v.lo && py.hi <= footprint->v.hi)) return {};
+    if (!finite(px) || !finite(py) || !(px.lo < px.hi && py.lo < py.hi) ||
+        !joinedPolynomialCoverage(pieces, {{px.lo, px.hi}, {py.lo, py.hi}}, work)) return {};
     std::vector<DirectSourceProjection> maps;
     maps.reserve(pieces.size());
     for (auto &piece : pieces) {
@@ -3465,9 +3886,131 @@ std::vector<DirectSourceProjection> joinedDirectProjections(const DirectSourcePr
     return maps;
 }
 
-SurfaceMappingBoundResult directSourceResidual(const SourceGraph &source, const BSplineSurface &image,
+SurfaceMappingBoundResult planarControlNetResidual(const DirectSourceProjection &map, const BSplineSurface &image,
+    Rectangle r, double budget, Work &work) {
+    if (!image.uDomain().contains(r.u.lo) || !image.uDomain().contains(r.u.hi) ||
+        !image.vDomain().contains(r.v.lo) || !image.vDomain().contains(r.v.hi)) return {};
+    const int nu = image.uPoleCount(), nv = image.vPoleCount();
+    const auto &uk = image.uKnots(), &vk = image.vKnots();
+    const auto activePoles = [](const std::vector<double> &knots, int count, Interval range) {
+        // The bicubic is position-continuous at its knots. The right span
+        // at the lower end and the left span at the upper end therefore
+        // cover the closed window without pulling in inactive controls.
+        const int first = containing(knots, 3, count, {range.lo, range.lo}) - 3;
+        const int end = int(std::lower_bound(knots.begin() + 3, knots.begin() + count + 1, range.hi) - knots.begin());
+        return std::pair{first, end};
+    };
+    const auto [firstU, endU] = activePoles(uk, nu, r.u);
+    const auto [firstV, endV] = activePoles(vk, nv, r.v);
+    const std::size_t witnessCost = 2 + (1 + directWitnessFractions.size()) * map.interiors.size();
+    if (witnessCost >= work.left) return {};
+    const auto insideContact = [&](const Vec2 &uv) {
+        if (!(r.u.lo < uv.x() && uv.x() < r.u.hi && r.v.lo < uv.y() && uv.y() < r.v.hi)) return false;
+        work.visit(map.interiors.size());
+        const I x = at(map.world[0], uv.x(), uv.y()), y = at(map.world[1], uv.x(), uv.y());
+        return std::any_of(map.interiors.begin(), map.interiors.end(),
+            [&](Rectangle box) { return strictlyInside(box, x, y); });
+    };
+    std::optional<Vec2> interior;
+    for (const auto &[fu, fv] : directWitnessFractions) {
+        const Vec2 uv((1. - fu) * r.u.lo + fu * r.u.hi, (1. - fv) * r.v.lo + fv * r.v.hi);
+        if (insideContact(uv)) {
+            interior = uv;
+            break;
+        }
+    }
+    if (!interior) return {};
+    const auto checkPoint = [&](const Vec2 &uv) {
+        work.visit();
+        const double u = uv.x(), v = uv.y();
+        const int iu = containing(uk, 3, nu, {u, u}), iv = containing(vk, 3, nv, {v, v});
+        const IP origin = point(image.pole(iu - 3, iv - 3));
+        const auto actual = surfaceOn(image, iu, iv, Polynomial(I(u)), Polynomial(I(v)), origin, UVLayout::Direct);
+        const auto wanted = directSourceOn(map, {{u, u}, {v, v}}, origin);
+        checkProjectedPointResidual(actual, wanted.support, {}, budget);
+    };
+
+    const auto [x, y] = map.axes;
+    const int z = 3 - x - y;
+    std::array<Affine, 3> expected;
+    expected[x] = map.world[0];
+    expected[y] = map.world[1];
+    expected[z] = {I(map.level) + map.normalSign * map.height.origin,
+        map.normalSign * map.height.du, map.normalSign * map.height.dv};
+    const auto terms = [&](const std::vector<double> &knots, int first, int end, bool alongU) {
+        std::vector<IP> result;
+        result.reserve(std::size_t(end - first));
+        for (int i = first; i < end; ++i) {
+            cancellationPoint();
+            const I g = (I(knots[i + 1]) + I(knots[i + 2]) + I(knots[i + 3])) / I(3.);
+            IP values;
+            for (int axis = 0; axis < 3; ++axis)
+                values[axis] = (alongU ? expected[axis].du : expected[axis].dv) * g;
+            result.push_back(values);
+        }
+        return result;
+    };
+    const auto u = terms(uk, firstU, endU, true), v = terms(vk, firstV, endV, false);
+
+    // The affine map has an exact representation on the same spline basis
+    // with Greville abscissae as coefficients. Positivity and partition of
+    // unity bound the norm of the residual by the maximum coefficient norm.
+    // validate() already bounds the native net to maxPoles. This single
+    // linear pass uses that bound. Work is reserved for geometric queries
+    // and adaptive cell subdivision, including the point witness below.
+    double upperSquared = 0.;
+    const double budgetSquared = (I(budget) * I(budget)).hi;
+    for (int i = firstU; i < endU; ++i) for (int j = firstV; j < endV; ++j) {
+        cancellationPoint();
+        const auto &uTerm = u[std::size_t(i - firstU)], &vTerm = v[std::size_t(j - firstV)];
+        auto residual = point(image.pole(i, j));
+        for (int axis = 0; axis < 3; ++axis)
+            residual[axis] = (residual[axis] - expected[axis].origin) - uTerm[axis] - vTerm[axis];
+        const I squared = scalar(residual, residual);
+        if (!finite(squared)) return {};
+        if (squared.hi > budgetSquared) {
+            // A coefficient is not a rejection witness. Look on its
+            // support first, then use the previously established contact.
+            const Vec2 local(.5 * std::max(r.u.lo, uk[i]) + .5 * std::min(r.u.hi, uk[i + 4]),
+                             .5 * std::max(r.v.lo, vk[j]) + .5 * std::min(r.v.hi, vk[j + 4]));
+            if (insideContact(local)) checkPoint(local);
+            if (local.x() != interior->x() || local.y() != interior->y()) checkPoint(*interior);
+            return {};
+        }
+        upperSquared = std::max(upperSquared, squared.hi);
+    }
+    const double upper = squareRoot(I(upperSquared)).hi;
+    return upper <= budget ? SurfaceMappingBoundResult{SurfaceMappingBoundStatus::Certified, upper}
+                           : SurfaceMappingBoundResult{};
+}
+
+bool directGridFitsWork(std::size_t uSpans, std::size_t vSpans, std::size_t charts, const Work &work,
+                        std::size_t projections = 1) {
+    // One visit per projection and up to five candidates per chart in each cell.
+    return uSpans <= work.left / vSpans / (projections + directWitnessFractions.size() * charts);
+}
+
+SurfaceMappingBoundResult affinePlanarControlNet(const std::vector<GraphPatch> &graphs, const BSplineSurface &image,
+    Rectangle r, const std::array<Affine, 2> &world, const Affine &height, const std::array<int, 2> &axes,
+    I normalSign, double budget, Work &work) {
+    const auto us = cuts(image.uKnots(), r.u), vs = cuts(image.vKnots(), r.v);
+    if (directGridFitsWork(us.size() - 1, vs.size() - 1, graphs.size(), work)) return {};
+    const int z = 3 - axes[0] - axes[1];
+    const double level = graphs.front().carrier.base.pole(0, 0)[z];
+    DirectSourceProjection projection{nullptr, world, height, axes, normalSign, level, {}, {}, {}};
+    for (const auto &patch : graphs) {
+        cancellationPoint();
+        if (!patch.fullDomain || !patch.contactIsRegular || constantGraphHeight(patch.carrier.base, z) != level) return {};
+        // These domains are physical X/Y intervals: the accepted native
+        // affine chart is either direct or transposed with proven orientation.
+        projection.interiors.push_back({patch.u, patch.v});
+    }
+    return planarControlNetResidual(projection, image, r, budget, work);
+}
+
+SurfaceMappingBoundResult directSourceResidual(const SourceGraph *source, const BSplineSurface &image,
     const std::vector<ProjectedStrip> &strips, Rectangle r, const std::array<Affine, 2> &world,
-    const Affine &height, const std::array<int, 2> &axes, double budget) {
+    const Affine &height, const std::array<int, 2> &axes, double budget, Work &work) {
     if (strips.empty()) return {};
     const auto [x, y] = axes;
     const int z = 3 - x - y;
@@ -3477,36 +4020,37 @@ SurfaceMappingBoundResult directSourceResidual(const SourceGraph &source, const 
     const bool flat = std::all_of(strips.begin(), strips.end(), [&](const ProjectedStrip &strip) {
         return strip.flat && strip.surface->pole(0, 0)[z] == level;
     });
-    if (!flat) {
-        // A support of degree d composes to at most d times the source
-        // degree. Its normal derivative times source height fits the same
-        // bound, even when the constant-reference normal bound is needed.
-        const int degree = std::max({1, source.surface->uDegree(), source.surface->vDegree()});
-        const int maxDegree = std::min(maxPhysicalHeightDegree, maxPolynomialDegree / degree);
-        projection.graph = commonDirectHeight(strips, x, y, z, maxDegree);
-    }
-    Work work;
+    // A support of degree d composes to at most d times the source
+    // degree. Its normal derivative times source height fits the same bound.
+    const int maxDegree = source ? std::min(maxPhysicalHeightDegree, maxPolynomialDegree /
+        std::max({1, source->surface->uDegree(), source->surface->vDegree()})) : 5;
+    if (!flat) projection.graph = commonDirectHeight(strips, x, y, z, maxDegree);
     std::vector<DirectSourceProjection> maps;
     if (flat || projection.graph) {
         for (const auto &strip : strips)
             projection.interiors.push_back(projectedChartInterior(*strip.surface, x, y));
         maps.push_back(std::move(projection));
     } else {
-        maps = joinedDirectProjections(projection, strips, r, work);
+        maps = joinedDirectProjections(projection, strips, r, maxDegree, work);
         if (maps.empty()) return {};
     }
     // In the rank-one projection, any two parameters mapping to the same
     // point differ along the affine inverse of the relief direction. A
     // fixed, nonzero Jacobian sign implies strict monotonicity on that line.
     // Evaluate the physical residual forward, without composing an inverse.
-    const double u = .5 * r.u.lo + .5 * r.u.hi, v = .5 * r.v.lo + .5 * r.v.hi;
-    const I center = sourceProjectionJacobian(source, world, {{u,u}, {v,v}});
-    if (!strictSign(center) ||
-        !regularSourceProjection(source, world, r, I(center.lo > 0. ? 1. : -1.), 0, work)) return {};
+    if (source) {
+        const double u = .5 * r.u.lo + .5 * r.u.hi, v = .5 * r.v.lo + .5 * r.v.hi;
+        const I center = sourceProjectionJacobian(*source, world, {{u,u}, {v,v}});
+        if (!strictSign(center) ||
+            !regularSourceProjection(*source, world, r, I(center.lo > 0. ? 1. : -1.), 0, work)) return {};
+    }
     const auto &uk = image.uKnots(), &vk = image.vKnots();
     if (r.u.lo < image.uDomain().lo || r.u.hi > image.uDomain().hi ||
         r.v.lo < image.vDomain().lo || r.v.hi > image.vDomain().hi) return {};
     const auto us = cuts(uk, r.u), vs = cuts(vk, r.v);
+    // Check the base cost before visiting the optional planar grid.
+    if (!source && !directGridFitsWork(us.size() - 1, vs.size() - 1, strips.size(), work, maps.size()))
+        return flat ? planarControlNetResidual(maps.front(), image, r, budget, work) : SurfaceMappingBoundResult{};
     bool hasInterior = false;
     double upper = 0.;
     for (std::size_t i = 1; i < us.size(); ++i) for (std::size_t j = 1; j < vs.size(); ++j) {
@@ -3541,8 +4085,10 @@ SurfaceMappingBoundResult nonlinearProjectedResidual(const Body &source, FaceId 
         const auto &patch = target.body->face(target.face);
         const auto *s = dynamic_cast<const BSplineSurface *>(patch.surface.get());
         if (!s || s->basis() || s->isUPeriodic() || s->isVPeriodic() ||
-            s->uDegree() < 1 || s->uDegree() > 2 || s->vDegree() < 1 || s->vDegree() > 2 ||
             (patch.sense ? 1. : -1.) != direction) return {};
+        const int maxNativeDegree = s->isRational() ? 3 : 2;
+        if (s->uDegree() < 1 || s->uDegree() > maxNativeDegree ||
+            s->vDegree() < 1 || s->vDegree() > maxNativeDegree) return {};
         validate(*s, false);
         const auto ud = s->uDomain(), vd = s->vDomain();
         if (!fullRectangle(*target.body, target.face, ud, vd)) return {};
@@ -3625,10 +4171,11 @@ SurfaceMappingBoundResult nonlinearProjectedResidual(const Body &source, FaceId 
     auto orientedHeight = originalHeight;
     auto projectedWorld = world;
     std::optional<SourceProjectionAdjustment> adjustment;
+    Work work;
     if (sourceGraph) {
         const auto directResidual = [&] {
-            return directSourceResidual(*sourceGraph, image, strips, sourceBox, world, originalHeight,
-                                      {axisX, axisY}, budget);
+            return directSourceResidual(sourceGraph, image, strips, sourceBox, world, originalHeight,
+                                       {axisX, axisY}, budget, work);
         };
         if (sourceGraph->surface->uDegree() > 3 || sourceGraph->surface->vDegree() > 3) return directResidual();
         if (!exact(sourceGraph->zUV[0], 0.) || !exact(sourceGraph->zUV[1], 0.)) {
@@ -3642,8 +4189,19 @@ SurfaceMappingBoundResult nonlinearProjectedResidual(const Body &source, FaceId 
                 if (!adjustment) return directResidual();
             }
         }
+    } else {
+        // A common height or a covered join of physical graphs can be
+        // assessed on the image grid, even with rational charts. An
+        // inconclusive optional pass keeps the existing strip traversal.
+        Work directWork;
+        try {
+            const auto proof = directSourceResidual(nullptr, image, strips, sourceBox, world, originalHeight,
+                                                   {axisX, axisY}, budget, directWork);
+            if (proof.status == SurfaceMappingBoundStatus::Certified) return proof;
+        } catch (const ProofFailed &) {
+            // An exhausted optional join must still allow the strip proof.
+        }
     }
-    Work work;
     double upper = 0.;
     bool hasInterior = false;
     I sourceY = range(world[1], sourceBox.u, sourceBox.v);
@@ -3653,12 +4211,23 @@ SurfaceMappingBoundResult nonlinearProjectedResidual(const Body &source, FaceId 
     for (const auto &strip : strips) {
         const auto *s = strip.surface;
         const auto &ku = s->uKnots(), &kv = s->vKnots();
+        int firstV = s->vDegree(), endV = s->vPoleCount();
+        if (strip.exactY) {
+            const auto domain = s->vDomain();
+            if (sourceY.hi < domain.lo || sourceY.lo > domain.hi) continue;
+            // Y=V: skip spans disjoint from the outward source range, keeping
+            // both one-sided polynomials when a limit is exactly on a knot.
+            const auto first = kv.begin() + firstV;
+            const auto last = kv.begin() + endV + 1;
+            firstV = std::max(firstV, int(std::lower_bound(first, last, sourceY.lo) - kv.begin()) - 1);
+            endV = std::min(endV, int(std::upper_bound(first, last, sourceY.hi) - kv.begin()));
+        }
         for (int i = s->uDegree(); i < s->uPoleCount(); ++i) {
             cancellationPoint();
             if (ku[i] == ku[i + 1]) continue;
-            for (int j = s->vDegree(); j < s->vPoleCount(); ++j) {
-                work.visit();
+            for (int j = firstV; j < endV; ++j) {
                 if (kv[j] == kv[j + 1]) continue;
+                work.visit();
                 Interval targetV{kv[j], kv[j + 1]};
                 if (strip.exactY) {
                     // Y=V is exact on this strip. Clip before subdivision
@@ -3696,7 +4265,7 @@ SurfaceMappingBoundResult projectedMappingResidualBound(
         const bool fullSource = fullRectangle(sourceBody, sourceFace, u, v);
         if (!plane) {
             const auto singleBezierSpan = [](int degree, int count, const std::vector<double> &knots, Interval domain) {
-                return degree >= 1 && degree <= 4 && count == degree + 1 &&
+                return degree >= 1 && degree <= 5 && count == degree + 1 &&
                     knots.front() == domain.lo && knots.back() == domain.hi;
             };
             // World X/Y are the exact source parameters; the source height
@@ -3787,6 +4356,11 @@ SurfaceMappingBoundResult projectedMappingResidualBound(
         bool hadProof = false;
         bool complete = true;
         Work work;
+        if (plane && fullSource) {
+            const auto proof = affinePlanarControlNet(graphs, *fitted, {u, v}, world, chartMapping.height,
+                {axisX, axisY}, I(targetChart.zDir()[axisZ]), budget, work);
+            if (proof.status == SurfaceMappingBoundStatus::Certified) return proof;
+        }
         for (const auto &patch : graphs) {
             cancellationPoint();
             Rectangle clipped{u, v};

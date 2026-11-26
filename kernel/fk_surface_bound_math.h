@@ -84,7 +84,7 @@ inline P scaled(P values, I factor) {
     for (I &value : values) value = value * factor;
     return values;
 }
-// Binomial coefficients through degree 21 fit exactly in double.
+// Binomial coefficients through degree 48 fit exactly in double.
 // Enclose the Bernstein product factor with interval arithmetic.
 inline double choose(int n, int k) {
     std::uint64_t value = 1;
@@ -97,7 +97,7 @@ inline I bernsteinProductFactor(int m, int n, int i, int j) {
 template<int MaxDegree, class ProofFailed>
 P product(const P &a, const P &b) {
     const int m = int(a.size()) - 1, n = int(b.size()) - 1;
-    static_assert(MaxDegree <= 21);
+    static_assert(MaxDegree <= 48);
     if (m + n > MaxDegree) throw ProofFailed{};
     P values(std::size_t(m + n + 1));
     for (int i = 0; i <= m; ++i)

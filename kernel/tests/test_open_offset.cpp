@@ -5,6 +5,7 @@
 #include "fk_classify.h"
 #include "fk_mass.h"
 #include "fk_offset.h"
+#include "fk_open_offset.h"
 #include "fk_profile.h"
 #include "fk_primitives.h"
 #include "fk_revolve.h"
@@ -356,4 +357,113 @@ FK_TEST(OpenOffsetTrimExcursion) {
         rejectedAtTrim = std::string(error.what()) == "spessore: il foro incontra il bordo del supporto rifilato";
     }
     FK_CHECK(rejectedAtTrim);
+}
+
+FK_TEST(OpenOffsetOpeningSkinResidualBetweenSamples) {
+    const auto skin = [](bool varyingU, double offset, double bump) {
+        const std::vector<double> plain{0., 0., 0., 0., 3., 3., 3., 3.};
+        const std::vector<double> local{0., 0., 0., 0., 1.08, 1.11, 1.14, 1.17, 1.20, 3., 3., 3., 3.};
+        const auto &u = varyingU && bump != 0. ? local : plain;
+        const auto &v = !varyingU && bump != 0. ? local : plain;
+        const auto greville = [](const std::vector<double> &knots, std::size_t i) {
+            return (knots[i + 1] + knots[i + 2] + knots[i + 3]) / 3.;
+        };
+        std::vector<Vec3> poles;
+        for (std::size_t i = 0; i < u.size() - 4; ++i)
+            for (std::size_t j = 0; j < v.size() - 4; ++j)
+                poles.emplace_back(greville(u, i), greville(v, j), offset + ((varyingU ? i : j) == 4 ? bump : 0.));
+        return BSplineSurface(3, 3, u, v, int(u.size()) - 4, int(v.size()) - 4, std::move(poles));
+    };
+
+    constexpr double budget = 1e-6;
+    const auto verify = [&](bool varyingU, const Curve<2> &uv, Interval range, double hidden) {
+        const auto source = skin(varyingU, 0., 0.);
+        for (double offset : {-1., 1.}) {
+            const auto validImage = skin(varyingU, offset, 2.5e-7);
+            detail::requireOpeningOffset(source, validImage, uv, range, offset, budget);
+            const auto badImage = skin(varyingU, offset, 3e-6);
+            const auto gap = [&](double fraction) {
+                const auto p = uv.point(range.lo + fraction * range.length());
+                const auto expected = source.point(p.x(), p.y()) + offset * source.normal(p.x(), p.y());
+                return distance(badImage.point(p.x(), p.y()), expected);
+            };
+            for (double t : {0., .25, .5, .75, 1.})
+                FK_CHECK(gap(t) < 1e-13);
+            FK_CHECK(gap(hidden) > budget);
+
+            bool rejected = false;
+            try {
+                detail::requireOpeningOffset(source, badImage, uv, range, offset, budget);
+            } catch (const std::domain_error &error) {
+                rejected = std::string(error.what()) ==
+                    "spessore: corrispondenza del foro con la pelle a distanza non dimostrata";
+            }
+            FK_CHECK(rejected);
+        }
+    };
+    const Line<2> alongU({1., 1.}, {1., 0.}), alongV({1., 2.}, {0., -1.});
+    verify(true, alongU, {0., 1.}, .14);
+    verify(false, alongV, {0., 1.}, .86);
+    const Line<2> oblique({2., 2.}, {-1., -1.});
+    verify(true, oblique, {0., std::sqrt(2.)}, .86);
+    const BSplineCurve<2> curved(3, {0., 0., 0., 0., 1., 1., 1., 1.},
+                                 {{1., 1.}, {4. / 3., 1.}, {5. / 3., 4. / 3.}, {2., 2.}});
+    verify(true, curved, {0., 1.}, .14);
+    const BSplineCurve<2> rational(2, {0., 0., 0., 1., 1., 1.},
+                                   {{1., 1.}, {1.5, 1.}, {2., 2.}}, {16., 12., 9.});
+    verify(true, rational, {0., 1.}, .56 / 3.14);
+}
+
+FK_TEST(OpenOffsetOpeningTraceIgnoresAwayFromCurve) {
+    const auto skin = [](double offset, double defect, bool curved) {
+        const std::vector<double> knots{0., 0., 0., 0., 6., 6., 6., 6.};
+        std::vector<Vec3> poles;
+        for (int i = 0; i < 4; ++i) for (int j = 0; j < 4; ++j) {
+            // In UV the deviation vanishes on v=u or on v=1+(u-1)^2/3.
+            const double onTrace = curved ? 1. + 2. * i * (i - 1) - 4. * i / 3. + 1. / 3. : 2. * i;
+            poles.emplace_back(2. * i, 2. * j, offset + defect * (2. * j - onTrace));
+        }
+        return BSplineSurface(3, 3, knots, knots, 4, 4, std::move(poles));
+    };
+
+    constexpr double budget = 1e-6;
+    const auto source = skin(0., 0., false);
+    for (bool curved : {false, true}) {
+        const CurvePtr<2> trace = curved
+            ? CurvePtr<2>(std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0., 0., 0., 0., 1., 1., 1., 1.},
+                                                           std::vector<Vec2>{{1., 1.}, {2., 1.}, {3., 2.}, {4., 4.}}))
+            : CurvePtr<2>(std::make_shared<Line<2>>(Vec2{1., 1.}, Vec2{1., 1.}));
+        const double hi = curved ? 1. : 3. * std::sqrt(2.);
+        const Interval range{.1 * hi, .9 * hi};
+        const TrimmedCurve<2> trimmed(trace, range.lo, range.hi);
+        const auto image = skin(1., .1, curved);
+        FK_CHECK(distance(image.point(2., 3.), Vec3(2., 3., 1.)) > .09);
+        detail::requireOpeningOffset(source, image, trimmed, range, 1., budget);
+    }
+    // An exact homogeneous parameter change of the parabolic trace.
+    const BSplineCurve<2> rational(2, {0., 0., 0., 1., 1., 1.},
+                                   {{1., 1.}, {2.5, 1.}, {4., 4.}}, {4., 2., 1.});
+    const std::vector<double> quadraticKnots{0., 0., 0., 6., 6., 6.};
+    std::vector<Vec3> quadraticPoles;
+    for (double u : {0., 3., 6.}) for (double v : {0., 3., 6.})
+        quadraticPoles.emplace_back(u, v, 0.);
+    const BSplineSurface quadraticSource(2, 2, quadraticKnots, quadraticKnots, 3, 3, std::move(quadraticPoles));
+    detail::requireOpeningOffset(quadraticSource, skin(1., .1, true), rational, {.1, .9}, 1., budget);
+}
+
+FK_TEST(OpenOffsetOpeningTraceAcrossManyKnotSpans) {
+    constexpr int spanCount = 300;
+    std::vector<double> u{0., 0., 0.};
+    for (int i = 0; i <= spanCount; ++i) u.push_back(i);
+    u.insert(u.end(), 3, double(spanCount));
+    const std::vector<double> v{0., 0., 0., 0., 300., 300., 300., 300.};
+    std::vector<Vec3> poles;
+    for (std::size_t i = 0; i < u.size() - 4; ++i)
+        for (double y : {0., 100., 200., 300.})
+            poles.emplace_back((u[i + 1] + u[i + 2] + u[i + 3]) / 3., y, 0.);
+    const BSplineSurface source(3, 3, u, v, int(u.size()) - 4, 4, poles);
+    for (auto &pole : poles) pole[2] = 1.;
+    const BSplineSurface image(3, 3, u, v, int(u.size()) - 4, 4, std::move(poles));
+    const Line<2> trace({.5, .5}, {1., 1.});
+    detail::requireOpeningOffset(source, image, trace, {0., 299. * std::sqrt(2.)}, 1., 1e-6);
 }

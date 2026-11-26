@@ -102,15 +102,15 @@ bool boundedExpansionInput(double value) {
 
 }
 
-std::optional<Vec2> detail::exactRationalBezierPoint(const Vec2 *poles, const double *weights,
-                                                    std::size_t count, double parameter) {
-    if (count < 2 || count > 9 || !(0. < parameter && parameter < 1.) || std::fegetround() != FE_TONEAREST)
+std::optional<Vec2> detail::exactRationalSplinePoint(const Vec2 *poles, const double *weights,
+                                                    std::size_t count, const double *knots, double parameter) {
+    if (count < 2 || count > 9 || !boundedExpansionInput(parameter) ||
+        std::fegetround() != FE_TONEAREST)
         return {};
-    double complement, lost;
-    twoSum(1., -parameter, complement, lost);
-    if (lost != 0.) return {};
 
-    int weightBit = 0, poleBit = 0;
+    int weightBit = 0, poleBit = 0, magnitudeBits = 256;
+    std::array<std::array<Expansion, 3>, 9> values;
+    constexpr int minBit = std::numeric_limits<double>::min_exponent - 1;
     for (std::size_t i = 0; i < count; ++i) {
         if (!(weights[i] > 0.) || !boundedExpansionInput(weights[i]) ||
             !boundedExpansionInput(poles[i].x()) || !boundedExpansionInput(poles[i].y()))
@@ -118,28 +118,70 @@ std::optional<Vec2> detail::exactRationalBezierPoint(const Vec2 *poles, const do
         weightBit = std::min(weightBit, lowestBit(weights[i]));
         poleBit = std::min({poleBit, lowestBit(poles[i].x()), lowestBit(poles[i].y())});
     }
-    // Each de Casteljau level adds at most one factor of parameter or
-    // complement. Products and their FMA residuals stay on a normal
-    // binary lattice. The input magnitude cap leaves room for all sums.
-    constexpr int minBit = std::numeric_limits<double>::min_exponent - 1;
-    weightBit += int(count - 1) * std::min(lowestBit(parameter), lowestBit(complement));
     if (weightBit + poleBit < minBit) return {};
-
-    const Expansion left(complement), right(parameter);
-    std::array<std::array<Expansion, 3>, 9> values;
     for (std::size_t i = 0; i < count; ++i) {
         const Expansion weight(weights[i]);
         values[i] = {Expansion(poles[i].x()) * weight, Expansion(poles[i].y()) * weight, weight};
     }
-    for (std::size_t length = count; length > 1; --length)
-        for (std::size_t i = 0; i + 1 < length; ++i)
-            for (std::size_t j = 0; j < values[i].size(); ++j)
-                values[i][j] = values[i][j] * left + values[i + 1][j] * right;
 
-    const auto &w = values[0][2];
+    // Clear the denominators of each de Boor level with a common product.
+    // Equal knot intervals contribute one factor. Each coordinate and
+    // weight carries the same positive scale, which cancels at the end.
+    for (std::size_t step = 1; step < count; ++step) {
+        struct Basis {
+            double lo, hi;
+            Expansion width;
+        };
+        std::array<Basis, 8> bases;
+        std::size_t used = 0;
+        std::array<int, 9> basisIndex;
+        for (std::size_t k = step; k < count; ++k) {
+            const double lo = knots[k - 1], hi = knots[count + k - step - 1];
+            if (!boundedExpansionInput(lo) || !boundedExpansionInput(hi) ||
+                !(lo < hi && lo <= parameter && parameter <= hi))
+                return {};
+            basisIndex[k] = -1;
+            if (parameter == lo || parameter == hi) continue;
+            std::size_t basis = 0;
+            while (basis < used && (bases[basis].lo != lo || bases[basis].hi != hi)) ++basis;
+            if (basis == used) {
+                bases[used++] = {lo, hi, difference(hi, lo)};
+                weightBit += std::min({lowestBit(lo), lowestBit(hi), lowestBit(parameter)});
+                magnitudeBits += std::max(0, std::ilogb(hi - lo) + 2);
+            }
+            basisIndex[k] = int(basis);
+        }
+        // Bound both products and their FMA residuals before expanding.
+        if (weightBit + poleBit < minBit || magnitudeBits > 960) return {};
+        std::array<Expansion, 9> prefix, suffix;
+        prefix[0] = Expansion(1.);
+        suffix[used] = Expansion(1.);
+        for (std::size_t i = 0; i < used; ++i) {
+            prefix[i + 1] = prefix[i] * bases[i].width;
+            suffix[used - i - 1] = suffix[used - i] * bases[used - i - 1].width;
+        }
+        for (std::size_t k = count - 1; k >= step; --k) {
+            const int basis = basisIndex[k];
+            if (basis < 0) {
+                const auto &end = parameter == knots[k - 1] ? values[k - 1] : values[k];
+                for (std::size_t j = 0; j < end.size(); ++j)
+                    values[k][j] = end[j] * prefix[used];
+            } else {
+                const auto index = std::size_t(basis);
+                const auto &interval = bases[index];
+                const auto scale = prefix[index] * suffix[index + 1];
+                const auto left = difference(interval.hi, parameter) * scale;
+                const auto right = difference(parameter, interval.lo) * scale;
+                for (std::size_t j = 0; j < values[k].size(); ++j)
+                    values[k][j] = values[k - 1][j] * left + values[k][j] * right;
+            }
+        }
+    }
+
+    const auto &w = values[count - 1][2];
     Vec2 result;
     for (std::size_t j = 0; j < 2; ++j) {
-        const auto &numerator = values[0][j];
+        const auto &numerator = values[count - 1][j];
         const double nearest = numerator.estimate() / w.estimate();
         // Candidate division is rounded. Only the exact product identity
         // can publish a Cartesian coordinate.
