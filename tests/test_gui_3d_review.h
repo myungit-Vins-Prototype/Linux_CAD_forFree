@@ -59,8 +59,148 @@ static void gui3dReviewRegressions(bool openGl) {
         QApplication::sendEvent(&view, &lost);
         require(!view.panKeyHeld_ && !view.panning_, "perdita del focus annulla i tasti trattenuti");
     }
+    {
+        PdfWindow window;
+        auto &view = *window.viewport_;
+        view.resize(800, 600);
+        view.camera_.autoFit_ = false;
+        view.camera_.zoom_ = 20;
+        PrimitiveParameters box;
+        box.size[0] = box.size[1] = box.size[2] = 4;
+        require(view.createPrimitive(box, QStringLiteral("Sezione ruotata")).isEmpty(), "solido per la rotazione della sezione");
+        auto *action = window.findChild<QAction *>("sectionViewAction");
+        auto *reset = window.findChild<QPushButton *>("sectionResetOrientation");
+        auto *offset = window.findChild<QDoubleSpinBox *>("sectionOffset");
+        auto *visible = window.findChild<QCheckBox *>("sectionPlaneVisible");
+        auto *inclination = window.findChild<QDoubleSpinBox *>("sectionInclination");
+        auto *flip = window.findChild<QCheckBox *>("sectionFlipSide");
+        require(action && reset && offset && visible && inclination && flip, "comandi Sezione 3D");
+        action->setChecked(true);
+        offset->setValue(.75);
+        require(view.sectionEnabled(), "sezione attiva");
+        const QString zeroTilt = inclination->text();
+        require(inclination->value() == 0. && view.section_.inclination == zeroTilt, "inclinazione iniziale a zero");
+
+        const auto drag = [&](QPointF from, QPointF to, Qt::KeyboardModifiers modifiers = Qt::NoModifier) {
+            QMouseEvent press(QEvent::MouseButtonPress, from, from, Qt::LeftButton, Qt::LeftButton, modifiers);
+            QApplication::sendEvent(&view, &press);
+            require(view.sectionDrag_ != CadViewport::SectionHandle::None, "il puntatore afferra il manipolatore");
+            const bool rotating = view.sectionRotationDragging();
+            const QString before = inclination->text();
+            QMouseEvent move(QEvent::MouseMove, to, to, Qt::NoButton, Qt::LeftButton, modifiers);
+            QApplication::sendEvent(&view, &move);
+            if (modifiers.testFlag(Qt::ShiftModifier)) require(view.sectionSnap_.has_value(), "Shift mostra il punto agganciato");
+            require((inclination->text() != before) == rotating && view.section_.inclination == inclination->text(),
+                    "pannello e viewport aggiornano l'angolo durante la rotazione");
+            QMouseEvent release(QEvent::MouseButtonRelease, to, to, Qt::LeftButton, Qt::NoButton, modifiers);
+            QApplication::sendEvent(&view, &release);
+            require(view.sectionDrag_ == CadViewport::SectionHandle::None && !view.sectionSnap_, "rilascio del manipolatore");
+        };
+        const QVector3D initial = view.section_.normal;
+        for (const auto handle : {CadViewport::SectionHandle::RotateU, CadViewport::SectionHandle::RotateV}) {
+            const bool faceOn = handle == CadViewport::SectionHandle::RotateU;
+            view.setViewFrame(QVector3D(0, 1, 0), faceOn ? QVector3D(1, 0, 0) : QVector3D(0, 0, 1));
+            const auto arc = view.sectionRotationArc(handle);
+            int start = 4;
+            for (; start < 30 && view.sectionHandleAt(arc[start].toPoint()) != handle; ++start) {}
+            require(start < 30, "anello selezionabile sia di fronte sia di taglio");
+            const auto pivot = view.sectionCenter(), axis = view.sectionRotationAxis(handle);
+            drag(arc[start], arc[start + 10]);
+            const auto normal = view.section_.normal;
+            const float cosine = std::clamp(QVector3D::dotProduct(initial, normal), -1.f, 1.f);
+            require(cosine < .996f, "l'anello cambia la normale del piano");
+            const QString tilt = inclination->text();
+            const double degrees = inclination->value();
+            require(tilt.endsWith(QChar(u'°')) && std::abs(degrees - std::acos(cosine) * 180.0 / std::acos(-1.0)) < .001,
+                    "i gradi riportano l'inclinazione rispetto al piano iniziale");
+            flip->setChecked(!flip->isChecked());
+            require(inclination->text() == tilt && view.section_.inclination == tilt &&
+                        (view.section_.normal + normal).length() < 1e-5,
+                    "invertire il lato non cambia l'inclinazione");
+            flip->setChecked(!flip->isChecked());
+            require(std::abs(QVector3D::dotProduct(axis, normal)) < 1e-5f, "la rotazione conserva l'asse afferrato");
+            require(std::abs(QVector3D::dotProduct(pivot - view.section_.point, normal)) < 1e-5f,
+                    "il piano ruota attorno al punto afferrato");
+            require(std::abs(offset->value() - .75) < 1e-6 &&
+                        view.sectionRemoves(pivot + normal) && !view.sectionRemoves(pivot - normal),
+                    "l'offset conserva la quota e il taglio segue la normale ruotata");
+
+            if (!faceOn) {
+                const auto arrow = view.sectionHandleShape().boundingRect().center();
+                const auto alongNormal = view.projectWorldPoint(view.sectionCenter() + normal) -
+                                         view.projectWorldPoint(view.sectionCenter());
+                require(view.sectionHandleAt(arrow.toPoint()) == CadViewport::SectionHandle::Translate,
+                        "la freccia resta selezionabile con la sezione inclinata");
+                drag(arrow, arrow + alongNormal);
+                require(std::abs(offset->value() - .75) > .1 &&
+                            (view.section_.normal - normal).length() < 1e-5,
+                        "la freccia trasla anche dopo la rotazione");
+                offset->setValue(.75);
+            }
+            const auto editPivot = view.sectionCenter();
+            inclination->setValue(23.75);
+            const auto edited = view.section_.normal;
+            const double expectedCosine = std::cos(23.75 * std::acos(-1.0) / 180.);
+            require(std::abs(QVector3D::dotProduct(edited, initial) - expectedCosine) < 1e-5 &&
+                        view.section_.inclination == inclination->text(),
+                    "il campo numerico ruota il piano e aggiorna il valore nel viewport");
+            require(std::abs(QVector3D::dotProduct(edited, axis)) < 1e-5 &&
+                        std::abs(QVector3D::dotProduct(editPivot - view.section_.point, edited)) < 1e-5,
+                    "l'input numerico conserva direzione e perno");
+            reset->click();
+            require((view.section_.normal - initial).length() < 1e-5 && std::abs(offset->value() - .75) < 1e-6,
+                    "ripristina orientamento mantenendo la posizione numerica");
+            require(inclination->text() == zeroTilt && view.section_.inclination == zeroTilt, "ripristino a zero gradi");
+        }
+
+        view.setViewFrame(QVector3D(1, 0, 0), QVector3D(0, 0, 1));
+        flip->setChecked(false);
+        const QPoint facePixel = view.projectWorldPoint({1.25f, 1.5f, 4.f}).toPoint();
+        offset->setValue(2.);
+        require(!view.sectionSnapAt(facePixel), "lo snap esclude le facce dietro la campitura");
+        offset->setValue(5.);
+        const QVector3D vertex(0, 0, 4);
+        const auto vertexSnap = view.sectionSnapAt(view.projectWorldPoint(vertex).toPoint());
+        require(vertexSnap && (*vertexSnap - vertex).length() < 1e-5f, "aggancio al vertice visibile davanti a quello nascosto");
+        const auto edgeSnap = view.sectionSnapAt(view.projectWorldPoint({1, 0, 4}).toPoint());
+        require(edgeSnap && std::abs(edgeSnap->y()) < 1e-5f && std::abs(edgeSnap->z() - 4) < 1e-5f,
+                "aggancio allo spigolo nella geometria esatta");
+        drag(view.sectionHandleShape().boundingRect().center(), facePixel, Qt::ShiftModifier);
+        require(std::abs(offset->value() - 4.) < 1e-5 && inclination->value() == 0.,
+                "lo snap fa passare il piano per la faccia mantenendo l'inclinazione");
+
+        view.setViewFrame(QVector3D(1, -1, 0), QVector3D(1, 1, 1));
+        QImage gizmo(view.size(), QImage::Format_ARGB32_Premultiplied);
+        gizmo.fill(Qt::transparent);
+        {
+            QPainter painter(&gizmo);
+            view.drawSectionHandle(painter);
+        }
+        QImage withoutAngle(view.size(), QImage::Format_ARGB32_Premultiplied);
+        withoutAngle.fill(Qt::transparent);
+        view.section_.inclination.clear();
+        {
+            QPainter painter(&withoutAngle);
+            view.drawSectionHandle(painter);
+        }
+        view.section_.inclination = zeroTilt;
+        require(gizmo != withoutAngle, "il valore angolare è disegnato accanto al manipolatore");
+        bool red = false, green = false;
+        for (int y = 0; y < gizmo.height() && !(red && green); ++y) {
+            const auto *row = reinterpret_cast<const QRgb *>(gizmo.constScanLine(y));
+            for (int x = 0; x < gizmo.width(); ++x) {
+                red |= row[x] == qRgb(255, 138, 130);
+                green |= row[x] == qRgb(130, 232, 189);
+            }
+        }
+        require(red && green, "entrambi gli anelli sono disegnati nel viewport");
+        visible->setChecked(false);
+        require(view.sectionEnabled() && !view.sectionHandlesAvailable(), "mostra piano nasconde il manipolatore e conserva il taglio");
+        action->setChecked(false);
+        require(!view.sectionEnabled(), "spegnere la sezione arresta il taglio");
+    }
     if (!openGl) {
-        std::cout << "PASS GUI review: palette e tasto pan; OpenGL non richiesto" << std::endl;
+        std::cout << "PASS GUI review: palette, tasto pan e manipolatore di sezione; OpenGL non richiesto" << std::endl;
         return;
     }
     require(QGuiApplication::platformName() != QStringLiteral("offscreen"), "la prova GL richiede una sessione grafica");

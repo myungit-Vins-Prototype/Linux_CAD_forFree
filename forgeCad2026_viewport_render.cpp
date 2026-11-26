@@ -398,12 +398,49 @@ void CadViewport::drawFeatureHandle(QPainter &painter) {
 }
 
 void CadViewport::drawSectionHandle(QPainter &painter) const {
-    if (!section_.enabled || !section_.showPlane || !sectionDragged_ || sketchMode_) return;
+    if (!sectionHandlesAvailable()) return;
+    const auto activeHandle = sectionDrag_ != SectionHandle::None ? sectionDrag_ : sectionHover_;
     bool disc = false;
     const QPolygonF shape = sectionHandleShape(&disc);
-    const bool active = sectionHover_ || sectionDragging_;
+    const bool active = activeHandle == SectionHandle::Translate;
     painter.save();
     painter.setRenderHint(QPainter::Antialiasing);
+    if (sectionRotated_) {
+        const auto drawArc = [&](SectionHandle handle, QColor color) {
+            const auto arc = sectionRotationArc(handle);
+            const bool highlighted = activeHandle == handle;
+            painter.setBrush(Qt::NoBrush);
+            painter.setPen(QPen(QColor(20, 29, 37, 215), highlighted ? 6.5 : 4.5,
+                                Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            painter.drawPolyline(arc);
+            painter.setPen(QPen(color, highlighted ? 3.8 : 2.4, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            painter.drawPolyline(arc);
+        };
+        drawArc(SectionHandle::RotateU, QColor("#ff8a82"));
+        drawArc(SectionHandle::RotateV, QColor("#82e8bd"));
+
+        if (!section_.inclination.isEmpty()) {
+            const QString text = QStringLiteral("Inclinazione %1").arg(section_.inclination);
+            painter.setFont(uiFont(11, QFont::DemiBold));
+            const QFontMetrics metrics(painter.font());
+            const QSize size(metrics.horizontalAdvance(text) + 16, metrics.height() + 8);
+            const auto pivot = sectionRotationDragging() ? sectionRotationPivot_ : sectionCenter();
+            const QPoint center = projectWorldPoint(pivot).toPoint();
+            int y = center.y() + 78;
+            if (y + size.height() + 4 > height()) y = center.y() - 78 - size.height();
+            const QRect badge(QPoint(qBound(4, center.x() - size.width() / 2, qMax(4, width() - size.width() - 4)),
+                                     qBound(4, y, qMax(4, height() - size.height() - 4))), size);
+            painter.setBrush(palette().brush(QPalette::ToolTipBase));
+            painter.setPen(palette().color(QPalette::Mid));
+            painter.drawRoundedRect(badge, 5, 5);
+            painter.setPen(palette().color(QPalette::ToolTipText));
+            painter.drawText(badge, Qt::AlignCenter, text);
+        }
+    }
+    if (!sectionDragged_) {
+        painter.restore();
+        return;
+    }
     QColor halo = kSelectionColor;
     halo.setAlpha(active ? 120 : 80);
     painter.setPen(QPen(halo, active ? 8.0 : 6.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
@@ -415,6 +452,14 @@ void CadViewport::drawSectionHandle(QPainter &painter) const {
     if (disc) {
         painter.setBrush(kSelectionColor);
         painter.drawEllipse(shape.boundingRect().center(), 2.5, 2.5);
+    }
+    if (sectionSnap_) {
+        const auto target = projectWorldPoint(*sectionSnap_);
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(QColor(20, 29, 37), 5));
+        painter.drawEllipse(target, 7, 7);
+        painter.setPen(QPen(QColor("#82e8bd"), 2));
+        painter.drawEllipse(target, 7, 7);
     }
     painter.restore();
 }
@@ -1705,7 +1750,7 @@ void CadViewport::drawSectionCaps(const QVector<int> &solids) {
 
 void CadViewport::drawSectionPlane() {
     if (!section_.enabled || !section_.showPlane) return;
-    sceneRenderer_.drawSectionPlane(overlayRenderer_, sectionQuad(), sectionHover_ || sectionDragging_);
+    sceneRenderer_.drawSectionPlane(overlayRenderer_, sectionQuad(), sectionHover_ != SectionHandle::None || sectionDrag_ != SectionHandle::None);
 }
 
 void CadViewport::drawExtrusions() {

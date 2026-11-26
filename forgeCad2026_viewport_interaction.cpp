@@ -203,11 +203,21 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
         }
     }
     if (!(interactionLocked_ || documentReadOnly_) && !trimPartPickFinished_ && event->button() == Qt::LeftButton && beginPlaneResize(lastMousePosition_)) return;
-    // Il piano di sezione si trascina dalla maniglia o dal bordo.
-    if (!(interactionLocked_ || documentReadOnly_) && !sketchMode_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_ && event->button() == Qt::LeftButton && sectionHandleAt(lastMousePosition_)) {
-        sectionDragging_ = true;
-        setCursor(Qt::SizeAllCursor);
-        return;
+    if (event->button() == Qt::LeftButton) {
+        QPointF tangent;
+        const auto handle = sectionHandleAt(lastMousePosition_, &tangent);
+        if (handle != SectionHandle::None) {
+            if (handle != SectionHandle::Translate) {
+                sectionRotationPivot_ = sectionCenter();
+                sectionRotationAxis_ = sectionRotationAxis(handle);
+                sectionRotationTangent_ = tangent;
+            }
+            sectionDrag_ = sectionHover_ = handle;
+            if (handle == SectionHandle::Translate) showStatus(QStringLiteral("Tieni premuto Shift per agganciare la geometria."));
+            setCursor(sectionRotationDragging() ? Qt::CrossCursor : Qt::SizeAllCursor);
+            update();
+            return;
+        }
     }
     if (refPicking_ && bodyBoxPickFinished_ && event->button() == Qt::LeftButton
         && (!sketchMode_ || sketchViewUnlocked_)) {
@@ -942,20 +952,24 @@ void CadViewport::mouseMoveEvent(QMouseEvent *event) {
         setCursor(Qt::SizeFDiagCursor);
         return;
     }
-    if (!trimPartPickFinished_ && !event->buttons() && !sketchMode_ && !sectionHover_) unsetCursor();
-    if (sectionDragging_) {
-        const double delta = sectionDragDelta(currentPosition - lastMousePosition_);
+    if (!trimPartPickFinished_ && !event->buttons() && !sketchMode_ && sectionHover_ == SectionHandle::None) unsetCursor();
+    if (sectionDrag_ != SectionHandle::None) {
+        const QPoint previous = lastMousePosition_;
         lastMousePosition_ = currentPosition;
-        if (delta != 0.0 && sectionDragged_) sectionDragged_(delta);
+        if (sectionRotationDragging() && sectionRotated_) {
+            const double degrees = sectionRotationDelta(previous, currentPosition);
+            if (std::isfinite(degrees) && degrees != 0.) sectionRotated_(sectionRotationAxis_, sectionRotationPivot_, degrees);
+        } else if (sectionDrag_ == SectionHandle::Translate && sectionDragged_) {
+            moveSectionDrag(currentPosition, previous, event->modifiers().testFlag(Qt::ShiftModifier));
+        }
         return;
     }
-    if (!trimPartPickFinished_ && !sketchMode_ && !(event->buttons() & Qt::LeftButton)
-        && section_.enabled && sectionDragged_) {
-        const bool over = sectionHandleAt(currentPosition);
+    if (!event->buttons()) {
+        const auto over = sectionHandleAt(currentPosition);
         if (over != sectionHover_) {
             sectionHover_ = over;
-            if (over) setCursor(Qt::SizeAllCursor);
-            else unsetCursor();
+            if (over == SectionHandle::None) unsetCursor();
+            else setCursor(over == SectionHandle::Translate ? Qt::SizeAllCursor : Qt::CrossCursor);
             update();
         }
     }
@@ -1240,6 +1254,11 @@ void CadViewport::keyReleaseEvent(QKeyEvent *event) {
 void CadViewport::focusOutEvent(QFocusEvent *event) {
     stopWheelZoom();
     featureHandleDragging_ = false;
+    if (sectionDrag_ != SectionHandle::None || sectionHover_ != SectionHandle::None) {
+        sectionDrag_ = sectionHover_ = SectionHandle::None;
+        sectionSnap_.reset();
+        update();
+    }
     panKeyHeld_ = false;
     panning_ = false;
     unsetCursor();
@@ -1283,9 +1302,16 @@ void CadViewport::mouseReleaseEvent(QMouseEvent *event) {
         return;
     }
     if (planeResizing_ && event->button() == Qt::LeftButton) { finishPlaneResize(false); return; }
-    if (sectionDragging_) {
-        sectionDragging_ = false;
-        if (!sectionHover_) unsetCursor();
+    if (sectionDrag_ != SectionHandle::None && event->button() == Qt::LeftButton) {
+        const auto position = event->position().toPoint();
+        if (sectionDrag_ == SectionHandle::Translate && sectionDragged_ && position != lastMousePosition_
+            && event->modifiers().testFlag(Qt::ShiftModifier)) moveSectionDrag(position, lastMousePosition_, true);
+        sectionDrag_ = SectionHandle::None;
+        sectionSnap_.reset();
+        sectionHover_ = sectionHandleAt(event->position().toPoint());
+        if (sectionHover_ == SectionHandle::None) unsetCursor();
+        else setCursor(sectionHover_ == SectionHandle::Translate ? Qt::SizeAllCursor : Qt::CrossCursor);
+        update();
         return;
     }
     if (panning_) {
@@ -1392,6 +1418,11 @@ void CadViewport::mouseReleaseEvent(QMouseEvent *event) {
 }
 
 void CadViewport::leaveEvent(QEvent *event) {
+    if (sectionHover_ != SectionHandle::None && sectionDrag_ == SectionHandle::None) {
+        sectionHover_ = SectionHandle::None;
+        unsetCursor();
+        update();
+    }
     if (hover_.kind != SceneObjectKind::None || sketchHover_.kind >= 0 || trimPartHover_ >= 0
         || sketchReferenceHoverSource_.kind >= 0) {
         sketchReferenceHoverSource_ = {}; sketchReferenceHoverLabels_.clear();

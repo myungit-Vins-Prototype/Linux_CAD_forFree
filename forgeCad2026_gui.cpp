@@ -107,6 +107,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QLocale>
+#include <QtMath>
 #include <QListWidget>
 #include <QSlider>
 #include <QScrollBar>
@@ -1790,11 +1791,13 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
     sectionAction = viewMenu->addAction(QStringLiteral("Vista in sezione"));
     sectionAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+X")));
     sectionAction->setCheckable(true);
-    sectionAction->setToolTip(QStringLiteral("Vista in sezione accesa/spenta (i parametri nella finestra Sezione; il piano si trascina dalla freccia)"));
+    sectionAction->setObjectName(QStringLiteral("sectionViewAction"));
+    sectionAction->setToolTip(QStringLiteral("Vista in sezione. Trascina gli anelli o modifica l’inclinazione nel pannello. Tieni premuto Shift mentre trascini la freccia per agganciare la geometria."));
     sectionParameters = viewMenu->addAction(QStringLiteral("Parametri della sezione..."));
     {
         // Finestra fluttuante come le altre (non modale: la vista resta attiva; si sposta trascinandola).
         auto *panel = new QDialog(this);
+        panel->setObjectName(QStringLiteral("sectionPanel"));
         panel->setWindowTitle(QStringLiteral("Sezione"));
         panel->setModal(false);
         auto *form = new QFormLayout(panel);
@@ -1805,14 +1808,28 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
         auto *slider = new QSlider(Qt::Horizontal, panel);
         slider->setRange(0, 2000);
         auto *offsetBox = new ForgeCad::ExpressionSpinBox(panel);
+        offsetBox->setObjectName(QStringLiteral("sectionOffset"));
         offsetBox->setDecimals(4);
         offsetBox->setRange(-1e6, 1e6);
         offsetBox->setKeyboardTracking(false);
+        offsetBox->setToolTip(QStringLiteral("Tieni premuto Shift mentre trascini la freccia nel viewport per agganciare la geometria."));
         auto *flipBox = new QCheckBox(QStringLiteral("Inverti il lato"), panel);
+        flipBox->setObjectName(QStringLiteral("sectionFlipSide"));
         auto *capsBox = new QCheckBox(QStringLiteral("Riempi le sezioni dei solidi"), panel);
         capsBox->setChecked(true);
         auto *planeVisible = new QCheckBox(QStringLiteral("Mostra il piano"), panel);
+        planeVisible->setObjectName(QStringLiteral("sectionPlaneVisible"));
         planeVisible->setChecked(true);
+        auto *inclination = new ForgeCad::ExpressionSpinBox(panel);
+        inclination->setObjectName(QStringLiteral("sectionInclination"));
+        inclination->setSuffix(QStringLiteral("°"));
+        inclination->setRange(0., 180.);
+        inclination->setDecimals(4);
+        inclination->setKeyboardTracking(false);
+        inclination->setToolTip(QStringLiteral("Angolo rispetto all’orientamento originale del piano scelto."));
+        auto *resetOrientation = new QPushButton(QStringLiteral("Ripristina orientamento"), panel);
+        resetOrientation->setObjectName(QStringLiteral("sectionResetOrientation"));
+        resetOrientation->setToolTip(QStringLiteral("Riporta la sezione all’orientamento del piano scelto."));
         auto *info = new QLabel(panel);
         info->setWordWrap(true);
         info->setObjectName(QStringLiteral("sectionPlaneInfo"));
@@ -1821,6 +1838,8 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
         form->addRow(QString(), pickButton);
         form->addRow(QStringLiteral("Posizione:"), slider);
         form->addRow(QString(), offsetBox);
+        form->addRow(QStringLiteral("Inclinazione:"), inclination);
+        form->addRow(QString(), resetOrientation);
         form->addRow(QString(), flipBox);
         form->addRow(QString(), capsBox);
         form->addRow(QString(), planeVisible);
@@ -1841,9 +1860,12 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
         };
         struct SectionPanelState {
             GeometryRef picked;
+            QQuaternion rotation;
+            QVector3D pivotShift; // Nel riferimento di base del piano scelto.
             double lo = -10.0, hi = 10.0;
             bool updating = false;
             bool active = false;
+            bool initialized = false;
         };
         auto state = std::make_shared<SectionPanelState>();
         // Il piano di base (punto e normale) della scelta attuale.
@@ -1863,25 +1885,50 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
             normal = QVector3D(float(resolved.direction.x()), float(resolved.direction.y()), float(resolved.direction.z()));
             return true;
         };
-        const auto apply = [viewport, basePlane, offsetBox, flipBox, capsBox, planeVisible, setSectionInfo, planeBox, state] {
-            QVector3D point, normal;
-            if (!state->active || !basePlane(point, normal)) {
+        const auto orientedPlane = [basePlane, state](QVector3D &point, QVector3D &normal, QVector3D &tangent) {
+            if (!basePlane(point, normal)) return false;
+            const auto base = QQuaternion::rotationTo(QVector3D(0, 0, 1), normal);
+            const auto orientation = base * state->rotation;
+            point += base.rotatedVector(state->pivotShift);
+            normal = orientation.rotatedVector(QVector3D(0, 0, 1)).normalized();
+            tangent = orientation.rotatedVector(QVector3D(1, 0, 0));
+            return true;
+        };
+        const auto resetRotation = [state] {
+            state->rotation = {};
+            state->pivotShift = {};
+        };
+        const auto tiltDegrees = [](const QVector3D &normal) {
+            return qRadiansToDegrees(std::atan2(std::hypot(double(normal.x()), double(normal.y())), double(normal.z())));
+        };
+        const auto apply = [viewport, orientedPlane, offsetBox, flipBox, capsBox, planeVisible, setSectionInfo,
+                            planeBox, state, resetOrientation, inclination, tiltDegrees] {
+            QVector3D point, normal, tangent;
+            const bool valid = state->active && orientedPlane(point, normal, tangent);
+            resetOrientation->setEnabled(valid);
+            inclination->setEnabled(valid);
+            const QSignalBlocker blockAngle(inclination);
+            if (!valid) {
+                inclination->setValue(0.);
                 viewport->setSection(false);
                 setSectionInfo(state->active && planeBox->currentIndex() == 3 ? QStringLiteral("Scegli il piano nella vista.") : QString());
                 return;
             }
-            normal.normalize();
-            if (flipBox->isChecked()) normal = -normal;
-            const QVector3D at = point + float(offsetBox->value()) * (flipBox->isChecked() ? -normal : normal);
-            viewport->setSection(true, at, normal, capsBox->isChecked(), planeVisible->isChecked());
+            const auto localNormal = state->rotation.rotatedVector(QVector3D(0, 0, 1));
+            inclination->setValue(tiltDegrees(localNormal));
+            const QString angleText = inclination->text();
+            const QVector3D at = point + float(offsetBox->value()) * normal;
+            viewport->setSection(true, at, flipBox->isChecked() ? -normal : normal,
+                                 capsBox->isChecked(), planeVisible->isChecked(), tangent, angleText);
             setSectionInfo(planeBox->currentIndex() == 3 ? ForgeCad::geometryRefText(state->picked, viewport->sketches(), viewport->extrusions())
                                                         : QString());
         };
         // L'intervallo del cursore: la geometria lungo la normale del piano. Per
         // un piano nuovo si toglie la parte verso l'osservatore (la sezione si vede).
-        const auto updateRange = [viewport, basePlane, slider, offsetBox, flipBox, state, apply](bool newPlane = false) {
-            QVector3D point, normal;
-            if (basePlane(point, normal)) {
+        const auto updateRange = [viewport, orientedPlane, slider, offsetBox, flipBox, state, apply](
+                                     bool newPlane = false, bool retainPosition = false) {
+            QVector3D point, normal, tangent;
+            if (orientedPlane(point, normal, tangent)) {
                 if (newPlane) {
                     const QSignalBlocker blocker(flipBox);
                     flipBox->setChecked(QVector3D::dotProduct(normal, viewport->viewerDirection()) < 0.0f);
@@ -1890,6 +1937,10 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
                 const double margin = 0.02 * std::max(1e-3, state->hi - state->lo);
                 state->lo -= margin;
                 state->hi += margin;
+                if (retainPosition) {
+                    state->lo = std::min(state->lo, offsetBox->value());
+                    state->hi = std::max(state->hi, offsetBox->value());
+                }
             }
             state->updating = true;
             const double value = std::clamp(offsetBox->value(), state->lo, state->hi);
@@ -1913,17 +1964,18 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
             state->updating = false;
             apply();
         });
-        const auto pick = [viewport, state, planeBox, setSectionInfo, updateRange] {
+        const auto pick = [viewport, state, planeBox, setSectionInfo, updateRange, resetRotation] {
             setSectionInfo(QStringLiteral("Clicca un piano o una faccia piana (Esc: annulla)."));
             const QString error = viewport->beginReferencePick(ForgeCad::DatumRolePlane, -1);
             if (!error.isEmpty()) {
                 setSectionInfo(error);
                 return;
             }
-            viewport->setReferencePickCallback([viewport, state, planeBox, updateRange](bool picked, GeometryRef ref) {
+            viewport->setReferencePickCallback([viewport, state, planeBox, updateRange, resetRotation](bool picked, GeometryRef ref) {
                 viewport->setReferencePickCallback(nullptr);
                 if (picked && (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & ForgeCad::DatumRolePlane)) {
                     state->picked = ref;
+                    resetRotation();
                     const QSignalBlocker blocker(planeBox);
                     planeBox->setCurrentIndex(3);
                 }
@@ -1931,25 +1983,33 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
             });
         };
         QObject::connect(pickButton, &QPushButton::clicked, panel, pick);
-        QObject::connect(planeBox, &QComboBox::currentIndexChanged, panel, [state, updateRange, pick](int index) {
-            if (index == 3 && state->picked.kind < 0) pick();
-            else updateRange(true);
+        QObject::connect(planeBox, &QComboBox::currentIndexChanged, panel, [state, updateRange, pick, resetRotation](int index) {
+            if (index == 3 && state->picked.kind < 0) {
+                pick();
+            } else {
+                resetRotation();
+                updateRange(true);
+            }
+        });
+        QObject::connect(resetOrientation, &QPushButton::clicked, panel, [resetRotation, updateRange] {
+            resetRotation();
+            updateRange(false, true);
         });
         for (QCheckBox *box : {flipBox, capsBox, planeVisible}) QObject::connect(box, &QCheckBox::toggled, panel, apply);
-        QObject::connect(sectionAction, &QAction::toggled, panel, [panel, updateRange, offsetBox, state, viewport, expandSectionInfo](bool on) {
+        QObject::connect(sectionAction, &QAction::toggled, panel,
+                         [panel, updateRange, offsetBox, state, viewport, expandSectionInfo, apply](bool on) {
             state->active = on;
             if (on) {
                 // La prima volta la sezione passa per il centro della geometria e si aprono i parametri.
-                static bool first = true;
-                updateRange(first);
-                if (first) offsetBox->setValue(0.5 * (state->lo + state->hi));
-                first = false;
+                updateRange(!state->initialized, state->initialized);
+                if (!state->initialized) offsetBox->setValue(0.5 * (state->lo + state->hi));
+                state->initialized = true;
                 panel->show();
                 expandSectionInfo();
                 panel->raise();
             } else {
                 viewport->cancelReferencePick();
-                viewport->setSection(false);
+                apply();
                 panel->hide();
             }
         });
@@ -1961,10 +2021,39 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
         });
         auto *offButton = closeButtons->addButton(QStringLiteral("Spegni la sezione"), QDialogButtonBox::DestructiveRole);
         QObject::connect(offButton, &QPushButton::clicked, panel, [sectionAction] { sectionAction->setChecked(false); });
-        viewport->setSectionRefreshCallback(apply);  // un piano scelto nella vista segue il suo corpo
+        viewport->setSectionRefreshCallback([updateRange] { updateRange(false, true); });
         // Trascinando il piano nella vista cambia la posizione (lungo la normale della sezione).
         viewport->setSectionDragCallback([offsetBox, flipBox](double delta) {
             offsetBox->setValue(offsetBox->value() + (flipBox->isChecked() ? -delta : delta));
+        });
+        const auto rotateAround = [state, offsetBox, updateRange](const QVector3D &point, const QQuaternion &base,
+                                                                 const QVector3D &center, const QQuaternion &rotation) {
+            state->rotation = rotation.normalized();
+            const auto direction = (base * state->rotation).rotatedVector(QVector3D(0, 0, 1)).normalized();
+            // L'offset continua a misurarsi lungo la nuova normale, mentre il
+            // punto afferrato resta esattamente sul piano durante la rotazione.
+            state->pivotShift = base.conjugated().rotatedVector(center - point - float(offsetBox->value()) * direction);
+            updateRange(false, true);
+        };
+        viewport->setSectionRotationCallback([basePlane, state, rotateAround](
+                                                 const QVector3D &axis, const QVector3D &center, double degrees) {
+            QVector3D point, normal;
+            if (!basePlane(point, normal)) return;
+            const auto base = QQuaternion::rotationTo(QVector3D(0, 0, 1), normal);
+            const auto localAxis = base.conjugated().rotatedVector(axis);
+            rotateAround(point, base, center, QQuaternion::fromAxisAndAngle(localAxis, float(degrees)) * state->rotation);
+        });
+        QObject::connect(inclination, &QDoubleSpinBox::valueChanged, panel,
+                         [viewport, basePlane, state, rotateAround, tiltDegrees](double value) {
+            const QVector3D referenceNormal(0, 0, 1);
+            QVector3D point, normal;
+            if (!state->active || !basePlane(point, normal)) return;
+            const auto localNormal = state->rotation.rotatedVector(referenceNormal);
+            auto axis = QVector3D::crossProduct(referenceNormal, localNormal);
+            // Ai due poli il primo asse del gizmo determina il verso.
+            if (axis.lengthSquared() < 1e-12f) axis = state->rotation.rotatedVector(QVector3D(1, 0, 0));
+            const auto delta = QQuaternion::fromAxisAndAngle(axis.normalized(), float(value - tiltDegrees(localNormal)));
+            rotateAround(point, QQuaternion::rotationTo(referenceNormal, normal), viewport->sectionCenter(), delta * state->rotation);
         });
     }
     connect(lowQuality, &QAction::triggered, this, [viewport] { viewport->setTessellationQuality(0); });

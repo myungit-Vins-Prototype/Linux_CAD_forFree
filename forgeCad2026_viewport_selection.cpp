@@ -2167,6 +2167,119 @@ QVector<int> CadViewport::faceDisplayEdges(int index, const FaceHit &hit) const 
     return result;
 }
 
+std::optional<QVector3D> CadViewport::sectionSnapAt(const QPoint &position) const {
+    using namespace ForgeCad::Kernel;
+    PrecisionScope precision(calculationAccuracy_);
+    QVector<int> bodies;
+    for (int i = 0; i < extrusions_.size(); ++i) {
+        const auto &body = extrusions_[i];
+        if (isBodyVisibleInScene(i) && ForgeCad::isShapeBody(body) && body.forgeBody
+            && (!body.display.vertices.isEmpty() || !body.display.edges.isEmpty())) bodies.append(i);
+    }
+
+    struct VisibleRay {
+        QVector3D origin, direction;
+        double depth = std::numeric_limits<double>::infinity();
+        bool cap = false;
+    };
+    const auto kernelPoint = [](const QVector3D &p) { return Vec3(p.x(), p.y(), p.z()); };
+    const auto displayPoint = [](const Vec3 &p) { return QVector3D(float(p.x()), float(p.y()), float(p.z())); };
+    const auto visibleRay = [&](const QPoint &pixel) {
+        VisibleRay ray;
+        viewRay(pixel, ray.origin, ray.direction);
+        ray.direction.normalize();
+        double skipped = 0.;
+        if (!sectionRay(ray.origin, ray.direction, skipped)) {
+            ray.depth = 0.;
+            ray.cap = true;
+            return ray;
+        }
+        if (displayMode_ == 0) return ray;
+        Box entry;
+        entry.add(kernelPoint(ray.origin));
+        for (int i : bodies) {
+            const auto &body = extrusions_[i];
+            FaceHit hit;
+            if (!cachedRayFace(i, ray.origin, ray.direction, hit)) continue;
+            const auto at = ray.origin + float(hit.distance) * ray.direction;
+            if (sectionRemoves(at)) continue;
+            const auto *index = body.display.rayIndex.get();
+            if (skipped > 0. && section_.caps && body.solid && (!index || index->bounds.overlaps(entry))) {
+                // La campitura è in primo piano e occlude le facce sul retro.
+                try {
+                    ray.cap = SolidClassifier(*body.forgeBody, linearResolution()).classify(entry.lo) == PointLocation::Inside;
+                } catch (const std::exception &) {
+                    ray.cap = true;
+                }
+                if (ray.cap) {
+                    ray.depth = 0.;
+                    return ray;
+                }
+            }
+            ray.depth = std::min(ray.depth, hit.distance);
+        }
+        return ray;
+    };
+
+    constexpr double radius = 8.;
+    const double depthTolerance = qMax(1e-5, 1.5 * double(camera_.zoom_) / qMax(1, height()));
+    double best = 2. * radius;
+    std::optional<QVector3D> target;
+    const auto offer = [&](const QVector3D &p, double bias) {
+        const QPointF screen = projectWorldPoint(p);
+        const double distance = pointDistance(screen, QPointF(position));
+        if (distance >= radius || distance + bias >= best || sectionRemoves(p)) return;
+        const auto ray = visibleRay(screen.toPoint());
+        const double depth = QVector3D::dotProduct(p - ray.origin, ray.direction);
+        if (depth < -depthTolerance || depth > ray.depth + depthTolerance) return;
+        best = distance + bias;
+        target = p;
+    };
+
+    for (int i : bodies) {
+        const auto &body = extrusions_[i];
+        const auto &edges = projectedBodyEdges(i);
+        for (int k = 0; k < edges.lines.size(); ++k) {
+            const EdgeId id(body.display.edgeIds.value(k, -1));
+            if (!body.forgeBody->contains(id)
+                || !edges.bounds[k].adjusted(-radius, -radius, radius, radius).contains(position)) continue;
+            const auto &edge = body.forgeBody->edge(id);
+            for (const auto vertex : {body.forgeBody->edgeStart(id), body.forgeBody->edgeEnd(id)})
+                offer(displayPoint(body.forgeBody->vertex(vertex).point), 0.);
+            if (best < radius || !edge.curve) continue;
+
+            // La polilinea individua il tratto sotto il puntatore. Il punto
+            // di aggancio viene poi ricondotto alla curva esatta del bordo.
+            const auto &screen = edges.lines[k];
+            const auto &world = body.display.edges[k];
+            double closest = radius;
+            std::optional<QVector3D> seed;
+            for (int j = 1; j < screen.size(); ++j) {
+                const QPointF v = screen[j] - screen[j - 1];
+                const double squared = QPointF::dotProduct(v, v);
+                if (squared == 0.) continue;
+                const double t = std::clamp(QPointF::dotProduct(QPointF(position) - screen[j - 1], v) / squared, 0., 1.);
+                const double distance = pointDistance(screen[j - 1] + t * v, QPointF(position));
+                if (distance >= closest) continue;
+                closest = distance;
+                seed = world[j - 1] + float(t) * (world[j] - world[j - 1]);
+            }
+            if (seed) {
+                try {
+                    offer(displayPoint(projectPoint(*edge.curve, kernelPoint(*seed), edge.range).point), radius);
+                } catch (const std::exception &) {
+                    // Una proiezione del bordo non riuscita lascia disponibili le facce.
+                }
+            }
+        }
+    }
+    if (target) return target;
+
+    const auto ray = visibleRay(position);
+    if (ray.cap || !std::isfinite(ray.depth)) return {};
+    return ray.origin + float(ray.depth) * ray.direction;
+}
+
 bool CadViewport::sectionRay(QVector3D &origin, const QVector3D &direction, double &skipped) const {
     skipped = 0.0;
     if (!section_.enabled) return true;

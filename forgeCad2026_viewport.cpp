@@ -464,12 +464,24 @@ void CadViewport::setInteractionLocked(bool locked) { interactionLocked_ = locke
 
 bool CadViewport::interactionLocked() const { return interactionLocked_; }
 
-void CadViewport::setSection(bool enabled, const QVector3D &point , const QVector3D &normal , bool caps , bool showPlane ) {
+void CadViewport::setSection(bool enabled, const QVector3D &point, const QVector3D &normal, bool caps,
+                             bool showPlane, const QVector3D &tangent, const QString &inclination) {
     section_.enabled = enabled && normal.lengthSquared() > 0.0f;
     section_.point = point;
     section_.normal = normal.lengthSquared() > 0.0f ? normal.normalized() : QVector3D(0, 0, 1);
     section_.caps = caps;
     section_.showPlane = showPlane;
+    section_.inclination = inclination;
+    const QVector3D n = section_.normal;
+    const QVector3D alongPlane = tangent - QVector3D::dotProduct(tangent, n) * n;
+    const QVector3D reference = qAbs(n.x()) < 0.9f ? QVector3D(1, 0, 0) : QVector3D(0, 1, 0);
+    section_.tangent = alongPlane.lengthSquared() > 1e-6f ? alongPlane.normalized()
+        : (reference - QVector3D::dotProduct(reference, n) * n).normalized();
+    if (!section_.enabled || !showPlane) {
+        if (sectionDrag_ != SectionHandle::None || sectionHover_ != SectionHandle::None) unsetCursor();
+        sectionDrag_ = sectionHover_ = SectionHandle::None;
+        sectionSnap_.reset();
+    }
     update();
 }
 
@@ -636,10 +648,55 @@ void CadViewport::dragFeatureHandle(const QPointF &position) {
 
 void CadViewport::setSectionDragCallback(std::function<void(double)> callback) { sectionDragged_ = std::move(callback); }
 
-QPolygonF CadViewport::sectionHandleShape(bool *disc ) const {
-    const QVector<QVector3D> quad = sectionQuad();
-    QVector3D center;
-    for (const QVector3D &p : quad) center += 0.25f * p;
+void CadViewport::setSectionRotationCallback(
+    std::function<void(const QVector3D &, const QVector3D &, double)> callback) {
+    sectionRotated_ = std::move(callback);
+}
+
+bool CadViewport::sectionHandlesAvailable() const {
+    return section_.enabled && section_.showPlane && !sketchMode_ && !refPicking_ && !edgePicking_
+        && !trimPartPickFinished_ && (sectionDragged_ || sectionRotated_);
+}
+
+bool CadViewport::sectionRotationDragging() const {
+    return sectionDrag_ == SectionHandle::RotateU || sectionDrag_ == SectionHandle::RotateV;
+}
+
+QVector3D CadViewport::sectionCenter() const {
+    updateSceneBounds();
+    const QVector3D middle = 0.5f * (sceneMin_ + sceneMax_);
+    return middle - QVector3D::dotProduct(middle - section_.point, section_.normal) * section_.normal;
+}
+
+QVector3D CadViewport::sectionRotationAxis(SectionHandle handle) const {
+    if (sectionRotationDragging() && handle == sectionDrag_) return sectionRotationAxis_;
+    return handle == SectionHandle::RotateU ? section_.tangent
+        : QVector3D::crossProduct(section_.normal, section_.tangent).normalized();
+}
+
+QPolygonF CadViewport::sectionRotationArc(SectionHandle handle, double *step) const {
+    const auto center = sectionRotationDragging() ? sectionRotationPivot_ : sectionCenter();
+    const auto axis = sectionRotationAxis(handle), viewer = viewerDirection();
+    const auto towardViewer = viewer - QVector3D::dotProduct(viewer, axis) * axis;
+    const bool faceOn = towardViewer.lengthSquared() < 0.04f;
+    const auto radial = faceOn ? section_.normal : towardViewer.normalized();
+    const auto across = QVector3D::crossProduct(axis, radial);
+    const float radius = (handle == SectionHandle::RotateU ? 55.0f : 70.0f) * camera_.zoom_ / qMax(1, height());
+    constexpr int segments = 48;
+    const double increment = (faceOn ? 2.0 : 1.0) * M_PI / segments;
+    const double start = faceOn ? 0.0 : -M_PI / 2.0;
+    if (step) *step = increment;
+    QPolygonF arc;
+    arc.reserve(segments + 1);
+    for (int i = 0; i <= segments; ++i) {
+        const double angle = start + i * increment;
+        arc << projectWorldPoint(center + radius * (float(std::cos(angle)) * radial + float(std::sin(angle)) * across));
+    }
+    return arc;
+}
+
+QPolygonF CadViewport::sectionHandleShape(bool *disc) const {
+    const auto center = sectionRotationDragging() ? sectionRotationPivot_ : sectionCenter();
     const QPointF a = projectWorldPoint(center), b = projectWorldPoint(center + sectionArrowLength() * section_.normal);
     const double length = pointDistance(a, b);
     if (disc) *disc = length < 18.0;
@@ -654,29 +711,93 @@ QPolygonF CadViewport::sectionHandleShape(bool *disc ) const {
     return QPolygonF({a + shaft * w, neck + shaft * w, neck + wing * w, b, neck - wing * w, neck - shaft * w, a - shaft * w});
 }
 
-bool CadViewport::sectionHandleAt(const QPoint &position) const {
-    if (!section_.enabled || !section_.showPlane || !sectionDragged_) return false;
+CadViewport::SectionHandle CadViewport::sectionHandleAt(const QPoint &position, QPointF *tangent) const {
+    if (!sectionHandlesAvailable() || interactionLocked_ || documentReadOnly_) return SectionHandle::None;
     const QPointF cursor(position);
-    const QPolygonF shape = sectionHandleShape();
-    if (shape.containsPoint(cursor, Qt::OddEvenFill)) return true;
-    for (int k = 0; k < shape.size(); ++k)
-        if (distanceToSegment(cursor, shape.at(k), shape.at((k + 1) % shape.size())) <= 5.0) return true;
-    const QVector<QVector3D> quad = sectionQuad();
-    for (int k = 0; k < 4; ++k)
-        if (distanceToSegment(cursor, projectWorldPoint(quad.at(k)), projectWorldPoint(quad.at((k + 1) % 4))) <= 6.0) return true;
-    return false;
+    if (sectionDragged_) {
+        const auto shape = sectionHandleShape();
+        if (shape.containsPoint(cursor, Qt::OddEvenFill)) return SectionHandle::Translate;
+        for (int i = 0; i < shape.size(); ++i)
+            if (distanceToSegment(cursor, shape[i], shape[(i + 1) % shape.size()]) <= 4.0)
+                return SectionHandle::Translate;
+    }
+
+    if (sectionRotated_) {
+        SectionHandle nearest = SectionHandle::None;
+        double best = 7.0;
+        for (const auto handle : {SectionHandle::RotateU, SectionHandle::RotateV}) {
+            double step = 0.;
+            const auto arc = sectionRotationArc(handle, &step);
+            for (int i = 1; i < arc.size(); ++i) {
+                const QPointF along = arc[i] - arc[i - 1];
+                if (QPointF::dotProduct(along, along) < 0.25) continue;
+                const double distance = distanceToSegment(cursor, arc[i - 1], arc[i]);
+                if (distance >= best) continue;
+                best = distance;
+                nearest = handle;
+                if (tangent) *tangent = along / step;
+            }
+        }
+        if (nearest != SectionHandle::None) return nearest;
+    }
+
+    if (sectionDragged_) {
+        const QVector<QVector3D> quad = sectionQuad();
+        for (int i = 0; i < quad.size(); ++i)
+            if (distanceToSegment(cursor, projectWorldPoint(quad[i]), projectWorldPoint(quad[(i + 1) % quad.size()])) <= 6.0)
+                return SectionHandle::Translate;
+    }
+    return SectionHandle::None;
 }
 
-float CadViewport::sectionArrowLength() const { return 90.0f * camera_.zoom_ / float(qMax(1, height())); }
+float CadViewport::sectionArrowLength() const {
+    return (sectionRotated_ ? 42.0f : 90.0f) * camera_.zoom_ / qMax(1, height());
+}
 
 double CadViewport::sectionDragDelta(const QPoint &mouse) const {
     const float length = sectionArrowLength();
-    const QPointF a = projectWorldPoint(section_.point), b = projectWorldPoint(section_.point + length * section_.normal);
+    const auto center = sectionCenter();
+    const QPointF a = projectWorldPoint(center), b = projectWorldPoint(center + length * section_.normal);
     const QPointF screen = b - a;
     const double pixels = std::hypot(screen.x(), screen.y());
     const double unit = double(camera_.zoom_) / double(qMax(1, height()));  // unita' del modello per pixel
     if (pixels < 12.0) return -double(mouse.y()) * unit;
     return (screen.x() * mouse.x() + screen.y() * mouse.y()) / (pixels * pixels) * double(length);
+}
+
+void CadViewport::moveSectionDrag(const QPoint &current, const QPoint &previous, bool snap) {
+    const auto previousSnap = sectionSnap_;
+    sectionSnap_ = snap ? sectionSnapAt(current) : std::nullopt;
+    const double delta = sectionSnap_ ? QVector3D::dotProduct(*sectionSnap_ - section_.point, section_.normal)
+        : snap ? 0. : sectionDragDelta(current - previous);
+    if (std::isfinite(delta) && delta != 0.) sectionDragged_(delta);
+    if (sectionSnap_ != previousSnap) update();
+}
+
+double CadViewport::sectionRotationDelta(const QPoint &from, const QPoint &to) const {
+    QVector3D origin, ray;
+    viewRay(from, origin, ray);
+    const auto axis = sectionRotationAxis_, pivot = sectionRotationPivot_;
+    const float denominator = QVector3D::dotProduct(ray, axis);
+    double radians = 0.;
+    if (qAbs(denominator) > 0.15f) {
+        const auto radial = [&](const QVector3D &a, const QVector3D &d) {
+            return a - pivot + d * (QVector3D::dotProduct(pivot - a, axis) / QVector3D::dotProduct(d, axis));
+        };
+        const auto first = radial(origin, ray);
+        viewRay(to, origin, ray);
+        const auto second = radial(origin, ray);
+        const float modelUnits = camera_.zoom_ / qMax(1, height());
+        if (std::min(first.lengthSquared(), second.lengthSquared()) < 100.0f * modelUnits * modelUnits) return 0.;
+        radians = std::atan2(QVector3D::dotProduct(axis, QVector3D::crossProduct(first, second)),
+                            QVector3D::dotProduct(first, second));
+    } else {
+        // Con l'anello di taglio la proiezione del raggio è instabile.
+        const auto tangent = sectionRotationTangent_;
+        const double squared = QPointF::dotProduct(tangent, tangent);
+        if (squared > 0.) radians = QPointF::dotProduct(QPointF(to - from), tangent) / squared;
+    }
+    return radians * 180.0 / M_PI;
 }
 
 void CadViewport::setSectionRefreshCallback(std::function<void()> callback) { sectionRefresh_ = std::move(callback); }
@@ -710,12 +831,8 @@ bool CadViewport::isSketchDrawn(int index) const {
 }
 
 QVector<QVector3D> CadViewport::sectionQuad(float scale ) const {
-    const QVector3D n = section_.normal;
-    const QVector3D helper = qAbs(n.x()) < 0.9f ? QVector3D(1, 0, 0) : QVector3D(0, 1, 0);
-    const QVector3D u = QVector3D::crossProduct(n, helper).normalized(), v = QVector3D::crossProduct(n, u);
-    updateSceneBounds();
-    const QVector3D middle = 0.5f * (sceneMin_ + sceneMax_);
-    const QVector3D center = middle - QVector3D::dotProduct(middle - section_.point, n) * n;
+    const QVector3D u = section_.tangent, v = QVector3D::crossProduct(section_.normal, u);
+    const auto center = sectionCenter();
     const float half = scale * qMax(0.6f * (sceneMax_ - sceneMin_).length(), 1.0f);
     return {center - half * u - half * v, center + half * u - half * v, center + half * u + half * v, center - half * u + half * v};
 }

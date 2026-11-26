@@ -249,7 +249,7 @@ ForgeCAD è scritto in **C++17** con **Qt 6** e una viewport **OpenGL 3.3 Core**
 - Rotazione, pan, zoom e inquadratura della scena.
 - Modalità filo di ferro, ombreggiata e ombreggiata con bordi.
 - Visualizzazione e selezione dei bordi nascosti; identificativi topologici di facce e bordi.
-- Vista in sezione con parametri modificabili.
+- In **Visualizza → Vista in sezione**, trascina gli anelli per inclinare il piano e la freccia per spostarlo lungo la normale. Modifica **Inclinazione** nel pannello per impostare l’angolo in gradi. Tieni premuto **Shift** durante il trascinamento della freccia per agganciarti a vertici, spigoli e facce visibili. **Parametri della sezione → Ripristina orientamento** riporta il piano a 0°.
 - Griglia, piani e assi configurabili, anche in primo piano.
 - Qualità della tassellazione bassa, media o alta; antialiasing MSAA.
 - Illuminazione Studio, Morbida e Ispezione; sfondo, luce ambiente e colori personalizzabili.

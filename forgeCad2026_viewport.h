@@ -756,10 +756,10 @@ public:
     // (resta la parte dalla parte opposta alla normale) e le sezioni dei solidi
     // si chiudono con lo stencil (riempimento tratteggiato). La selezione
     // ignora quello che sta dalla parte tolta.
-    void setSection(bool enabled, const QVector3D &point = {}, const QVector3D &normal = QVector3D(0, 0, 1), bool caps = true, bool showPlane = true);
+    void setSection(bool enabled, const QVector3D &point = {}, const QVector3D &normal = QVector3D(0, 0, 1),
+                    bool caps = true, bool showPlane = true, const QVector3D &tangent = {}, const QString &inclination = {});
     bool sectionEnabled() const;
-    // Trascinamento del piano di sezione nella vista: `callback(spostamento)`
-    // lungo la normale della sezione (nullptr: il piano non si trascina).
+    QVector3D sectionCenter() const;
     // Manipolatore temporaneo: modifica i parametri del pannello, mai il documento.
     void setFilletRadiusHandles(const QVector<FilletRadiusHandle> &handles,
                                 std::function<void(int,int,double,bool)> changed);
@@ -781,18 +781,8 @@ public:
     void dragFeatureHandle(const QPointF &position);
 
     void setSectionDragCallback(std::function<void(double)> callback);
-    // Maniglia del piano di sezione sullo schermo: la freccia dal centro del
-    // piano lungo la normale (un disco se la normale guarda l'osservatore).
-    QPolygonF sectionHandleShape(bool *disc = nullptr) const;
-    // Il puntatore sta sulla maniglia o sul bordo del piano.
-    bool sectionHandleAt(const QPoint &position) const;
-    // La maniglia disegnata come un oggetto selezionato: arancio pieno con il contorno giallo e l'alone.
-    void drawSectionHandle(QPainter &painter) const;
-    float sectionArrowLength() const;
-    // Spostamento lungo la normale per un movimento del puntatore: la sua
-    // componente lungo la normale vista sullo schermo; con la normale verso
-    // l'osservatore, il movimento verticale.
-    double sectionDragDelta(const QPoint &mouse) const;
+    // Asse e centro nel modello, angolo incrementale in gradi.
+    void setSectionRotationCallback(std::function<void(const QVector3D &, const QVector3D &, double)> callback);
     // Direzione dal centro della vista verso l'osservatore (coordinate del modello).
     QVector3D viewerDirection() const;
     SketchFrame curveTrimView() const;
@@ -1514,6 +1504,19 @@ private:
     bool sectionRay(QVector3D &origin, const QVector3D &direction, double &skipped) const;
     // Il punto sta nella parte tolta dalla sezione.
     bool sectionRemoves(const QVector3D &point) const;
+    enum class SectionHandle { None, Translate, RotateU, RotateV };
+    bool sectionHandlesAvailable() const;
+    std::optional<QVector3D> sectionSnapAt(const QPoint &position) const;
+    void moveSectionDrag(const QPoint &current, const QPoint &previous, bool snap);
+    QVector3D sectionRotationAxis(SectionHandle handle) const;
+    QPolygonF sectionRotationArc(SectionHandle handle, double *step = nullptr) const;
+    QPolygonF sectionHandleShape(bool *disc = nullptr) const;
+    SectionHandle sectionHandleAt(const QPoint &position, QPointF *tangent = nullptr) const;
+    void drawSectionHandle(QPainter &painter) const;
+    float sectionArrowLength() const;
+    double sectionDragDelta(const QPoint &mouse) const;
+    double sectionRotationDelta(const QPoint &from, const QPoint &to) const;
+    bool sectionRotationDragging() const;
     // Quadrato sul piano di sezione che copre la scena.
     QVector<QVector3D> sectionQuad(float scale = 1.0f) const;
     void enableSectionClip();
@@ -1957,8 +1960,9 @@ private:
     mutable QVector3D sceneMin_, sceneMax_;
     struct SectionState {
         bool enabled = false;
-        QVector3D point, normal{0.0f, 0.0f, 1.0f};
+        QVector3D point, normal{0.0f, 0.0f, 1.0f}, tangent{1.0f, 0.0f, 0.0f};
         bool caps = true, showPlane = true;
+        QString inclination;
     };
     SectionState section_;
     SketchReferenceHit convertHover_;
@@ -1980,7 +1984,11 @@ private:
     double featureHandleDragValue_ = 0, featureHandleMouseAngle_ = 0;
     QPointF featureHandleLastMouse_;
     std::function<void(double)> sectionDragged_;
-    bool sectionDragging_ = false, sectionHover_ = false;
+    std::function<void(const QVector3D &, const QVector3D &, double)> sectionRotated_;
+    SectionHandle sectionDrag_ = SectionHandle::None, sectionHover_ = SectionHandle::None;
+    QVector3D sectionRotationPivot_, sectionRotationAxis_;
+    QPointF sectionRotationTangent_;
+    std::optional<QVector3D> sectionSnap_;
     mutable bool sceneBoundsDirty_ = true;
     static constexpr float kDefaultPlaneHalf = 4.0f;  // mezzo lato dei piani senza geometria
     mutable float planeHalf_ = kDefaultPlaneHalf;
