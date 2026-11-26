@@ -7,9 +7,8 @@ Aggiornato **26 novembre 2026**.
 ## Regole permanenti e decisioni
 
 - **17/11: utente autorizza commit/push delle modifiche accumulate, poi proseguire la review.**
-- Italiano; nessun `codex` nei nomi dei branch. `main` unico;
-  `solver-mesh-gpu` è stato integrato e archiviato il 30 ottobre. CUDA e Metal restano backend opzionali negli stessi
-  sorgenti, con fallback CPU.
+- Italiano, nessun `codex` nei nomi dei branch. Sviluppo solo su `main`. Il 26/11 integrati i 9 commit fino a `7de866c`.
+  `solver-mesh-gpu` archiviato il 30/10. CUDA e Metal opzionali con fallback CPU.
 - Aggiornare a ogni traguardo e prima della risposta finale; preservare le altre chat e distinguere
   implementato/verificato/sperimentale/proposto con prove e limiti.
 - **Circa 200 righe, massimo 16 KiB e 10 interventi recenti**. Aggiornare le voci tematiche;
